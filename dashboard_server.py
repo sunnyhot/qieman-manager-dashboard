@@ -39,6 +39,10 @@ MULTI_BLANK_RE = re.compile(r"\n{3,}")
 TRADE_SENTENCE_SPLIT_RE = re.compile(r"(?:\n+|(?<=[。！？!?；;]))")
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
+AUTO_FETCH_TIMEOUT_SECONDS = 6
+MANUAL_FETCH_TIMEOUT_SECONDS = 120
+HOME_PLATFORM_FETCH_TIMEOUT_SECONDS = 4
+PLATFORM_FETCH_TIMEOUT_SECONDS = 10
 LIVE_SNAPSHOT: Optional[Dict[str, Any]] = None
 PLATFORM_TRADE_CACHE: Dict[str, Dict[str, Any]] = {}
 PLATFORM_TRADE_TTL_SECONDS = 120
@@ -62,6 +66,8 @@ PLATFORM_WINDOW_OPTIONS = [
     ("ytd", "今年"),
     ("365d", "近1年"),
 ]
+PLATFORM_SIGNAL_SECTION_ID = "platform-actions"
+PLATFORM_TIMELINE_SECTION_ID = "timeline-actions"
 
 FORM_FIELDS = [
     "mode",
@@ -848,6 +854,19 @@ def history_summaries() -> List[Dict[str, Any]]:
     return items
 
 
+def preferred_snapshot_name(history: List[Dict[str, Any]], prefer_posts: bool = False) -> str:
+    if not history:
+        return ""
+    if prefer_posts:
+        for item in history:
+            if normalize_text(item.get("snapshot_type")) != "posts":
+                continue
+            name = normalize_text(item.get("file_name"))
+            if name:
+                return name
+    return normalize_text(history[0].get("file_name"))
+
+
 def snapshot_path_from_name(name: str) -> Path:
     path = (OUTPUT_DIR / Path(name).name).resolve()
     if path.parent != OUTPUT_DIR.resolve() or not path.exists():
@@ -894,7 +913,7 @@ def build_scraper_command(payload: Dict[str, Any], output_dir: Path) -> List[str
     return command
 
 
-def run_fetch(payload: Dict[str, Any]) -> Dict[str, Any]:
+def run_fetch(payload: Dict[str, Any], timeout_seconds: Optional[int] = None) -> Dict[str, Any]:
     persist = bool(payload.get("persist"))
     target_dir: Optional[tempfile.TemporaryDirectory[str]] = None
     output_dir = OUTPUT_DIR
@@ -903,7 +922,19 @@ def run_fetch(payload: Dict[str, Any]) -> Dict[str, Any]:
         output_dir = Path(target_dir.name)
 
     command = build_scraper_command(payload, output_dir)
-    result = subprocess.run(command, capture_output=True, text=True, cwd=PROJECT_DIR)
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            cwd=PROJECT_DIR,
+            timeout=timeout_seconds if timeout_seconds and timeout_seconds > 0 else None,
+        )
+    except subprocess.TimeoutExpired:
+        if target_dir:
+            target_dir.cleanup()
+        hint = "请稍后重试，或缩小时间范围/页数后再刷新。"
+        raise RuntimeError(f"抓取超时（>{safe_int(timeout_seconds)}秒），{hint}")
     stdout = result.stdout.strip()
     stderr = result.stderr.strip()
     if result.returncode != 0:
@@ -1128,6 +1159,13 @@ def build_route_url(path: str, form_values: Dict[str, str], **overrides: Any) ->
             params.pop(key, None)
     query = urlencode(params)
     return f"{path}?{query}" if query else path
+
+
+def append_url_fragment(url: str, fragment: str) -> str:
+    clean_fragment = normalize_text(fragment).lstrip("#")
+    if not clean_fragment:
+        return url
+    return f"{url.split('#', 1)[0]}#{clean_fragment}"
 
 
 def build_page_url(form_values: Dict[str, str], **overrides: Any) -> str:
@@ -1355,6 +1393,59 @@ def preload_fund_market_data(fund_codes: List[str]) -> tuple[Dict[str, Dict[str,
             except Exception:
                 quotes[code] = {}
     return histories, quotes
+
+
+def enrich_platform_actions_with_valuation(actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    source_actions = [dict(item) for item in actions if isinstance(item, dict)]
+    if not source_actions:
+        return actions
+    fund_codes = [normalize_text(item.get("fund_code")) for item in source_actions if normalize_text(item.get("fund_code"))]
+    histories, quotes = preload_fund_market_data(fund_codes)
+    enriched_actions: List[Dict[str, Any]] = []
+    for action in source_actions:
+        enriched = dict(action)
+        fund_code = normalize_text(enriched.get("fund_code"))
+        history = histories.get(fund_code) if fund_code else {}
+
+        trade_valuation = safe_float(enriched.get("nav"))
+        trade_valuation_date = normalize_date_text(normalize_text(enriched.get("nav_date")))
+        trade_valuation_source = "调仓净值"
+        if trade_valuation <= 0:
+            nav_entry = lookup_fund_nav_by_date(history or {}, enriched.get("txn_date") or enriched.get("created_at"))
+            trade_valuation = safe_float(nav_entry.get("nav"))
+            trade_valuation_date = trade_valuation_date or normalize_date_text(normalize_text(nav_entry.get("date")))
+            if trade_valuation > 0:
+                trade_valuation_source = "历史净值回填"
+            else:
+                trade_valuation_source = ""
+        elif not trade_valuation_date:
+            trade_valuation_date = normalize_date_text(normalize_text(enriched.get("txn_date") or enriched.get("created_at")))
+
+        quote = quotes.get(fund_code) if fund_code else {}
+        current_valuation = safe_float(quote.get("price"))
+        current_valuation_time = normalize_text(quote.get("price_time"))
+        current_valuation_source = normalize_text(quote.get("price_source_label")) or "当前估值"
+
+        valuation_change_amount = 0.0
+        valuation_change_pct = 0.0
+        if trade_valuation > 0 and current_valuation > 0:
+            valuation_change_amount = round(current_valuation - trade_valuation, 4)
+            valuation_change_pct = round((current_valuation / trade_valuation - 1.0) * 100.0, 2)
+
+        enriched.update(
+            {
+                "trade_valuation": round(trade_valuation, 4) if trade_valuation > 0 else 0.0,
+                "trade_valuation_date": trade_valuation_date,
+                "trade_valuation_source": trade_valuation_source,
+                "current_valuation": round(current_valuation, 4) if current_valuation > 0 else 0.0,
+                "current_valuation_time": current_valuation_time,
+                "current_valuation_source": current_valuation_source,
+                "valuation_change_amount": valuation_change_amount,
+                "valuation_change_pct": valuation_change_pct,
+            }
+        )
+        enriched_actions.append(enriched)
+    return enriched_actions
 
 
 def enrich_platform_holdings_with_pricing(holdings: Dict[str, Any], actions: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -1795,6 +1886,8 @@ def build_platform_trade_data(prod_code: str, raw_items: List[Dict[str, Any]]) -
                     "strategy_type": normalize_text(order.get("strategy_type")),
                     "large_class": normalize_text(order.get("large_class")),
                     "buy_date": normalize_text(order.get("buy_date")),
+                    "nav": safe_float(order.get("nav")),
+                    "nav_date": normalize_text(order.get("nav_date")),
                     "order_count_in_adjustment": len(normalized_orders),
                 }
             )
@@ -1814,6 +1907,7 @@ def build_platform_trade_data(prod_code: str, raw_items: List[Dict[str, Any]]) -
             }
         )
     actions = sorted(actions, key=platform_action_timestamp, reverse=True)
+    actions = enrich_platform_actions_with_valuation(actions)
     adjustments = sorted(
         adjustments,
         key=lambda item: safe_int(item.get("txn_ts")) or safe_int(item.get("created_ts")),
@@ -1836,7 +1930,7 @@ def build_platform_trade_data(prod_code: str, raw_items: List[Dict[str, Any]]) -
     }
 
 
-def fetch_platform_trade_data(prod_code: str) -> Dict[str, Any]:
+def fetch_platform_trade_data(prod_code: str, timeout_seconds: int = PLATFORM_FETCH_TIMEOUT_SECONDS) -> Dict[str, Any]:
     target = normalize_text(prod_code)
     if not target:
         return {
@@ -1850,7 +1944,11 @@ def fetch_platform_trade_data(prod_code: str) -> Dict[str, Any]:
         return cached["data"]
     client = build_dashboard_client()
     try:
-        raw = client.get("/long-win/plan/adjustments", {"desc": "true", "prodCode": target})
+        raw = client.get(
+            "/long-win/plan/adjustments",
+            {"desc": "true", "prodCode": target},
+            timeout=max(1, safe_int(timeout_seconds)),
+        )
         if not isinstance(raw, list):
             raise RuntimeError("平台调仓接口返回结构异常")
         data = build_platform_trade_data(target, [item for item in raw if isinstance(item, dict)])
@@ -1932,6 +2030,154 @@ def bar_chart(snapshot: Optional[Dict[str, Any]]) -> str:
         '<div class="activity-subtitle">越长代表当天发言越多</div>'
         '</div>'
         f'<div class="activity-rows">{"".join(segments)}</div>'
+        '</div>'
+    )
+
+
+def platform_action_date_text(action: Dict[str, Any]) -> str:
+    date_text = normalize_date_text(normalize_text(action.get("txn_date") or action.get("created_at")))
+    if date_text:
+        return date_text
+    action_ts = platform_action_timestamp(action)
+    if action_ts > 0:
+        try:
+            return datetime.fromtimestamp(action_ts / 1000).strftime("%Y-%m-%d")
+        except (TypeError, ValueError, OSError):
+            return ""
+    return ""
+
+
+def build_platform_monthly_overview(actions: List[Dict[str, Any]], limit_months: int = 12) -> Dict[str, Any]:
+    buckets: Dict[str, Dict[str, Any]] = {}
+    for action in actions:
+        if not isinstance(action, dict):
+            continue
+        action_date = platform_action_date_text(action)
+        if len(action_date) < 7:
+            continue
+        month_key = action_date[:7]
+        if len(month_key) != 7:
+            continue
+        bucket = buckets.setdefault(
+            month_key,
+            {
+                "month": month_key,
+                "buy_count": 0,
+                "sell_count": 0,
+                "total_count": 0,
+                "active_days": set(),
+            },
+        )
+        side = normalize_text(action.get("side"))
+        if side == "buy":
+            bucket["buy_count"] = safe_int(bucket.get("buy_count")) + 1
+        elif side == "sell":
+            bucket["sell_count"] = safe_int(bucket.get("sell_count")) + 1
+        bucket["total_count"] = safe_int(bucket.get("total_count")) + 1
+        if action_date:
+            active_days = bucket.get("active_days")
+            if isinstance(active_days, set):
+                active_days.add(action_date)
+
+    items = sorted(buckets.values(), key=lambda item: normalize_text(item.get("month")), reverse=True)
+    limit_value = safe_int(limit_months)
+    if limit_value > 0:
+        items = items[:limit_value]
+
+    result_items: List[Dict[str, Any]] = []
+    max_month_total = 0
+    max_side_count = 0
+    for item in items:
+        buy_count = safe_int(item.get("buy_count"))
+        sell_count = safe_int(item.get("sell_count"))
+        total_count = safe_int(item.get("total_count"))
+        active_days = item.get("active_days")
+        active_day_count = len(active_days) if isinstance(active_days, set) else 0
+        trades_per_active_day = round(total_count / active_day_count, 2) if active_day_count > 0 else 0.0
+        result_items.append(
+            {
+                "month": normalize_text(item.get("month")),
+                "buy_count": buy_count,
+                "sell_count": sell_count,
+                "total_count": total_count,
+                "active_day_count": active_day_count,
+                "trades_per_active_day": trades_per_active_day,
+            }
+        )
+        max_month_total = max(max_month_total, total_count)
+        max_side_count = max(max_side_count, buy_count, sell_count)
+
+    month_count = len(result_items)
+    total_count = sum(safe_int(item.get("total_count")) for item in result_items)
+    buy_count = sum(safe_int(item.get("buy_count")) for item in result_items)
+    sell_count = sum(safe_int(item.get("sell_count")) for item in result_items)
+    return {
+        "items": result_items,
+        "month_count": month_count,
+        "total_count": total_count,
+        "buy_count": buy_count,
+        "sell_count": sell_count,
+        "avg_total_per_month": round(total_count / month_count, 1) if month_count else 0.0,
+        "avg_buy_per_month": round(buy_count / month_count, 1) if month_count else 0.0,
+        "avg_sell_per_month": round(sell_count / month_count, 1) if month_count else 0.0,
+        "max_month_total": max_month_total,
+        "max_side_count": max_side_count,
+    }
+
+
+def render_platform_trade_overview(actions: List[Dict[str, Any]], range_label: str, using_custom_range: bool) -> str:
+    overview = build_platform_monthly_overview(actions, limit_months=12)
+    items = [item for item in list(overview.get("items") or []) if isinstance(item, dict)]
+    if not items:
+        return '<div class="empty">当前时间范围内还没有可统计的月度调仓数据。</div>'
+    max_side_count = max(1, safe_int(overview.get("max_side_count")))
+
+    rows: List[str] = []
+    for item in items:
+        month = normalize_text(item.get("month")) or "未知月份"
+        buy_count = safe_int(item.get("buy_count"))
+        sell_count = safe_int(item.get("sell_count"))
+        total_count = safe_int(item.get("total_count"))
+        active_day_count = safe_int(item.get("active_day_count"))
+        trade_freq = safe_float(item.get("trades_per_active_day"))
+        buy_width = round((buy_count / max_side_count) * 100.0, 1) if buy_count > 0 else 0.0
+        sell_width = round((sell_count / max_side_count) * 100.0, 1) if sell_count > 0 else 0.0
+        rows.append(
+            '<article class="trade-month-card">'
+            f'<div class="trade-month-head"><strong>{html.escape(month)}</strong><span>总计 {total_count} 笔</span></div>'
+            '<div class="trade-month-lines">'
+            '<div class="trade-month-line buy">'
+            '<span class="trade-side">买入</span>'
+            f'<div class="trade-track"><div class="trade-fill buy" style="width:{buy_width:.1f}%"></div></div>'
+            f'<span class="trade-value">{buy_count}</span>'
+            '</div>'
+            '<div class="trade-month-line sell">'
+            '<span class="trade-side">卖出</span>'
+            f'<div class="trade-track"><div class="trade-fill sell" style="width:{sell_width:.1f}%"></div></div>'
+            f'<span class="trade-value">{sell_count}</span>'
+            '</div>'
+            '</div>'
+            f'<div class="trade-month-meta">活跃 {active_day_count} 天 · 每活跃日 {trade_freq:.2f} 笔</div>'
+            '</article>'
+        )
+
+    return (
+        '<div class="trade-overview">'
+        '<div class="trade-overview-head">'
+        '<div>'
+        '<h3>交易时间总览</h3>'
+        f'<p class="muted">按月看买卖节奏，当前范围 {html.escape(range_label)}'
+        f'{"（跟随左侧日期）" if using_custom_range else ""}。</p>'
+        '</div>'
+        '<span class="chip">近 12 个月窗口</span>'
+        '</div>'
+        '<div class="trade-overview-metrics">'
+        f'<div class="trade-overview-metric"><small>覆盖月份</small><strong>{safe_int(overview.get("month_count"))}</strong></div>'
+        f'<div class="trade-overview-metric"><small>月均交易</small><strong>{safe_float(overview.get("avg_total_per_month")):.1f}</strong></div>'
+        f'<div class="trade-overview-metric"><small>买入月均</small><strong>{safe_float(overview.get("avg_buy_per_month")):.1f}</strong></div>'
+        f'<div class="trade-overview-metric"><small>卖出月均</small><strong>{safe_float(overview.get("avg_sell_per_month")):.1f}</strong></div>'
+        '</div>'
+        f'<div class="trade-month-list">{"".join(rows)}</div>'
         '</div>'
     )
 
@@ -2271,6 +2517,13 @@ def render_forum_preview_panel(
     snapshot_name: str,
     source_label: str,
     limit: int = 4,
+    focus_post_id: int = 0,
+    comments_payload: Optional[Dict[str, Any]] = None,
+    comment_error: str = "",
+    comment_sort: str = "hot",
+    comment_page: int = 1,
+    only_manager_replies: bool = False,
+    page_path: str = "/",
 ) -> str:
     section_title = snapshot_section_title(snapshot)
     since_value = normalize_date_text(normalize_text(form_values.get("since")))
@@ -2294,47 +2547,45 @@ def render_forum_preview_panel(
             '</section>'
         )
     records = snapshot.get("records") if isinstance(snapshot.get("records"), list) else []
-    cards: List[str] = []
-    for record in records[:limit]:
-        if snapshot.get("snapshot_type") == "posts":
-            post_id = safe_int(record.get("post_id"))
-            title = strip_html(record.get("title") or record.get("intro") or f"帖子 {post_id or ''}")
-            excerpt = truncate_text(strip_html(record.get("content_text") or record.get("intro") or "无正文"), 180)
-            view_url = (
-                build_route_url(
-                    "/forum",
-                    form_values,
-                    snapshot=snapshot_name or None,
-                    focus_post_id=post_id,
-                    comment_sort="hot",
-                    comment_page=1,
-                    only_manager_replies=None,
-                )
-                + f"#post-{post_id}"
+    max_cards = max(1, safe_int(limit) or 1)
+    preview_records: List[Dict[str, Any]] = [item for item in records[:max_cards] if isinstance(item, dict)]
+    if snapshot.get("snapshot_type") == "posts" and focus_post_id:
+        has_focus = any(safe_int(item.get("post_id")) == focus_post_id for item in preview_records)
+        if not has_focus:
+            focus_record = next(
+                (
+                    item
+                    for item in records
+                    if isinstance(item, dict) and safe_int(item.get("post_id")) == focus_post_id
+                ),
+                None,
             )
-            cards.append(
-                '<article class="record-card">'
-                f'<h3 class="record-title">{html.escape(title)}</h3>'
-                f'<div class="record-meta"><span>{html_text(record.get("user_name") or record.get("broker_user_id") or "未知用户")}</span>'
-                f'<span>{html_text(record.get("group_name") or "未标注小组")}</span>'
-                f'<span>{html_text(format_time(record.get("created_at")))}</span>'
-                f'<span>评 {safe_int(record.get("comment_count"))}</span></div>'
-                f'<div class="record-content">{html.escape(excerpt)}</div>'
-                f'<div class="record-actions"><a class="mini-btn" href="{html.escape(view_url)}">去详情看正文和评论</a></div>'
-                '</article>'
-            )
-        elif snapshot.get("snapshot_type") == "users":
-            cards.append(generic_record_card_html(record, "user_name", "user_desc", "未知用户"))
-        elif snapshot.get("snapshot_type") == "groups":
-            cards.append(generic_record_card_html(record, "group_name", "group_desc", "未命名小组"))
-        else:
-            cards.append(generic_record_card_html(record, "title", "content", "记录"))
-    list_html = "".join(cards) if cards else '<div class="empty">这份快照里没有可展示的记录。</div>'
+            if isinstance(focus_record, dict):
+                if max_cards > 1:
+                    preview_records = preview_records[: max_cards - 1] + [focus_record]
+                else:
+                    preview_records = [focus_record]
+    preview_snapshot = dict(snapshot)
+    preview_snapshot["records"] = preview_records
+    list_html = records_html(
+        snapshot=preview_snapshot,
+        form_values=form_values,
+        snapshot_name=snapshot_name,
+        focus_post_id=focus_post_id,
+        comments_payload=comments_payload,
+        comment_error=comment_error,
+        comment_sort=comment_sort,
+        comment_page=comment_page,
+        only_manager_replies=only_manager_replies,
+        page_path=page_path,
+    )
     current_title = normalize_text(snapshot.get("title")) or "等待载入"
     current_subtitle = (
         f"{normalize_text(snapshot.get('subtitle') or snapshot.get('mode'))} · {safe_int(snapshot.get('count'))} 条 · {format_time(snapshot.get('created_at'))}"
     )
-    subline = f"来源：{source_label or '未选择'}。首页只展示最近 {min(limit, len(records))} 条，完整正文和评论请进详情页。"
+    subline = f"来源：{source_label or '未选择'}。首页只展示最近 {min(max_cards, len(records))} 条，完整正文和评论请进详情页。"
+    if snapshot.get("snapshot_type") != "posts":
+        subline += " 当前快照不是发帖类型，热评和主理人回复交互仅在发帖快照显示。"
     if using_history_snapshot and (since_value or until_value):
         subline += " 当前论坛区还是右侧选中的历史快照；如果想让论坛也按左侧日期对齐，请点一次“仅刷新最新”或“刷新并保存”。"
     chips = [normalize_text(snapshot.get("kind_label")), normalize_text(snapshot.get("mode"))]
@@ -2369,6 +2620,7 @@ def render_signal_panel(
     page_path: str = "/",
     card_limit: int = 36,
     home_mode: bool = False,
+    section_anchor: str = "",
 ) -> str:
     if not platform_trades:
         return ""
@@ -2384,6 +2636,7 @@ def render_signal_panel(
             '</section>'
         )
     platform_window = normalize_text(form_values.get("platform_window")) or "all"
+    section_anchor = normalize_text(section_anchor).lstrip("#")
     range_info = platform_effective_range(form_values)
     range_label = normalize_text(range_info.get("label")) or "全部"
     using_custom_range = normalize_text(range_info.get("mode")) == "custom"
@@ -2392,6 +2645,7 @@ def render_signal_panel(
     summary_all = summarize_filtered_platform_actions(all_actions)
     summary_buy = summarize_filtered_platform_actions(filter_platform_actions(platform_trades, form_values, "buy"))
     summary_sell = summarize_filtered_platform_actions(filter_platform_actions(platform_trades, form_values, "sell"))
+    trade_overview_html = render_platform_trade_overview(all_actions, range_label, using_custom_range)
     toolbar = []
     for value, label, count in [
         ("all", "全部动作", safe_int(summary_all.get("count"))),
@@ -2405,6 +2659,7 @@ def render_signal_panel(
             signal_filter=value if value != "all" else None,
             timeline_asset=timeline_asset if timeline_asset != "all" else None,
         )
+        url = append_url_fragment(url, section_anchor)
         toolbar.append(f'<a class="mini-btn{" active" if signal_filter == value else ""}" href="{html.escape(url)}">{html.escape(label)} · {count}</a>')
     window_toolbar = []
     if using_custom_range:
@@ -2419,6 +2674,7 @@ def render_signal_panel(
                 timeline_asset=timeline_asset if timeline_asset != "all" else None,
                 platform_window=value if value != "all" else None,
             )
+            url = append_url_fragment(url, section_anchor)
             active = platform_window == value or (platform_window == "" and value == "all")
             window_toolbar.append(f'<a class="mini-btn{" active" if active else ""}" href="{html.escape(url)}">{html.escape(label)}</a>')
     signal_cards = []
@@ -2438,6 +2694,21 @@ def render_signal_panel(
         summary_line = normalize_text(action.get("comment"))
         article_url = normalize_text(action.get("article_url"))
         related_count = max(0, safe_int(action.get("order_count_in_adjustment")) - 1)
+        trade_valuation = safe_float(action.get("trade_valuation"))
+        trade_valuation_date = normalize_date_text(normalize_text(action.get("trade_valuation_date")))
+        current_valuation = safe_float(action.get("current_valuation"))
+        current_valuation_source = normalize_text(action.get("current_valuation_source")) or "当前估值"
+        current_valuation_time = normalize_text(action.get("current_valuation_time"))
+        valuation_change_pct = safe_float(action.get("valuation_change_pct"))
+        trade_valuation_text = format_decimal(trade_valuation) if trade_valuation > 0 else "—"
+        if trade_valuation > 0 and trade_valuation_date:
+            trade_valuation_text += f"（{trade_valuation_date}）"
+        current_valuation_text = format_decimal(current_valuation) if current_valuation > 0 else "—"
+        if current_valuation > 0 and current_valuation_time:
+            current_valuation_text += f"（{current_valuation_time}）"
+        valuation_line = f"调仓时估值 {trade_valuation_text} · 当前{current_valuation_source} {current_valuation_text}"
+        if trade_valuation > 0 and current_valuation > 0:
+            valuation_line += f" · 变化 {format_signed_percent(valuation_change_pct)}"
         signal_cards.append(
             f'<article class="signal-card {html.escape(card_side)}">'
             '<div class="signal-top">'
@@ -2446,6 +2717,7 @@ def render_signal_panel(
             "</div>"
             f'<div class="record-meta"><span>调仓单 {safe_int(action.get("adjustment_id"))}</span><span>{html_text(action.get("action"))} {safe_int(action.get("trade_unit"))} 份</span><span>{html_text(action.get("fund_name"))}</span><span>创建 {html_text(action.get("created_at"))}</span></div>'
             f'<div class="signal-events"><div class="signal-line">{html.escape(detail)}</div>'
+            + f'<div class="signal-line">{html.escape(valuation_line)}</div>'
             + (f'<div class="signal-line">同单说明 · {html.escape(summary_line)}</div>' if summary_line else "")
             + (f'<div class="signal-line">同一调仓单还包含 {related_count} 个其他动作</div>' if related_count else "")
             + '</div>'
@@ -2463,6 +2735,7 @@ def render_signal_panel(
         timeline_asset=timeline_asset if timeline_asset != "all" else None,
         platform_window=platform_window if platform_window != "all" else None,
     )
+    detail_url = append_url_fragment(detail_url, PLATFORM_SIGNAL_SECTION_ID)
     timeline_url = build_route_url(
         "/timeline",
         form_values,
@@ -2471,7 +2744,15 @@ def render_signal_panel(
         timeline_asset=timeline_asset if timeline_asset != "all" else None,
         platform_window=platform_window if platform_window != "all" else None,
     )
-    home_url = "/"
+    timeline_url = append_url_fragment(timeline_url, PLATFORM_TIMELINE_SECTION_ID)
+    home_url = build_route_url(
+        "/",
+        form_values,
+        snapshot=snapshot_name or None,
+        signal_filter=signal_filter if signal_filter != "all" else None,
+        timeline_asset=timeline_asset if timeline_asset != "all" else None,
+        platform_window=platform_window if platform_window != "all" else None,
+    )
     if home_mode:
         head_actions = (
             f'<div class="record-actions"><a class="mini-btn" href="{html.escape(detail_url)}">查看全部调仓</a>'
@@ -2479,7 +2760,7 @@ def render_signal_panel(
         )
     else:
         head_actions = (
-            f'<div class="record-actions"><a class="mini-btn" href="{html.escape(home_url)}">返回首页</a>'
+            f'<div class="record-actions"><a class="mini-btn" href="{html.escape(home_url)}">返回主理人看板</a>'
             f'<a class="mini-btn" href="{html.escape(timeline_url)}">查看按标的时间线</a></div>'
         )
     if home_mode:
@@ -2494,9 +2775,14 @@ def render_signal_panel(
             f'{html.escape(latest_text[:60] + ("…" if len(latest_text) > 60 else ""))}。'
             f'当前列表展示 {min(card_limit, len(filtered_actions))} / {len(filtered_actions)} 条。'
         )
+    section_open = (
+        f'<section id="{html.escape(section_anchor)}" class="panel">'
+        if section_anchor
+        else '<section class="panel">'
+    )
     return (
-        '<section class="panel">'
-        '<div class="snapshot-head">'
+        section_open
+        + '<div class="snapshot-head">'
         '<div>'
         '<h2>平台调仓</h2>'
         '<p class="muted">这里直接来自且慢平台调仓接口 `/long-win/plan/adjustments`，不再只靠帖子内容匹配买卖动作。</p>'
@@ -2509,6 +2795,7 @@ def render_signal_panel(
         f'<div class="metric"><small>卖出动作</small><strong>{safe_int(summary_all.get("sell_count"))}</strong></div>'
         f'<div class="metric"><small>覆盖调仓单</small><strong>{safe_int(summary_all.get("adjustment_count"))}</strong></div>'
         '</div>'
+        f'{trade_overview_html}'
         f'<div class="toolbar">{"".join(toolbar)}</div>'
         f'<div class="toolbar">{"".join(window_toolbar)}</div>'
         f'<div class="record-subline">{subline}</div>'
@@ -2688,6 +2975,7 @@ def render_platform_timeline_section(
             '</section>'
         )
     platform_window = normalize_text(form_values.get("platform_window")) or "all"
+    section_anchor = PLATFORM_TIMELINE_SECTION_ID
     range_info = platform_effective_range(form_values)
     range_label = normalize_text(range_info.get("label")) or "全部"
     using_custom_range = normalize_text(range_info.get("mode")) == "custom"
@@ -2707,6 +2995,7 @@ def render_platform_timeline_section(
             timeline_asset=timeline_asset if timeline_asset != "all" else None,
             platform_window=platform_window if platform_window != "all" else None,
         )
+        url = append_url_fragment(url, section_anchor)
         side_toolbar.append(
             f'<a class="mini-btn{" active" if signal_filter == value else ""}" href="{html.escape(url)}">{html.escape(label)} · {count}</a>'
         )
@@ -2723,6 +3012,7 @@ def render_platform_timeline_section(
                 timeline_asset=timeline_asset if timeline_asset != "all" else None,
                 platform_window=value if value != "all" else None,
             )
+            url = append_url_fragment(url, section_anchor)
             active = platform_window == value or (platform_window == "" and value == "all")
             window_toolbar.append(f'<a class="mini-btn{" active" if active else ""}" href="{html.escape(url)}">{html.escape(label)}</a>')
 
@@ -2732,8 +3022,17 @@ def render_platform_timeline_section(
     if timeline_asset and timeline_asset != "all":
         filtered_items = [item for item in asset_source_items if normalize_text(item.get("label")) == timeline_asset]
 
+    all_assets_url = build_route_url(
+        "/timeline",
+        form_values,
+        snapshot=snapshot_name or None,
+        signal_filter=signal_filter if signal_filter != "all" else None,
+        timeline_asset=None,
+        platform_window=platform_window if platform_window != "all" else None,
+    )
+    all_assets_url = append_url_fragment(all_assets_url, section_anchor)
     asset_toolbar = [
-        f'<a class="mini-btn{" active" if timeline_asset in {"", "all"} else ""}" href="{html.escape(build_route_url("/timeline", form_values, snapshot=snapshot_name or None, signal_filter=signal_filter if signal_filter != "all" else None, timeline_asset=None, platform_window=platform_window if platform_window != "all" else None))}">全部标的</a>'
+        f'<a class="mini-btn{" active" if timeline_asset in {"", "all"} else ""}" href="{html.escape(all_assets_url)}">全部标的</a>'
     ]
     for item in asset_source_items[:12]:
         label = normalize_text(item.get("label"))
@@ -2745,6 +3044,7 @@ def render_platform_timeline_section(
             timeline_asset=label,
             platform_window=platform_window if platform_window != "all" else None,
         )
+        url = append_url_fragment(url, section_anchor)
         asset_toolbar.append(
             f'<a class="mini-btn{" active" if timeline_asset == label else ""}" href="{html.escape(url)}">{html.escape(label)} · {safe_int(item.get("event_count"))}</a>'
         )
@@ -2784,9 +3084,10 @@ def render_platform_timeline_section(
         latest_text = normalize_text(latest_entry.get("action_title") or latest_entry.get("comment") or latest_entry.get("title")) or "暂无"
     timeline_list_html = "".join(timeline_cards) if timeline_cards else '<div class="empty">当前筛选下没有标的时间线。</div>'
     home_url = "/"
+    section_open = f'<section id="{html.escape(section_anchor)}" class="panel">'
     return (
-        '<section class="panel">'
-        '<div class="snapshot-head">'
+        section_open
+        + '<div class="snapshot-head">'
         '<div><h2>按标的聚合时间线</h2><p class="muted">这里只展示平台真实调仓单中的买入和卖出，并按标的串起来。</p></div>'
         f'<a class="mini-btn" href="{html.escape(home_url)}">返回主页</a>'
         '</div>'
@@ -2872,14 +3173,18 @@ def render_dashboard_page(
         ]
         if normalize_text(auth_result.get("user_label")):
             auth_lines.append(f"userLabel: {normalize_text(auth_result.get('user_label'))}")
+        auth_content = "<br>".join(html.escape(line) for line in auth_lines if line)
         flash_blocks.append(
-            f'<div class="flash {auth_class}">{"<br>".join(html.escape(line) for line in auth_lines if line)}</div>'
+            f'<div class="flash {auth_class} flash-transient" data-transient-seconds="8">'
+            '<button type="button" class="flash-close" aria-label="关闭提示">×</button>'
+            f'<div class="flash-body">{auth_content}</div>'
+            '</div>'
         )
     current_title = normalize_text(current_snapshot.get("title")) if current_snapshot else "等待载入"
     current_subtitle = (
         f"{normalize_text(current_snapshot.get('subtitle') or current_snapshot.get('mode'))} · {safe_int(current_snapshot.get('count'))} 条 · {format_time(current_snapshot.get('created_at'))}"
         if current_snapshot
-        else "历史快照和最新抓取结果会显示在这里。"
+        else "最新抓取摘要会显示在这里。"
     )
     forum_badge_class = "ok" if current_snapshot else "fail"
     cookie_ok = COOKIE_FILE.exists()
@@ -2905,14 +3210,7 @@ def render_dashboard_page(
     )
     comment_anchor = f"#post-{focus_post_id}" if focus_post_id else ""
     reload_url = build_page_url(form_values, snapshot=current_snapshot_name or None) + comment_anchor
-    history_search_form = (
-        '<form method="get" class="history-search-form">'
-        f'{render_hidden_inputs(form_values, history_search=None, snapshot=current_snapshot_name or None)}'
-        '<label>历史搜索<input name="history_search" placeholder="搜文件名 / 标题 / 模式" value="'
-        f'{html.escape(normalize_text(form_values.get("history_search")))}"></label>'
-        '<button class="btn-ghost" type="submit">筛选</button>'
-        "</form>"
-    )
+    chips_html = "".join(f'<span class="chip">{html.escape(item)}</span>' for item in chips if item)
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -3002,9 +3300,42 @@ def render_dashboard_page(
     .dot.fail {{ background: var(--danger); box-shadow: 0 0 0 4px rgba(201, 87, 70, 0.16); }}
     .layout {{
       display: grid;
-      grid-template-columns: 330px minmax(0, 1fr) 320px;
-      gap: 18px;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
       align-items: start;
+    }}
+    .controls {{
+      order: 1;
+      position: relative;
+      overflow: hidden;
+    }}
+    .controls::before {{
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 18% -20%, rgba(13, 138, 118, 0.15), transparent 45%),
+        radial-gradient(circle at 90% 5%, rgba(244, 122, 85, 0.14), transparent 35%);
+      pointer-events: none;
+    }}
+    .content-grid {{
+      order: 2;
+      display: grid;
+      gap: 12px;
+      align-items: start;
+    }}
+    .flash-stack {{
+      display: grid;
+      gap: 10px;
+    }}
+    .priority-grid {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }}
+    .priority-grid > section.panel {{
+      min-width: 0;
     }}
     .panel {{
       background: var(--paper);
@@ -3014,13 +3345,55 @@ def render_dashboard_page(
       box-shadow: var(--shadow);
       padding: 18px;
     }}
-    .controls-grid, .viewer, .records, .timeline-list, .timeline-entries, .signal-list, .comment-panel, .reply-list {{
+    .controls-grid, .records, .timeline-list, .timeline-entries, .signal-list, .comment-panel, .reply-list {{
       display: grid;
       gap: 14px;
+    }}
+    .compact-controls {{
+      position: relative;
+      z-index: 1;
+      gap: 12px;
+    }}
+    .query-head {{
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: start;
+    }}
+    .query-head h2 {{
+      margin: 0;
+      font-size: clamp(23px, 2.5vw, 30px);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }}
+    .query-head p {{
+      margin: 6px 0 0;
+      max-width: 780px;
+    }}
+    .query-summary {{
+      display: grid;
+      gap: 8px;
+      min-width: min(420px, 100%);
+    }}
+    .query-summary .record-meta span {{
+      font-size: 12px;
+    }}
+    .query-core {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      align-items: end;
+    }}
+    .query-core .keyword-field {{
+      grid-column: span 2;
     }}
     .field-grid {{
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }}
+    .field-group {{
+      display: grid;
       gap: 10px;
     }}
     label {{
@@ -3060,29 +3433,90 @@ def render_dashboard_page(
       border: 1px solid var(--line);
       box-shadow: none;
     }}
+    .btn-ghost[disabled] {{
+      cursor: wait;
+      opacity: 0.66;
+    }}
     .mini-btn.active {{
       background: linear-gradient(135deg, var(--accent), #0c6a76);
       color: white;
       border-color: transparent;
     }}
-    .actions {{
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+    .action-row {{
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
       gap: 10px;
     }}
-    .full-action {{ display: grid; gap: 10px; }}
+    .action-row-main {{
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }}
+    .action-row-tools {{
+      margin-left: auto;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }}
+    .advanced-panel {{
+      border-radius: 16px;
+      border: 1px dashed rgba(23, 49, 59, 0.18);
+      background: rgba(255, 255, 255, 0.52);
+      padding: 2px 12px 12px;
+    }}
+    .advanced-panel summary {{
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 10px 0;
+      list-style: none;
+    }}
+    .advanced-panel summary::-webkit-details-marker {{
+      display: none;
+    }}
+    .advanced-grid {{
+      display: grid;
+      gap: 10px;
+    }}
     .muted {{
       color: var(--muted);
       font-size: 13px;
       line-height: 1.6;
     }}
     .flash {{
+      position: relative;
       padding: 14px 16px;
+      padding-right: 44px;
       border-radius: 18px;
       border: 1px solid rgba(23, 49, 59, 0.08);
       background: rgba(255, 255, 255, 0.82);
       line-height: 1.7;
       font-size: 14px;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }}
+    .flash.flash-hiding {{
+      opacity: 0;
+      transform: translateY(-4px);
+    }}
+    .flash-close {{
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 4px;
+      min-height: auto;
+      border-radius: 8px;
+    }}
+    .flash-close:hover {{
+      background: rgba(23, 49, 59, 0.08);
+      color: var(--ink);
     }}
     .flash.ok {{ border-color: rgba(13, 138, 118, 0.28); }}
     .flash.fail {{ border-color: rgba(201, 87, 70, 0.28); }}
@@ -3113,6 +3547,121 @@ def render_dashboard_page(
       font-size: 24px;
       letter-spacing: -0.03em;
       line-height: 1.05;
+    }}
+    .trade-overview {{
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(23, 49, 59, 0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.84), rgba(255,255,255,0.62));
+      display: grid;
+      gap: 12px;
+    }}
+    .trade-overview-head {{
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }}
+    .trade-overview-head h3 {{
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }}
+    .trade-overview-head p {{
+      margin: 6px 0 0;
+      font-size: 12px;
+      line-height: 1.6;
+    }}
+    .trade-overview-metrics {{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }}
+    .trade-overview-metric {{
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(23, 49, 59, 0.08);
+      background: rgba(255, 255, 255, 0.7);
+    }}
+    .trade-overview-metric small {{
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 6px;
+    }}
+    .trade-overview-metric strong {{
+      display: block;
+      font-size: 19px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }}
+    .trade-month-list {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }}
+    .trade-month-card {{
+      border-radius: 16px;
+      border: 1px solid rgba(23, 49, 59, 0.08);
+      background: rgba(255, 255, 255, 0.72);
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }}
+    .trade-month-head {{
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+    }}
+    .trade-month-head strong {{
+      font-size: 14px;
+      line-height: 1.2;
+    }}
+    .trade-month-head span {{
+      font-size: 12px;
+      color: var(--muted);
+    }}
+    .trade-month-lines {{
+      display: grid;
+      gap: 8px;
+    }}
+    .trade-month-line {{
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr) 28px;
+      gap: 8px;
+      align-items: center;
+    }}
+    .trade-side {{
+      font-size: 12px;
+      color: var(--muted);
+    }}
+    .trade-track {{
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(23, 49, 59, 0.08);
+      overflow: hidden;
+    }}
+    .trade-fill {{
+      height: 100%;
+      border-radius: 999px;
+      width: 0;
+      min-width: 0;
+    }}
+    .trade-fill.buy {{ background: linear-gradient(90deg, #0d8a76 0%, #57b0a3 100%); }}
+    .trade-fill.sell {{ background: linear-gradient(90deg, #f47a55 0%, #c95746 100%); }}
+    .trade-value {{
+      text-align: right;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ink);
+    }}
+    .trade-month-meta {{
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
     }}
     .activity-chart {{ margin-top: 14px; display: grid; gap: 12px; }}
     .activity-head {{ display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }}
@@ -3251,7 +3800,7 @@ def render_dashboard_page(
     .history-list {{
       display: grid;
       gap: 10px;
-      max-height: calc(100vh - 240px);
+      max-height: none;
       overflow: auto;
       padding-right: 4px;
     }}
@@ -3270,12 +3819,6 @@ def render_dashboard_page(
       font-size: 12px;
       line-height: 1.5;
     }}
-    .history-search-form {{
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      margin-bottom: 12px;
-    }}
     .hidden {{ display: none !important; }}
     .empty {{
       padding: 28px 18px;
@@ -3291,15 +3834,22 @@ def render_dashboard_page(
       line-height: 1.5;
     }}
     @media (max-width: 1320px) {{
-      .layout {{ grid-template-columns: 300px minmax(0, 1fr); }}
-      .history {{ grid-column: 1 / -1; }}
-      .history-list {{ max-height: none; }}
+      .priority-grid {{ grid-template-columns: 1fr; }}
+      .query-head {{ display: grid; }}
+      .query-summary {{ min-width: 0; }}
+      .query-core .keyword-field {{ grid-column: auto; }}
     }}
     @media (max-width: 980px) {{
       .page {{ padding: 18px; }}
       .hero {{ display: grid; }}
       .layout {{ grid-template-columns: 1fr; }}
-      .metrics, .field-grid, .actions, .history-search-form {{ grid-template-columns: 1fr; }}
+      .metrics, .field-grid, .query-core {{ grid-template-columns: 1fr; }}
+      .trade-overview-head {{ display: grid; }}
+      .trade-overview-metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+      .trade-month-list {{ grid-template-columns: 1fr; }}
+      .action-row {{ align-items: stretch; }}
+      .action-row-main, .action-row-tools {{ width: 100%; margin-left: 0; }}
+      .action-row-main > *, .action-row-tools > * {{ flex: 1 1 0; }}
       .timeline-entry {{ grid-template-columns: 1fr; }}
     }}
   </style>
@@ -3313,128 +3863,221 @@ def render_dashboard_page(
       </div>
       <div class="hero-badges">
         <div class="badge"><span class="dot {'ok' if cookie_ok else 'fail'}"></span><span>{'已发现本地 Cookie' if cookie_ok else '未发现本地 Cookie'}</span></div>
-        <div class="badge"><span class="dot ok"></span><span>历史 {len(history)} 份</span></div>
+        <div class="badge"><span class="dot ok"></span><span>默认进入即拉取最新</span></div>
       </div>
     </header>
 
     <div class="layout">
       <section class="panel controls">
-        <form method="post" class="controls-grid">
-          <div>
-            <h2>实时查询</h2>
-            <p class="muted">现在改成了纯后端交互。左侧起止日期会同时约束平台调仓和新抓的论坛发言；模式、用户、关键词、页数这些主要影响论坛抓取，产品代码影响平台调仓。如果当前展示的是历史快照，点一次“仅刷新最新”后两边就会按同一时间范围对齐。</p>
+        <form method="post" class="controls-grid compact-controls">
+          <div class="query-head">
+            <div>
+              <h2>实时查询</h2>
+              <p class="muted">顶部改成紧凑查询条：保留高频参数和操作按钮，高级参数折叠起来，默认进入页面就会自动拉取最新数据。</p>
+            </div>
+            <div class="query-summary">
+              <div class="badge"><span class="dot {forum_badge_class}"></span><span>{'已载入当前结果' if current_snapshot else '等待首次刷新'}</span></div>
+              <div class="record-meta"><span>{html.escape(current_title)}</span><span>{html.escape(current_subtitle)}</span></div>
+              <div class="chips">{chips_html or '<span class="chip">默认最新</span>'}</div>
+            </div>
           </div>
 
-          <div class="field-group">
+          <div class="query-core">
             <label>模式
               <select name="mode">{mode_options_html(normalize_text(form_values.get("mode")))}</select>
             </label>
-          </div>
-
-          <div{group_hidden}>
-            <div class="field-grid">
-              <label>产品代码
-                <input name="prod_code" placeholder="LONG_WIN" value="{html.escape(normalize_text(form_values.get("prod_code")))}">
-              </label>
-              <label>主理人
-                <input name="manager_name" placeholder="ETF拯救世界" value="{html.escape(normalize_text(form_values.get("manager_name")))}">
-              </label>
-            </div>
-            <div class="field-grid">
-              <label>小组链接
-                <input name="group_url" placeholder="https://qieman.com/content/group-detail/43" value="{html.escape(normalize_text(form_values.get("group_url")))}">
-              </label>
-              <label>groupId
-                <input name="group_id" placeholder="43" value="{html.escape(normalize_text(form_values.get("group_id")))}">
-              </label>
-            </div>
-          </div>
-
-          <div{user_hidden}>
-            <div class="field-grid">
-              <label>用户昵称
-                <input name="user_name" placeholder="ETF拯救世界" value="{html.escape(normalize_text(form_values.get("user_name")))}">
-              </label>
-              <label>brokerUserId
-                <input name="broker_user_id" placeholder="793413" value="{html.escape(normalize_text(form_values.get("broker_user_id")))}">
-              </label>
-            </div>
-            <div class="field-grid">
-              <label>spaceUserId
-                <input name="space_user_id" placeholder="123456" value="{html.escape(normalize_text(form_values.get("space_user_id")))}">
-              </label>
-              <label>关键词
-                <input name="keyword" placeholder="指数 / 红利 / 创业板" value="{html.escape(normalize_text(form_values.get("keyword")))}">
-              </label>
-            </div>
-          </div>
-
-          <div class="field-grid">
+            <label>产品代码
+              <input name="prod_code" placeholder="LONG_WIN" value="{html.escape(normalize_text(form_values.get("prod_code")))}">
+            </label>
+            <label class="keyword-field">关键词
+              <input name="keyword" placeholder="指数 / 红利 / 创业板" value="{html.escape(normalize_text(form_values.get("keyword")))}">
+            </label>
             <label>起始日期
               <input name="since" placeholder="2026-04-01" value="{html.escape(normalize_text(form_values.get("since")))}">
             </label>
             <label>结束日期
               <input name="until" placeholder="2026-04-17" value="{html.escape(normalize_text(form_values.get("until")))}">
             </label>
-          </div>
-
-          <div class="field-grid">
             <label>页数
               <input name="pages" value="{html.escape(normalize_text(form_values.get("pages")))}" placeholder="5">
             </label>
-            <label>每页条数
-              <input name="page_size" value="{html.escape(normalize_text(form_values.get("page_size")))}" placeholder="10">
-            </label>
           </div>
 
-          <div class="field-grid">
-            <label>自动刷新
-              <select name="auto_refresh">{auto_refresh_html}</select>
-            </label>
-            <label>历史搜索
-              <input name="history_search" placeholder="搜文件名 / 标题 / 模式" value="{html.escape(normalize_text(form_values.get("history_search")))}">
-            </label>
+          <div class="action-row">
+            <div class="action-row-main">
+              <button class="btn-primary" type="submit" name="action" value="fetch-preview">立即刷新</button>
+              <button class="btn-secondary" type="submit" name="action" value="fetch-save">刷新并保存</button>
+            </div>
+            <div class="action-row-tools">
+              <button id="auth-check-btn" class="btn-ghost" type="submit" name="action" value="auth-check">验证登录态</button>
+              <a class="mini-btn" href="{html.escape(reload_url)}">重载当前筛选</a>
+            </div>
           </div>
+
+          <details class="advanced-panel">
+            <summary>高级参数（按模式启用：主理人 / 用户ID / 自动刷新）</summary>
+            <div class="advanced-grid">
+              <div class="field-grid">
+                <label>每页条数
+                  <input name="page_size" value="{html.escape(normalize_text(form_values.get("page_size")))}" placeholder="10">
+                </label>
+                <label>自动刷新
+                  <select name="auto_refresh">{auto_refresh_html}</select>
+                </label>
+              </div>
+
+              <div{group_hidden}>
+                <div class="field-grid">
+                  <label>主理人
+                    <input name="manager_name" placeholder="ETF拯救世界" value="{html.escape(normalize_text(form_values.get("manager_name")))}">
+                  </label>
+                  <label>groupId
+                    <input name="group_id" placeholder="43" value="{html.escape(normalize_text(form_values.get("group_id")))}">
+                  </label>
+                </div>
+                <div class="field-grid">
+                  <label>小组链接
+                    <input name="group_url" placeholder="https://qieman.com/content/group-detail/43" value="{html.escape(normalize_text(form_values.get("group_url")))}">
+                  </label>
+                </div>
+              </div>
+
+              <div{user_hidden}>
+                <div class="field-grid">
+                  <label>用户昵称
+                    <input name="user_name" placeholder="ETF拯救世界" value="{html.escape(normalize_text(form_values.get("user_name")))}">
+                  </label>
+                  <label>brokerUserId
+                    <input name="broker_user_id" placeholder="793413" value="{html.escape(normalize_text(form_values.get("broker_user_id")))}">
+                  </label>
+                </div>
+                <div class="field-grid">
+                  <label>spaceUserId
+                    <input name="space_user_id" placeholder="123456" value="{html.escape(normalize_text(form_values.get("space_user_id")))}">
+                  </label>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <p class="muted">{html.escape(detail_meta or "当前不展示历史快照卡片，主页每次打开都会自动抓取最新。")}</p>
 
           {render_hidden_inputs(form_values, snapshot=current_snapshot_name or None)}
-
-          <div class="actions">
-            <button class="btn-primary" type="submit" name="action" value="fetch-preview">仅刷新最新</button>
-            <button class="btn-secondary" type="submit" name="action" value="fetch-save">刷新并保存</button>
-          </div>
-
-          <div class="full-action">
-            <button class="btn-ghost" type="submit" name="action" value="auth-check">验证登录态</button>
-          </div>
-
-          <div class="full-action">
-            <a class="mini-btn" href="{html.escape(reload_url)}">只重载当前页</a>
-          </div>
         </form>
       </section>
 
-      <main class="viewer">
-        {''.join(flash_blocks)}
-
-        {render_signal_panel(platform_trades or {}, form_values, current_snapshot_name, signal_filter, timeline_asset, page_path="/", card_limit=6, home_mode=True)}
-
-        {render_forum_preview_panel(current_snapshot, form_values, current_snapshot_name, source_label, limit=4)}
-      </main>
-
-      <aside class="panel history">
-        <div class="history-top">
-          <div>
-            <h2>历史快照</h2>
-            <p class="muted">直接读取本地 `output/` 的 JSON 文件。</p>
-          </div>
-          <a class="mini-btn" href="{html.escape(build_page_url(form_values, snapshot=None, focus_post_id=None, comment_sort=None, comment_page=None, only_manager_replies=None, signal_filter=None, timeline_asset=None, auto_run=None))}">重载历史</a>
+      <main class="content-grid">
+        <div id="flash-stack" class="flash-stack">{''.join(flash_blocks)}</div>
+        <div class="priority-grid">
+          {render_signal_panel(platform_trades or {}, form_values, current_snapshot_name, signal_filter, timeline_asset, page_path="/", card_limit=8, home_mode=True, section_anchor=PLATFORM_SIGNAL_SECTION_ID)}
+          {render_forum_preview_panel(current_snapshot, form_values, current_snapshot_name, source_label, limit=6, focus_post_id=focus_post_id, comments_payload=comments_payload, comment_error=comment_error, comment_sort=comment_sort, comment_page=comment_page, only_manager_replies=only_manager_replies, page_path="/")}
         </div>
-        {history_search_form}
-        <div class="history-list">{history_list_html(history, current_snapshot_name, form_values)}</div>
-        <div class="footer-note">这个看板默认只监听 `127.0.0.1`。Cookie 仍然只保存在本机文件里，不会在页面里直接展示原文。</div>
-      </aside>
+      </main>
     </div>
   </div>
+  <script>
+    (function () {{
+      function escapeHtml(value) {{
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }}
+
+      function dismissFlash(node) {{
+        if (!node) return;
+        node.classList.add("flash-hiding");
+        window.setTimeout(function () {{
+          if (node && node.parentNode) node.parentNode.removeChild(node);
+        }}, 220);
+      }}
+
+      function bindFlash(node) {{
+        if (!node || node.dataset.bound === "1") return;
+        node.dataset.bound = "1";
+        var closeBtn = node.querySelector(".flash-close");
+        if (closeBtn) {{
+          closeBtn.addEventListener("click", function () {{
+            dismissFlash(node);
+          }});
+        }}
+        var seconds = Number(node.getAttribute("data-transient-seconds") || "0");
+        if (seconds > 0) {{
+          window.setTimeout(function () {{
+            dismissFlash(node);
+          }}, seconds * 1000);
+        }}
+      }}
+
+      function bindAllFlashes() {{
+        var nodes = document.querySelectorAll(".flash");
+        for (var i = 0; i < nodes.length; i += 1) {{
+          bindFlash(nodes[i]);
+        }}
+      }}
+
+      function pushFlash(ok, lines, seconds) {{
+        var stack = document.getElementById("flash-stack");
+        if (!stack) return;
+        var root = document.createElement("div");
+        root.className = "flash " + (ok ? "ok" : "fail") + " flash-transient";
+        root.setAttribute("data-transient-seconds", String(seconds || 8));
+        var closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "flash-close";
+        closeBtn.setAttribute("aria-label", "关闭提示");
+        closeBtn.textContent = "×";
+        var body = document.createElement("div");
+        body.className = "flash-body";
+        body.innerHTML = (lines || []).map(function (line) {{ return escapeHtml(line); }}).join("<br>");
+        root.appendChild(closeBtn);
+        root.appendChild(body);
+        stack.insertBefore(root, stack.firstChild);
+        bindFlash(root);
+      }}
+
+      function setupAuthCheckButton() {{
+        var button = document.getElementById("auth-check-btn");
+        if (!button) return;
+        button.addEventListener("click", function (event) {{
+          event.preventDefault();
+          if (button.disabled) return;
+          var originLabel = button.textContent || "验证登录态";
+          button.disabled = true;
+          button.textContent = "验证中...";
+          fetch("/api/check-auth", {{ cache: "no-store" }})
+            .then(function (response) {{
+              return response.json().then(function (payload) {{
+                return {{ ok: response.ok, payload: payload || {{}} }};
+              }});
+            }})
+            .then(function (result) {{
+              if (!result.ok) {{
+                throw new Error(result.payload.error || "登录校验失败");
+              }}
+              var payload = result.payload || {{}};
+              var lines = [payload.message || (payload.ok ? "登录态有效" : "登录态无效")];
+              if (payload.user_name) lines.push("userName: " + payload.user_name);
+              if (payload.broker_user_id) lines.push("brokerUserId: " + payload.broker_user_id);
+              if (payload.user_label) lines.push("userLabel: " + payload.user_label);
+              pushFlash(!!payload.ok, lines, 8);
+            }})
+            .catch(function (error) {{
+              pushFlash(false, [error && error.message ? error.message : "登录校验失败"], 8);
+            }})
+            .finally(function () {{
+              button.disabled = false;
+              button.textContent = originLabel;
+            }});
+        }});
+      }}
+
+      bindAllFlashes();
+      setupAuthCheckButton();
+    }})();
+  </script>
 </body>
 </html>"""
 
@@ -3512,6 +4155,105 @@ def render_platform_page(
     }}
     .metric small {{ color: var(--muted); display: block; margin-bottom: 8px; }}
     .metric strong {{ display: block; font-size: 24px; letter-spacing: -0.03em; line-height: 1.05; }}
+    .trade-overview {{
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(23, 49, 59, 0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.84), rgba(255,255,255,0.62));
+      display: grid;
+      gap: 12px;
+    }}
+    .trade-overview-head {{
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }}
+    .trade-overview-head h3 {{
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }}
+    .trade-overview-head p {{
+      margin: 6px 0 0;
+      font-size: 12px;
+      line-height: 1.6;
+    }}
+    .trade-overview-metrics {{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }}
+    .trade-overview-metric {{
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(23, 49, 59, 0.08);
+      background: rgba(255, 255, 255, 0.7);
+    }}
+    .trade-overview-metric small {{
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 6px;
+    }}
+    .trade-overview-metric strong {{
+      display: block;
+      font-size: 19px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }}
+    .trade-month-list {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }}
+    .trade-month-card {{
+      border-radius: 16px;
+      border: 1px solid rgba(23, 49, 59, 0.08);
+      background: rgba(255, 255, 255, 0.72);
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }}
+    .trade-month-head {{
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+    }}
+    .trade-month-head strong {{ font-size: 14px; line-height: 1.2; }}
+    .trade-month-head span {{ font-size: 12px; color: var(--muted); }}
+    .trade-month-lines {{ display: grid; gap: 8px; }}
+    .trade-month-line {{
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr) 28px;
+      gap: 8px;
+      align-items: center;
+    }}
+    .trade-side {{ font-size: 12px; color: var(--muted); }}
+    .trade-track {{
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(23, 49, 59, 0.08);
+      overflow: hidden;
+    }}
+    .trade-fill {{
+      height: 100%;
+      border-radius: 999px;
+      width: 0;
+      min-width: 0;
+    }}
+    .trade-fill.buy {{ background: linear-gradient(90deg, #0d8a76 0%, #57b0a3 100%); }}
+    .trade-fill.sell {{ background: linear-gradient(90deg, #f47a55 0%, #c95746 100%); }}
+    .trade-value {{
+      text-align: right;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ink);
+    }}
+    .trade-month-meta {{ color: var(--muted); font-size: 12px; line-height: 1.5; }}
     .mini-btn {{
       border: 1px solid var(--line); border-radius: 14px; padding: 11px 14px; min-height: 42px; font: inherit;
       font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
@@ -3612,6 +4354,9 @@ def render_platform_page(
       .page {{ padding: 18px; }}
       .hero {{ display: grid; }}
       .metrics {{ grid-template-columns: 1fr; }}
+      .trade-overview-head {{ display: grid; }}
+      .trade-overview-metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+      .trade-month-list {{ grid-template-columns: 1fr; }}
       .allocation-grid {{ grid-template-columns: 1fr; }}
       .activity-head {{ display: grid; }}
       .activity-row {{ grid-template-columns: 52px minmax(0, 1fr) 34px; gap: 10px; }}
@@ -3638,7 +4383,7 @@ def render_platform_page(
 
     {render_platform_holdings_panel(platform_trades or {{}})}
 
-    {render_signal_panel(platform_trades or {{}}, form_values, current_snapshot_name, signal_filter, timeline_asset, page_path="/platform", card_limit=120, home_mode=False)}
+    {render_signal_panel(platform_trades or {{}}, form_values, current_snapshot_name, signal_filter, timeline_asset, page_path="/platform", card_limit=120, home_mode=False, section_anchor=PLATFORM_SIGNAL_SECTION_ID)}
   </div>
 </body>
 </html>"""
@@ -3677,6 +4422,15 @@ def render_forum_page(
         detail_meta = " · ".join(bit for bit in detail_bits if bit and bit != "未记录")
     else:
         detail_meta = ""
+    dashboard_url = build_route_url(
+        "/",
+        form_values,
+        snapshot=current_snapshot_name or None,
+        focus_post_id=None,
+        comment_sort=None,
+        comment_page=None,
+        only_manager_replies=None,
+    )
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -3811,7 +4565,7 @@ def render_forum_page(
           <h2>{html.escape(section_title)}</h2>
           <p class="muted">{html.escape(detail_meta or "点击右侧历史快照，或者从左边发起一次实时抓取。")}</p>
         </div>
-        <div class="record-actions"><a class="mini-btn" href="/">返回首页</a></div>
+        <div class="record-actions"><a class="mini-btn" href="{html.escape(dashboard_url)}">返回主理人看板</a></div>
       </div>
       <div class="record-meta">{''.join(f'<span>{html.escape(item)}</span>' for item in chips if item)}</div>
     </section>
@@ -6514,17 +7268,28 @@ class DashboardHandler(BaseHTTPRequestHandler):
             error = ""
             current_snapshot: Optional[Dict[str, Any]] = None
 
-            if auto_run:
+            should_fetch_latest_default = parsed.path == "/" and not selected_name and not auto_run
+
+            if auto_run or should_fetch_latest_default:
                 try:
                     payload = dict(form_values)
                     payload["persist"] = False
-                    current_snapshot = run_fetch(payload)
+                    current_snapshot = run_fetch(payload, timeout_seconds=AUTO_FETCH_TIMEOUT_SECONDS)
                     LIVE_SNAPSHOT = current_snapshot
                     selected_name = "__live__"
-                    source_label = "自动刷新结果"
-                    notice = f"已自动刷新 {format_time(datetime.now().isoformat(timespec='seconds'))}"
+                    source_label = "自动刷新结果" if auto_run else "默认实时结果"
+                    notice_prefix = "已自动刷新" if auto_run else "已默认获取最新数据"
+                    notice = f"{notice_prefix} {format_time(datetime.now().isoformat(timespec='seconds'))}"
                 except Exception as exc:
                     error = str(exc)
+                    if history:
+                        fallback_name = preferred_snapshot_name(history, prefer_posts=True)
+                        if fallback_name:
+                            current_snapshot = get_snapshot_by_name(fallback_name)
+                            selected_name = fallback_name
+                            source_label = "历史快照"
+                            notice = "默认抓取超时，已先展示最近快照。可点击“立即刷新”重试。"
+                            error = ""
             elif selected_name:
                 try:
                     current_snapshot = get_snapshot_by_name(selected_name)
@@ -6532,8 +7297,32 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 except FileNotFoundError:
                     error = "未找到所选快照。"
 
-            if not current_snapshot and history:
-                fallback_name = normalize_text(history[0].get("file_name"))
+            if not current_snapshot and parsed.path == "/" and selected_name == "__live__":
+                try:
+                    payload = dict(form_values)
+                    payload["persist"] = False
+                    current_snapshot = run_fetch(payload, timeout_seconds=AUTO_FETCH_TIMEOUT_SECONDS)
+                    LIVE_SNAPSHOT = current_snapshot
+                    selected_name = "__live__"
+                    source_label = "默认实时结果"
+                    notice = f"已默认获取最新数据 {format_time(datetime.now().isoformat(timespec='seconds'))}"
+                    error = ""
+                except Exception as exc:
+                    error = str(exc)
+                    if history:
+                        fallback_name = preferred_snapshot_name(history, prefer_posts=True)
+                        if fallback_name:
+                            current_snapshot = get_snapshot_by_name(fallback_name)
+                            selected_name = fallback_name
+                            source_label = "历史快照"
+                            notice = "默认抓取超时，已先展示最近快照。可点击“立即刷新”重试。"
+                            error = ""
+
+            if not current_snapshot and history and parsed.path != "/":
+                fallback_name = preferred_snapshot_name(
+                    history,
+                    prefer_posts=parsed.path in {"/", "/forum"},
+                )
                 if fallback_name:
                     current_snapshot = get_snapshot_by_name(fallback_name)
                     selected_name = fallback_name
@@ -6545,7 +7334,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
             only_manager_replies = first_mapping_value(params, "only_manager_replies") == "1"
             signal_filter = first_mapping_value(params, "signal_filter") or "all"
             timeline_asset = first_mapping_value(params, "timeline_asset") or "all"
-            platform_trades = fetch_platform_trade_data(normalize_text(form_values.get("prod_code")))
+            platform_timeout = HOME_PLATFORM_FETCH_TIMEOUT_SECONDS if parsed.path == "/" else PLATFORM_FETCH_TIMEOUT_SECONDS
+            platform_trades = fetch_platform_trade_data(
+                normalize_text(form_values.get("prod_code")),
+                timeout_seconds=platform_timeout,
+            )
             if parsed.path == "/timeline":
                 self.respond_html(
                     render_timeline_page(
@@ -6683,7 +7476,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 try:
                     payload = dict(form_values)
                     payload["persist"] = False
-                    current_snapshot = run_fetch(payload)
+                    current_snapshot = run_fetch(payload, timeout_seconds=MANUAL_FETCH_TIMEOUT_SECONDS)
                     LIVE_SNAPSHOT = current_snapshot
                     current_snapshot_name = "__live__"
                     source_label = "临时实时结果"
@@ -6694,7 +7487,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 try:
                     payload = dict(form_values)
                     payload["persist"] = True
-                    current_snapshot = run_fetch(payload)
+                    current_snapshot = run_fetch(payload, timeout_seconds=MANUAL_FETCH_TIMEOUT_SECONDS)
                     current_snapshot_name = normalize_text(current_snapshot.get("file_name"))
                     source_label = "最新并已保存"
                     history = history_summaries()
@@ -6703,7 +7496,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     error = str(exc)
             elif action == "auth-check":
                 auth_result = run_auth_check()
-                notice = "登录校验已完成。"
+                notice = ""
 
             if not current_snapshot and current_snapshot_name:
                 try:
@@ -6714,7 +7507,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     if not error:
                         error = "未找到所选快照。"
             if not current_snapshot and history:
-                fallback_name = normalize_text(history[0].get("file_name"))
+                fallback_name = preferred_snapshot_name(history, prefer_posts=True)
                 if fallback_name:
                     current_snapshot = get_snapshot_by_name(fallback_name)
                     current_snapshot_name = fallback_name
@@ -6727,7 +7520,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             only_manager_replies = first_mapping_value(form_data, "only_manager_replies") == "1"
             signal_filter = first_mapping_value(form_data, "signal_filter") or "all"
             timeline_asset = first_mapping_value(form_data, "timeline_asset") or "all"
-            platform_trades = fetch_platform_trade_data(normalize_text(form_values.get("prod_code")))
+            platform_trades = fetch_platform_trade_data(
+                normalize_text(form_values.get("prod_code")),
+                timeout_seconds=PLATFORM_FETCH_TIMEOUT_SECONDS,
+            )
             comments_payload, comment_error = load_comments_for_view(
                 snapshot=current_snapshot,
                 focus_post_id=focus_post_id,
@@ -6769,7 +7565,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            snapshot = run_fetch(payload if isinstance(payload, dict) else {})
+            snapshot = run_fetch(
+                payload if isinstance(payload, dict) else {},
+                timeout_seconds=MANUAL_FETCH_TIMEOUT_SECONDS,
+            )
         except Exception as exc:
             self.respond_error(HTTPStatus.BAD_REQUEST, str(exc))
             return

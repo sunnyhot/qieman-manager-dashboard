@@ -1,0 +1,4 @@
+interface:
+  display_name: "且慢主理人看板"
+  short_description: "抓且慢主理人发言、评论、调仓、持仓和本地看板"
+  default_prompt: "Use $qieman-manager-dashboard to inspect Qieman manager posts, platform trades, holdings, comments, or launch the local dashboard."

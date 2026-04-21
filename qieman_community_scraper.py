@@ -160,7 +160,7 @@ class QiemanCommunityClient:
             headers["Cookie"] = self.cookie
         return headers
 
-    def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    def get(self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = 20) -> Any:
         query = ""
         if params:
             query = "?" + urllib.parse.urlencode(
@@ -169,7 +169,7 @@ class QiemanCommunityClient:
         full_path = f"{API_BASE}{path}{query}"
         request = urllib.request.Request(BASE_URL + full_path, headers=self._headers(full_path))
         try:
-            with urllib.request.urlopen(request, timeout=20) as response:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
                 payload = json.loads(response.read().decode("utf-8", errors="ignore"))
         except urllib.error.HTTPError as exc:
             raise parse_http_error(exc) from exc
