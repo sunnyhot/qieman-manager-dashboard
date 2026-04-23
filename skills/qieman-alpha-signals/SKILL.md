@@ -29,6 +29,24 @@ python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/project_runtime
 python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/project_runtime.py --action stop --json
 ```
 
+## Incremental Watch (New Trades + New Forum Posts)
+
+```bash
+# 首次运行默认建基线，不提醒历史数据
+python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/updates_watch.py \
+  --prod-code LONG_WIN \
+  --manager-name "ETF拯救世界" \
+  --forum-mode auto \
+  --json
+
+# 后续轮询：仅返回新增调仓/新增发言
+python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/updates_watch.py \
+  --prod-code LONG_WIN \
+  --manager-name "ETF拯救世界" \
+  --forum-mode auto \
+  --json
+```
+
 ## Routing Guide
 
 1. Need one-click full project runtime (frontend page): run `project_runtime.py`.
@@ -37,9 +55,10 @@ python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/project_runtime
 4. Need posts/speech source data: run one of `following_posts_query.py`, `group_posts_query.py`, `space_items_query.py`, `public_items_query.py`.
 5. Need comments for a post: run `post_comments_query.py`.
 6. Need platform adjustments/positions: run `manager_launch.py`, `platform_holdings_query.py`, `platform_timeline_query.py`, `platform_monthly_overview_query.py`.
-7. Need valuation only: run `valuation_query.py`.
-8. Need local snapshots: run `snapshot_index.py`, `snapshot_read.py`.
-9. Need signal inference from posts/snapshots: run `signal_extract.py`.
+7. Need near-real-time incremental watch for new trades/posts: run `updates_watch.py`.
+8. Need valuation only: run `valuation_query.py`.
+9. Need local snapshots: run `snapshot_index.py`, `snapshot_read.py`.
+10. Need signal inference from posts/snapshots: run `signal_extract.py`.
 
 ## Atomic Commands
 
@@ -78,6 +97,14 @@ python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/project_runtime
 - `scripts/snapshot_index.py`
 - `scripts/snapshot_read.py`
 - `scripts/signal_extract.py`
+
+### Incremental Monitoring
+
+- `scripts/updates_watch.py`
+  - watches both platform actions and forum speech
+  - stateful deduplication via local `output/watch-state-*.json`
+  - first run builds baseline (no historical alert), next runs return only new items
+  - `auto` forum mode: tries `following-posts`, falls back to `public` when auth is unavailable
 
 ### Compatibility Wrapper
 

@@ -35,6 +35,12 @@
 | `platform_monthly_overview_query.py` | Fetch month-level trade frequency split (buy vs sell) | `--prod-code LONG_WIN --months 12 --json` |
 | `valuation_query.py` | Fetch fund valuation now and optional date-point valuation | `--fund-codes 021550,001052 --at-date 2026-04-16 --json` |
 
+## Incremental Monitoring
+
+| Script | Purpose | Typical Args |
+|---|---|---|
+| `updates_watch.py` | Watch new platform actions and new forum posts with local dedup state | `--prod-code LONG_WIN --manager-name "ETF拯救世界" --forum-mode auto --json` |
+
 ## Snapshot and Signal Processing
 
 | Script | Purpose | Typical Args |
@@ -62,6 +68,7 @@ python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/following_posts
 python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/post_comments_query.py --post-id 73567 --sort-type latest --json
 python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/manager_launch.py --prod-code LONG_WIN --since 2026-04-01 --until 2026-04-21 --json
 python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/platform_monthly_overview_query.py --prod-code LONG_WIN --months 12 --json
+python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/updates_watch.py --prod-code LONG_WIN --manager-name "ETF拯救世界" --forum-mode auto --json
 python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/platform_holdings_query.py --prod-code LONG_WIN --json
 python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/snapshot_index.py --search ETF拯救世界 --json
 python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/signal_extract.py --latest --json

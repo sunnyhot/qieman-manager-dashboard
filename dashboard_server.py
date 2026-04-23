@@ -5,6 +5,7 @@ import argparse
 import bisect
 import html
 import json
+import os
 import re
 import subprocess
 import tempfile
@@ -29,9 +30,17 @@ from qieman_community_scraper import (
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
-OUTPUT_DIR = PROJECT_DIR / "output"
-COOKIE_FILE = PROJECT_DIR / "qieman.cookie"
+RUNTIME_DATA_DIR = Path(
+    os.environ.get("QIEMAN_DATA_DIR", str(PROJECT_DIR))
+).expanduser().resolve()
+OUTPUT_DIR = Path(
+    os.environ.get("QIEMAN_OUTPUT_DIR", str(RUNTIME_DATA_DIR / "output"))
+).expanduser().resolve()
+COOKIE_FILE = Path(
+    os.environ.get("QIEMAN_COOKIE_FILE", str(RUNTIME_DATA_DIR / "qieman.cookie"))
+).expanduser().resolve()
 SCRAPER_FILE = PROJECT_DIR / "qieman_community_scraper.py"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 JSON_LINE_RE = re.compile(r"^JSON:\s*(.+)$", re.M)
 HTML_TAG_RE = re.compile(r"<[^>]+>")
@@ -1080,13 +1089,19 @@ def fetch_post_comments(
 
 def api_status() -> Dict[str, Any]:
     history = history_summaries()
-    latest = history[0] if history else None
+    visible_history = [
+        item for item in history
+        if not normalize_text(item.get("file_name")).startswith("watch-state-")
+    ]
+    latest = visible_history[0] if visible_history else (history[0] if history else None)
+    preferred_name = preferred_snapshot_name(visible_history or history, prefer_posts=True)
     return {
         "cookie_exists": COOKIE_FILE.exists(),
         "cookie_file": str(COOKIE_FILE),
         "output_dir": str(OUTPUT_DIR),
         "snapshot_count": len(history),
         "latest_snapshot": latest,
+        "preferred_snapshot_name": preferred_name,
         "default_form": {
             "mode": "following-posts" if COOKIE_FILE.exists() else "group-manager",
             "prod_code": "LONG_WIN",
@@ -1095,6 +1110,28 @@ def api_status() -> Dict[str, Any]:
             "page_size": "10",
         },
     }
+
+
+def api_bootstrap() -> Dict[str, Any]:
+    history = history_summaries()
+    preferred_name = preferred_snapshot_name(history, prefer_posts=True)
+    preferred_snapshot = {}
+    if preferred_name:
+        try:
+            preferred_snapshot = get_snapshot_by_name(preferred_name)
+        except FileNotFoundError:
+            preferred_snapshot = {}
+    return {
+        "status": api_status(),
+        "history": history,
+        "preferred_snapshot_name": preferred_name,
+        "preferred_snapshot": preferred_snapshot,
+    }
+
+
+def api_platform(prod_code: str) -> Dict[str, Any]:
+    target = normalize_text(prod_code) or normalize_text(api_status().get("default_form", {}).get("prod_code")) or "LONG_WIN"
+    return fetch_platform_trade_data(target)
 
 
 def html_text(value: Any) -> str:
@@ -7410,8 +7447,16 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/status":
             self.respond_json(api_status())
             return
+        if parsed.path == "/api/bootstrap":
+            self.respond_json(api_bootstrap())
+            return
         if parsed.path == "/api/history":
             self.respond_json({"items": history_summaries()})
+            return
+        if parsed.path == "/api/platform":
+            params = parse_qs(parsed.query)
+            prod_code = normalize_text(params.get("prod_code", [""])[0])
+            self.respond_json(api_platform(prod_code))
             return
         if parsed.path == "/api/snapshot":
             params = parse_qs(parsed.query)
