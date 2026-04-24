@@ -643,9 +643,9 @@ private struct OverviewSectionView: View {
 
                 ManagerWatchControlCard()
 
-                SectionCard(title: "资产总览卡片", subtitle: "按基金汇总“已持有 + 待确认 + 定投档案”", icon: "rectangle.grid.2x2") {
+                SectionCard(title: "资产总览卡片", subtitle: "按基金汇总「已持有 + 待确认 + 定投档案」", icon: "rectangle.grid.2x2") {
                     if model.personalAssetRows.isEmpty {
-                        Text("还没有可展示的个人资产。去“我的持仓”里导入持仓、买入中或定投计划后，这里会自动聚合。")
+                        Text("还没有可展示的个人资产。去「我的持仓」里导入持仓、买入中或定投计划后，这里会自动聚合。")
                             .font(.system(size: 12))
                             .foregroundStyle(AppPalette.muted)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -806,7 +806,7 @@ private struct OverviewHeroCard: View {
             Text("资产主屏")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(AppPalette.ink)
-            Text("这页现在先看你的资产全貌，再看主理人动态。每个标的会把“已持有、买入中、定投计划”聚合到同一个原生视图里，避免来回切页面对账。")
+            Text("这页现在先看你的资产全貌，再看主理人动态。每个标的会把「已持有、买入中、定投计划」聚合到同一个原生视图里，避免来回切页面对账。")
                 .font(.system(size: 13))
                 .foregroundStyle(AppPalette.muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -838,7 +838,7 @@ private struct OverviewHeroCard: View {
                 ?? model.investmentPlanSummary.map { "\($0.activePlanCount) 个进行中计划 · 下次 \($0.nextExecutionDate ?? "待定")" }
                 ?? model.pendingTradeSummary.map { "待确认 \(currencyText($0.totalCashAmount)) · \($0.actionCount) 笔" }
                 ?? model.userPortfolioSnapshot.map { "浮盈 \(currencyOptional($0.totalProfitAmount)) · \($0.holdingCount) 个标的" }
-                ?? "去“我的持仓”里粘贴代码和份额"
+                ?? "去「我的持仓」里粘贴代码和份额"
             )
                 .font(.system(size: 12))
                 .foregroundStyle(AppPalette.muted)
@@ -1159,7 +1159,7 @@ private struct PlatformSectionView: View {
                             if model.monthlyPlatformSummary.isEmpty {
                                 EmptySectionState(
                                     title: "还没有平台调仓数据",
-                                    subtitle: "右上角点“刷新”后会重新直拉平台调仓；即使论坛抓取失败，调仓也会单独更新。",
+                                    subtitle: "右上角点「刷新」后会重新直拉平台调仓；即使论坛抓取失败，调仓也会单独更新。",
                                     actionTitle: "立即刷新"
                                 ) {
                                     Task { try? await model.refreshLatest(persist: false) }
@@ -1435,14 +1435,14 @@ private struct PortfolioSectionView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(AppPalette.muted)
 
-                SectionCard(title: “导入中心”, subtitle: “支持手动录入、上传图片 OCR、上传表格到三类资产区”, icon: “square.and.arrow.down”) {
+                SectionCard(title: "导入中心", subtitle: "支持手动录入、上传图片 OCR、上传表格到三类资产区", icon: "square.and.arrow.down") {
                     HStack(spacing: 10) {
                         ToolbarBadge(
-                            title: hasAnyPersonalData ? “已导入资产数据” : “尚未导入”,
+                            title: hasAnyPersonalData ? "已导入资产数据" : "尚未导入",
                             tint: hasAnyPersonalData ? AppPalette.positive : AppPalette.warning
                         )
                         Spacer()
-                        Button(“打开导入中心”) {
+                        Button("打开导入中心") {
                             withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
                                 model.selectedSection = .importCenter
                             }
@@ -1452,7 +1452,7 @@ private struct PortfolioSectionView: View {
                     }
                 }
 
-                SectionCard(title: “资产全貌总表”, subtitle: “把”已持有 + 待确认 + 计划档案”聚合到同一行”, icon: “tablecells”) {
+                SectionCard(title: "资产全貌总表", subtitle: "把「已持有 + 待确认 + 计划档案」聚合到同一行", icon: "tablecells") {
                     if model.personalAssetRows.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("还没有可聚合的资产数据。先导入持仓、买入中或定投计划。")
@@ -1477,7 +1477,7 @@ private struct PortfolioSectionView: View {
                         }
                     } else {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(model.hasPersonalPortfolio ? "持仓已保存，点“刷新估值”即可拉最新价格。" : "还没有个人持仓。先在上面粘贴代码和份额。")
+                            Text(model.hasPersonalPortfolio ? "持仓已保存，点「刷新估值」即可拉最新价格。" : "还没有个人持仓。先在上面粘贴代码和份额。")
                                 .font(.system(size: 12))
                                 .foregroundStyle(AppPalette.muted)
                         }
@@ -1559,7 +1559,7 @@ private struct PortfolioSectionView: View {
                                     Text("当前还没有已暂停或已终止的计划明细。")
                                         .font(.system(size: 11, weight: .medium))
                                         .foregroundStyle(AppPalette.muted)
-                                    Text("后续把这些计划的截图、表格或手工文本导入到“定投计划”草稿区，并把最后一列状态写成“已暂停”或“已终止”，这里就会自动归档。")
+                                    Text("后续把这些计划的截图、表格或手工文本导入到「定投计划」草稿区，并把最后一列状态写成「已暂停」或「已终止」，这里就会自动归档。")
                                         .font(.system(size: 10))
                                         .foregroundStyle(AppPalette.muted)
                                 }
@@ -1595,25 +1595,25 @@ private struct PortfolioSectionView: View {
 
 private struct ImportCenterSectionView: View {
     @EnvironmentObject private var model: AppModel
-    @AppStorage(“portfolio.import.center.expanded”) private var isImportCenterExpanded = false
-    @AppStorage(“portfolio.import.show_imported_targets”) private var shouldShowImportedImportTargets = false
+    @AppStorage("portfolio.import.center.expanded") private var isImportCenterExpanded = false
+    @AppStorage("portfolio.import.show_imported_targets") private var shouldShowImportedImportTargets = false
     @State private var importTarget: PersonalDataImportTarget = .holdings
     @State private var isDraftEditorExpanded = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                SectionCard(title: “导入中心”, subtitle: “支持手动录入、上传图片 OCR、上传表格到三类资产区”, icon: “square.and.arrow.down”) {
+                SectionCard(title: "导入中心", subtitle: "支持手动录入、上传图片 OCR、上传表格到三类资产区", icon: "square.and.arrow.down") {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 10) {
                             ToolbarBadge(
-                                title: hasAnyPersonalData ? “已导入资产数据” : “尚未导入”,
+                                title: hasAnyPersonalData ? "已导入资产数据" : "尚未导入",
                                 tint: hasAnyPersonalData ? AppPalette.positive : AppPalette.warning
                             )
                             ToolbarBadge(
                                 title: hasCurrentDraft
-                                ? “草稿 \(currentDraftLineCount) 行 / \(currentDraftCharacterCount) 字”
-                                : “草稿为空”,
+                                ? "草稿 \(currentDraftLineCount) 行 / \(currentDraftCharacterCount) 字"
+                                : "草稿为空",
                                 tint: hasCurrentDraft ? AppPalette.info : AppPalette.muted
                             )
                             Spacer()
@@ -1621,11 +1621,11 @@ private struct ImportCenterSectionView: View {
 
                         if hiddenImportedTargetCount > 0 {
                             HStack(spacing: 10) {
-                                Text(shouldShowImportedImportTargets ? “当前显示全部导入对象，可继续补录或重导。” : “已导入成功的对象已暂时收起，需要补录或重导时可以显示全部。”)
+                                Text(shouldShowImportedImportTargets ? "当前显示全部导入对象，可继续补录或重导。" : "已导入成功的对象已暂时收起，需要补录或重导时可以显示全部。")
                                     .font(.system(size: 11))
                                     .foregroundStyle(AppPalette.muted)
                                 Spacer()
-                                Button(shouldShowImportedImportTargets ? “只看未导入” : “显示已导入对象”) {
+                                Button(shouldShowImportedImportTargets ? "只看未导入" : "显示已导入对象") {
                                     withAnimation(.easeInOut(duration: 0.18)) {
                                         shouldShowImportedImportTargets.toggle()
                                         syncImportTargetWithVisibleTargets()
@@ -1634,13 +1634,13 @@ private struct ImportCenterSectionView: View {
                                 .buttonStyle(.bordered)
                             }
                         } else if unimportedImportTargets.isEmpty {
-                            Text(“持仓中、买入中和定投计划都已导入成功。仍可选择任一对象继续补录或重导，股票录入在”持仓中”。”)
+                            Text("持仓中、买入中和定投计划都已导入成功。仍可选择任一对象继续补录或重导，股票录入在「持仓中」。")
                                 .font(.system(size: 11))
                                 .foregroundStyle(AppPalette.muted)
                                 .padding(.horizontal, 2)
                         }
 
-                        Picker(“导入对象”, selection: $importTarget) {
+                        Picker("导入对象", selection: $importTarget) {
                             ForEach(visibleImportTargets) { target in
                                 Text(target.rawValue).tag(target)
                             }
@@ -1654,7 +1654,7 @@ private struct ImportCenterSectionView: View {
 
                         HStack(spacing: 8) {
                             Spacer()
-                            Button(isDraftEditorExpanded ? “收起编辑” : “展开编辑”) {
+                            Button(isDraftEditorExpanded ? "收起编辑" : "展开编辑") {
                                 withAnimation(.easeInOut(duration: 0.18)) {
                                     isDraftEditorExpanded.toggle()
                                 }
@@ -1705,13 +1705,13 @@ private struct ImportCenterSectionView: View {
                             .tint(AppPalette.brand)
                             .disabled(importTarget == .holdings && model.isResolvingPortfolioNames)
 
-                            Button(“上传图片”) {
+                            Button("上传图片") {
                                 presentImportPanel(source: .image)
                             }
                             .buttonStyle(.bordered)
                             .disabled(model.isProcessingImport)
 
-                            Button(“上传表格”) {
+                            Button("上传表格") {
                                 presentImportPanel(source: .table)
                             }
                             .buttonStyle(.bordered)
@@ -1723,15 +1723,15 @@ private struct ImportCenterSectionView: View {
                             .buttonStyle(.bordered)
 
                             if importTarget == .holdings {
-                                Button(model.isRefreshingPortfolio ? “刷新中…” : “刷新估值”) {
+                                Button(model.isRefreshingPortfolio ? "刷新中…" : "刷新估值") {
                                     Task { try? await model.refreshUserPortfolio() }
                                 }
                                 .buttonStyle(.bordered)
                                 .disabled(model.isRefreshingPortfolio || !model.hasPersonalPortfolio)
                             }
 
-                            Button(“清空草稿”) {
-                                model.updateDraft(“”, for: importTarget)
+                            Button("清空草稿") {
+                                model.updateDraft("", for: importTarget)
                             }
                             .buttonStyle(.bordered)
                             .disabled(model.draft(for: importTarget).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -1762,30 +1762,30 @@ private struct ImportCenterSectionView: View {
     private var reloadButtonTitle: String {
         switch importTarget {
         case .holdings:
-            return “重载已保存”
+            return "重载已保存"
         case .pendingTrades:
-            return “重载买入中”
+            return "重载买入中"
         case .investmentPlans:
-            return “重载计划”
+            return "重载计划"
         }
     }
 
     private var saveDraftButtonTitle: String {
         if importTarget == .holdings, model.isResolvingPortfolioNames {
-            return “补全名称中…”
+            return "补全名称中…"
         }
         return importTarget.buttonTitle
     }
 
     private var tableImportTypes: [UTType] {
         var types: [UTType] = [.plainText, .text, .commaSeparatedText, .json]
-        if let xlsx = UTType(filenameExtension: “xlsx”) {
+        if let xlsx = UTType(filenameExtension: "xlsx") {
             types.append(xlsx)
         }
-        if let csv = UTType(filenameExtension: “csv”) {
+        if let csv = UTType(filenameExtension: "csv") {
             types.append(csv)
         }
-        if let tsv = UTType(filenameExtension: “tsv”) {
+        if let tsv = UTType(filenameExtension: "tsv") {
             types.append(tsv)
         }
         return types
@@ -1814,7 +1814,7 @@ private struct ImportCenterSectionView: View {
 
     private var importAvailabilityKey: String {
         PersonalDataImportTarget.allCases
-            .map { model.hasImportedData(for: $0) ? “1” : “0” }
+            .map { model.hasImportedData(for: $0) ? "1" : "0" }
             .joined()
     }
 
@@ -1836,12 +1836,12 @@ private struct ImportCenterSectionView: View {
         let lines = currentDraftText
             .split(whereSeparator: \.isNewline)
             .map(String.init)
-        guard !lines.isEmpty else { return “” }
+        guard !lines.isEmpty else { return "" }
         let previewLines = Array(lines.prefix(8))
         let suffix = lines.count > previewLines.count
-            ? “\n… 还有 \(lines.count - previewLines.count) 行，点击”展开编辑”查看完整草稿”
-            : “”
-        return previewLines.joined(separator: “\n”) + suffix
+            ? "\n… 还有 \(lines.count - previewLines.count) 行，点击「展开编辑」查看完整草稿"
+            : ""
+        return previewLines.joined(separator: "\n") + suffix
     }
 
     private var hasAnyPersonalData: Bool {
@@ -1864,11 +1864,11 @@ private struct ImportCenterSectionView: View {
         panel.resolvesAliases = true
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
         panel.allowedContentTypes = source == .image ? [.image] : tableImportTypes
-        panel.title = source == .image ? “选择要 OCR 的图片” : “选择要导入的表格或文本”
+        panel.title = source == .image ? "选择要 OCR 的图片" : "选择要导入的表格或文本"
         panel.message = source == .image
-            ? “图片会先识别成文字，再填入当前导入对象的草稿区。”
-            : “支持 txt、csv、tsv、json、xlsx，会转换成当前导入对象的草稿。”
-        panel.prompt = “选择”
+            ? "图片会先识别成文字，再填入当前导入对象的草稿区。"
+            : "支持 txt、csv、tsv、json、xlsx，会转换成当前导入对象的草稿。"
+        panel.prompt = "选择"
 
         let target = importTarget
         let response = panel.runModal()

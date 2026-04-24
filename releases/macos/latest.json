@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.1.6",
-  "name": "QiemanDashboard 2.1.6",
-  "body": "修复股票导入覆盖已有基金持仓的问题；资产总表按基金和股票分区展示；股票行情增加腾讯行情兜底以补全名称和实时价格；更新安装时增加强制退出兜底，确保安装脚本能关闭旧 App 并重启。",
+  "tag_name": "v2.1.7",
+  "name": "QiemanDashboard 2.1.7",
+  "body": "把导入中心从持仓页提取为独立页面，侧边栏和持仓页均可进入；修复 Swift 6.1 编译兼容性问题。",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/tree/main/releases/macos",
-  "published_at": "2026-04-24T10:00:36Z",
+  "published_at": "2026-04-24T12:00:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.1.6.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.1.6/QiemanDashboard-2.1.6.zip",
-      "size": 3060655,
+      "name": "QiemanDashboard-2.1.7.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.1.7/QiemanDashboard-2.1.7.zip",
+      "size": 3136969,
       "content_type": "application/zip"
     }
   ]
