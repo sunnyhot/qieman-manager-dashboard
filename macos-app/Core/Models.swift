@@ -6,7 +6,6 @@ enum AppSection: String, CaseIterable, Identifiable {
     case platform = "平台调仓"
     case forum = "论坛发言"
     case snapshots = "历史快照"
-    case backupWeb = "网页备份"
 
     var id: String { rawValue }
 
@@ -22,8 +21,6 @@ enum AppSection: String, CaseIterable, Identifiable {
             return "text.bubble"
         case .snapshots:
             return "clock.arrow.circlepath"
-        case .backupWeb:
-            return "globe"
         }
     }
 }

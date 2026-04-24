@@ -9,14 +9,14 @@
 1. **原生 macOS App**
    - SwiftUI 原生界面
    - 原生登录窗口，自动抓取并保存且慢登录态
-   - 原生“我的持仓 / 平台调仓 / 论坛发言 / 历史快照 / 网页备份”
+   - 原生“我的持仓 / 平台调仓 / 论坛发言 / 历史快照”
    - 菜单栏弹框显示个人持仓的实时估值、今日涨跌、总收益，并支持排序
    - 关闭主窗口后可只保留菜单栏，支持开机自启
    - 可定时巡检主理人调仓和发言，并通过系统通知推送，点击通知可直接跳到对应详情
 
-2. **本地浏览器看板（兼容备份）**
+2. **本地浏览器看板（兼容工具）**
    - `dashboard_server.py` 提供浏览器版看板
-   - 当前主要作为网页备份入口存在，方便保留旧页面能力与历史快照兼容
+   - 当前主要作为调试与兼容工具保留，不再作为原生 App 的导航入口
 
 3. **Python 抓取脚本**
    - `qieman_scraper.py`：抓且慢公开内容页
@@ -126,7 +126,7 @@ bash scripts/build_macos_app.sh
 ### 产物
 
 - App Bundle：`dist/macos-app/QiemanDashboard.app`
-- 分发压缩包：`dist/macos-app/QiemanDashboard-2.1.2.zip`
+- 分发压缩包：`dist/macos-app/QiemanDashboard-2.1.3.zip`
 
 ### 运行
 
@@ -145,7 +145,7 @@ open dist/macos-app/QiemanDashboard.app
 ### 自定义构建参数
 
 ```bash
-APP_VERSION=2.1.2 \
+APP_VERSION=2.1.3 \
 APP_BUILD=210 \
 BUNDLE_ID=com.sunnyhot.qieman.manager.dashboard \
 MIN_MACOS_VERSION=14.0 \
@@ -163,11 +163,11 @@ https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/release
 发布新版本时：
 
 ```bash
-APP_VERSION=2.1.2 bash scripts/build_macos_app.sh
-cp dist/macos-app/QiemanDashboard-2.1.2.zip releases/macos/
+APP_VERSION=2.1.3 bash scripts/build_macos_app.sh
+cp dist/macos-app/QiemanDashboard-2.1.3.zip releases/macos/
 # 同步更新 releases/macos/latest.json 里的 tag_name、资源 URL 和 size
-git add releases/macos/latest.json releases/macos/QiemanDashboard-2.1.2.zip
-git commit -m "Publish QiemanDashboard 2.1.2"
+git add releases/macos/latest.json releases/macos/QiemanDashboard-2.1.3.zip
+git commit -m "Publish QiemanDashboard 2.1.3"
 git push
 ```
 
@@ -538,5 +538,5 @@ python3 skills/qieman-alpha-signals/scripts/project_runtime.py --action stop --j
 ## 说明
 
 - `output/` 和 `qieman.cookie` 都属于本地工作数据，不是源码的一部分
-- 默认推荐先用原生 macOS App；浏览器版更适合作为网页备份和兼容入口
+- 默认推荐使用原生 macOS App；浏览器版主要作为调试与兼容工具保留
 - 当前 App 打包是“本地正式产物”级别：有完整 bundle、版本号、zip 和 ad-hoc 签名；如果要对外分发，还建议补苹果开发者签名和 notarization

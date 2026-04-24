@@ -43,9 +43,6 @@ struct QiemanDashboardApp: App {
                 Button("打开数据目录") {
                     model.openDataDirectory()
                 }
-                Button("打开网页备份") {
-                    model.openWebBackupInBrowser()
-                }
                 Button("登录且慢") {
                     model.presentLoginSheet()
                 }

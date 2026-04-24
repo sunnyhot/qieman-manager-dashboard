@@ -271,15 +271,6 @@ final class AppModel: ObservableObject {
         serverController.openDataDirectory()
     }
 
-    func openWebBackupInBrowser() {
-        Task {
-            await prepareWebBackup()
-            if baseURL != nil {
-                serverController.openBackupInBrowser()
-            }
-        }
-    }
-
     func presentLoginSheet() {
         do {
             let supportDirectory = try serverController.prepareEnvironment()
@@ -297,23 +288,6 @@ final class AppModel: ObservableObject {
         rebuildNativeStatus()
         noticeMessage = "已自动保存登录态。现在可以直接验证登录态，或切到“关注动态”刷新。"
         Task { await validateAuth() }
-    }
-
-    func prepareWebBackup() async {
-        if baseURL != nil {
-            return
-        }
-        errorMessage = ""
-        do {
-            let supportDirectory = try serverController.prepareEnvironment()
-            dataDirectoryURL = supportDirectory
-            logFileURL = serverController.logFileURL
-            let url = try await serverController.ensureStarted()
-            baseURL = url
-            noticeMessage = "网页备份已启动。"
-        } catch {
-            errorMessage = error.localizedDescription
-        }
     }
 
     func checkForUpdates(userInitiated: Bool) async {
@@ -754,9 +728,6 @@ final class AppModel: ObservableObject {
     var liveModeLabel: String {
         if isRefreshing {
             return "刷新中"
-        }
-        if hasLiveService {
-            return "原生直连 + 网页备份"
         }
         return "原生直连"
     }

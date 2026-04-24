@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.1.2",
-  "name": "QiemanDashboard 2.1.2",
-  "body": "持仓中支持只输入基金代码、份额和成本价；保存时会按基金代码自动补全基金名称并回写本地持仓草稿。同步保留应用内自动更新、待确认/定投自动流转、论坛正文清洗、历史快照与平台调仓布局优化、macOS dark mode 适配、导入按钮修复等改动。",
+  "tag_name": "v2.1.3",
+  "name": "QiemanDashboard 2.1.3",
+  "body": "移除网页备份入口；优化首页主理人提醒为左右信息面板；删除总览页基金全貌总表；总览资产卡、最近调仓和最近发言支持点击跳转到对应列表与详情。",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/tree/main/releases/macos",
-  "published_at": "2026-04-24T08:10:20Z",
+  "published_at": "2026-04-24T08:28:23Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.1.2.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.1.2/QiemanDashboard-2.1.2.zip",
-      "size": 3312638,
+      "name": "QiemanDashboard-2.1.3.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.1.3/QiemanDashboard-2.1.3.zip",
+      "size": 3323037,
       "content_type": "application/zip"
     }
   ]

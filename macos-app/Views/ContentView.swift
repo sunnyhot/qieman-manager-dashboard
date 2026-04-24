@@ -32,7 +32,7 @@ struct ContentView: View {
         switch model.selectedSection {
         case .platform, .forum:
             return true
-        case .overview, .portfolio, .snapshots, .backupWeb:
+        case .overview, .portfolio, .snapshots:
             return false
         }
     }
@@ -146,27 +146,15 @@ struct ContentView: View {
                             .font(.system(size: 10, weight: .semibold, design: .rounded))
                             .foregroundStyle(AppPalette.muted)
 
-                        VStack(spacing: 10) {
-                            Button {
-                                model.openDataDirectory()
-                            } label: {
-                                Image(systemName: "folder")
-                                    .font(.system(size: 11))
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(AppPalette.muted)
-                            .help("打开数据目录")
-
-                            Button {
-                                model.openWebBackupInBrowser()
-                            } label: {
-                                Image(systemName: "globe")
-                                    .font(.system(size: 11))
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(AppPalette.muted)
-                            .help("打开网页备份")
+                        Button {
+                            model.openDataDirectory()
+                        } label: {
+                            Image(systemName: "folder")
+                                .font(.system(size: 11))
                         }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(AppPalette.muted)
+                        .help("打开数据目录")
                     }
                     .frame(maxWidth: .infinity)
                 } else {
@@ -188,15 +176,6 @@ struct ContentView: View {
                             model.openDataDirectory()
                         } label: {
                             Image(systemName: "folder")
-                                .font(.system(size: 11))
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(AppPalette.muted)
-
-                        Button {
-                            model.openWebBackupInBrowser()
-                        } label: {
-                            Image(systemName: "globe")
                                 .font(.system(size: 11))
                         }
                         .buttonStyle(.plain)
@@ -229,9 +208,6 @@ struct ContentView: View {
             guard model.selectedSection != section else { return }
             withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
                 model.selectedSection = section
-            }
-            if section == .backupWeb {
-                Task(priority: .utility) { await model.prepareWebBackup() }
             }
         } label: {
             HStack(spacing: isCompact ? 0 : 10) {
@@ -493,8 +469,6 @@ struct ContentView: View {
             ForumSectionView()
         case .snapshots:
             SnapshotsSectionView()
-        case .backupWeb:
-            WebBackupView(url: model.baseURL)
         }
     }
 }
@@ -621,36 +595,48 @@ private struct OverviewSectionView: View {
                 OverviewHeroCard()
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
-                    MetricCard(
+                    OverviewJumpMetricCard(
                         title: "总持仓",
                         value: model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? "—",
                         subtitle: model.personalAssetSummary.map {
                             "已持有 \(currencyText($0.totalMarketValue)) + 待确认 \(currencyText($0.totalPendingCashAmount)) + 下次计划 \(currencyText($0.totalEstimatedNextPlanAmount))"
                         } ?? "个人资产还未导入完整",
                         icon: "wallet.bifold",
-                        accent: AppPalette.brand
-                    )
-                    MetricCard(
+                        accent: AppPalette.brand,
+                        destination: "我的持仓"
+                    ) {
+                        openPortfolio()
+                    }
+                    OverviewJumpMetricCard(
                         title: "待确认买入",
                         value: model.personalAssetSummary.map { currencyText($0.totalPendingCashAmount) } ?? "—",
                         subtitle: model.pendingTradeSummary.map { "\($0.actionCount) 笔交易进行中" } ?? "暂无买入中",
                         icon: "clock.badge.exclamationmark",
-                        accent: AppPalette.warning
-                    )
-                    MetricCard(
+                        accent: AppPalette.warning,
+                        destination: "我的持仓"
+                    ) {
+                        openPortfolio()
+                    }
+                    OverviewJumpMetricCard(
                         title: "计划档案",
                         value: model.investmentPlanSummary.map { "\($0.activePlanCount) / \($0.pausedPlanCount) / \($0.endedPlanCount)" } ?? "—",
                         subtitle: model.investmentPlanSummary.map { "进行中 / 暂停 / 终止 · 共 \($0.planCount) 条" } ?? "还没有计划档案",
                         icon: "calendar.badge.clock",
-                        accent: AppPalette.info
-                    )
-                    MetricCard(
+                        accent: AppPalette.info,
+                        destination: "我的持仓"
+                    ) {
+                        openPortfolio()
+                    }
+                    OverviewJumpMetricCard(
                         title: "覆盖基金",
                         value: model.personalAssetSummary.map { "\($0.fundCount)" } ?? "0",
                         subtitle: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "先导入你的个人资产",
                         icon: "square.grid.3x2",
-                        accent: AppPalette.accentWarm
-                    )
+                        accent: AppPalette.accentWarm,
+                        destination: "我的持仓"
+                    ) {
+                        openPortfolio()
+                    }
                 }
 
                 ManagerWatchControlCard()
@@ -667,23 +653,15 @@ private struct OverviewSectionView: View {
                     } else {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 270), spacing: 12)], spacing: 12) {
                             ForEach(model.personalAssetRows) { row in
-                                PersonalAssetOverviewCard(row: row)
+                                Button {
+                                    openPortfolio()
+                                } label: {
+                                    PersonalAssetOverviewCard(row: row)
+                                }
+                                .buttonStyle(PressResponsiveButtonStyle())
+                                .help("打开我的持仓")
                             }
                         }
-                    }
-                }
-
-                SectionCard(title: "基金全貌总表", subtitle: "一行看清每只基金的持仓、待确认和计划状态", icon: "tablecells") {
-                    if model.personalAssetRows.isEmpty {
-                        Text("导入任一类个人数据后，这里会生成汇总总表。")
-                            .font(.system(size: 12))
-                            .foregroundStyle(AppPalette.muted)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                            .background(AppPalette.card)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                    } else {
-                        PersonalAssetBrowser(rows: model.personalAssetRows)
                     }
                 }
 
@@ -699,7 +677,13 @@ private struct OverviewSectionView: View {
                     } else {
                         VStack(spacing: 8) {
                             ForEach(model.latestPlatformActions) { action in
-                                PlatformActionRow(action: action)
+                                Button {
+                                    openPlatform(action)
+                                } label: {
+                                    PlatformActionRow(action: action)
+                                }
+                                .buttonStyle(PressResponsiveButtonStyle())
+                                .help("打开平台调仓详情")
                             }
                         }
                     }
@@ -714,7 +698,13 @@ private struct OverviewSectionView: View {
                     if model.hasForumPosts {
                         VStack(spacing: 8) {
                             ForEach(Array(model.forumRecords.prefix(6))) { record in
-                                ForumRecordRow(record: record)
+                                Button {
+                                    openForum(record)
+                                } label: {
+                                    ForumRecordRow(record: record)
+                                }
+                                .buttonStyle(PressResponsiveButtonStyle())
+                                .help("打开论坛发言详情")
                             }
                         }
                     } else {
@@ -730,6 +720,57 @@ private struct OverviewSectionView: View {
             }
             .padding(16)
         }
+    }
+
+    private func openPortfolio() {
+        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            model.selectedSection = .portfolio
+        }
+    }
+
+    private func openPlatform(_ action: PlatformActionPayload) {
+        model.selectPlatformAction(action.id)
+        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            model.selectedSection = .platform
+        }
+    }
+
+    private func openForum(_ record: SnapshotRecordPayload) {
+        model.selectedPostID = record.id
+        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            model.selectedSection = .forum
+        }
+    }
+}
+
+private struct OverviewJumpMetricCard: View {
+    let title: String
+    let value: String
+    let subtitle: String
+    let icon: String
+    let accent: Color
+    let destination: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            MetricCard(title: title, value: value, subtitle: subtitle, icon: icon, accent: accent)
+                .overlay(alignment: .topTrailing) {
+                    HStack(spacing: 4) {
+                        Text(destination)
+                        Image(systemName: "arrow.up.right")
+                    }
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 5)
+                    .background(accent.opacity(0.10))
+                    .clipShape(Capsule())
+                    .padding(9)
+                }
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
+        .help("打开\(destination)")
     }
 }
 
@@ -865,156 +906,156 @@ private struct ManagerWatchControlCard: View {
 
     var body: some View {
         SectionCard(title: "主理人提醒", subtitle: "App 常驻时自动巡检新调仓和新发言，并通过系统通知推送", icon: "bell.badge") {
-            VStack(alignment: .leading, spacing: 14) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) {
-                        Toggle("开启通知巡检", isOn: enabledBinding)
-                            .toggleStyle(.switch)
-                        ToolbarBadge(
-                            title: model.managerWatchStatusText,
-                            tint: model.managerWatchSettings.isEnabled ? AppPalette.positive : AppPalette.muted
-                        )
-                        ToolbarBadge(
-                            title: model.managerWatchSettings.watchPlatform && model.managerWatchSettings.watchForum
-                                ? "调仓 + 发言"
-                                : (model.managerWatchSettings.watchPlatform ? "仅调仓" : (model.managerWatchSettings.watchForum ? "仅发言" : "未选择")),
-                            tint: AppPalette.info
-                        )
-                        Spacer()
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Toggle("开启通知巡检", isOn: enabledBinding)
-                            .toggleStyle(.switch)
-                        HStack(spacing: 8) {
-                            ToolbarBadge(
-                                title: model.managerWatchStatusText,
-                                tint: model.managerWatchSettings.isEnabled ? AppPalette.positive : AppPalette.muted
-                            )
-                            ToolbarBadge(
-                                title: model.managerWatchSettings.watchPlatform && model.managerWatchSettings.watchForum
-                                    ? "调仓 + 发言"
-                                    : (model.managerWatchSettings.watchPlatform ? "仅调仓" : (model.managerWatchSettings.watchForum ? "仅发言" : "未选择")),
-                                tint: AppPalette.info
-                            )
-                        }
-                    }
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 12) {
+                    managerWatchControls
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                    managerWatchStatusPanel
+                        .frame(width: 380, alignment: .topLeading)
                 }
 
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
-                    compactField("产品", text: prodCodeBinding, minWidth: 220)
-                    compactField("主理人", text: managerNameBinding, minWidth: 220)
-                    intervalMenu
-                }
-
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 16) {
-                        Toggle("监控平台调仓", isOn: platformBinding)
-                            .toggleStyle(.checkbox)
-                        Toggle("监控主理人发言", isOn: forumBinding)
-                            .toggleStyle(.checkbox)
-                        Spacer()
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Toggle("监控平台调仓", isOn: platformBinding)
-                            .toggleStyle(.checkbox)
-                        Toggle("监控主理人发言", isOn: forumBinding)
-                            .toggleStyle(.checkbox)
-                    }
-                }
-                .font(.system(size: 12))
-
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) {
-                        Toggle("开机自启", isOn: launchAtLoginBinding)
-                            .toggleStyle(.switch)
-                        ToolbarBadge(title: model.launchAtLoginStatusText, tint: model.launchAtLoginEnabled ? AppPalette.positive : AppPalette.muted)
-                        ToolbarBadge(title: "关闭窗口后仅保留菜单栏", tint: AppPalette.info)
-                        Spacer()
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Toggle("开机自启", isOn: launchAtLoginBinding)
-                            .toggleStyle(.switch)
-                        HStack(spacing: 8) {
-                            ToolbarBadge(title: model.launchAtLoginStatusText, tint: model.launchAtLoginEnabled ? AppPalette.positive : AppPalette.muted)
-                            ToolbarBadge(title: "关闭窗口后仅保留菜单栏", tint: AppPalette.info)
-                        }
-                    }
-                }
-                .font(.system(size: 12))
-
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) {
-                        Button("保存设置") {
-                            model.saveManagerWatchConfiguration()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(AppPalette.brand)
-
-                        Button("同步当前查询") {
-                            model.syncManagerWatchTargetsFromCurrentForm()
-                        }
-                        .buttonStyle(.bordered)
-
-                        Button("立即巡检") {
-                            model.runManagerWatchNow()
-                        }
-                        .buttonStyle(.bordered)
-
-                        Spacer()
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Button("保存设置") {
-                            model.saveManagerWatchConfiguration()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(AppPalette.brand)
-
-                        HStack(spacing: 10) {
-                            Button("同步当前查询") {
-                                model.syncManagerWatchTargetsFromCurrentForm()
-                            }
-                            .buttonStyle(.bordered)
-
-                            Button("立即巡检") {
-                                model.runManagerWatchNow()
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                    }
-                }
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                    StatChip(title: "巡检目标", value: model.managerWatchScopeText)
-                    if let lastChecked = model.managerWatchSettings.lastCheckedAt {
-                        StatChip(title: "上次检查", value: lastChecked)
-                    }
-                    if let lastSuccess = model.managerWatchSettings.lastSuccessAt {
-                        StatChip(title: "上次成功", value: lastSuccess)
-                    }
-                }
-                }
-
-                if let error = model.managerWatchSettings.lastErrorMessage, !error.isEmpty {
-                    HStack(spacing: 8) {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(AppPalette.warning)
-                            .frame(width: 4)
-                        Text(error)
-                            .font(.system(size: 11))
-                            .foregroundStyle(AppPalette.ink)
-                    }
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(AppPalette.warning.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                VStack(alignment: .leading, spacing: 12) {
+                    managerWatchControls
+                    managerWatchStatusPanel
                 }
             }
         }
+    }
+
+    private var managerWatchControls: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                Toggle("开启通知巡检", isOn: enabledBinding)
+                    .toggleStyle(.switch)
+                ToolbarBadge(
+                    title: model.managerWatchStatusText,
+                    tint: model.managerWatchSettings.isEnabled ? AppPalette.positive : AppPalette.muted
+                )
+                ToolbarBadge(title: model.managerWatchSettings.intervalLabel, tint: AppPalette.info)
+                Spacer()
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
+                compactField("产品", text: prodCodeBinding, minWidth: 220)
+                compactField("主理人", text: managerNameBinding, minWidth: 220)
+            }
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 16) {
+                    Toggle("监控平台调仓", isOn: platformBinding)
+                        .toggleStyle(.checkbox)
+                    Toggle("监控主理人发言", isOn: forumBinding)
+                        .toggleStyle(.checkbox)
+                    intervalMenu
+                        .frame(maxWidth: 240)
+                    Spacer()
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle("监控平台调仓", isOn: platformBinding)
+                        .toggleStyle(.checkbox)
+                    Toggle("监控主理人发言", isOn: forumBinding)
+                        .toggleStyle(.checkbox)
+                    intervalMenu
+                }
+            }
+            .font(.system(size: 12))
+
+            HStack(spacing: 10) {
+                Button("保存设置") {
+                    model.saveManagerWatchConfiguration()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppPalette.brand)
+
+                Button("同步当前查询") {
+                    model.syncManagerWatchTargetsFromCurrentForm()
+                }
+                .buttonStyle(.bordered)
+
+                Button("立即巡检") {
+                    model.runManagerWatchNow()
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .padding(14)
+        .background(AppPalette.cardStrong.opacity(0.72))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
+        )
+    }
+
+    private var managerWatchStatusPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "bell.and.waves.left.and.right")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(AppPalette.brand)
+                    .frame(width: 34, height: 34)
+                    .background(AppPalette.brandSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("巡检状态")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text(model.managerWatchScopeText)
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                        .lineLimit(1)
+                }
+                Spacer()
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
+                ManagerWatchStatusTile(title: "巡检目标", value: model.managerWatchScopeText, tint: AppPalette.brand)
+                ManagerWatchStatusTile(
+                    title: "上次检查",
+                    value: model.managerWatchSettings.lastCheckedAt ?? "暂无",
+                    tint: AppPalette.muted
+                )
+                ManagerWatchStatusTile(
+                    title: "上次成功",
+                    value: model.managerWatchSettings.lastSuccessAt ?? "暂无",
+                    tint: AppPalette.positive
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("开机自启", isOn: launchAtLoginBinding)
+                    .toggleStyle(.switch)
+                HStack(spacing: 8) {
+                    ToolbarBadge(title: model.launchAtLoginStatusText, tint: model.launchAtLoginEnabled ? AppPalette.positive : AppPalette.muted)
+                    ToolbarBadge(title: "关闭窗口后保留菜单栏", tint: AppPalette.info)
+                }
+            }
+            .font(.system(size: 12))
+
+            if let error = model.managerWatchSettings.lastErrorMessage, !error.isEmpty {
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(AppPalette.warning)
+                        .frame(width: 4)
+                    Text(error)
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppPalette.ink)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppPalette.warning.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(14)
+        .background(AppPalette.card.opacity(0.82))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
+        )
     }
 
     private var intervalMenu: some View {
@@ -1064,6 +1105,30 @@ private struct ManagerWatchControlCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .frame(minWidth: minWidth, maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct ManagerWatchStatusTile: View {
+    let title: String
+    let value: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppPalette.muted)
+            Text(value)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(AppPalette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(tint.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
 
