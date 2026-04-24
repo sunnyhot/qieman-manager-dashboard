@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import Darwin
 import Foundation
 import ServiceManagement
 
@@ -337,6 +338,8 @@ final class AppModel: ObservableObject {
             noticeMessage = "更新包已准备好，正在重启应用完成覆盖安装。"
             try? await Task.sleep(nanoseconds: 600_000_000)
             NSApplication.shared.terminate(nil)
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            Darwin.exit(0)
         } catch {
             updateInstallProgress = ""
             errorMessage = error.localizedDescription
@@ -367,25 +370,31 @@ final class AppModel: ObservableObject {
         do {
             let savedCount: Int
             if shouldUsePortfolioSummaryImport(for: portfolioDraft) {
+                let existingHoldings = userPortfolioHoldings
                 try runPortfolioSummaryImport(text: portfolioDraft)
-                reloadPortfolioFromDisk()
-                savedCount = userPortfolioHoldings.count
-                noticeMessage = "已通过摘要导入保存个人持仓，正在按代码补全名称。"
-            } else {
-                let holdings = try portfolioStore.parseDraft(portfolioDraft)
-                userPortfolioHoldings = holdings
-                try portfolioStore.save(holdings, to: portfolioFileURL)
-                savedCount = holdings.count
+                let importedHoldings = try portfolioStore.load(from: portfolioFileURL)
+                let mergedHoldings = portfolioStore.merging(importedHoldings, into: existingHoldings)
+                userPortfolioHoldings = mergedHoldings
+                try portfolioStore.save(mergedHoldings, to: portfolioFileURL)
                 portfolioDraft = ""
-                noticeMessage = "已保存 \(holdings.count) 条个人持仓，正在按代码补全名称。"
+                savedCount = importedHoldings.count
+                noticeMessage = "已通过摘要导入保存 \(importedHoldings.count) 条个人持仓，并保留已有基金和股票配置，正在按代码补全名称。"
+            } else {
+                let importedHoldings = try portfolioStore.parseDraft(portfolioDraft)
+                let mergedHoldings = portfolioStore.merging(importedHoldings, into: userPortfolioHoldings)
+                userPortfolioHoldings = mergedHoldings
+                try portfolioStore.save(mergedHoldings, to: portfolioFileURL)
+                savedCount = importedHoldings.count
+                portfolioDraft = ""
+                noticeMessage = "已保存 \(importedHoldings.count) 条个人持仓，并保留已有基金和股票配置，正在按代码补全名称。"
             }
             Task {
                 let resolvedCount = await resolveAndPersistPortfolioNames()
                 try? await refreshUserPortfolio(updateNotice: false)
                 if resolvedCount > 0 {
-                    noticeMessage = "已保存 \(savedCount) 条个人持仓，并通过代码补全 \(resolvedCount) 个名称。"
+                    noticeMessage = "已保存 \(savedCount) 条个人持仓，并通过代码补全 \(resolvedCount) 个名称。已有配置已保留。"
                 } else {
-                    noticeMessage = "已保存 \(savedCount) 条个人持仓。"
+                    noticeMessage = "已保存 \(savedCount) 条个人持仓，已有配置已保留。"
                 }
             }
         } catch {
@@ -956,6 +965,9 @@ final class AppModel: ObservableObject {
                 let rawHolding = rawHoldingsByKey[key]
                 let pending = (pendingByKey[key] ?? []).sorted { $0.occurredAt > $1.occurredAt }
                 let plans = (plansByKey[key] ?? []).sorted(by: sortInvestmentPlans)
+                let assetType = holdingRow?.holding.assetType
+                    ?? rawHolding?.assetType
+                    ?? .fund
                 let fundName = holdingRow?.fundName
                     ?? rawHolding?.normalizedName
                     ?? pending.first?.fundName
@@ -968,6 +980,7 @@ final class AppModel: ObservableObject {
 
                 return PersonalAssetAggregateRow(
                     key: key,
+                    assetType: assetType,
                     fundName: fundName,
                     fundCode: normalizedCode(fundCode),
                     holdingRow: holdingRow,

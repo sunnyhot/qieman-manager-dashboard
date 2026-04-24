@@ -2612,6 +2612,7 @@ private struct PersonalAssetOverviewCard: View {
                                 .font(.system(size: 10, design: .monospaced))
                                 .foregroundStyle(AppPalette.muted)
                         }
+                        ToolbarBadge(title: row.assetTypeLabel, tint: row.assetType == .stock ? AppPalette.info : AppPalette.brand)
                         ToolbarBadge(title: row.combinedStatusText, tint: row.hasPending ? AppPalette.warning : AppPalette.brand)
                         if row.hasDrawdownPlan {
                             ToolbarBadge(title: "涨跌幅 \(row.drawdownPlanCount)", tint: AppPalette.info)
@@ -2791,7 +2792,7 @@ private struct PersonalAssetBrowser: View {
                 .background(AppPalette.cardStrong)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
-                PersonalAssetTable(rows: displayedRows)
+                PersonalAssetGroupedTable(rows: displayedRows)
             }
         }
     }
@@ -2906,6 +2907,44 @@ private struct PersonalAssetBrowser: View {
     }
 }
 
+private struct PersonalAssetGroupedTable: View {
+    let rows: [PersonalAssetAggregateRow]
+
+    private var fundRows: [PersonalAssetAggregateRow] {
+        rows.filter { $0.assetType == .fund }
+    }
+
+    private var stockRows: [PersonalAssetAggregateRow] {
+        rows.filter { $0.assetType == .stock }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if !fundRows.isEmpty {
+                group(title: "基金", rows: fundRows)
+            }
+            if !stockRows.isEmpty {
+                group(title: "股票", rows: stockRows)
+            }
+        }
+    }
+
+    private func group(title: String, rows: [PersonalAssetAggregateRow]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+                ToolbarBadge(title: "\(rows.count) 只", tint: title == "股票" ? AppPalette.info : AppPalette.brand)
+                Text("市值 \(currencyText(rows.compactMap(\.marketValue).reduce(0, +)))")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+            }
+            PersonalAssetTable(rows: rows)
+        }
+    }
+}
+
 private struct PersonalAssetTable: View {
     let rows: [PersonalAssetAggregateRow]
 
@@ -2961,6 +3000,7 @@ private struct PersonalAssetTableRow: View {
                     Text(row.fundName)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
+                    ToolbarBadge(title: row.assetTypeLabel, tint: row.assetType == .stock ? AppPalette.info : AppPalette.brand)
                     ToolbarBadge(title: row.combinedStatusText, tint: row.hasPending ? AppPalette.warning : AppPalette.brand)
                     if row.hasDrawdownPlan {
                         ToolbarBadge(title: "涨跌幅 \(row.drawdownPlanCount)", tint: AppPalette.info)

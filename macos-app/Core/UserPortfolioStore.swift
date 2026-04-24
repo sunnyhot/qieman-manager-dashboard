@@ -64,6 +64,33 @@ struct UserPortfolioStore {
         holdings.map(\.draftLine).joined(separator: "\n")
     }
 
+    func merging(_ imported: [UserPortfolioHolding], into existing: [UserPortfolioHolding]) -> [UserPortfolioHolding] {
+        var merged = existing
+        var indexByKey: [String: Int] = [:]
+        for (index, holding) in merged.enumerated() {
+            indexByKey[mergeKey(for: holding)] = index
+        }
+
+        for importedHolding in imported {
+            let key = mergeKey(for: importedHolding)
+            if let existingIndex = indexByKey[key] {
+                let current = merged[existingIndex]
+                merged[existingIndex] = UserPortfolioHolding(
+                    id: current.id,
+                    fundCode: importedHolding.normalizedFundCode,
+                    assetType: importedHolding.assetType,
+                    units: importedHolding.units,
+                    costPrice: importedHolding.costPrice,
+                    displayName: importedHolding.normalizedName ?? current.normalizedName
+                )
+            } else {
+                indexByKey[key] = merged.count
+                merged.append(importedHolding)
+            }
+        }
+        return merged
+    }
+
     private func parseLine(_ line: String) -> UserPortfolioHolding? {
         let normalized = line
             .replacingOccurrences(of: "，", with: ",")
@@ -190,6 +217,14 @@ struct UserPortfolioStore {
 
     private func isDigits(_ value: String) -> Bool {
         CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: value))
+    }
+
+    private func mergeKey(for holding: UserPortfolioHolding) -> String {
+        let code = holding.normalizedFundCode.lowercased()
+        if !code.isEmpty {
+            return "\(holding.assetType.rawValue):code:\(code)"
+        }
+        return "\(holding.assetType.rawValue):name:\((holding.normalizedName ?? "").lowercased())"
     }
 }
 

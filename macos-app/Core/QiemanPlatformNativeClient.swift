@@ -695,6 +695,16 @@ final class QiemanPlatformNativeClient {
     }
 
     private func fetchStockQuote(_ stockCode: String) async throws -> NativeStockQuote {
+        if let quote = try? await fetchEastmoneyStockQuote(stockCode), quote.hasUsableData {
+            return quote
+        }
+        if let quote = try? await fetchTencentStockQuote(stockCode), quote.hasUsableData {
+            return quote
+        }
+        return .empty(stockCode)
+    }
+
+    private func fetchEastmoneyStockQuote(_ stockCode: String) async throws -> NativeStockQuote {
         guard let secid = stockSecID(for: stockCode) else {
             return .empty(stockCode)
         }
@@ -721,6 +731,39 @@ final class QiemanPlatformNativeClient {
             price: price ?? 0,
             priceTime: isoTimestampNow(),
             priceSource: "stock_quote",
+            priceSourceLabel: "股票行情",
+            previousClose: previousClose,
+            changePct: changePct
+        )
+    }
+
+    private func fetchTencentStockQuote(_ stockCode: String) async throws -> NativeStockQuote {
+        guard let symbol = tencentStockSymbol(for: stockCode) else {
+            return .empty(stockCode)
+        }
+        let url = URL(string: "https://qt.gtimg.cn/q=\(symbol)")!
+        let text = try await requestText(hostURL: url, absoluteURL: url, headers: [
+            "Accept": "text/plain,*/*",
+            "Referer": "https://gu.qq.com/",
+        ])
+        guard let quoted = firstMatch(in: text, pattern: #"="([^"]*)";"#) else {
+            return .empty(stockCode)
+        }
+        let parts = quoted.split(separator: "~", omittingEmptySubsequences: false).map(String.init)
+        guard parts.count > 32 else {
+            return .empty(stockCode)
+        }
+        let code = normalizedString(parts[safe: 2]).nilIfEmpty ?? stockCode
+        let price = doubleValue(parts[safe: 3]) ?? 0
+        let previousClose = doubleValue(parts[safe: 4])
+        let changePct = doubleValue(parts[safe: 32])
+
+        return NativeStockQuote(
+            stockCode: code,
+            stockName: normalizedString(parts[safe: 1]),
+            price: price,
+            priceTime: formattedTencentQuoteTime(parts[safe: 30]),
+            priceSource: "tencent_stock_quote",
             priceSourceLabel: "股票行情",
             previousClose: previousClose,
             changePct: changePct
@@ -839,7 +882,7 @@ final class QiemanPlatformNativeClient {
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw NativePlatformError.invalidResponse
         }
-        return String(decoding: data, as: UTF8.self)
+        return decodeResponseText(data)
     }
 
     private func buildErrorMessage(_ payload: Any, statusCode: Int) -> String {
@@ -909,6 +952,47 @@ final class QiemanPlatformNativeClient {
             return "1.\(code)"
         }
         return "0.\(code)"
+    }
+
+    private func tencentStockSymbol(for stockCode: String) -> String? {
+        let code = stockCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard code.count == 6, CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: code)) else {
+            return nil
+        }
+        if code.hasPrefix("6") || code.hasPrefix("9") {
+            return "sh\(code)"
+        }
+        if code.hasPrefix("4") || code.hasPrefix("8") {
+            return "bj\(code)"
+        }
+        return "sz\(code)"
+    }
+
+    private func formattedTencentQuoteTime(_ value: String?) -> String {
+        let raw = (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard raw.count >= 14 else { return raw }
+        let year = raw.prefix(4)
+        let month = raw.dropFirst(4).prefix(2)
+        let day = raw.dropFirst(6).prefix(2)
+        let hour = raw.dropFirst(8).prefix(2)
+        let minute = raw.dropFirst(10).prefix(2)
+        let second = raw.dropFirst(12).prefix(2)
+        return "\(year)-\(month)-\(day) \(hour):\(minute):\(second)"
+    }
+
+    private func decodeResponseText(_ data: Data) -> String {
+        if let text = String(data: data, encoding: .utf8) {
+            return text
+        }
+        let gb18030 = String.Encoding(
+            rawValue: CFStringConvertEncodingToNSStringEncoding(
+                CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)
+            )
+        )
+        if let text = String(data: data, encoding: gb18030) {
+            return text
+        }
+        return String(decoding: data, as: UTF8.self)
     }
 
     private func actionTimestamp(_ txnTs: Int?, createdTs: Int?) -> Int {
@@ -1085,6 +1169,10 @@ private struct NativeStockQuote {
     let previousClose: Double?
     let changePct: Double?
 
+    var hasUsableData: Bool {
+        price > 0 || !stockName.isEmpty
+    }
+
     static func empty(_ stockCode: String) -> NativeStockQuote {
         NativeStockQuote(
             stockCode: stockCode,
@@ -1096,6 +1184,13 @@ private struct NativeStockQuote {
             previousClose: nil,
             changePct: nil
         )
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        guard indices.contains(index) else { return nil }
+        return self[index]
     }
 }
 

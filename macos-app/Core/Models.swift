@@ -1029,6 +1029,7 @@ struct PersonalInvestmentPlanSummary: Hashable {
 
 struct PersonalAssetAggregateRow: Identifiable, Hashable {
     let key: String
+    let assetType: PersonalAssetType
     let fundName: String
     let fundCode: String?
     let holdingRow: UserPortfolioValuationRow?
@@ -1037,6 +1038,10 @@ struct PersonalAssetAggregateRow: Identifiable, Hashable {
     let plans: [PersonalInvestmentPlan]
 
     var id: String { key }
+
+    var assetTypeLabel: String {
+        assetType.displayName
+    }
 
     var marketValue: Double? {
         holdingRow?.marketValue
