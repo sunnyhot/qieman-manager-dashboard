@@ -22,6 +22,7 @@ fileprivate actor QiemanPlatformCache {
     private var payloads: [String: (Date, PlatformPayload)] = [:]
     private var histories: [String: (Date, NativeFundHistory)] = [:]
     private var quotes: [String: (Date, NativeFundQuote)] = [:]
+    private var stockQuotes: [String: (Date, NativeStockQuote)] = [:]
 
     func payload(for prodCode: String, ttl: TimeInterval) -> PlatformPayload? {
         guard let (loadedAt, payload) = payloads[prodCode], Date().timeIntervalSince(loadedAt) < ttl else {
@@ -54,6 +55,17 @@ fileprivate actor QiemanPlatformCache {
 
     func store(quote: NativeFundQuote, for fundCode: String) {
         quotes[fundCode] = (Date(), quote)
+    }
+
+    func stockQuote(for stockCode: String, ttl: TimeInterval) -> NativeStockQuote? {
+        guard let (loadedAt, quote) = stockQuotes[stockCode], Date().timeIntervalSince(loadedAt) < ttl else {
+            return nil
+        }
+        return quote
+    }
+
+    func store(stockQuote: NativeStockQuote, for stockCode: String) {
+        stockQuotes[stockCode] = (Date(), stockQuote)
     }
 }
 
@@ -95,15 +107,20 @@ final class QiemanPlatformNativeClient {
             )
         }
 
-        let fundCodes = Array(Set(normalizedHoldings.map(\.normalizedFundCode)))
+        let fundCodes = Array(Set(normalizedHoldings.filter { $0.assetType == .fund }.map(\.normalizedFundCode)))
+        let stockCodes = Array(Set(normalizedHoldings.filter { $0.assetType == .stock }.map(\.normalizedFundCode)))
         let histories = await preloadHistories(fundCodes)
         let quotes = await preloadQuotes(fundCodes, histories: histories)
+        let stockQuotes = await preloadStockQuotes(stockCodes)
 
         let rows = normalizedHoldings.map { holding -> UserPortfolioValuationRow in
-            let history = histories[holding.normalizedFundCode]
-            let quote = quotes[holding.normalizedFundCode]
-            let latestNav = history?.series.first
-            let resolvedPrice = quote?.price ?? latestNav?.nav
+            let pricePayload = userPortfolioPricePayload(
+                for: holding,
+                histories: histories,
+                quotes: quotes,
+                stockQuotes: stockQuotes
+            )
+            let resolvedPrice = pricePayload.currentPrice ?? pricePayload.officialNav
             let marketValue = resolvedPrice.map { round($0 * holding.units, digits: 2) }
             let costValue = holding.costPrice.map { round($0 * holding.units, digits: 2) }
             let profitAmount = zipOptional(marketValue, costValue).map { round($0.0 - $0.1, digits: 2) }
@@ -118,20 +135,19 @@ final class QiemanPlatformNativeClient {
                 holding: holding,
                 fundName: firstNonEmpty([
                     holding.normalizedName ?? "",
-                    quote?.fundName ?? "",
-                    history?.fundName ?? "",
+                    pricePayload.assetName,
                     holding.normalizedFundCode,
                 ]),
-                currentPrice: (quote?.price ?? 0) > 0 ? round(quote?.price ?? 0, digits: 4) : nil,
-                priceTime: firstNonEmpty([quote?.priceTime ?? "", latestNav?.date ?? ""]).nilIfEmpty,
-                priceSource: firstNonEmpty([quote?.priceSourceLabel ?? "", quote?.priceSource ?? "", "最新净值"]).nilIfEmpty,
-                officialNav: (quote?.officialNav ?? latestNav?.nav).map { round($0, digits: 4) },
-                officialNavDate: firstNonEmpty([quote?.officialNavDate ?? "", latestNav?.date ?? ""]).nilIfEmpty,
+                currentPrice: pricePayload.currentPrice.map { round($0, digits: 4) },
+                priceTime: pricePayload.priceTime.nilIfEmpty,
+                priceSource: pricePayload.priceSource.nilIfEmpty,
+                officialNav: pricePayload.officialNav.map { round($0, digits: 4) },
+                officialNavDate: pricePayload.officialNavDate.nilIfEmpty,
                 marketValue: marketValue,
                 costValue: costValue,
                 profitAmount: profitAmount,
                 profitPct: profitPct,
-                estimateChangePct: quote?.estimateChangePct
+                estimateChangePct: pricePayload.estimateChangePct
             )
         }
 
@@ -157,6 +173,29 @@ final class QiemanPlatformNativeClient {
         )
     }
 
+    func resolveAssetNames(holdings: [UserPortfolioHolding]) async -> [UUID: String] {
+        let fundCodes = Array(Set(holdings.filter { $0.assetType == .fund }.map(\.normalizedFundCode).filter { !$0.isEmpty }))
+        let stockCodes = Array(Set(holdings.filter { $0.assetType == .stock }.map(\.normalizedFundCode).filter { !$0.isEmpty }))
+
+        let fundNamesByCode = await resolveFundNames(fundCodes: fundCodes)
+        let stockQuotes = await preloadStockQuotes(stockCodes)
+
+        var names: [UUID: String] = [:]
+        for holding in holdings {
+            switch holding.assetType {
+            case .fund:
+                if let name = fundNamesByCode[holding.normalizedFundCode], !name.isEmpty {
+                    names[holding.id] = name
+                }
+            case .stock:
+                if let name = stockQuotes[holding.normalizedFundCode]?.stockName, !name.isEmpty {
+                    names[holding.id] = name
+                }
+            }
+        }
+        return names
+    }
+
     func resolveFundNames(fundCodes: [String]) async -> [String: String] {
         let normalizedCodes = Array(Set(fundCodes.map(normalizedString).filter { !$0.isEmpty }))
         guard !normalizedCodes.isEmpty else { return [:] }
@@ -175,6 +214,40 @@ final class QiemanPlatformNativeClient {
             }
         }
         return names
+    }
+
+    private func userPortfolioPricePayload(
+        for holding: UserPortfolioHolding,
+        histories: [String: NativeFundHistory],
+        quotes: [String: NativeFundQuote],
+        stockQuotes: [String: NativeStockQuote]
+    ) -> NativeUserPortfolioPricePayload {
+        switch holding.assetType {
+        case .fund:
+            let history = histories[holding.normalizedFundCode]
+            let quote = quotes[holding.normalizedFundCode]
+            let latestNav = history?.series.last
+            return NativeUserPortfolioPricePayload(
+                assetName: firstNonEmpty([quote?.fundName ?? "", history?.fundName ?? ""]),
+                currentPrice: (quote?.price ?? 0) > 0 ? quote?.price : nil,
+                priceTime: firstNonEmpty([quote?.priceTime ?? "", latestNav?.date ?? ""]),
+                priceSource: firstNonEmpty([quote?.priceSourceLabel ?? "", quote?.priceSource ?? "", "最新净值"]),
+                officialNav: quote?.officialNav ?? latestNav?.nav,
+                officialNavDate: firstNonEmpty([quote?.officialNavDate ?? "", latestNav?.date ?? ""]),
+                estimateChangePct: quote?.estimateChangePct
+            )
+        case .stock:
+            let quote = stockQuotes[holding.normalizedFundCode]
+            return NativeUserPortfolioPricePayload(
+                assetName: quote?.stockName ?? "",
+                currentPrice: (quote?.price ?? 0) > 0 ? quote?.price : nil,
+                priceTime: quote?.priceTime ?? "",
+                priceSource: quote?.priceSourceLabel ?? "",
+                officialNav: (quote?.previousClose ?? 0) > 0 ? quote?.previousClose : nil,
+                officialNavDate: quote?.priceTime ?? "",
+                estimateChangePct: quote?.changePct
+            )
+        }
     }
 
     private func requestAdjustments(prodCode: String) async throws -> [[String: Any]] {
@@ -533,6 +606,27 @@ final class QiemanPlatformNativeClient {
         return results
     }
 
+    private func preloadStockQuotes(_ stockCodes: [String]) async -> [String: NativeStockQuote] {
+        var results: [String: NativeStockQuote] = [:]
+        let uniqueCodes = Array(Set(stockCodes.filter { !$0.isEmpty }))
+        await withTaskGroup(of: (String, NativeStockQuote).self) { group in
+            for code in uniqueCodes {
+                group.addTask {
+                    if let cached = await self.cache.stockQuote(for: code, ttl: self.quoteTTL) {
+                        return (code, cached)
+                    }
+                    let quote = (try? await self.fetchStockQuote(code)) ?? NativeStockQuote.empty(code)
+                    await self.cache.store(stockQuote: quote, for: code)
+                    return (code, quote)
+                }
+            }
+            for await (code, quote) in group {
+                results[code] = quote
+            }
+        }
+        return results
+    }
+
     private func fetchFundHistorySeries(_ fundCode: String) async throws -> NativeFundHistory {
         let now = Int(Date().timeIntervalSince1970)
         let url = URL(string: "https://fund.eastmoney.com/pingzhongdata/\(fundCode).js?v=\(now)")!
@@ -598,6 +692,39 @@ final class QiemanPlatformNativeClient {
             )
         }
         return .empty(fundCode)
+    }
+
+    private func fetchStockQuote(_ stockCode: String) async throws -> NativeStockQuote {
+        guard let secid = stockSecID(for: stockCode) else {
+            return .empty(stockCode)
+        }
+        let url = URL(string: "https://push2.eastmoney.com/api/qt/stock/get?secid=\(secid)&fields=f43,f57,f58,f59,f60,f169,f170")!
+        let text = try await requestText(hostURL: url, absoluteURL: url, headers: [
+            "Accept": "application/json",
+            "Referer": "https://quote.eastmoney.com/",
+        ])
+        let payload = (try? JSONSerialization.jsonObject(with: Data(text.utf8))) ?? [:]
+        guard let object = payload as? [String: Any],
+              let data = object["data"] as? [String: Any],
+              let code = normalizedString(data["f57"]).nilIfEmpty else {
+            return .empty(stockCode)
+        }
+
+        let scale = pow(10.0, Double(intValue(data["f59"]) ?? 2))
+        let price = scaledQuoteValue(data["f43"], scale: scale)
+        let previousClose = scaledQuoteValue(data["f60"], scale: scale)
+        let changePct = scaledQuoteValue(data["f170"], scale: 100)
+
+        return NativeStockQuote(
+            stockCode: code,
+            stockName: normalizedString(data["f58"]),
+            price: price ?? 0,
+            priceTime: isoTimestampNow(),
+            priceSource: "stock_quote",
+            priceSourceLabel: "股票行情",
+            previousClose: previousClose,
+            changePct: changePct
+        )
     }
 
     private func lookupNav(history: NativeFundHistory?, dateText: String) -> NativeFundHistoryEntry? {
@@ -768,6 +895,22 @@ final class QiemanPlatformNativeClient {
         return nil
     }
 
+    private func scaledQuoteValue(_ value: Any?, scale: Double) -> Double? {
+        guard let raw = doubleValue(value), scale > 0 else { return nil }
+        return raw / scale
+    }
+
+    private func stockSecID(for stockCode: String) -> String? {
+        let code = stockCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard code.count == 6, CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: code)) else {
+            return nil
+        }
+        if code.hasPrefix("6") || code.hasPrefix("9") {
+            return "1.\(code)"
+        }
+        return "0.\(code)"
+    }
+
     private func actionTimestamp(_ txnTs: Int?, createdTs: Int?) -> Int {
         (txnTs ?? 0) > 0 ? (txnTs ?? 0) : (createdTs ?? 0)
     }
@@ -930,6 +1073,40 @@ private struct NativeFundQuote {
             estimateChangePct: nil
         )
     }
+}
+
+private struct NativeStockQuote {
+    let stockCode: String
+    let stockName: String
+    let price: Double
+    let priceTime: String
+    let priceSource: String
+    let priceSourceLabel: String
+    let previousClose: Double?
+    let changePct: Double?
+
+    static func empty(_ stockCode: String) -> NativeStockQuote {
+        NativeStockQuote(
+            stockCode: stockCode,
+            stockName: "",
+            price: 0,
+            priceTime: "",
+            priceSource: "",
+            priceSourceLabel: "",
+            previousClose: nil,
+            changePct: nil
+        )
+    }
+}
+
+private struct NativeUserPortfolioPricePayload {
+    let assetName: String
+    let currentPrice: Double?
+    let priceTime: String
+    let priceSource: String
+    let officialNav: Double?
+    let officialNavDate: String
+    let estimateChangePct: Double?
 }
 
 private extension String {

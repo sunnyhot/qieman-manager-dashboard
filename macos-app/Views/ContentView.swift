@@ -628,7 +628,7 @@ private struct OverviewSectionView: View {
                         openPortfolio()
                     }
                     OverviewJumpMetricCard(
-                        title: "覆盖基金",
+                        title: "覆盖标的",
                         value: model.personalAssetSummary.map { "\($0.fundCount)" } ?? "0",
                         subtitle: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "先导入你的个人资产",
                         icon: "square.grid.3x2",
@@ -804,7 +804,7 @@ private struct OverviewHeroCard: View {
             Text("资产主屏")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(AppPalette.ink)
-            Text("这页现在先看你的资产全貌，再看主理人动态。每只基金会把“已持有、买入中、定投计划”聚合到同一个原生视图里，避免来回切页面对账。")
+            Text("这页现在先看你的资产全貌，再看主理人动态。每个标的会把“已持有、买入中、定投计划”聚合到同一个原生视图里，避免来回切页面对账。")
                 .font(.system(size: 13))
                 .foregroundStyle(AppPalette.muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1416,7 +1416,7 @@ private struct PortfolioSectionView: View {
                         accent: AppPalette.info
                     )
                     MetricCard(
-                        title: "覆盖基金",
+                        title: "覆盖标的",
                         value: model.personalAssetSummary.map { "\($0.fundCount)" } ?? "0",
                         subtitle: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "支持手动、图片和表格导入",
                         icon: "square.grid.3x2",
@@ -1568,10 +1568,10 @@ private struct PortfolioSectionView: View {
                     }
                 }
 
-                SectionCard(title: "基金全貌总表", subtitle: "把“已持有 + 待确认 + 计划档案”聚合到同一行", icon: "tablecells") {
+                SectionCard(title: "资产全貌总表", subtitle: "把“已持有 + 待确认 + 计划档案”聚合到同一行", icon: "tablecells") {
                     if model.personalAssetRows.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("还没有可聚合的基金数据。先导入持仓、买入中或定投计划。")
+                            Text("还没有可聚合的资产数据。先导入持仓、买入中或定投计划。")
                                 .font(.system(size: 12))
                                 .foregroundStyle(AppPalette.muted)
                         }
@@ -2658,7 +2658,7 @@ private struct PersonalAssetBrowser: View {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(AppPalette.muted)
-                    TextField("搜索基金名或代码", text: $searchText)
+                    TextField("搜索名称或代码", text: $searchText)
                         .textFieldStyle(.plain)
                 }
                 .padding(.horizontal, 12)
@@ -2720,7 +2720,7 @@ private struct PersonalAssetBrowser: View {
 
             if displayedRows.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("当前筛选下没有基金。")
+                    Text("当前筛选下没有标的。")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
                     Text("可以试试切换筛选条件，或者清空搜索词。")
@@ -2853,7 +2853,7 @@ private struct PersonalAssetTable: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                Text("基金")
+                Text("标的")
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("实时估值 / 收益")
                     .frame(width: 220, alignment: .leading)

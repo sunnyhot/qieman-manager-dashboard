@@ -13,7 +13,8 @@ from pathlib import Path
 
 HEADER_ALIASES = {
     "fund_name": {"fundname", "displayname", "name", "基金", "基金名称", "名称", "标的", "fund"},
-    "fund_code": {"fundcode", "code", "代码", "基金代码"},
+    "fund_code": {"fundcode", "code", "代码", "基金代码", "标的代码"},
+    "asset_type": {"assettype", "资产类型", "类型"},
     "units": {"units", "份额", "持有份额", "数量"},
     "cost_price": {"costprice", "cost", "成本", "成本价"},
     "market_value": {"marketvalue", "amount", "金额", "持仓金额", "持有金额", "当前金额"},
@@ -22,6 +23,7 @@ HEADER_ALIASES = {
     "occurred_at": {"occurredat", "time", "datetime", "时间", "发生时间"},
     "action": {"action", "actionlabel", "动作", "类型"},
     "target_fund_name": {"targetfundname", "目标基金", "转入基金", "目标标的"},
+    "target_fund_code": {"targetfundcode", "目标基金代码", "转入基金代码", "目标代码"},
     "amount_text": {"amounttext", "金额文本", "金额/份额", "金额", "份额"},
     "status": {"status", "状态"},
     "plan_type": {"plantype", "plantypelabel", "计划类型", "类型", "定投类型"},
@@ -222,6 +224,7 @@ def holdings_lines_from_dict_rows(rows: list[dict[str, str]]) -> list[str]:
     for row in rows:
         fund_name = value_from_mapping(row, "fund_name")
         fund_code = value_from_mapping(row, "fund_code")
+        asset_type = value_from_mapping(row, "asset_type")
         units = value_from_mapping(row, "units")
         cost_price = value_from_mapping(row, "cost_price")
         market_value = value_from_mapping(row, "market_value")
@@ -229,7 +232,7 @@ def holdings_lines_from_dict_rows(rows: list[dict[str, str]]) -> list[str]:
         profit_pct = value_from_mapping(row, "profit_pct")
 
         if fund_code and units:
-            parts = [fund_code, units]
+            parts = [asset_type, fund_code, units] if asset_type else [fund_code, units]
             if cost_price:
                 parts.append(cost_price)
             if fund_name:
@@ -251,8 +254,8 @@ def holdings_lines_from_raw_rows(rows: list[list[str]]) -> list[str]:
         if len(cleaned) >= 4 and not cleaned[0].isdigit():
             pct = cleaned[3] if "%" in cleaned[3] else f"{cleaned[3]}%"
             lines.append(f"{cleaned[0]} | {cleaned[1]} | {cleaned[2]} | {pct}")
-        elif len(cleaned) >= 2 and cleaned[0].isdigit():
-            parts = cleaned[:4]
+        elif len(cleaned) >= 2 and (cleaned[0].isdigit() or cleaned[0].lower() in {"股票", "stock", "基金", "fund"}):
+            parts = cleaned[:5] if cleaned[0].lower() in {"股票", "stock", "基金", "fund"} else cleaned[:4]
             lines.append(" ".join(parts))
     return lines
 
@@ -262,8 +265,8 @@ def pending_lines_from_dict_rows(rows: list[dict[str, str]]) -> list[str]:
     for row in rows:
         occurred_at = value_from_mapping(row, "occurred_at")
         action = value_from_mapping(row, "action")
-        fund_name = value_from_mapping(row, "fund_name")
-        target_fund_name = value_from_mapping(row, "target_fund_name")
+        fund_name = value_from_mapping(row, "fund_name") or value_from_mapping(row, "fund_code")
+        target_fund_name = value_from_mapping(row, "target_fund_name") or value_from_mapping(row, "target_fund_code")
         amount_text = value_from_mapping(row, "amount_text") or value_from_mapping(row, "market_value")
         status = value_from_mapping(row, "status") or "交易进行中"
         note = value_from_mapping(row, "note")
@@ -291,7 +294,7 @@ def plan_lines_from_dict_rows(rows: list[dict[str, str]]) -> list[str]:
     lines: list[str] = []
     for row in rows:
         plan_type = value_from_mapping(row, "plan_type")
-        fund_name = value_from_mapping(row, "fund_name")
+        fund_name = value_from_mapping(row, "fund_name") or value_from_mapping(row, "fund_code")
         schedule_text = value_from_mapping(row, "schedule_text")
         amount_text = value_from_mapping(row, "amount_text") or value_from_mapping(row, "market_value")
         invested_periods = value_from_mapping(row, "invested_periods")

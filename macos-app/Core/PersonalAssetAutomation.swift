@@ -280,6 +280,7 @@ struct PersonalAssetAutomation {
         let targetName = normalizedDisplayName(trade.targetFundName) ?? normalizedDisplayName(trade.fundName)
         let targetKey = keyForFund(targetCode, targetName)
         let index = holdings.firstIndex { holding in
+            guard holding.assetType == .fund else { return false }
             keyForFund(holding.fundCode, holding.displayName) == targetKey
         }
         let existing = index.map { holdings[$0] }

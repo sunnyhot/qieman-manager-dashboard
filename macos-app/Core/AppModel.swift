@@ -370,19 +370,20 @@ final class AppModel: ObservableObject {
                 try runPortfolioSummaryImport(text: portfolioDraft)
                 reloadPortfolioFromDisk()
                 savedCount = userPortfolioHoldings.count
-                noticeMessage = "已通过摘要导入保存个人持仓，正在按基金代码补全名称。"
+                noticeMessage = "已通过摘要导入保存个人持仓，正在按代码补全名称。"
             } else {
                 let holdings = try portfolioStore.parseDraft(portfolioDraft)
                 userPortfolioHoldings = holdings
                 try portfolioStore.save(holdings, to: portfolioFileURL)
                 savedCount = holdings.count
-                noticeMessage = "已保存 \(holdings.count) 条个人持仓，正在按基金代码补全名称。"
+                portfolioDraft = ""
+                noticeMessage = "已保存 \(holdings.count) 条个人持仓，正在按代码补全名称。"
             }
             Task {
                 let resolvedCount = await resolveAndPersistPortfolioNames()
                 try? await refreshUserPortfolio(updateNotice: false)
                 if resolvedCount > 0 {
-                    noticeMessage = "已保存 \(savedCount) 条个人持仓，并通过基金代码补全 \(resolvedCount) 个基金名称。"
+                    noticeMessage = "已保存 \(savedCount) 条个人持仓，并通过代码补全 \(resolvedCount) 个名称。"
                 } else {
                     noticeMessage = "已保存 \(savedCount) 条个人持仓。"
                 }
@@ -555,15 +556,13 @@ final class AppModel: ObservableObject {
         isResolvingPortfolioNames = true
         defer { isResolvingPortfolioNames = false }
 
-        let namesByCode = await platformClient.resolveFundNames(
-            fundCodes: missingNameHoldings.map(\.normalizedFundCode)
-        )
-        guard !namesByCode.isEmpty else { return 0 }
+        let namesByHoldingID = await platformClient.resolveAssetNames(holdings: missingNameHoldings)
+        guard !namesByHoldingID.isEmpty else { return 0 }
 
         var resolvedCount = 0
         let enrichedHoldings = userPortfolioHoldings.map { holding in
             guard holding.normalizedName == nil,
-                  let resolvedName = namesByCode[holding.normalizedFundCode],
+                  let resolvedName = namesByHoldingID[holding.id],
                   !resolvedName.isEmpty
             else {
                 return holding
@@ -572,6 +571,7 @@ final class AppModel: ObservableObject {
             return UserPortfolioHolding(
                 id: holding.id,
                 fundCode: holding.fundCode,
+                assetType: holding.assetType,
                 units: holding.units,
                 costPrice: holding.costPrice,
                 displayName: resolvedName
@@ -582,7 +582,6 @@ final class AppModel: ObservableObject {
 
         do {
             userPortfolioHoldings = enrichedHoldings
-            portfolioDraft = portfolioStore.draft(from: enrichedHoldings)
             try portfolioStore.save(enrichedHoldings, to: portfolioFileURL)
             return resolvedCount
         } catch {
@@ -914,12 +913,12 @@ final class AppModel: ObservableObject {
     var personalAssetRows: [PersonalAssetAggregateRow] {
         var valuationRowsByKey: [String: UserPortfolioValuationRow] = [:]
         for row in userPortfolioSnapshot?.rows ?? [] {
-            valuationRowsByKey[personalFundKey(code: row.holding.normalizedFundCode, name: row.fundName)] = row
+            valuationRowsByKey[personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName)] = row
         }
 
         var rawHoldingsByKey: [String: UserPortfolioHolding] = [:]
         for holding in userPortfolioHoldings {
-            let key = personalFundKey(code: holding.normalizedFundCode, name: holding.normalizedName)
+            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName)
             rawHoldingsByKey[key] = rawHoldingsByKey[key] ?? holding
         }
 
@@ -1039,7 +1038,7 @@ final class AppModel: ObservableObject {
         do {
             let holdings = try portfolioStore.load(from: portfolioFileURL)
             userPortfolioHoldings = holdings
-            portfolioDraft = portfolioStore.draft(from: holdings)
+            portfolioDraft = ""
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -1050,7 +1049,7 @@ final class AppModel: ObservableObject {
         do {
             pendingTrades = try pendingTradesStore.load(from: pendingTradeFileURL)
                 .sorted { $0.occurredAt > $1.occurredAt }
-            pendingTradesDraft = pendingTradesStore.draft(from: pendingTrades)
+            pendingTradesDraft = ""
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -1061,7 +1060,7 @@ final class AppModel: ObservableObject {
         do {
             investmentPlans = try investmentPlansStore.load(from: investmentPlanFileURL)
                 .sorted(by: sortInvestmentPlans)
-            investmentPlansDraft = investmentPlansStore.draft(from: investmentPlans)
+            investmentPlansDraft = ""
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -1124,17 +1123,14 @@ final class AppModel: ObservableObject {
             if holdingsChanged, let portfolioFileURL {
                 userPortfolioHoldings = nextHoldings
                 try portfolioStore.save(nextHoldings, to: portfolioFileURL)
-                portfolioDraft = portfolioStore.draft(from: nextHoldings)
             }
             if pendingChanged, let pendingTradeFileURL {
                 pendingTrades = nextPendingTrades
                 try pendingTradesStore.save(nextPendingTrades, to: pendingTradeFileURL)
-                pendingTradesDraft = pendingTradesStore.draft(from: nextPendingTrades)
             }
             if plansChanged, let investmentPlanFileURL {
                 investmentPlans = nextInvestmentPlans
                 try investmentPlansStore.save(nextInvestmentPlans, to: investmentPlanFileURL)
-                investmentPlansDraft = investmentPlansStore.draft(from: nextInvestmentPlans)
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -1157,14 +1153,14 @@ final class AppModel: ObservableObject {
         var priceByKey: [String: Double] = [:]
 
         for row in userPortfolioSnapshot?.rows ?? [] {
-            let key = personalFundKey(code: row.holding.normalizedFundCode, name: row.fundName)
+            let key = personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName)
             if let price = row.resolvedPrice, price > 0 {
                 priceByKey[key] = price
             }
         }
 
         for holding in holdings {
-            let key = personalFundKey(code: holding.normalizedFundCode, name: holding.normalizedName)
+            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName)
             if priceByKey[key] == nil, let costPrice = holding.costPrice, costPrice > 0 {
                 priceByKey[key] = costPrice
             }
@@ -1191,7 +1187,7 @@ final class AppModel: ObservableObject {
         do {
             let snapshot = try await platformClient.fetchUserPortfolioSnapshot(holdings: Array(syntheticHoldingsByKey.values))
             for row in snapshot.rows {
-                let key = personalFundKey(code: row.holding.normalizedFundCode, name: row.fundName)
+                let key = personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName)
                 if let price = row.resolvedPrice, price > 0 {
                     priceByKey[key] = price
                 }
@@ -1229,7 +1225,7 @@ final class AppModel: ObservableObject {
     private func latestEstimateChangePct(for plan: PersonalInvestmentPlan) -> Double? {
         let key = personalFundKey(code: plan.fundCode, name: plan.fundName)
         return userPortfolioSnapshot?.rows.first { row in
-            personalFundKey(code: row.holding.normalizedFundCode, name: row.fundName) == key
+            personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName) == key
         }?.estimateChangePct
     }
 
@@ -1785,8 +1781,12 @@ final class AppModel: ObservableObject {
     }
 
     private func personalFundKey(code: String?, name: String?) -> String {
+        personalAssetKey(assetType: .fund, code: code, name: name)
+    }
+
+    private func personalAssetKey(assetType: PersonalAssetType, code: String?, name: String?) -> String {
         if let code = normalizedCode(code) {
-            return "code:\(code)"
+            return "\(assetType.rawValue):code:\(code)"
         }
         let normalizedName = (name ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1794,7 +1794,7 @@ final class AppModel: ObservableObject {
             .replacingOccurrences(of: "（", with: "(")
             .replacingOccurrences(of: "）", with: ")")
             .replacingOccurrences(of: " ", with: "")
-        return "name:\(normalizedName)"
+        return "\(assetType.rawValue):name:\(normalizedName)"
     }
 
     private func normalizedCode(_ value: String?) -> String? {

@@ -46,22 +46,22 @@ enum PersonalDataImportTarget: String, CaseIterable, Identifiable {
     var sampleText: String {
         switch self {
         case .holdings:
-            return "示例：021550 1200 1.1304"
+            return "示例：021550 1200 1.1304；股票 600519 10 1500"
         case .pendingTrades:
-            return "示例：2026-04-23 09:48:33 | 定投 | 华泰柏瑞纳斯达克100ETF联接(QDII)A | 10.00元 | 交易进行中"
+            return "示例：2026-04-23 09:48:33 | 定投 | 019524 | 10.00元 | 交易进行中"
         case .investmentPlans:
-            return "示例：定投 | 易方达恒生科技ETF联接(QDII)A | 每周三定投 | 500.00元 | 2 | 1000.00元 | 余额宝 | 2026-04-29(星期三) | 进行中"
+            return "示例：定投 | 013308 | 每周三定投 | 500.00元 | 2 | 1000.00元 | 余额宝 | 2026-04-29(星期三) | 进行中"
         }
     }
 
     var helpText: String {
         switch self {
         case .holdings:
-            return "支持“代码 份额 成本价”；基金名称会保存时按代码自动补全，也支持上传图片或表格后自动填入草稿区。"
+            return "支持“代码 份额 成本价”和“股票 代码 数量 成本价”；名称会保存时按代码自动补全，也支持上传图片或表格后自动填入草稿区。"
         case .pendingTrades:
-            return "支持时间、动作、基金、金额/份额、状态五列；图片上传会先 OCR 到草稿区。"
+            return "支持时间、动作、基金代码或名称、金额/份额、状态五列；保存时会按基金代码自动补全名称。"
         case .investmentPlans:
-            return "支持计划类型、基金、计划说明、金额、期数、累计、支付方式、下次时间，也支持“进行中 / 已暂停 / 已终止”状态。"
+            return "支持计划类型、基金代码或名称、计划说明、金额、期数、累计、支付方式、下次时间，也支持“进行中 / 已暂停 / 已终止”状态。"
         }
     }
 }
@@ -696,19 +696,63 @@ struct PlatformMonthSummary: Identifiable, Hashable {
     }
 }
 
+enum PersonalAssetType: String, Codable, Hashable {
+    case fund
+    case stock
+
+    var displayName: String {
+        switch self {
+        case .fund:
+            return "基金"
+        case .stock:
+            return "股票"
+        }
+    }
+
+    var draftPrefix: String? {
+        switch self {
+        case .fund:
+            return nil
+        case .stock:
+            return "股票"
+        }
+    }
+}
+
 struct UserPortfolioHolding: Codable, Hashable, Identifiable {
     let id: UUID
     let fundCode: String
+    let assetType: PersonalAssetType
     let units: Double
     let costPrice: Double?
     let displayName: String?
 
-    init(id: UUID = UUID(), fundCode: String, units: Double, costPrice: Double?, displayName: String?) {
+    enum CodingKeys: String, CodingKey {
+        case id
+        case fundCode
+        case assetType
+        case units
+        case costPrice
+        case displayName
+    }
+
+    init(id: UUID = UUID(), fundCode: String, assetType: PersonalAssetType = .fund, units: Double, costPrice: Double?, displayName: String?) {
         self.id = id
         self.fundCode = fundCode
+        self.assetType = assetType
         self.units = units
         self.costPrice = costPrice
         self.displayName = displayName
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        self.fundCode = try container.decode(String.self, forKey: .fundCode)
+        self.assetType = try container.decodeIfPresent(PersonalAssetType.self, forKey: .assetType) ?? .fund
+        self.units = try container.decode(Double.self, forKey: .units)
+        self.costPrice = try container.decodeIfPresent(Double.self, forKey: .costPrice)
+        self.displayName = try container.decodeIfPresent(String.self, forKey: .displayName)
     }
 
     var normalizedFundCode: String {
@@ -721,7 +765,11 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
     }
 
     var draftLine: String {
-        var parts = [normalizedFundCode, Self.decimalText(units)]
+        var parts: [String] = []
+        if let draftPrefix = assetType.draftPrefix {
+            parts.append(draftPrefix)
+        }
+        parts.append(contentsOf: [normalizedFundCode, Self.decimalText(units)])
         if let costPrice {
             parts.append(Self.decimalText(costPrice))
         }

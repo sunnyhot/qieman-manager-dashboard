@@ -87,28 +87,46 @@ struct UserPortfolioStore {
         let cleaned = tokens.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         guard cleaned.count >= 2 else { return nil }
 
-        if isFundCode(cleaned[0]) {
+        var tokens = cleaned
+        var assetType: PersonalAssetType = .fund
+        if let explicitType = parseAssetType(tokens[0]) {
+            assetType = explicitType
+            tokens.removeFirst()
+        } else if tokens.count >= 2, let explicitType = parseAssetType(tokens[1]) {
+            assetType = explicitType
+            tokens.remove(at: 1)
+        } else if let parsedCode = parseAssetCode(tokens[0]), parsedCode.assetType == .stock {
+            assetType = .stock
+        } else if tokens.count >= 2, let parsedCode = parseAssetCode(tokens[1]), parsedCode.assetType == .stock {
+            assetType = .stock
+        }
+
+        guard tokens.count >= 2 else { return nil }
+
+        if let parsedCode = parseAssetCode(tokens[0]) {
             return buildHolding(
-                code: cleaned[0],
-                unitsText: cleaned[safe: 1],
-                costText: cleaned[safe: 2],
-                nameParts: Array(cleaned.dropFirst(3))
+                code: parsedCode.code,
+                assetType: parsedCode.assetType ?? assetType,
+                unitsText: tokens[safe: 1],
+                costText: tokens[safe: 2],
+                nameParts: Array(tokens.dropFirst(3))
             )
         }
 
-        if cleaned.count >= 3, isFundCode(cleaned[1]) {
+        if tokens.count >= 3, let parsedCode = parseAssetCode(tokens[1]) {
             return buildHolding(
-                code: cleaned[1],
-                unitsText: cleaned[safe: 2],
-                costText: cleaned[safe: 3],
-                nameParts: [cleaned[0]] + Array(cleaned.dropFirst(4))
+                code: parsedCode.code,
+                assetType: parsedCode.assetType ?? assetType,
+                unitsText: tokens[safe: 2],
+                costText: tokens[safe: 3],
+                nameParts: [tokens[0]] + Array(tokens.dropFirst(4))
             )
         }
 
         return nil
     }
 
-    private func buildHolding(code: String, unitsText: String?, costText: String?, nameParts: [String]) -> UserPortfolioHolding? {
+    private func buildHolding(code: String, assetType: PersonalAssetType, unitsText: String?, costText: String?, nameParts: [String]) -> UserPortfolioHolding? {
         guard let unitsText, let units = decimalValue(unitsText), units > 0 else {
             return nil
         }
@@ -122,6 +140,7 @@ struct UserPortfolioStore {
         let name = derivedNameParts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         return UserPortfolioHolding(
             fundCode: code,
+            assetType: assetType,
             units: units,
             costPrice: parsedCost,
             displayName: name.isEmpty ? nil : name
@@ -135,10 +154,42 @@ struct UserPortfolioStore {
         return Double(normalized)
     }
 
-    private func isFundCode(_ value: String) -> Bool {
+    private func parseAssetType(_ value: String) -> PersonalAssetType? {
+        let normalized = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        switch normalized {
+        case "股票", "stock", "a股", "沪深":
+            return .stock
+        case "基金", "fund":
+            return .fund
+        default:
+            return nil
+        }
+    }
+
+    private func parseAssetCode(_ value: String) -> (code: String, assetType: PersonalAssetType?)? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 5 && trimmed.count <= 6 else { return false }
-        return CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: trimmed))
+        let upper = trimmed.uppercased()
+
+        if upper.count == 8,
+           (upper.hasPrefix("SH") || upper.hasPrefix("SZ")),
+           isDigits(String(upper.dropFirst(2))) {
+            return (String(upper.dropFirst(2)), .stock)
+        }
+
+        if upper.count == 9,
+           (upper.hasSuffix(".SH") || upper.hasSuffix(".SZ")),
+           isDigits(String(upper.prefix(6))) {
+            return (String(upper.prefix(6)), .stock)
+        }
+
+        guard trimmed.count >= 5 && trimmed.count <= 6, isDigits(trimmed) else { return nil }
+        return (trimmed, nil)
+    }
+
+    private func isDigits(_ value: String) -> Bool {
+        CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: value))
     }
 }
 
