@@ -19,7 +19,7 @@ private enum PersonalAssetSortOption: String, CaseIterable, Identifiable {
     case pendingAmount = "待确认金额"
     case nextExecution = "下次定投时间"
     case planCumulative = "累计计划金额"
-    case name = "基金名"
+    case name = "标的名"
 
     var id: String { rawValue }
 }
@@ -1463,101 +1463,108 @@ private struct PortfolioSectionView: View {
                         }
 
                         if isImportCenterExpanded || !hasAnyPersonalData {
-                            Picker("导入对象", selection: $importTarget) {
-                                ForEach(PersonalDataImportTarget.allCases) { target in
-                                    Text(target.rawValue).tag(target)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .frame(maxWidth: 520)
-
-                            Text(importTarget.helpText)
-                                .font(.system(size: 11))
-                                .foregroundStyle(AppPalette.muted)
-
-                            HStack(spacing: 8) {
-                                Spacer()
-                                Button(isDraftEditorExpanded ? "收起编辑" : "展开编辑") {
-                                    withAnimation(.easeInOut(duration: 0.18)) {
-                                        isDraftEditorExpanded.toggle()
+                            if visibleImportTargets.isEmpty {
+                                Text("持仓中、买入中和定投计划都已导入成功。后续需要重导时，可先在对应数据区清空或重载后再补录。")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(AppPalette.muted)
+                                    .padding(.horizontal, 2)
+                            } else {
+                                Picker("导入对象", selection: $importTarget) {
+                                    ForEach(visibleImportTargets) { target in
+                                        Text(target.rawValue).tag(target)
                                     }
                                 }
-                                .buttonStyle(.bordered)
-                            }
+                                .pickerStyle(.segmented)
+                                .frame(maxWidth: 520)
 
-                            if isDraftEditorExpanded {
-                                TextEditor(text: selectedDraftBinding)
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .frame(height: 220)
-                                    .padding(10)
+                                Text(importTarget.helpText)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(AppPalette.muted)
+
+                                HStack(spacing: 8) {
+                                    Spacer()
+                                    Button(isDraftEditorExpanded ? "收起编辑" : "展开编辑") {
+                                        withAnimation(.easeInOut(duration: 0.18)) {
+                                            isDraftEditorExpanded.toggle()
+                                        }
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
+
+                                if isDraftEditorExpanded {
+                                    TextEditor(text: selectedDraftBinding)
+                                        .font(.system(size: 12, design: .monospaced))
+                                        .frame(height: 220)
+                                        .padding(10)
+                                        .background(AppPalette.cardStrong)
+                                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14)
+                                                .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                                        )
+                                } else if hasCurrentDraft {
+                                    ScrollView {
+                                        Text(currentDraftPreviewText)
+                                            .font(.system(size: 12, design: .monospaced))
+                                            .foregroundStyle(AppPalette.ink)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(10)
+                                    }
+                                    .frame(height: 122)
                                     .background(AppPalette.cardStrong)
                                     .clipShape(RoundedRectangle(cornerRadius: 14))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 14)
                                             .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                                     )
-                            } else if hasCurrentDraft {
-                                ScrollView {
-                                    Text(currentDraftPreviewText)
-                                        .font(.system(size: 12, design: .monospaced))
-                                        .foregroundStyle(AppPalette.ink)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(10)
                                 }
-                                .frame(height: 122)
-                                .background(AppPalette.cardStrong)
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
-                                )
-                            }
 
-                            HStack {
-                                Text(importTarget.sampleText)
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(AppPalette.muted)
-                                Spacer()
-                            }
-
-                            HStack(spacing: 10) {
-                                Button(saveDraftButtonTitle) {
-                                    model.saveDraft(for: importTarget)
+                                HStack {
+                                    Text(importTarget.sampleText)
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(AppPalette.muted)
+                                    Spacer()
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .tint(AppPalette.brand)
-                                .disabled(importTarget == .holdings && model.isResolvingPortfolioNames)
 
-                                Button("上传图片") {
-                                    presentImportPanel(source: .image)
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(model.isProcessingImport)
+                                HStack(spacing: 10) {
+                                    Button(saveDraftButtonTitle) {
+                                        model.saveDraft(for: importTarget)
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(AppPalette.brand)
+                                    .disabled(importTarget == .holdings && model.isResolvingPortfolioNames)
 
-                                Button("上传表格") {
-                                    presentImportPanel(source: .table)
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(model.isProcessingImport)
-
-                                Button(reloadButtonTitle) {
-                                    model.reloadDraftTargetFromDisk(importTarget)
-                                }
-                                .buttonStyle(.bordered)
-
-                                if importTarget == .holdings {
-                                    Button(model.isRefreshingPortfolio ? "刷新中…" : "刷新估值") {
-                                        Task { try? await model.refreshUserPortfolio() }
+                                    Button("上传图片") {
+                                        presentImportPanel(source: .image)
                                     }
                                     .buttonStyle(.bordered)
-                                    .disabled(model.isRefreshingPortfolio || !model.hasPersonalPortfolio)
-                                }
+                                    .disabled(model.isProcessingImport)
 
-                                Button("清空草稿") {
-                                    model.updateDraft("", for: importTarget)
+                                    Button("上传表格") {
+                                        presentImportPanel(source: .table)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .disabled(model.isProcessingImport)
+
+                                    Button(reloadButtonTitle) {
+                                        model.reloadDraftTargetFromDisk(importTarget)
+                                    }
+                                    .buttonStyle(.bordered)
+
+                                    if importTarget == .holdings {
+                                        Button(model.isRefreshingPortfolio ? "刷新中…" : "刷新估值") {
+                                            Task { try? await model.refreshUserPortfolio() }
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .disabled(model.isRefreshingPortfolio || !model.hasPersonalPortfolio)
+                                    }
+
+                                    Button("清空草稿") {
+                                        model.updateDraft("", for: importTarget)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .disabled(model.draft(for: importTarget).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                                 }
-                                .buttonStyle(.bordered)
-                                .disabled(model.draft(for: importTarget).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             }
                         } else {
                             Text("导入中心已折叠。需要补录时点“展开导入中心”，不影响下面资产总表和估值浏览。")
@@ -1700,8 +1707,14 @@ private struct PortfolioSectionView: View {
             }
             .padding(16)
         }
+        .onAppear {
+            syncImportTargetWithVisibleTargets()
+        }
         .onChange(of: importTarget) { _, _ in
             isDraftEditorExpanded = false
+        }
+        .onChange(of: importAvailabilityKey) { _, _ in
+            syncImportTargetWithVisibleTargets()
         }
     }
 
@@ -1748,6 +1761,16 @@ private struct PortfolioSectionView: View {
         model.draft(for: importTarget)
     }
 
+    private var visibleImportTargets: [PersonalDataImportTarget] {
+        PersonalDataImportTarget.allCases.filter { !model.hasImportedData(for: $0) }
+    }
+
+    private var importAvailabilityKey: String {
+        PersonalDataImportTarget.allCases
+            .map { model.hasImportedData(for: $0) ? "1" : "0" }
+            .joined()
+    }
+
     private var hasCurrentDraft: Bool {
         !currentDraftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -1776,6 +1799,14 @@ private struct PortfolioSectionView: View {
 
     private var hasAnyPersonalData: Bool {
         model.hasPersonalPortfolio || model.hasPendingTrades || model.hasInvestmentPlans
+    }
+
+    private func syncImportTargetWithVisibleTargets() {
+        guard !visibleImportTargets.isEmpty else { return }
+        if !visibleImportTargets.contains(importTarget) {
+            importTarget = visibleImportTargets[0]
+            isDraftEditorExpanded = false
+        }
     }
 
     private func presentImportPanel(source: PersonalDataImportSource) {

@@ -281,7 +281,7 @@ struct PersonalAssetAutomation {
         let targetKey = keyForFund(targetCode, targetName)
         let index = holdings.firstIndex { holding in
             guard holding.assetType == .fund else { return false }
-            keyForFund(holding.fundCode, holding.displayName) == targetKey
+            return keyForFund(holding.fundCode, holding.displayName) == targetKey
         }
         let existing = index.map { holdings[$0] }
         let resolvedCode = existing?.fundCode ?? targetCode

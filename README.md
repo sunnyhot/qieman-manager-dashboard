@@ -65,7 +65,7 @@
   - 总资产估值
   - 今日涨跌
   - 总收益
-  - 每只持仓基金的实时估值、今日涨跌、总收益
+  - 每只持仓标的的实时估值、今日涨跌、总收益
   - 排序方式：按今日涨跌 / 按总收益 / 按市值
 
 ### 登录、通知与自动巡检
@@ -126,7 +126,7 @@ bash scripts/build_macos_app.sh
 ### 产物
 
 - App Bundle：`dist/macos-app/QiemanDashboard.app`
-- 分发压缩包：`dist/macos-app/QiemanDashboard-2.1.3.zip`
+- 分发压缩包：`dist/macos-app/QiemanDashboard-2.1.4.zip`
 
 ### 运行
 
@@ -145,7 +145,7 @@ open dist/macos-app/QiemanDashboard.app
 ### 自定义构建参数
 
 ```bash
-APP_VERSION=2.1.3 \
+APP_VERSION=2.1.4 \
 APP_BUILD=210 \
 BUNDLE_ID=com.sunnyhot.qieman.manager.dashboard \
 MIN_MACOS_VERSION=14.0 \
@@ -163,11 +163,11 @@ https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/release
 发布新版本时：
 
 ```bash
-APP_VERSION=2.1.3 bash scripts/build_macos_app.sh
-cp dist/macos-app/QiemanDashboard-2.1.3.zip releases/macos/
+APP_VERSION=2.1.4 bash scripts/build_macos_app.sh
+cp dist/macos-app/QiemanDashboard-2.1.4.zip releases/macos/
 # 同步更新 releases/macos/latest.json 里的 tag_name、资源 URL 和 size
-git add releases/macos/latest.json releases/macos/QiemanDashboard-2.1.3.zip
-git commit -m "Publish QiemanDashboard 2.1.3"
+git add releases/macos/latest.json releases/macos/QiemanDashboard-2.1.4.zip
+git commit -m "Publish QiemanDashboard 2.1.4"
 git push
 ```
 
@@ -389,7 +389,7 @@ python3 scripts/prepare_personal_import.py \
 - 计划档案
 - 覆盖基金数
 
-### 每只基金维度
+### 每只标的维度
 
 - 实时估值
 - 今日涨跌金额 / 涨跌率
@@ -406,7 +406,7 @@ python3 scripts/prepare_personal_import.py \
 - 今日涨跌
 - 总收益
 - 总收益率
-- 每只持仓基金的：
+- 每只持仓标的的：
   - 实时估值
   - 今日涨跌
   - 总收益

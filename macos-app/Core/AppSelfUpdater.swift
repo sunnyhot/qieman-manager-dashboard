@@ -177,7 +177,15 @@ struct AppSelfUpdater {
 
           if /usr/bin/ditto "${NEW_APP_PATH}" "${APP_PATH}"; then
             /usr/bin/xattr -dr com.apple.quarantine "${APP_PATH}" 2>/dev/null || true
-            /usr/bin/open "${APP_PATH}"
+            attempts=0
+            until /usr/bin/open -n "${APP_PATH}"; do
+              attempts=$((attempts + 1))
+              if [ "${attempts}" -gt 20 ]; then
+                echo "Timed out trying to relaunch updated app"
+                exit 1
+              fi
+              sleep 0.5
+            done
             rm -rf "${BACKUP_PATH}"
             rm -rf "${WORK_DIR}"
           else
@@ -185,7 +193,7 @@ struct AppSelfUpdater {
             rm -rf "${APP_PATH}"
             if [ -e "${BACKUP_PATH}" ]; then
               mv "${BACKUP_PATH}" "${APP_PATH}"
-              /usr/bin/open "${APP_PATH}"
+              /usr/bin/open -n "${APP_PATH}" || true
             fi
             exit 1
           fi
@@ -195,14 +203,18 @@ struct AppSelfUpdater {
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/nohup")
         process.arguments = [
+            "/bin/sh",
             scriptURL.path,
             currentAppURL.path,
             downloadedAppURL.path,
             "\(ProcessInfo.processInfo.processIdentifier)",
             workDirectory.path,
         ]
+        process.standardInput = FileHandle.nullDevice
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
 
         do {
             try process.run()

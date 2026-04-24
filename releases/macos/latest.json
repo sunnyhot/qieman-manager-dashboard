@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.1.3",
-  "name": "QiemanDashboard 2.1.3",
-  "body": "移除网页备份入口；优化首页主理人提醒为左右信息面板；删除总览页基金全貌总表；总览资产卡、最近调仓和最近发言支持点击跳转到对应列表与详情。",
+  "tag_name": "v2.1.4",
+  "name": "QiemanDashboard 2.1.4",
+  "body": "我的持仓支持股票录入与估值；持仓中、买入中、定投计划支持只输入基金代码并自动补全名称；导入中心会隐藏已经导入成功的对象；更新安装后会自动重启应用。",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/tree/main/releases/macos",
-  "published_at": "2026-04-24T08:28:23Z",
+  "published_at": "2026-04-24T09:19:28Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.1.3.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.1.3/QiemanDashboard-2.1.3.zip",
-      "size": 3323037,
+      "name": "QiemanDashboard-2.1.4.zip",
+      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.1.4.zip",
+      "size": 3050969,
       "content_type": "application/zip"
     }
   ]

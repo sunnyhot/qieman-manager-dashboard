@@ -634,6 +634,17 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func hasImportedData(for target: PersonalDataImportTarget) -> Bool {
+        switch target {
+        case .holdings:
+            return hasPersonalPortfolio
+        case .pendingTrades:
+            return hasPendingTrades
+        case .investmentPlans:
+            return hasInvestmentPlans
+        }
+    }
+
     func importExternalFile(at fileURL: URL, source: PersonalDataImportSource, target: PersonalDataImportTarget) async {
         isProcessingImport = true
         errorMessage = ""

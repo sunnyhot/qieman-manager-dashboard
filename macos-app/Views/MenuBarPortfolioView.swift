@@ -35,13 +35,13 @@ struct MenuBarPortfolioView: View {
                         MenuBarEmptyState(
                             icon: "waveform.path.ecg",
                             title: "还没有估值结果",
-                            subtitle: "点一次刷新，就会拉到每只基金的实时估值和总收益。"
+                            subtitle: "点一次刷新，就会拉到每只标的的实时估值和总收益。"
                         )
                     } else {
                         MenuBarEmptyState(
                             icon: "briefcase",
                             title: model.hasInvestmentPlans ? "已导入计划，但还没持仓估值" : "还没配置持仓",
-                            subtitle: "去主界面的“我的持仓”录入后，这里会直接显示每只基金的实时估值和总收益。"
+                            subtitle: "去主界面的“我的持仓”录入后，这里会直接显示每只标的的实时估值和总收益。"
                         )
                     }
                 }
@@ -245,7 +245,7 @@ private struct MenuBarSummaryCard: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(AppPalette.muted)
                 Spacer()
-                Text("共 \(snapshot.holdingCount) 只基金")
+                Text("共 \(snapshot.holdingCount) 只标的")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
             }
