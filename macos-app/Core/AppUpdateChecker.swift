@@ -43,7 +43,7 @@ enum AppUpdateCheckError: LocalizedError {
         case .invalidFeedURL(let value):
             return "更新源地址无效：\(value)"
         case .noGitHubRelease:
-            return "GitHub 上还没有可用的 Release。发布一个新版本并上传 App 压缩包后，这里就能检查到。"
+            return "GitHub 上还没有可用的更新清单或 Release。上传最新 App 压缩包和 latest.json 后，这里就能检查到。"
         case .requestFailed(let statusCode):
             return "检查更新失败，GitHub 返回 HTTP \(statusCode)。"
         case .invalidResponse:
@@ -142,7 +142,7 @@ struct AppUpdateChecker {
 
     static var defaultFeedURLString: String {
         let value = Bundle.main.object(forInfoDictionaryKey: "QiemanUpdateFeedURL") as? String
-        return nonEmpty(value) ?? "https://api.github.com/repos/\(defaultRepository)/releases/latest"
+        return nonEmpty(value) ?? "https://raw.githubusercontent.com/\(defaultRepository)/main/releases/macos/latest.json"
     }
 
     static var bundleVersion: String {

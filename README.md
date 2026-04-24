@@ -154,30 +154,32 @@ bash scripts/build_macos_app.sh
 
 ### 自动检查更新
 
-原生 App 会在启动后自动轻量检查一次更新，也可以在右上角「更多」菜单或 macOS 应用菜单里手动点「检查更新」。发现新版本后，应用会弹出更新窗口；用户点「下载并重启安装」后，App 会下载 GitHub Release 里的 zip，校验 Bundle ID、版本号和签名，再覆盖当前 `.app` 并自动重启。默认更新源是 GitHub Releases：
+原生 App 会在启动后自动轻量检查一次更新，也可以在右上角「更多」菜单或 macOS 应用菜单里手动点「检查更新」。发现新版本后，应用会弹出更新窗口；用户点「下载并重启安装」后，App 会下载 GitHub 上的 zip，校验 Bundle ID、版本号和签名，再覆盖当前 `.app` 并自动重启。默认更新源是仓库里的静态更新清单：
 
 ```text
-https://api.github.com/repos/sunnyhot/qieman-manager-dashboard/releases/latest
+https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/latest.json
 ```
 
 发布新版本时：
 
 ```bash
 APP_VERSION=2.1.1 bash scripts/build_macos_app.sh
-gh release create v2.1.1 \
-  dist/macos-app/QiemanDashboard-2.1.1.zip \
-  --repo sunnyhot/qieman-manager-dashboard \
-  --title "QiemanDashboard 2.1.1" \
-  --notes "更新说明"
+cp dist/macos-app/QiemanDashboard-2.1.1.zip releases/macos/
+# 同步更新 releases/macos/latest.json 里的 tag_name、资源 URL 和 size
+git add releases/macos/latest.json releases/macos/QiemanDashboard-2.1.1.zip
+git commit -m "Publish QiemanDashboard 2.1.1"
+git push
 ```
 
 也可以通过环境变量覆盖更新仓库或更新源：
 
 ```bash
 UPDATE_REPOSITORY=sunnyhot/qieman-manager-dashboard \
-UPDATE_FEED_URL=https://api.github.com/repos/sunnyhot/qieman-manager-dashboard/releases/latest \
+UPDATE_FEED_URL=https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/latest.json \
 bash scripts/build_macos_app.sh
 ```
+
+如果希望继续用 GitHub Releases，也可以把 `UPDATE_FEED_URL` 指到 `https://api.github.com/repos/<owner>/<repo>/releases/latest`，应用兼容 GitHub Release API 的 JSON 结构。
 
 ### 签名说明
 
