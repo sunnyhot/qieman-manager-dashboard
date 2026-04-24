@@ -126,7 +126,7 @@ bash scripts/build_macos_app.sh
 ### 产物
 
 - App Bundle：`dist/macos-app/QiemanDashboard.app`
-- 分发压缩包：`dist/macos-app/QiemanDashboard-2.1.4.zip`
+- 分发压缩包：`dist/macos-app/QiemanDashboard-2.1.5.zip`
 
 ### 运行
 
@@ -145,7 +145,7 @@ open dist/macos-app/QiemanDashboard.app
 ### 自定义构建参数
 
 ```bash
-APP_VERSION=2.1.4 \
+APP_VERSION=2.1.5 \
 APP_BUILD=210 \
 BUNDLE_ID=com.sunnyhot.qieman.manager.dashboard \
 MIN_MACOS_VERSION=14.0 \
@@ -163,11 +163,11 @@ https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/release
 发布新版本时：
 
 ```bash
-APP_VERSION=2.1.4 bash scripts/build_macos_app.sh
-cp dist/macos-app/QiemanDashboard-2.1.4.zip releases/macos/
+APP_VERSION=2.1.5 bash scripts/build_macos_app.sh
+cp dist/macos-app/QiemanDashboard-2.1.5.zip releases/macos/
 # 同步更新 releases/macos/latest.json 里的 tag_name、资源 URL 和 size
-git add releases/macos/latest.json releases/macos/QiemanDashboard-2.1.4.zip
-git commit -m "Publish QiemanDashboard 2.1.4"
+git add releases/macos/latest.json releases/macos/QiemanDashboard-2.1.5.zip
+git commit -m "Publish QiemanDashboard 2.1.5"
 git push
 ```
 

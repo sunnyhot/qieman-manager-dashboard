@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.1.4",
-  "name": "QiemanDashboard 2.1.4",
-  "body": "我的持仓支持股票录入与估值；持仓中、买入中、定投计划支持只输入基金代码并自动补全名称；导入中心会隐藏已经导入成功的对象；更新安装后会自动重启应用。",
+  "tag_name": "v2.1.5",
+  "name": "QiemanDashboard 2.1.5",
+  "body": "修复导入中心入口过度隐藏的问题：已导入对象默认可收起，但可一键显示并重新补录；股票录入入口在“持仓中”，支持形如“股票 600519 10 1500”的录入格式。",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/tree/main/releases/macos",
-  "published_at": "2026-04-24T09:19:28Z",
+  "published_at": "2026-04-24T09:39:38Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.1.4.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.1.4/QiemanDashboard-2.1.4.zip",
-      "size": 3050969,
+      "name": "QiemanDashboard-2.1.5.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.1.5/QiemanDashboard-2.1.5.zip",
+      "size": 3051603,
       "content_type": "application/zip"
     }
   ]
