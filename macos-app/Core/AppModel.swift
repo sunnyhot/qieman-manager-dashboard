@@ -47,6 +47,7 @@ final class AppModel: ObservableObject {
     @Published var showAdvancedParams = false
     @Published var isRefreshingPortfolio = false
     @Published var isProcessingImport = false
+    @Published var isResolvingPortfolioNames = false
     @Published var isCheckingForUpdates = false
     @Published var availableUpdate: AppUpdateRelease?
     @Published var isPresentingUpdateSheet = false
@@ -390,17 +391,28 @@ final class AppModel: ObservableObject {
             return
         }
         do {
+            let savedCount: Int
             if shouldUsePortfolioSummaryImport(for: portfolioDraft) {
                 try runPortfolioSummaryImport(text: portfolioDraft)
                 reloadPortfolioFromDisk()
-                noticeMessage = "已通过摘要导入保存个人持仓。"
+                savedCount = userPortfolioHoldings.count
+                noticeMessage = "已通过摘要导入保存个人持仓，正在按基金代码补全名称。"
             } else {
                 let holdings = try portfolioStore.parseDraft(portfolioDraft)
                 userPortfolioHoldings = holdings
                 try portfolioStore.save(holdings, to: portfolioFileURL)
-                noticeMessage = "已保存 \(holdings.count) 条个人持仓。"
+                savedCount = holdings.count
+                noticeMessage = "已保存 \(holdings.count) 条个人持仓，正在按基金代码补全名称。"
             }
-            Task { try? await refreshUserPortfolio() }
+            Task {
+                let resolvedCount = await resolveAndPersistPortfolioNames()
+                try? await refreshUserPortfolio(updateNotice: false)
+                if resolvedCount > 0 {
+                    noticeMessage = "已保存 \(savedCount) 条个人持仓，并通过基金代码补全 \(resolvedCount) 个基金名称。"
+                } else {
+                    noticeMessage = "已保存 \(savedCount) 条个人持仓。"
+                }
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -554,6 +566,54 @@ final class AppModel: ObservableObject {
         userPortfolioSnapshot = snapshot
         if updateNotice {
             noticeMessage = "个人持仓估值已刷新。"
+        }
+    }
+
+    @discardableResult
+    private func resolveAndPersistPortfolioNames() async -> Int {
+        guard let portfolioFileURL else { return 0 }
+
+        let missingNameHoldings = userPortfolioHoldings.filter {
+            !$0.normalizedFundCode.isEmpty && $0.normalizedName == nil
+        }
+        guard !missingNameHoldings.isEmpty else { return 0 }
+
+        isResolvingPortfolioNames = true
+        defer { isResolvingPortfolioNames = false }
+
+        let namesByCode = await platformClient.resolveFundNames(
+            fundCodes: missingNameHoldings.map(\.normalizedFundCode)
+        )
+        guard !namesByCode.isEmpty else { return 0 }
+
+        var resolvedCount = 0
+        let enrichedHoldings = userPortfolioHoldings.map { holding in
+            guard holding.normalizedName == nil,
+                  let resolvedName = namesByCode[holding.normalizedFundCode],
+                  !resolvedName.isEmpty
+            else {
+                return holding
+            }
+            resolvedCount += 1
+            return UserPortfolioHolding(
+                id: holding.id,
+                fundCode: holding.fundCode,
+                units: holding.units,
+                costPrice: holding.costPrice,
+                displayName: resolvedName
+            )
+        }
+
+        guard resolvedCount > 0 else { return 0 }
+
+        do {
+            userPortfolioHoldings = enrichedHoldings
+            portfolioDraft = portfolioStore.draft(from: enrichedHoldings)
+            try portfolioStore.save(enrichedHoldings, to: portfolioFileURL)
+            return resolvedCount
+        } catch {
+            errorMessage = error.localizedDescription
+            return 0
         }
     }
 

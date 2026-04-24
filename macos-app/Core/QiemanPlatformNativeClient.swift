@@ -157,6 +157,26 @@ final class QiemanPlatformNativeClient {
         )
     }
 
+    func resolveFundNames(fundCodes: [String]) async -> [String: String] {
+        let normalizedCodes = Array(Set(fundCodes.map(normalizedString).filter { !$0.isEmpty }))
+        guard !normalizedCodes.isEmpty else { return [:] }
+
+        let histories = await preloadHistories(normalizedCodes)
+        let quotes = await preloadQuotes(normalizedCodes, histories: histories)
+
+        var names: [String: String] = [:]
+        for code in normalizedCodes {
+            let name = firstNonEmpty([
+                quotes[code]?.fundName ?? "",
+                histories[code]?.fundName ?? "",
+            ])
+            if !name.isEmpty {
+                names[code] = name
+            }
+        }
+        return names
+    }
+
     private func requestAdjustments(prodCode: String) async throws -> [[String: Any]] {
         let payload = try await requestJSON(
             hostURL: baseURL,

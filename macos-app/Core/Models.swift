@@ -49,7 +49,7 @@ enum PersonalDataImportTarget: String, CaseIterable, Identifiable {
     var sampleText: String {
         switch self {
         case .holdings:
-            return "示例：021550 1200 1.1304 博时红利低波100"
+            return "示例：021550 1200 1.1304"
         case .pendingTrades:
             return "示例：2026-04-23 09:48:33 | 定投 | 华泰柏瑞纳斯达克100ETF联接(QDII)A | 10.00元 | 交易进行中"
         case .investmentPlans:
@@ -60,7 +60,7 @@ enum PersonalDataImportTarget: String, CaseIterable, Identifiable {
     var helpText: String {
         switch self {
         case .holdings:
-            return "支持“代码 份额 成本价 名称”，也支持上传图片或表格后自动填入草稿区。"
+            return "支持“代码 份额 成本价”；基金名称会保存时按代码自动补全，也支持上传图片或表格后自动填入草稿区。"
         case .pendingTrades:
             return "支持时间、动作、基金、金额/份额、状态五列；图片上传会先 OCR 到草稿区。"
         case .investmentPlans:

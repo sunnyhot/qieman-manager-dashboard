@@ -1456,11 +1456,12 @@ private struct PortfolioSectionView: View {
                             }
 
                             HStack(spacing: 10) {
-                                Button(importTarget.buttonTitle) {
+                                Button(saveDraftButtonTitle) {
                                     model.saveDraft(for: importTarget)
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .tint(AppPalette.brand)
+                                .disabled(importTarget == .holdings && model.isResolvingPortfolioNames)
 
                                 Button("上传图片") {
                                     presentImportPanel(source: .image)
@@ -1655,6 +1656,13 @@ private struct PortfolioSectionView: View {
         case .investmentPlans:
             return "重载计划"
         }
+    }
+
+    private var saveDraftButtonTitle: String {
+        if importTarget == .holdings, model.isResolvingPortfolioNames {
+            return "补全名称中…"
+        }
+        return importTarget.buttonTitle
     }
 
     private var tableImportTypes: [UTType] {
