@@ -32,7 +32,7 @@ struct ContentView: View {
         switch model.selectedSection {
         case .platform, .forum:
             return true
-        case .overview, .portfolio, .snapshots:
+        case .overview, .portfolio, .importCenter, .snapshots:
             return false
         }
     }
@@ -463,6 +463,8 @@ struct ContentView: View {
             OverviewSectionView()
         case .portfolio:
             PortfolioSectionView()
+        case .importCenter:
+            ImportCenterSectionView()
         case .platform:
             PlatformSectionView()
         case .forum:
@@ -1321,10 +1323,6 @@ private struct PlatformSectionView: View {
 
 private struct PortfolioSectionView: View {
     @EnvironmentObject private var model: AppModel
-    @AppStorage("portfolio.import.center.expanded") private var isImportCenterExpanded = false
-    @AppStorage("portfolio.import.show_imported_targets") private var shouldShowImportedImportTargets = false
-    @State private var importTarget: PersonalDataImportTarget = .holdings
-    @State private var isDraftEditorExpanded = false
 
     private var totalProfitAmount: Double? {
         model.userPortfolioSnapshot?.totalProfitAmount
@@ -1437,160 +1435,24 @@ private struct PortfolioSectionView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(AppPalette.muted)
 
-                SectionCard(title: "导入中心", subtitle: "支持手动录入、上传图片 OCR、上传表格到三类资产区", icon: "square.and.arrow.down") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 10) {
-                            ToolbarBadge(
-                                title: hasAnyPersonalData ? "已导入资产数据" : "尚未导入",
-                                tint: hasAnyPersonalData ? AppPalette.positive : AppPalette.warning
-                            )
-                            ToolbarBadge(
-                                title: hasCurrentDraft
-                                ? "草稿 \(currentDraftLineCount) 行 / \(currentDraftCharacterCount) 字"
-                                : "草稿为空",
-                                tint: hasCurrentDraft ? AppPalette.info : AppPalette.muted
-                            )
-                            Spacer()
-                            Button(isImportCenterExpanded ? "收起导入中心" : "展开导入中心") {
-                                withAnimation(.easeInOut(duration: 0.20)) {
-                                    isImportCenterExpanded.toggle()
-                                    if !isImportCenterExpanded {
-                                        isDraftEditorExpanded = false
-                                    }
-                                }
+                SectionCard(title: “导入中心”, subtitle: “支持手动录入、上传图片 OCR、上传表格到三类资产区”, icon: “square.and.arrow.down”) {
+                    HStack(spacing: 10) {
+                        ToolbarBadge(
+                            title: hasAnyPersonalData ? “已导入资产数据” : “尚未导入”,
+                            tint: hasAnyPersonalData ? AppPalette.positive : AppPalette.warning
+                        )
+                        Spacer()
+                        Button(“打开导入中心”) {
+                            withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+                                model.selectedSection = .importCenter
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(AppPalette.brand)
                         }
-
-                        if isImportCenterExpanded || !hasAnyPersonalData {
-                            if hiddenImportedTargetCount > 0 {
-                                HStack(spacing: 10) {
-                                    Text(shouldShowImportedImportTargets ? "当前显示全部导入对象，可继续补录或重导。" : "已导入成功的对象已暂时收起，需要补录或重导时可以显示全部。")
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(AppPalette.muted)
-                                    Spacer()
-                                    Button(shouldShowImportedImportTargets ? "只看未导入" : "显示已导入对象") {
-                                        withAnimation(.easeInOut(duration: 0.18)) {
-                                            shouldShowImportedImportTargets.toggle()
-                                            syncImportTargetWithVisibleTargets()
-                                        }
-                                    }
-                                    .buttonStyle(.bordered)
-                                }
-                            } else if unimportedImportTargets.isEmpty {
-                                Text("持仓中、买入中和定投计划都已导入成功。仍可选择任一对象继续补录或重导，股票录入在“持仓中”。")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(AppPalette.muted)
-                                    .padding(.horizontal, 2)
-                            }
-
-                            Picker("导入对象", selection: $importTarget) {
-                                ForEach(visibleImportTargets) { target in
-                                    Text(target.rawValue).tag(target)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .frame(maxWidth: 520)
-
-                            Text(importTarget.helpText)
-                                .font(.system(size: 11))
-                                .foregroundStyle(AppPalette.muted)
-
-                            HStack(spacing: 8) {
-                                Spacer()
-                                Button(isDraftEditorExpanded ? "收起编辑" : "展开编辑") {
-                                    withAnimation(.easeInOut(duration: 0.18)) {
-                                        isDraftEditorExpanded.toggle()
-                                    }
-                                }
-                                .buttonStyle(.bordered)
-                            }
-
-                            if isDraftEditorExpanded {
-                                TextEditor(text: selectedDraftBinding)
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .frame(height: 220)
-                                    .padding(10)
-                                    .background(AppPalette.cardStrong)
-                                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 14)
-                                            .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
-                                    )
-                            } else if hasCurrentDraft {
-                                ScrollView {
-                                    Text(currentDraftPreviewText)
-                                        .font(.system(size: 12, design: .monospaced))
-                                        .foregroundStyle(AppPalette.ink)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(10)
-                                }
-                                .frame(height: 122)
-                                .background(AppPalette.cardStrong)
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
-                                )
-                            }
-
-                            HStack {
-                                Text(importTarget.sampleText)
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(AppPalette.muted)
-                                Spacer()
-                            }
-
-                            HStack(spacing: 10) {
-                                Button(saveDraftButtonTitle) {
-                                    model.saveDraft(for: importTarget)
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .tint(AppPalette.brand)
-                                .disabled(importTarget == .holdings && model.isResolvingPortfolioNames)
-
-                                Button("上传图片") {
-                                    presentImportPanel(source: .image)
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(model.isProcessingImport)
-
-                                Button("上传表格") {
-                                    presentImportPanel(source: .table)
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(model.isProcessingImport)
-
-                                Button(reloadButtonTitle) {
-                                    model.reloadDraftTargetFromDisk(importTarget)
-                                }
-                                .buttonStyle(.bordered)
-
-                                if importTarget == .holdings {
-                                    Button(model.isRefreshingPortfolio ? "刷新中…" : "刷新估值") {
-                                        Task { try? await model.refreshUserPortfolio() }
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .disabled(model.isRefreshingPortfolio || !model.hasPersonalPortfolio)
-                                }
-
-                                Button("清空草稿") {
-                                    model.updateDraft("", for: importTarget)
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(model.draft(for: importTarget).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            }
-                        } else {
-                            Text("导入中心已折叠。需要补录时点“展开导入中心”，不影响下面资产总表和估值浏览。")
-                                .font(.system(size: 11))
-                                .foregroundStyle(AppPalette.muted)
-                                .padding(.horizontal, 2)
-                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(AppPalette.brand)
                     }
                 }
 
-                SectionCard(title: "资产全貌总表", subtitle: "把“已持有 + 待确认 + 计划档案”聚合到同一行", icon: "tablecells") {
+                SectionCard(title: “资产全貌总表”, subtitle: “把”已持有 + 待确认 + 计划档案”聚合到同一行”, icon: “tablecells”) {
                     if model.personalAssetRows.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("还没有可聚合的资产数据。先导入持仓、买入中或定投计划。")
@@ -1722,6 +1584,163 @@ private struct PortfolioSectionView: View {
             }
             .padding(16)
         }
+    }
+
+    private var hasAnyPersonalData: Bool {
+        model.hasPersonalPortfolio || model.hasPendingTrades || model.hasInvestmentPlans
+    }
+}
+
+// MARK: - Import Center
+
+private struct ImportCenterSectionView: View {
+    @EnvironmentObject private var model: AppModel
+    @AppStorage(“portfolio.import.center.expanded”) private var isImportCenterExpanded = false
+    @AppStorage(“portfolio.import.show_imported_targets”) private var shouldShowImportedImportTargets = false
+    @State private var importTarget: PersonalDataImportTarget = .holdings
+    @State private var isDraftEditorExpanded = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionCard(title: “导入中心”, subtitle: “支持手动录入、上传图片 OCR、上传表格到三类资产区”, icon: “square.and.arrow.down”) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 10) {
+                            ToolbarBadge(
+                                title: hasAnyPersonalData ? “已导入资产数据” : “尚未导入”,
+                                tint: hasAnyPersonalData ? AppPalette.positive : AppPalette.warning
+                            )
+                            ToolbarBadge(
+                                title: hasCurrentDraft
+                                ? “草稿 \(currentDraftLineCount) 行 / \(currentDraftCharacterCount) 字”
+                                : “草稿为空”,
+                                tint: hasCurrentDraft ? AppPalette.info : AppPalette.muted
+                            )
+                            Spacer()
+                        }
+
+                        if hiddenImportedTargetCount > 0 {
+                            HStack(spacing: 10) {
+                                Text(shouldShowImportedImportTargets ? “当前显示全部导入对象，可继续补录或重导。” : “已导入成功的对象已暂时收起，需要补录或重导时可以显示全部。”)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(AppPalette.muted)
+                                Spacer()
+                                Button(shouldShowImportedImportTargets ? “只看未导入” : “显示已导入对象”) {
+                                    withAnimation(.easeInOut(duration: 0.18)) {
+                                        shouldShowImportedImportTargets.toggle()
+                                        syncImportTargetWithVisibleTargets()
+                                    }
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        } else if unimportedImportTargets.isEmpty {
+                            Text(“持仓中、买入中和定投计划都已导入成功。仍可选择任一对象继续补录或重导，股票录入在”持仓中”。”)
+                                .font(.system(size: 11))
+                                .foregroundStyle(AppPalette.muted)
+                                .padding(.horizontal, 2)
+                        }
+
+                        Picker(“导入对象”, selection: $importTarget) {
+                            ForEach(visibleImportTargets) { target in
+                                Text(target.rawValue).tag(target)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 520)
+
+                        Text(importTarget.helpText)
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppPalette.muted)
+
+                        HStack(spacing: 8) {
+                            Spacer()
+                            Button(isDraftEditorExpanded ? “收起编辑” : “展开编辑”) {
+                                withAnimation(.easeInOut(duration: 0.18)) {
+                                    isDraftEditorExpanded.toggle()
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                        }
+
+                        if isDraftEditorExpanded {
+                            TextEditor(text: selectedDraftBinding)
+                                .font(.system(size: 12, design: .monospaced))
+                                .frame(height: 220)
+                                .padding(10)
+                                .background(AppPalette.cardStrong)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                                )
+                        } else if hasCurrentDraft {
+                            ScrollView {
+                                Text(currentDraftPreviewText)
+                                    .font(.system(size: 12, design: .monospaced))
+                                    .foregroundStyle(AppPalette.ink)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(10)
+                            }
+                            .frame(height: 122)
+                            .background(AppPalette.cardStrong)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                            )
+                        }
+
+                        HStack {
+                            Text(importTarget.sampleText)
+                                .font(.system(size: 11))
+                                .foregroundStyle(AppPalette.muted)
+                            Spacer()
+                        }
+
+                        HStack(spacing: 10) {
+                            Button(saveDraftButtonTitle) {
+                                model.saveDraft(for: importTarget)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(AppPalette.brand)
+                            .disabled(importTarget == .holdings && model.isResolvingPortfolioNames)
+
+                            Button(“上传图片”) {
+                                presentImportPanel(source: .image)
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(model.isProcessingImport)
+
+                            Button(“上传表格”) {
+                                presentImportPanel(source: .table)
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(model.isProcessingImport)
+
+                            Button(reloadButtonTitle) {
+                                model.reloadDraftTargetFromDisk(importTarget)
+                            }
+                            .buttonStyle(.bordered)
+
+                            if importTarget == .holdings {
+                                Button(model.isRefreshingPortfolio ? “刷新中…” : “刷新估值”) {
+                                    Task { try? await model.refreshUserPortfolio() }
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(model.isRefreshingPortfolio || !model.hasPersonalPortfolio)
+                            }
+
+                            Button(“清空草稿”) {
+                                model.updateDraft(“”, for: importTarget)
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(model.draft(for: importTarget).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                    }
+                }
+            }
+            .padding(16)
+        }
         .onAppear {
             syncImportTargetWithVisibleTargets()
         }
@@ -1743,30 +1762,30 @@ private struct PortfolioSectionView: View {
     private var reloadButtonTitle: String {
         switch importTarget {
         case .holdings:
-            return "重载已保存"
+            return “重载已保存”
         case .pendingTrades:
-            return "重载买入中"
+            return “重载买入中”
         case .investmentPlans:
-            return "重载计划"
+            return “重载计划”
         }
     }
 
     private var saveDraftButtonTitle: String {
         if importTarget == .holdings, model.isResolvingPortfolioNames {
-            return "补全名称中…"
+            return “补全名称中…”
         }
         return importTarget.buttonTitle
     }
 
     private var tableImportTypes: [UTType] {
         var types: [UTType] = [.plainText, .text, .commaSeparatedText, .json]
-        if let xlsx = UTType(filenameExtension: "xlsx") {
+        if let xlsx = UTType(filenameExtension: “xlsx”) {
             types.append(xlsx)
         }
-        if let csv = UTType(filenameExtension: "csv") {
+        if let csv = UTType(filenameExtension: “csv”) {
             types.append(csv)
         }
-        if let tsv = UTType(filenameExtension: "tsv") {
+        if let tsv = UTType(filenameExtension: “tsv”) {
             types.append(tsv)
         }
         return types
@@ -1795,7 +1814,7 @@ private struct PortfolioSectionView: View {
 
     private var importAvailabilityKey: String {
         PersonalDataImportTarget.allCases
-            .map { model.hasImportedData(for: $0) ? "1" : "0" }
+            .map { model.hasImportedData(for: $0) ? “1” : “0” }
             .joined()
     }
 
@@ -1817,12 +1836,12 @@ private struct PortfolioSectionView: View {
         let lines = currentDraftText
             .split(whereSeparator: \.isNewline)
             .map(String.init)
-        guard !lines.isEmpty else { return "" }
+        guard !lines.isEmpty else { return “” }
         let previewLines = Array(lines.prefix(8))
         let suffix = lines.count > previewLines.count
-            ? "\n… 还有 \(lines.count - previewLines.count) 行，点击“展开编辑”查看完整草稿"
-            : ""
-        return previewLines.joined(separator: "\n") + suffix
+            ? “\n… 还有 \(lines.count - previewLines.count) 行，点击”展开编辑”查看完整草稿”
+            : “”
+        return previewLines.joined(separator: “\n”) + suffix
     }
 
     private var hasAnyPersonalData: Bool {
@@ -1845,11 +1864,11 @@ private struct PortfolioSectionView: View {
         panel.resolvesAliases = true
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
         panel.allowedContentTypes = source == .image ? [.image] : tableImportTypes
-        panel.title = source == .image ? "选择要 OCR 的图片" : "选择要导入的表格或文本"
+        panel.title = source == .image ? “选择要 OCR 的图片” : “选择要导入的表格或文本”
         panel.message = source == .image
-            ? "图片会先识别成文字，再填入当前导入对象的草稿区。"
-            : "支持 txt、csv、tsv、json、xlsx，会转换成当前导入对象的草稿。"
-        panel.prompt = "选择"
+            ? “图片会先识别成文字，再填入当前导入对象的草稿区。”
+            : “支持 txt、csv、tsv、json、xlsx，会转换成当前导入对象的草稿。”
+        panel.prompt = “选择”
 
         let target = importTarget
         let response = panel.runModal()
