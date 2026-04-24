@@ -69,6 +69,25 @@ struct ContentView: View {
                 model.handleCookieSavedFromLoginSheet()
             }
         }
+        .sheet(isPresented: $model.isPresentingUpdateSheet) {
+            if let update = model.availableUpdate {
+                AppUpdateSheet(
+                    release: update,
+                    isInstalling: model.isInstallingUpdate,
+                    installProgress: model.updateInstallProgress,
+                    onInstall: {
+                        Task { await model.downloadAndInstallAvailableUpdate() }
+                    },
+                    onReleasePage: {
+                        model.openAvailableUpdateReleasePage()
+                        model.dismissUpdateSheet()
+                    },
+                    onDismiss: {
+                        model.dismissUpdateSheet()
+                    }
+                )
+            }
+        }
     }
 
     // MARK: - Sidebar
@@ -370,6 +389,24 @@ struct ContentView: View {
 
                 Divider()
 
+                Button(model.isCheckingForUpdates ? "检查更新中…" : "检查更新") {
+                    Task { await model.checkForUpdates(userInitiated: true) }
+                }
+                .disabled(model.isCheckingForUpdates)
+
+                if model.availableUpdate != nil {
+                    Button(model.isInstallingUpdate ? "安装更新中…" : "下载并重启安装") {
+                        Task { await model.downloadAndInstallAvailableUpdate() }
+                    }
+                    .disabled(model.isInstallingUpdate)
+
+                    Button("打开 Release 页面") {
+                        model.openAvailableUpdateReleasePage()
+                    }
+                }
+
+                Divider()
+
                 Button(model.showAdvancedParams ? "收起高级参数" : "展开高级参数") {
                     model.showAdvancedParams.toggle()
                 }
@@ -414,7 +451,7 @@ struct ContentView: View {
         } label: {
             Text(mode.label)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(isSelected ? Color.white : AppPalette.ink)
+                .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
                 .background(isSelected ? AppPalette.brand : AppPalette.cardStrong)
@@ -459,6 +496,117 @@ struct ContentView: View {
         case .backupWeb:
             WebBackupView(url: model.baseURL)
         }
+    }
+}
+
+private struct AppUpdateSheet: View {
+    let release: AppUpdateRelease
+    let isInstalling: Bool
+    let installProgress: String
+    let onInstall: () -> Void
+    let onReleasePage: () -> Void
+    let onDismiss: () -> Void
+
+    private var releaseNotesPreview: String {
+        let trimmed = release.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "这个版本没有填写更新说明。" : trimmed
+    }
+
+    private var publishedText: String? {
+        guard let publishedAt = release.publishedAt else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter.string(from: publishedAt)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.system(size: 34, weight: .semibold))
+                    .foregroundStyle(AppPalette.brand)
+                    .frame(width: 48, height: 48)
+                    .background(AppPalette.brandSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("发现新版本")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(AppPalette.positive)
+                    Text(release.displayTitle)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text("当前 \(release.currentVersion) · 最新 \(release.version)")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(AppPalette.muted)
+                }
+
+                Spacer()
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    if let asset = release.asset {
+                        ToolbarBadge(title: asset.name, tint: AppPalette.info)
+                        ToolbarBadge(title: asset.sizeText, tint: AppPalette.muted)
+                    } else {
+                        ToolbarBadge(title: "未找到 zip 资产", tint: AppPalette.warning)
+                    }
+
+                    if let publishedText {
+                        ToolbarBadge(title: publishedText, tint: AppPalette.muted)
+                    }
+                }
+
+                Text(releaseNotesPreview)
+                    .font(.system(size: 13))
+                    .foregroundStyle(AppPalette.ink)
+                    .lineSpacing(4)
+                    .lineLimit(8)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppPalette.cardStrong)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                if isInstalling {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text(installProgress.isEmpty ? "正在准备更新…" : installProgress)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(AppPalette.muted)
+                    }
+                    .padding(.horizontal, 2)
+                }
+            }
+
+            HStack {
+                Button("稍后") {
+                    onDismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+                .disabled(isInstalling)
+
+                Spacer()
+
+                Button("查看发布页") {
+                    onReleasePage()
+                }
+                .disabled(isInstalling)
+
+                Button {
+                    onInstall()
+                } label: {
+                    Label(isInstalling ? "安装中…" : "下载并重启安装", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+                .disabled(isInstalling || release.asset == nil)
+            }
+        }
+        .padding(24)
+        .frame(width: 520)
+        .background(AppPalette.paper)
     }
 }
 
@@ -950,11 +1098,7 @@ private struct PlatformSectionView: View {
                                     Task { try? await model.refreshLatest(persist: false) }
                                 }
                             } else {
-                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 10)], spacing: 10) {
-                                    ForEach(model.monthlyPlatformSummary) { month in
-                                        MonthSummaryCard(month: month)
-                                    }
-                                }
+                                PlatformMonthlyOverview(months: model.monthlyPlatformSummary)
                             }
                         }
 
@@ -1081,7 +1225,7 @@ private struct PlatformSectionView: View {
             }
 
             if let selectedAction = model.selectedPlatformAction {
-                PlatformActionRow(action: selectedAction, isSelected: true)
+                PlatformActionDetailCard(action: selectedAction)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("还没有选中的调仓动作")
@@ -1114,8 +1258,6 @@ private struct PortfolioSectionView: View {
     @EnvironmentObject private var model: AppModel
     @AppStorage("portfolio.import.center.expanded") private var isImportCenterExpanded = false
     @State private var importTarget: PersonalDataImportTarget = .holdings
-    @State private var isImportingImage = false
-    @State private var isImportingTable = false
     @State private var isDraftEditorExpanded = false
 
     private var totalProfitAmount: Double? {
@@ -1321,14 +1463,16 @@ private struct PortfolioSectionView: View {
                                 .tint(AppPalette.brand)
 
                                 Button("上传图片") {
-                                    isImportingImage = true
+                                    presentImportPanel(source: .image)
                                 }
                                 .buttonStyle(.bordered)
+                                .disabled(model.isProcessingImport)
 
                                 Button("上传表格") {
-                                    isImportingTable = true
+                                    presentImportPanel(source: .table)
                                 }
                                 .buttonStyle(.bordered)
+                                .disabled(model.isProcessingImport)
 
                                 Button(reloadButtonTitle) {
                                     model.reloadDraftTargetFromDisk(importTarget)
@@ -1490,20 +1634,6 @@ private struct PortfolioSectionView: View {
             }
             .padding(16)
         }
-        .fileImporter(
-            isPresented: $isImportingImage,
-            allowedContentTypes: [.image],
-            allowsMultipleSelection: false
-        ) { result in
-            handleImportResult(result, source: .image)
-        }
-        .fileImporter(
-            isPresented: $isImportingTable,
-            allowedContentTypes: tableImportTypes,
-            allowsMultipleSelection: false
-        ) { result in
-            handleImportResult(result, source: .table)
-        }
         .onChange(of: importTarget) { _, _ in
             isDraftEditorExpanded = false
         }
@@ -1575,14 +1705,26 @@ private struct PortfolioSectionView: View {
         model.hasPersonalPortfolio || model.hasPendingTrades || model.hasInvestmentPlans
     }
 
-    private func handleImportResult(_ result: Result<[URL], Error>, source: PersonalDataImportSource) {
-        switch result {
-        case .success(let urls):
-            guard let url = urls.first else { return }
-            Task { await model.importExternalFile(at: url, source: source, target: importTarget) }
-        case .failure(let error):
-            model.errorMessage = error.localizedDescription
+    private func presentImportPanel(source: PersonalDataImportSource) {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.resolvesAliases = true
+        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
+        panel.allowedContentTypes = source == .image ? [.image] : tableImportTypes
+        panel.title = source == .image ? "选择要 OCR 的图片" : "选择要导入的表格或文本"
+        panel.message = source == .image
+            ? "图片会先识别成文字，再填入当前导入对象的草稿区。"
+            : "支持 txt、csv、tsv、json、xlsx，会转换成当前导入对象的草稿。"
+        panel.prompt = "选择"
+
+        let target = importTarget
+        let response = panel.runModal()
+        guard response == .OK, let url = panel.url else {
+            return
         }
+        Task { await model.importExternalFile(at: url, source: source, target: target) }
     }
 }
 
@@ -1730,8 +1872,10 @@ private struct ForumSectionView: View {
                                 Toggle("只看主理人回复", isOn: $model.onlyManagerReplies)
                                     .toggleStyle(.checkbox)
 
-                                Button(model.isLoadingComments ? "加载中…" : "加载评论") {
+                                Button {
                                     Task { await model.loadCommentsForSelectedPost() }
+                                } label: {
+                                    Label(model.isLoadingComments ? "刷新中" : "刷新评论", systemImage: "arrow.clockwise")
                                 }
                                 .disabled(model.isLoadingComments)
 
@@ -1749,8 +1893,10 @@ private struct ForumSectionView: View {
                                 Toggle("只看主理人回复", isOn: $model.onlyManagerReplies)
                                     .toggleStyle(.checkbox)
 
-                                Button(model.isLoadingComments ? "加载中…" : "加载评论") {
+                                Button {
                                     Task { await model.loadCommentsForSelectedPost() }
+                                } label: {
+                                    Label(model.isLoadingComments ? "刷新中" : "刷新评论", systemImage: "arrow.clockwise")
                                 }
                                 .disabled(model.isLoadingComments)
                             }
@@ -1763,10 +1909,14 @@ private struct ForumSectionView: View {
                                 }
                             }
                         } else {
-                            Text(model.isLoadingComments ? "正在加载评论…" : "当前未加载评论。")
+                            Text(model.isLoadingComments ? "正在加载评论…" : "暂无评论，或当前登录态无法读取评论。")
                                 .foregroundStyle(.secondary)
                         }
                     }
+                }
+                .task(id: forumCommentsAutoLoadKey) {
+                    guard model.currentSnapshotSupportsComments else { return }
+                    await model.loadCommentsForSelectedPost()
                 }
             } else {
                 EmptySectionState(
@@ -1779,6 +1929,14 @@ private struct ForumSectionView: View {
             }
         }
     }
+
+    private var forumCommentsAutoLoadKey: String {
+        [
+            model.selectedPost?.postId.map(String.init) ?? "",
+            model.commentSortType,
+            model.onlyManagerReplies ? "manager" : "all"
+        ].joined(separator: "|")
+    }
 }
 
 // MARK: - Snapshots
@@ -1787,71 +1945,295 @@ private struct SnapshotsSectionView: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        HSplitView {
-            List(model.history, id: \.id) { snapshot in
-                let isSelected = model.currentSnapshot?.id == snapshot.id
-                Button {
-                    Task { await model.loadSnapshot(snapshot) }
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(snapshot.displayTitle)
-                            .font(.headline)
-                        Text("\(snapshot.subtitle) · \(snapshot.count) 条")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(snapshot.createdAt)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(10)
-                    .background(isSelected ? AppPalette.brand.opacity(0.12) : AppPalette.cardStrong.opacity(0.22))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSelected ? AppPalette.brand.opacity(0.55) : AppPalette.line.opacity(0.45), lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(PressResponsiveButtonStyle())
-                .listRowBackground(Color.clear)
+        GeometryReader { proxy in
+            if proxy.size.width < 920 {
+                compactLayout
+            } else {
+                desktopLayout
             }
-            .frame(minWidth: 320, idealWidth: 360)
+        }
+    }
+
+    private var desktopLayout: some View {
+        HStack(alignment: .top, spacing: 0) {
+            historyPanel
+                .frame(width: 320)
+            Divider()
+                .overlay(AppPalette.line.opacity(0.5))
+            detailPanel
+        }
+        .background(AppPalette.paper.opacity(0.82))
+    }
+
+    private var compactLayout: some View {
+        VStack(spacing: 0) {
+            historyPanel
+                .frame(height: 300)
+            Divider()
+                .overlay(AppPalette.line.opacity(0.5))
+            detailPanel
+        }
+        .background(AppPalette.paper.opacity(0.82))
+    }
+
+    private var historyPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Label("快照索引", systemImage: "clock.arrow.circlepath")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text("按创建时间倒序，本地保留 \(model.history.count) 个快照")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                Spacer()
+                ToolbarBadge(title: "\(model.history.count)", tint: AppPalette.brand)
+            }
 
             ScrollView {
-                if let snapshot = model.currentSnapshot {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text(snapshot.displayTitle)
-                            .font(.system(size: 22, weight: .bold))
-                        Text(snapshot.subtitle)
-                            .foregroundStyle(.secondary)
-
-                        HStack(spacing: 8) {
-                            StatChip(title: "类型", value: snapshot.kindLabel ?? snapshot.snapshotType)
-                            StatChip(title: "模式", value: snapshot.mode)
-                            StatChip(title: "条数", value: "\(snapshot.count)")
-                            StatChip(title: "创建时间", value: snapshot.createdAt)
-                        }
-
-                        if let stats = snapshot.stats {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 12)], spacing: 12) {
-                                MetricCard(title: "用户数", value: "\(stats.uniqueUsers ?? 0)", subtitle: "快照统计", icon: "person.2", accent: AppPalette.info)
-                                MetricCard(title: "分组数", value: "\(stats.uniqueGroups ?? 0)", subtitle: "快照统计", icon: "square.grid.2x2", accent: AppPalette.positive)
-                                MetricCard(title: "点赞", value: "\(stats.totalLikes ?? 0)", subtitle: "累计互动", icon: "heart", accent: AppPalette.accentWarm)
-                                MetricCard(title: "评论", value: "\(stats.totalComments ?? 0)", subtitle: "累计互动", icon: "bubble.left", accent: AppPalette.warning)
-                            }
-                        }
-
-                        if !snapshot.records.isEmpty {
-                            VStack(spacing: 8) {
-                                ForEach(Array(snapshot.records.prefix(12))) { record in
-                                    ForumRecordRow(record: record)
-                                }
+                LazyVStack(spacing: 8) {
+                    if model.history.isEmpty {
+                        SnapshotEmptyInlineState()
+                    } else {
+                        ForEach(model.history, id: \.id) { snapshot in
+                            SnapshotHistoryRow(
+                                snapshot: snapshot,
+                                isSelected: model.currentSnapshot?.id == snapshot.id
+                            ) {
+                                Task { await model.loadSnapshot(snapshot) }
                             }
                         }
                     }
-                    .padding(16)
+                }
+                .padding(.bottom, 8)
+            }
+        }
+        .padding(16)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(AppPalette.cardStrong.opacity(0.34))
+    }
+
+    private var detailPanel: some View {
+        ScrollView {
+            if let snapshot = model.currentSnapshot {
+                VStack(alignment: .leading, spacing: 16) {
+                    SnapshotDetailHeader(snapshot: snapshot)
+
+                    if let stats = snapshot.stats {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                            SnapshotMetricTile(title: "用户", value: "\(stats.uniqueUsers ?? 0)", subtitle: "快照统计", icon: "person.2", accent: AppPalette.info)
+                            SnapshotMetricTile(title: "分组", value: "\(stats.uniqueGroups ?? 0)", subtitle: "快照统计", icon: "square.grid.2x2", accent: AppPalette.positive)
+                            SnapshotMetricTile(title: "点赞", value: "\(stats.totalLikes ?? 0)", subtitle: "累计互动", icon: "heart", accent: AppPalette.accentWarm)
+                            SnapshotMetricTile(title: "评论", value: "\(stats.totalComments ?? 0)", subtitle: "累计互动", icon: "bubble.left", accent: AppPalette.warning)
+                        }
+                    }
+
+                    SnapshotRecordsPreview(snapshot: snapshot)
+                }
+                .padding(18)
+            } else {
+                EmptySectionState(
+                    title: "还没有选中的历史快照",
+                    subtitle: "左侧选择一个快照后，这里会展示统计、来源和记录预览。",
+                    actionTitle: "刷新"
+                ) {
+                    Task { try? await model.refreshLatest(persist: false) }
+                }
+                .padding(18)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+private struct SnapshotHistoryRow: View {
+    let snapshot: SnapshotPayload
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(snapshot.displayTitle)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text("\(snapshot.count)")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(isSelected ? AppPalette.brand : AppPalette.muted)
+                }
+
+                Text(snapshot.subtitle)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+
+                HStack(spacing: 6) {
+                    SnapshotMiniBadge(text: snapshot.kindLabel ?? snapshot.snapshotType, tint: AppPalette.info)
+                    SnapshotMiniBadge(text: snapshot.mode, tint: AppPalette.brand)
+                }
+
+                Text(snapshot.createdAt)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(11)
+            .background(isSelected ? AppPalette.brand.opacity(0.12) : AppPalette.card.opacity(0.72))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? AppPalette.brand.opacity(0.62) : AppPalette.line.opacity(0.42), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
+    }
+}
+
+private struct SnapshotDetailHeader: View {
+    let snapshot: SnapshotPayload
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(snapshot.displayTitle)
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppPalette.ink)
+                        .lineLimit(2)
+                    Text(snapshot.subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppPalette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                SnapshotMiniBadge(text: snapshot.persisted == true ? "已保存" : "临时", tint: snapshot.persisted == true ? AppPalette.positive : AppPalette.warning)
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
+                StatChip(title: "类型", value: snapshot.kindLabel ?? snapshot.snapshotType)
+                StatChip(title: "模式", value: snapshot.mode)
+                StatChip(title: "条数", value: "\(snapshot.count)")
+                StatChip(title: "创建时间", value: snapshot.createdAt)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppPalette.cardStrong.opacity(0.76))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(AppPalette.line.opacity(0.56), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+private struct SnapshotMetricTile: View {
+    let title: String
+    let value: String
+    let subtitle: String
+    let icon: String
+    let accent: Color
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 15))
+                .foregroundStyle(accent)
+                .frame(width: 34, height: 34)
+                .background(accent.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+                Text(value)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(AppPalette.ink)
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
+        .padding(12)
+        .background(AppPalette.card.opacity(0.86))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(AppPalette.line.opacity(0.42), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+private struct SnapshotRecordsPreview: View {
+    let snapshot: SnapshotPayload
+
+    private var previewRecords: [SnapshotRecordPayload] {
+        Array(snapshot.records.prefix(16))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(snapshot.snapshotType == "posts" ? "发言预览" : "记录预览")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text("展示前 \(previewRecords.count) 条，保留原始快照顺序")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                Spacer()
+                SnapshotMiniBadge(text: "\(snapshot.records.count) 条", tint: AppPalette.brand)
+            }
+
+            if previewRecords.isEmpty {
+                SnapshotEmptyInlineState()
+            } else {
+                LazyVStack(spacing: 8) {
+                    ForEach(previewRecords) { record in
+                        ForumRecordRow(record: record)
+                    }
                 }
             }
         }
+    }
+}
+
+private struct SnapshotMiniBadge: View {
+    let text: String
+    let tint: Color
+
+    var body: some View {
+        Text(text.isEmpty ? "未标注" : text)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(tint.opacity(0.11))
+            .clipShape(Capsule())
+    }
+}
+
+private struct SnapshotEmptyInlineState: View {
+    var body: some View {
+        Text("暂无可展示内容")
+            .font(.system(size: 11))
+            .foregroundStyle(AppPalette.muted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(AppPalette.card.opacity(0.62))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -2296,10 +2678,10 @@ private struct PersonalAssetBrowser: View {
                 Text(scope.rawValue)
                 Text("\(count)")
                     .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(isSelected ? Color.white.opacity(0.88) : AppPalette.muted)
+                    .foregroundStyle(isSelected ? AppPalette.onBrand.opacity(0.88) : AppPalette.muted)
             }
             .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(isSelected ? Color.white : AppPalette.ink)
+            .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(isSelected ? AppPalette.brand : AppPalette.cardStrong)
@@ -2782,6 +3164,159 @@ private struct PlatformActionRow: View {
     }
 }
 
+private struct PlatformActionDetailCard: View {
+    let action: PlatformActionPayload
+
+    private var isBuy: Bool {
+        let raw = (action.side ?? action.action ?? action.actionTitle ?? "").lowercased()
+        return raw.contains("buy") || raw.contains("买")
+    }
+
+    private var sideText: String { isBuy ? "买入" : "卖出" }
+    private var sideColor: Color { isBuy ? AppPalette.positive : AppPalette.warning }
+
+    private var changeTint: Color {
+        let value = action.valuationChangePct ?? action.valuationChangeAmount ?? 0
+        if value > 0 { return AppPalette.positive }
+        if value < 0 { return AppPalette.danger }
+        return AppPalette.muted
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(sideColor)
+                    .frame(width: 4, height: 52)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text(action.displayTitle)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(AppPalette.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(sideText)
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(sideColor)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(sideColor.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+
+                    Text("\(action.fundName ?? action.title ?? "未命名标的") · \(action.fundCode ?? "无代码")")
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppPalette.muted)
+                }
+
+                Spacer()
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
+                detailMetric("调仓时间", action.txnDate ?? action.createdAt ?? "未知", tint: AppPalette.ink)
+                detailMetric("调仓估值", decimalOptional(action.tradeValuation), tint: AppPalette.ink)
+                detailMetric("当前估值", decimalOptional(action.currentValuation), tint: AppPalette.ink)
+                detailMetric("估值变化", percentOptional(action.valuationChangePct), tint: changeTint)
+                detailMetric("变化金额", signedCurrencyText(action.valuationChangeAmount), tint: changeTint)
+                detailMetric("计划份数", action.postPlanUnit.map(String.init) ?? "—", tint: AppPalette.ink)
+                detailMetric("交易份数", action.tradeUnit.map(String.init) ?? "—", tint: AppPalette.ink)
+                detailMetric("净值", decimalOptional(action.nav), tint: AppPalette.ink)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                if let comment = action.comment, !comment.isEmpty {
+                    Text(comment)
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppPalette.ink)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                WrapLine(items: [
+                    sourceText("调仓估值", source: action.tradeValuationSource, date: action.tradeValuationDate),
+                    sourceText("当前估值", source: action.currentValuationSource, date: action.currentValuationTime),
+                    action.navDate.map { "净值日期 \($0)" },
+                    action.adjustmentId.map { "调仓单 \($0)" },
+                    action.orderCountInAdjustment.map { "同单动作 \($0)" }
+                ].compactMap { $0 })
+
+                if let article = action.articleUrl, let url = URL(string: article) {
+                    Link(destination: url) {
+                        Label("打开平台原文", systemImage: "arrow.up.right.square")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(AppPalette.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func detailMetric(_ title: String, _ value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.muted)
+            Text(value)
+                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(tint.opacity(0.07))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func sourceText(_ title: String, source: String?, date: String?) -> String? {
+        let parts = [source, date].compactMap { value in
+            let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        guard !parts.isEmpty else { return nil }
+        return "\(title)：\(parts.joined(separator: " · "))"
+    }
+}
+
+private struct WrapLine: View {
+    let items: [String]
+
+    var body: some View {
+        if !items.isEmpty {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    chips
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    chips
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var chips: some View {
+        ForEach(items, id: \.self) { item in
+            Text(item)
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.muted)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(AppPalette.cardStrong)
+                .clipShape(Capsule())
+        }
+    }
+}
+
 private struct HoldingCard: View {
     let holding: HoldingItemPayload
 
@@ -2845,30 +3380,222 @@ private struct HoldingCard: View {
     }
 }
 
+private struct PlatformMonthlyOverview: View {
+    let months: [PlatformMonthSummary]
+
+    private var totalCount: Int {
+        months.map(\.totalCount).reduce(0, +)
+    }
+
+    private var buyCount: Int {
+        months.map(\.buyCount).reduce(0, +)
+    }
+
+    private var sellCount: Int {
+        months.map(\.sellCount).reduce(0, +)
+    }
+
+    private var activeDays: Int {
+        months.map(\.activeDays).reduce(0, +)
+    }
+
+    private var busiestMonth: PlatformMonthSummary? {
+        months.max { left, right in
+            if left.totalCount != right.totalCount {
+                return left.totalCount < right.totalCount
+            }
+            return left.month < right.month
+        }
+    }
+
+    private var averagePerMonthText: String {
+        guard !months.isEmpty else { return "0.0" }
+        return String(format: "%.1f", Double(totalCount) / Double(months.count))
+    }
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 12) {
+                summaryPanel
+                    .frame(width: 270)
+                monthGrid
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                summaryPanel
+                monthGrid
+            }
+        }
+    }
+
+    private var summaryPanel: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: "calendar.badge.clock")
+                    .font(.system(size: 18))
+                    .foregroundStyle(AppPalette.brand)
+                    .frame(width: 38, height: 38)
+                    .background(AppPalette.brand.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("近 12 个月")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text(months.first.map { "\($0.month) 起" } ?? "暂无月份")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                }
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\(totalCount)")
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(AppPalette.ink)
+                Text("笔")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.muted)
+            }
+
+            VStack(spacing: 8) {
+                rhythmLine(title: "买入", value: buyCount, tint: AppPalette.positive)
+                rhythmLine(title: "卖出", value: sellCount, tint: AppPalette.warning)
+            }
+
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                SnapshotMiniBadge(text: "活跃 \(activeDays) 天", tint: AppPalette.info)
+                SnapshotMiniBadge(text: "月均 \(averagePerMonthText) 笔", tint: AppPalette.brand)
+                if let busiestMonth {
+                    SnapshotMiniBadge(text: "最密 \(busiestMonth.month)", tint: AppPalette.accentWarm)
+                    SnapshotMiniBadge(text: "\(busiestMonth.totalCount) 笔", tint: AppPalette.accentWarm)
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(AppPalette.card.opacity(0.82))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var monthGrid: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 10)], spacing: 10) {
+            ForEach(months) { month in
+                MonthSummaryCard(month: month)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    private func rhythmLine(title: String, value: Int, tint: Color) -> some View {
+        let ratio = totalCount > 0 ? Double(value) / Double(totalCount) : 0
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text("\(value)")
+                    .monospacedDigit()
+            }
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(AppPalette.muted)
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(AppPalette.cardStrong)
+                    Capsule()
+                        .fill(tint.opacity(0.78))
+                        .frame(width: max(6, proxy.size.width * ratio))
+                }
+            }
+            .frame(height: 7)
+        }
+    }
+}
+
 private struct MonthSummaryCard: View {
     let month: PlatformMonthSummary
 
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(month.month)
-                .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                .frame(width: 60)
+    private var total: Int {
+        max(month.totalCount, 1)
+    }
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    StatPill(title: "总计", value: "\(month.totalCount)")
-                    StatPill(title: "买入", value: "\(month.buyCount)")
-                    StatPill(title: "卖出", value: "\(month.sellCount)")
-                }
-                Text("活跃 \(month.activeDays) 天 · 每活跃日 \(month.perActiveDayText) 笔")
-                    .font(.system(size: 10))
+    private var buyRatio: Double {
+        Double(month.buyCount) / Double(total)
+    }
+
+    private var sellRatio: Double {
+        Double(month.sellCount) / Double(total)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(month.month)
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(AppPalette.ink)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                Text("\(month.totalCount)")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(AppPalette.ink)
+                Text("笔")
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(AppPalette.muted)
             }
+
+            GeometryReader { proxy in
+                HStack(spacing: 2) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(AppPalette.positive.opacity(0.72))
+                        .frame(width: max(month.buyCount > 0 ? 6 : 0, proxy.size.width * buyRatio))
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(AppPalette.warning.opacity(0.72))
+                        .frame(width: max(month.sellCount > 0 ? 6 : 0, proxy.size.width * sellRatio))
+                }
+            }
+            .frame(height: 8)
+
+            HStack(spacing: 6) {
+                miniCount(title: "买", value: month.buyCount, tint: AppPalette.positive)
+                miniCount(title: "卖", value: month.sellCount, tint: AppPalette.warning)
+                Spacer(minLength: 4)
+                Text("活跃 \(month.activeDays) 天")
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+            }
+
+            Text("每活跃日 \(month.perActiveDayText) 笔")
+                .font(.system(size: 9))
+                .foregroundStyle(AppPalette.muted)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(AppPalette.card)
+        .background(AppPalette.card.opacity(0.72))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(AppPalette.line.opacity(0.32), lineWidth: 1)
+        )
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func miniCount(title: String, value: Int, tint: Color) -> some View {
+        HStack(spacing: 3) {
+            Circle()
+                .fill(tint)
+                .frame(width: 5, height: 5)
+            Text("\(title) \(value)")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(AppPalette.ink)
+                .lineLimit(1)
+        }
     }
 }
 

@@ -200,6 +200,7 @@ final class QiemanLoginSession: ObservableObject {
     @Published var statusMessage = "在页面里完成登录即可。只要检测到可用登录态，App 就会自动保存。"
     @Published var hasSavedCookie = false
     @Published var savedCookieCount = 0
+    @Published var navigationNonce = UUID()
     @Published var captureNonce = UUID()
     @Published var clearNonce = UUID()
     @Published var popupContext: QiemanLoginPopupContext?
@@ -252,6 +253,7 @@ final class QiemanLoginSession: ObservableObject {
     func navigate(to url: URL) {
         currentURL = url
         currentURLText = url.absoluteString
+        navigationNonce = UUID()
     }
 
     func requestCookieCapture() {
@@ -264,6 +266,9 @@ final class QiemanLoginSession: ObservableObject {
 
     func updateCurrentURL(_ url: URL?) {
         guard let url else { return }
+        if url.scheme == "http" || url.scheme == "https" {
+            currentURL = url
+        }
         currentURLText = url.absoluteString
     }
 
@@ -477,14 +482,22 @@ final class QiemanLoginSession: ObservableObject {
 private struct QiemanLoginWebView: NSViewRepresentable {
     @ObservedObject var session: QiemanLoginSession
 
+    private static func makeConfiguration() -> WKWebViewConfiguration {
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = .default()
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
+        if #available(macOS 11.0, *) {
+            configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        }
+        return configuration
+    }
+
     func makeCoordinator() -> Coordinator {
         Coordinator(session: session)
     }
 
     func makeNSView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .default()
-        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let webView = WKWebView(frame: .zero, configuration: Self.makeConfiguration())
         webView.setValue(false, forKey: "drawsBackground")
         context.coordinator.attach(webView)
         webView.load(URLRequest(url: session.currentURL))
@@ -493,7 +506,8 @@ private struct QiemanLoginWebView: NSViewRepresentable {
 
     func updateNSView(_ webView: WKWebView, context: Context) {
         context.coordinator.session = session
-        if webView.url?.absoluteString != session.currentURL.absoluteString {
+        if context.coordinator.lastNavigationNonce != session.navigationNonce {
+            context.coordinator.lastNavigationNonce = session.navigationNonce
             webView.load(URLRequest(url: session.currentURL))
         }
         if context.coordinator.lastCaptureNonce != session.captureNonce {
@@ -512,6 +526,7 @@ private struct QiemanLoginWebView: NSViewRepresentable {
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKHTTPCookieStoreObserver {
         var session: QiemanLoginSession
+        var lastNavigationNonce: UUID
         var lastCaptureNonce: UUID
         var lastClearNonce: UUID
         private weak var primaryWebView: WKWebView?
@@ -520,6 +535,7 @@ private struct QiemanLoginWebView: NSViewRepresentable {
 
         init(session: QiemanLoginSession) {
             self.session = session
+            self.lastNavigationNonce = session.navigationNonce
             self.lastCaptureNonce = session.captureNonce
             self.lastClearNonce = session.clearNonce
         }
@@ -577,6 +593,16 @@ private struct QiemanLoginWebView: NSViewRepresentable {
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             session.updateCurrentURL(navigationAction.request.url)
             lastInteractiveWebView = webView
+            if let url = navigationAction.request.url, !isWebURL(url) {
+                NSWorkspace.shared.open(url)
+                decisionHandler(.cancel)
+                return
+            }
+            if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
+                openPopup(for: URLRequest(url: url), requestURL: url)
+                decisionHandler(.cancel)
+                return
+            }
             decisionHandler(.allow)
         }
 
@@ -673,6 +699,22 @@ private struct QiemanLoginWebView: NSViewRepresentable {
                 cookieStore.add(self)
                 observedCookieStores[key] = cookieStore
             }
+        }
+
+        private func openPopup(for request: URLRequest, requestURL: URL?) {
+            let popupWebView = WKWebView(frame: .zero, configuration: QiemanLoginWebView.makeConfiguration())
+            popupWebView.setValue(false, forKey: "drawsBackground")
+            configure(popupWebView, asPrimary: false)
+            lastInteractiveWebView = popupWebView
+            popupWebView.load(request)
+            Task { @MainActor in
+                session.presentPopup(webView: popupWebView, requestURL: requestURL)
+            }
+        }
+
+        private func isWebURL(_ url: URL) -> Bool {
+            guard let scheme = url.scheme?.lowercased() else { return false }
+            return scheme == "http" || scheme == "https" || scheme == "about"
         }
     }
 }

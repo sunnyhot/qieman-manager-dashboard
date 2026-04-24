@@ -4,12 +4,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="${APP_NAME:-QiemanDashboard}"
 APP_DISPLAY_NAME="${APP_DISPLAY_NAME:-且慢主理人}"
-APP_VERSION="${APP_VERSION:-2.1.0}"
+APP_VERSION="${APP_VERSION:-2.1.1}"
 APP_BUILD="${APP_BUILD:-$(date +%Y%m%d%H%M)}"
 BUNDLE_ID="${BUNDLE_ID:-com.sunnyhot.qieman.manager.dashboard}"
 MIN_MACOS_VERSION="${MIN_MACOS_VERSION:-14.0}"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 TARGET_ARCH="${TARGET_ARCH:-$(uname -m)}"
+UPDATE_REPOSITORY="${UPDATE_REPOSITORY:-sunnyhot/qieman-manager-dashboard}"
+UPDATE_FEED_URL="${UPDATE_FEED_URL:-https://api.github.com/repos/${UPDATE_REPOSITORY}/releases/latest}"
 DIST_DIR="$ROOT_DIR/dist/macos-app"
 APP_DIR="$DIST_DIR/${APP_NAME}.app"
 CONTENTS_DIR="$APP_DIR/Contents"
@@ -83,10 +85,14 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
   <string>NSApplication</string>
   <key>NSHumanReadableCopyright</key>
   <string>Copyright © 2026 sunnyhot. All rights reserved.</string>
+  <key>QiemanUpdateRepository</key>
+  <string>__UPDATE_REPOSITORY__</string>
+  <key>QiemanUpdateFeedURL</key>
+  <string>__UPDATE_FEED_URL__</string>
 </dict>
 </plist>
 PLIST
-perl -0pi -e 's#__APP_NAME__#'"$APP_NAME"'#g; s#__APP_DISPLAY_NAME__#'"$APP_DISPLAY_NAME"'#g; s#__APP_VERSION__#'"$APP_VERSION"'#g; s#__APP_BUILD__#'"$APP_BUILD"'#g; s#__BUNDLE_ID__#'"$BUNDLE_ID"'#g; s#__MIN_MACOS_VERSION__#'"$MIN_MACOS_VERSION"'#g' "$CONTENTS_DIR/Info.plist"
+perl -0pi -e 's#__APP_NAME__#'"$APP_NAME"'#g; s#__APP_DISPLAY_NAME__#'"$APP_DISPLAY_NAME"'#g; s#__APP_VERSION__#'"$APP_VERSION"'#g; s#__APP_BUILD__#'"$APP_BUILD"'#g; s#__BUNDLE_ID__#'"$BUNDLE_ID"'#g; s#__MIN_MACOS_VERSION__#'"$MIN_MACOS_VERSION"'#g; s#__UPDATE_REPOSITORY__#'"$UPDATE_REPOSITORY"'#g; s#__UPDATE_FEED_URL__#'"$UPDATE_FEED_URL"'#g' "$CONTENTS_DIR/Info.plist"
 printf 'APPL????' > "$CONTENTS_DIR/PkgInfo"
 
 echo "[5/8] 拷贝项目运行文件"

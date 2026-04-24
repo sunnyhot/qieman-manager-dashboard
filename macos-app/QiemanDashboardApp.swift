@@ -50,6 +50,11 @@ struct QiemanDashboardApp: App {
                     model.presentLoginSheet()
                 }
                 Divider()
+                Button(model.isCheckingForUpdates ? "检查更新中…" : "检查更新…") {
+                    Task { await model.checkForUpdates(userInitiated: true) }
+                }
+                .disabled(model.isCheckingForUpdates)
+                Divider()
                 Button("立即刷新") {
                     Task { try? await model.refreshLatest(persist: false) }
                 }

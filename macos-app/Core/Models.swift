@@ -415,18 +415,26 @@ struct SnapshotRecordPayload: Decodable, Hashable, Identifiable {
     }
 
     var titleText: String {
-        let text = firstNonEmpty([title, userName, groupName, managerName, intro, brokerUserId]) ?? "未命名记录"
+        let text = firstNonEmpty([
+            plainText(title),
+            plainText(intro),
+            headlineText(from: plainText(contentText)),
+            plainText(userName),
+            plainText(groupName),
+            plainText(managerName),
+            plainText(brokerUserId),
+        ]) ?? "未命名记录"
         return text.replacingOccurrences(of: "\n", with: " ")
     }
 
     var bodyText: String {
         firstNonEmpty([
-            contentText,
-            intro,
-            userDesc,
-            groupDesc,
-            userLabel,
-            managerLabel,
+            plainText(contentText),
+            plainText(intro),
+            plainText(userDesc),
+            plainText(groupDesc),
+            plainText(userLabel),
+            plainText(managerLabel),
         ]) ?? "无正文"
     }
 
@@ -461,6 +469,64 @@ struct SnapshotRecordPayload: Decodable, Hashable, Identifiable {
 
     private func firstNonEmpty(_ values: [String?]) -> String? {
         values.first(where: { ($0 ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }) ?? nil
+    }
+
+    private func headlineText(from value: String?) -> String? {
+        guard let value else { return nil }
+        let firstLine = value
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first(where: { !$0.isEmpty }) ?? ""
+        guard !firstLine.isEmpty else { return nil }
+
+        let sentenceEnders: [Character] = ["。", "！", "？", "；"]
+        if let endIndex = firstLine.firstIndex(where: { sentenceEnders.contains($0) }) {
+            return String(firstLine[...endIndex])
+        }
+        if firstLine.count > 56 {
+            return String(firstLine.prefix(56)) + "..."
+        }
+        return firstLine
+    }
+
+    private func plainText(_ value: String?) -> String? {
+        guard var text = value?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+            return nil
+        }
+
+        text = decodeCommonHTMLEntities(text)
+        text = text
+            .replacingOccurrences(of: #"(?i)<\s*br\s*/?\s*>"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"(?i)</\s*(p|div|li|h[1-6]|blockquote)\s*>"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"(?i)<\s*(p|div|li|h[1-6]|blockquote)[^>]*>"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"(?i)<img[^>]*>"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"<[^>]+>"#, with: "", options: .regularExpression)
+
+        text = decodeCommonHTMLEntities(text)
+            .replacingOccurrences(of: "\u{00a0}", with: " ")
+
+        let lines = text
+            .components(separatedBy: .newlines)
+            .map {
+                $0
+                    .replacingOccurrences(of: #"[ \t]{2,}"#, with: " ", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            .filter { !$0.isEmpty }
+
+        let cleaned = lines.joined(separator: "\n\n")
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
+    private func decodeCommonHTMLEntities(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: "&apos;", with: "'")
     }
 }
 

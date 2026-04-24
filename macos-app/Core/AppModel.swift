@@ -47,6 +47,11 @@ final class AppModel: ObservableObject {
     @Published var showAdvancedParams = false
     @Published var isRefreshingPortfolio = false
     @Published var isProcessingImport = false
+    @Published var isCheckingForUpdates = false
+    @Published var availableUpdate: AppUpdateRelease?
+    @Published var isPresentingUpdateSheet = false
+    @Published var isInstallingUpdate = false
+    @Published var updateInstallProgress = ""
 
     @Published var noticeMessage = ""
     @Published var errorMessage = ""
@@ -64,10 +69,16 @@ final class AppModel: ObservableObject {
     private let managerWatchStore = ManagerWatchStore()
     private let importRecognizer = PersonalImportRecognizer()
     private let notificationManager = LocalNotificationManager()
+    private let personalAssetAutomation = PersonalAssetAutomation()
+    private let updateAutoCheckDefaultsKey = "qieman.dashboard.update.lastAutoCheckAt"
+    private let updateAutoCheckInterval: TimeInterval = 12 * 60 * 60
 
     private var didApplyDefaultForm = false
     private var didStart = false
     private var managerWatchTask: Task<Void, Never>?
+    private var personalAssetAutomationTask: Task<Void, Never>?
+    private var activeCommentsRequestKey = ""
+    private var isApplyingPersonalAssetAutomation = false
     private var cancellables = Set<AnyCancellable>()
 
     init() {
@@ -82,6 +93,7 @@ final class AppModel: ObservableObject {
 
     deinit {
         managerWatchTask?.cancel()
+        personalAssetAutomationTask?.cancel()
     }
 
     func start() async {
@@ -123,7 +135,10 @@ final class AppModel: ObservableObject {
             try? await refreshUserPortfolio(updateNotice: false)
         }
 
+        await applyPersonalAssetAutomation(updateNotice: false)
         restartManagerWatchLoop(immediate: false)
+        restartPersonalAssetAutomationLoop()
+        scheduleAutomaticUpdateCheckIfNeeded()
     }
 
     func refreshLatest(persist: Bool, updateNotice: Bool = true) async throws {
@@ -217,20 +232,36 @@ final class AppModel: ObservableObject {
 
     func loadCommentsForSelectedPost() async {
         guard let post = selectedPost, let postID = post.postId else { return }
+        let sortType = commentSortType
+        let managerBrokerUserID = onlyManagerReplies ? (post.brokerUserId ?? "") : ""
+        let requestKey = [
+            String(postID),
+            sortType,
+            managerBrokerUserID
+        ].joined(separator: "|")
+
+        activeCommentsRequestKey = requestKey
+        commentsPayload = nil
         isLoadingComments = true
         errorMessage = ""
-        defer { isLoadingComments = false }
+        defer {
+            if activeCommentsRequestKey == requestKey {
+                isLoadingComments = false
+            }
+        }
 
         do {
-            let managerBrokerUserID = onlyManagerReplies ? (post.brokerUserId ?? "") : ""
-            commentsPayload = try await nativeClient.fetchComments(
+            let payload = try await nativeClient.fetchComments(
                 postID: postID,
-                sortType: commentSortType,
+                sortType: sortType,
                 pageNum: 1,
                 pageSize: 10,
                 managerBrokerUserID: managerBrokerUserID
             )
+            guard activeCommentsRequestKey == requestKey else { return }
+            commentsPayload = payload
         } catch {
+            guard activeCommentsRequestKey == requestKey else { return }
             errorMessage = error.localizedDescription
         }
     }
@@ -282,6 +313,75 @@ final class AppModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func checkForUpdates(userInitiated: Bool) async {
+        guard !isCheckingForUpdates else { return }
+        if userInitiated {
+            errorMessage = ""
+        } else {
+            UserDefaults.standard.set(Date(), forKey: updateAutoCheckDefaultsKey)
+        }
+
+        isCheckingForUpdates = true
+        defer { isCheckingForUpdates = false }
+
+        do {
+            let checker = try AppUpdateChecker()
+            let update = try await checker.check()
+            if let update {
+                availableUpdate = update
+                isPresentingUpdateSheet = true
+                noticeMessage = "发现新版本 \(update.version)，可以下载并重启安装。"
+            } else if userInitiated {
+                noticeMessage = "已经是最新版本：\(checker.currentVersion)。"
+            }
+        } catch {
+            if userInitiated {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    func downloadAndInstallAvailableUpdate() async {
+        guard let update = availableUpdate else { return }
+        guard !isInstallingUpdate else { return }
+
+        isInstallingUpdate = true
+        errorMessage = ""
+        updateInstallProgress = "正在准备更新…"
+        defer {
+            isInstallingUpdate = false
+        }
+
+        do {
+            try await AppSelfUpdater.downloadAndPrepareInstall(release: update) { [weak self] message in
+                self?.updateInstallProgress = message
+            }
+            updateInstallProgress = "安装器已启动，应用即将重启…"
+            noticeMessage = "更新包已准备好，正在重启应用完成覆盖安装。"
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            NSApplication.shared.terminate(nil)
+        } catch {
+            updateInstallProgress = ""
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func openAvailableUpdateDownload() {
+        guard let url = availableUpdate?.downloadURL else { return }
+        NSWorkspace.shared.open(url)
+        noticeMessage = "已打开 GitHub 更新下载页。"
+    }
+
+    func openAvailableUpdateReleasePage() {
+        guard let url = availableUpdate?.htmlURL else { return }
+        NSWorkspace.shared.open(url)
+        noticeMessage = "已打开 GitHub Release 页面。"
+    }
+
+    func dismissUpdateSheet() {
+        isPresentingUpdateSheet = false
     }
 
     func savePortfolioFromDraft() {
@@ -358,28 +458,36 @@ final class AppModel: ObservableObject {
         if userPortfolioHoldings.isEmpty {
             userPortfolioSnapshot = nil
             noticeMessage = "已从磁盘重载持仓，目前没有已保存内容。"
+            Task { await applyPersonalAssetAutomation() }
             return
         }
         noticeMessage = "已从磁盘重载 \(userPortfolioHoldings.count) 条个人持仓。"
-        Task { try? await refreshUserPortfolio(updateNotice: false) }
+        Task {
+            try? await refreshUserPortfolio(updateNotice: false)
+            await applyPersonalAssetAutomation()
+        }
     }
 
     func reloadPendingTradesFromDisk() {
         loadPendingTrades()
         if pendingTrades.isEmpty {
             noticeMessage = "已从磁盘重载买入中记录，目前没有已保存内容。"
+            Task { await applyPersonalAssetAutomation() }
             return
         }
         noticeMessage = "已从磁盘重载 \(pendingTrades.count) 条买入中记录。"
+        Task { await applyPersonalAssetAutomation() }
     }
 
     func reloadInvestmentPlansFromDisk() {
         loadInvestmentPlans()
         if investmentPlans.isEmpty {
             noticeMessage = "已从磁盘重载定投计划，目前没有已保存内容。"
+            Task { await applyPersonalAssetAutomation() }
             return
         }
         noticeMessage = "已从磁盘重载 \(investmentPlans.count) 条定投计划。"
+        Task { await applyPersonalAssetAutomation() }
     }
 
     func syncManagerWatchTargetsFromCurrentForm() {
@@ -928,6 +1036,212 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func restartPersonalAssetAutomationLoop() {
+        personalAssetAutomationTask?.cancel()
+        personalAssetAutomationTask = Task { [weak self] in
+            let interval: UInt64 = 15 * 60 * 1_000_000_000
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: interval)
+                if Task.isCancelled { return }
+                await self?.applyPersonalAssetAutomation()
+            }
+        }
+    }
+
+    @discardableResult
+    private func applyPersonalAssetAutomation(updateNotice: Bool = true) async -> Bool {
+        guard dataDirectoryURL != nil, !isApplyingPersonalAssetAutomation else { return false }
+        isApplyingPersonalAssetAutomation = true
+        defer { isApplyingPersonalAssetAutomation = false }
+
+        let today = Date()
+        let planResult = personalAssetAutomation.generateDuePlanTrades(
+            plans: investmentPlans,
+            existingPendingTrades: pendingTrades,
+            today: today
+        ) { [weak self] plan, _ in
+            self?.estimatedAutomationAmount(for: plan)
+        }
+
+        let priceByKey = await automationPriceLookup(for: planResult.pendingTrades, holdings: userPortfolioHoldings)
+        let confirmationResult = personalAssetAutomation.confirmDuePendingTrades(
+            holdings: userPortfolioHoldings,
+            pendingTrades: planResult.pendingTrades,
+            today: today,
+            priceByKey: priceByKey,
+            keyForFund: { [weak self] code, name in
+                self?.personalFundKey(code: code, name: name) ?? "name:\(name ?? "")"
+            }
+        )
+
+        var change = planResult.change
+        change.confirmedPendingCount += confirmationResult.change.confirmedPendingCount
+        change.skippedConfirmationCount += confirmationResult.change.skippedConfirmationCount
+
+        let nextHoldings = confirmationResult.holdings
+        let nextPendingTrades = confirmationResult.pendingTrades.sorted { $0.occurredAt > $1.occurredAt }
+        let nextInvestmentPlans = planResult.plans.sorted(by: sortInvestmentPlans)
+
+        let holdingsChanged = nextHoldings != userPortfolioHoldings
+        let pendingChanged = nextPendingTrades != pendingTrades
+        let plansChanged = nextInvestmentPlans != investmentPlans
+        guard holdingsChanged || pendingChanged || plansChanged else {
+            return false
+        }
+
+        do {
+            if holdingsChanged, let portfolioFileURL {
+                userPortfolioHoldings = nextHoldings
+                try portfolioStore.save(nextHoldings, to: portfolioFileURL)
+                portfolioDraft = portfolioStore.draft(from: nextHoldings)
+            }
+            if pendingChanged, let pendingTradeFileURL {
+                pendingTrades = nextPendingTrades
+                try pendingTradesStore.save(nextPendingTrades, to: pendingTradeFileURL)
+                pendingTradesDraft = pendingTradesStore.draft(from: nextPendingTrades)
+            }
+            if plansChanged, let investmentPlanFileURL {
+                investmentPlans = nextInvestmentPlans
+                try investmentPlansStore.save(nextInvestmentPlans, to: investmentPlanFileURL)
+                investmentPlansDraft = investmentPlansStore.draft(from: nextInvestmentPlans)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+
+        if holdingsChanged, !userPortfolioHoldings.isEmpty {
+            try? await refreshUserPortfolio(updateNotice: false)
+        }
+        if updateNotice, let noticeText = change.noticeText {
+            noticeMessage = noticeText
+        }
+        return true
+    }
+
+    private func automationPriceLookup(
+        for pendingTrades: [PersonalPendingTrade],
+        holdings: [UserPortfolioHolding]
+    ) async -> [String: Double] {
+        var priceByKey: [String: Double] = [:]
+
+        for row in userPortfolioSnapshot?.rows ?? [] {
+            let key = personalFundKey(code: row.holding.normalizedFundCode, name: row.fundName)
+            if let price = row.resolvedPrice, price > 0 {
+                priceByKey[key] = price
+            }
+        }
+
+        for holding in holdings {
+            let key = personalFundKey(code: holding.normalizedFundCode, name: holding.normalizedName)
+            if priceByKey[key] == nil, let costPrice = holding.costPrice, costPrice > 0 {
+                priceByKey[key] = costPrice
+            }
+        }
+
+        var syntheticHoldingsByKey: [String: UserPortfolioHolding] = [:]
+        for trade in pendingTrades {
+            let code = normalizedCode(trade.targetFundCode) ?? normalizedCode(trade.fundCode)
+            let name = normalizedText(trade.targetFundName) ?? normalizedText(trade.fundName)
+            let key = personalFundKey(code: code, name: name)
+            guard priceByKey[key] == nil, let code else { continue }
+            syntheticHoldingsByKey[key] = UserPortfolioHolding(
+                fundCode: code,
+                units: 1,
+                costPrice: nil,
+                displayName: name
+            )
+        }
+
+        guard !syntheticHoldingsByKey.isEmpty else {
+            return priceByKey
+        }
+
+        do {
+            let snapshot = try await platformClient.fetchUserPortfolioSnapshot(holdings: Array(syntheticHoldingsByKey.values))
+            for row in snapshot.rows {
+                let key = personalFundKey(code: row.holding.normalizedFundCode, name: row.fundName)
+                if let price = row.resolvedPrice, price > 0 {
+                    priceByKey[key] = price
+                }
+            }
+        } catch {
+            if errorMessage.isEmpty {
+                errorMessage = "部分待确认买入缺少实时价格，暂时保留在待确认。"
+            }
+        }
+
+        return priceByKey
+    }
+
+    private func estimatedAutomationAmount(for plan: PersonalInvestmentPlan) -> Double? {
+        let range = automationAmountRange(for: plan)
+        guard let low = range.min else { return nil }
+        let high = range.max ?? low
+
+        if !plan.isDrawdownMode {
+            return abs(high - low) < 0.001 ? low : (low + high) / 2
+        }
+
+        guard let changePct = latestEstimateChangePct(for: plan) else {
+            return abs(high - low) < 0.001 ? low : (low + high) / 2
+        }
+        if changePct < 0 {
+            return high
+        }
+        if changePct > 0 {
+            return low
+        }
+        return abs(high - low) < 0.001 ? low : (low + high) / 2
+    }
+
+    private func latestEstimateChangePct(for plan: PersonalInvestmentPlan) -> Double? {
+        let key = personalFundKey(code: plan.fundCode, name: plan.fundName)
+        return userPortfolioSnapshot?.rows.first { row in
+            personalFundKey(code: row.holding.normalizedFundCode, name: row.fundName) == key
+        }?.estimateChangePct
+    }
+
+    private func automationAmountRange(for plan: PersonalInvestmentPlan) -> (min: Double?, max: Double?) {
+        let parsed = parsedAutomationAmountRange(from: plan.amountText)
+        let minValue = plan.minAmount ?? parsed.min
+        let maxValue = plan.maxAmount ?? parsed.max
+        switch (minValue, maxValue) {
+        case let (min?, max?) where max < min:
+            return (max, min)
+        case let (min?, max?):
+            return (min, max)
+        case let (min?, nil):
+            return (min, min)
+        case let (nil, max?):
+            return (max, max)
+        default:
+            return (nil, nil)
+        }
+    }
+
+    private func parsedAutomationAmountRange(from text: String) -> (min: Double?, max: Double?) {
+        let cleaned = text
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: "元", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let numbers = cleaned
+            .split { !"0123456789.".contains($0) }
+            .compactMap { Double($0) }
+        guard let first = numbers.first else {
+            return (nil, nil)
+        }
+        if numbers.count >= 2, let second = numbers.dropFirst().first {
+            return (first, second)
+        }
+        return (first, first)
+    }
+
+    private func normalizedText(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     private func loadManagerWatchSettings() {
         guard let managerWatchFileURL else { return }
         do {
@@ -1088,6 +1402,18 @@ final class AppModel: ObservableObject {
         } else {
             launchAtLoginEnabled = false
             errorMessage = "当前系统版本不支持开机自启设置。"
+        }
+    }
+
+    private func scheduleAutomaticUpdateCheckIfNeeded() {
+        let lastCheckDate = UserDefaults.standard.object(forKey: updateAutoCheckDefaultsKey) as? Date
+        if let lastCheckDate, Date().timeIntervalSince(lastCheckDate) < updateAutoCheckInterval {
+            return
+        }
+
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            await self?.checkForUpdates(userInitiated: false)
         }
     }
 
