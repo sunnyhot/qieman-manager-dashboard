@@ -7,7 +7,7 @@
   "assets": [
     {
       "name": "QiemanDashboard-2.1.1.zip",
-      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.1.1.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.1.1/QiemanDashboard-2.1.1.zip",
       "size": 3307980,
       "content_type": "application/zip"
     }
