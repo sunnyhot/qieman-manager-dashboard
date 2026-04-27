@@ -1,7 +1,19 @@
 import Foundation
 
+private let currencyFormatter: NumberFormatter = {
+    let f = NumberFormatter()
+    f.numberStyle = .decimal
+    f.minimumFractionDigits = 2
+    f.maximumFractionDigits = 2
+    return f
+}()
+
+private func formattedNumber(_ value: Double) -> String {
+    currencyFormatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
+}
+
 func currencyText(_ value: Double) -> String {
-    "¥" + String(format: "%.2f", value)
+    "¥" + formattedNumber(value)
 }
 
 func currencyOptional(_ value: Double?) -> String {
@@ -12,7 +24,7 @@ func currencyOptional(_ value: Double?) -> String {
 func signedCurrencyText(_ value: Double?) -> String {
     guard let value else { return "—" }
     let sign = value >= 0 ? "+" : "-"
-    return "¥\(sign)\(String(format: "%.2f", abs(value)))"
+    return "¥\(sign)\(formattedNumber(abs(value)))"
 }
 
 func percentOptional(_ value: Double?) -> String {

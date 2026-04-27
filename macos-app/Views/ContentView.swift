@@ -1747,20 +1747,20 @@ private struct SettingsSectionView: View {
                     }
                 }
 
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     Image(systemName: "arrow.down.circle")
-                        .font(.system(size: 11))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(AppPalette.brand)
                     Text("当前 \(AppUpdateChecker.bundleVersion)")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(AppPalette.muted)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
                     Spacer()
                     Button(model.isCheckingForUpdates ? "检查更新中…" : "检查更新") {
                         Task { await model.checkForUpdates(userInitiated: true) }
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(AppPalette.brand)
-                    .controlSize(.small)
+                    .controlSize(.regular)
                     .disabled(model.isCheckingForUpdates)
 
                     if model.availableUpdate != nil {
@@ -1768,18 +1768,18 @@ private struct SettingsSectionView: View {
                             Task { await model.downloadAndInstallAvailableUpdate() }
                         }
                         .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .controlSize(.regular)
                         .disabled(model.isInstallingUpdate)
 
                         Button("查看 Release") {
                             model.openAvailableUpdateReleasePage()
                         }
                         .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .controlSize(.regular)
                     }
                 }
                 .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .padding(.vertical, 12)
                 .background(AppPalette.paper.opacity(0.96))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
@@ -2838,14 +2838,6 @@ private struct PersonalAssetBrowser: View {
                     }
                 }
                 .padding(.vertical, 2)
-            }
-
-            HStack(spacing: 10) {
-                StatChip(title: "显示", value: "\(displayedRows.count) / \(rows.count)")
-                StatChip(title: "总收益", value: signedCurrencyText(totalDisplayedProfit))
-                StatChip(title: "今日涨跌", value: signedCurrencyText(totalDisplayedChange))
-                StatChip(title: "待确认", value: totalPendingAmount > 0 ? currencyText(totalPendingAmount) : "—")
-                StatChip(title: "涨跌幅模式", value: "\(drawdownFundCount)")
             }
 
             if displayedRows.isEmpty {
