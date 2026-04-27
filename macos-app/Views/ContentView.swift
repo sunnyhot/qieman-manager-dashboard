@@ -2623,6 +2623,9 @@ private struct PersonalAssetOverviewCard: View {
                                 .foregroundStyle(AppPalette.muted)
                         }
                         ToolbarBadge(title: row.assetTypeLabel, tint: row.assetType == .stock ? AppPalette.info : AppPalette.brand)
+                        if let marketLabel = row.rawHolding?.marketLabel ?? row.holdingRow?.holding.marketLabel {
+                            ToolbarBadge(title: marketLabel, tint: AppPalette.info)
+                        }
                         ToolbarBadge(title: row.combinedStatusText, tint: row.hasPending ? AppPalette.warning : AppPalette.brand)
                         if row.hasDrawdownPlan {
                             ToolbarBadge(title: "涨跌幅 \(row.drawdownPlanCount)", tint: AppPalette.info)
@@ -2647,12 +2650,12 @@ private struct PersonalAssetOverviewCard: View {
             }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: 10)], spacing: 10) {
-                AssetMiniStat(title: "实时估值", value: row.marketValue.map(currencyText) ?? "—", tint: AppPalette.brand)
-                AssetMiniStat(title: "总收益", value: signedCurrencyText(row.profitAmount), tint: profitTint)
-                AssetMiniStat(title: "今日涨跌", value: signedCurrencyText(row.estimateChangeAmount), tint: changeTint)
+                AssetMiniStat(title: "实时估值", value: row.marketValue.map { currencyText($0, market: row.detectedMarket) } ?? "—", tint: AppPalette.brand)
+                AssetMiniStat(title: "总收益", value: signedCurrencyText(row.profitAmount, market: row.detectedMarket), tint: profitTint)
+                AssetMiniStat(title: "今日涨跌", value: signedCurrencyText(row.estimateChangeAmount, market: row.detectedMarket), tint: changeTint)
                 AssetMiniStat(
                     title: "待确认",
-                    value: row.pendingCashAmount > 0 ? currencyText(row.pendingCashAmount) : (row.pendingUnitAmount > 0 ? "\(unitsText(row.pendingUnitAmount)) 份" : "—"),
+                    value: row.pendingCashAmount > 0 ? currencyText(row.pendingCashAmount, market: row.detectedMarket) : (row.pendingUnitAmount > 0 ? "\(unitsText(row.pendingUnitAmount)) 份" : "—"),
                     tint: AppPalette.warning
                 )
             }
@@ -3017,6 +3020,9 @@ private struct PersonalAssetTableRow: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
                     ToolbarBadge(title: row.assetTypeLabel, tint: row.assetType == .stock ? AppPalette.info : AppPalette.brand)
+                    if let marketLabel = row.rawHolding?.marketLabel ?? row.holdingRow?.holding.marketLabel {
+                        ToolbarBadge(title: marketLabel, tint: AppPalette.info)
+                    }
                     ToolbarBadge(title: row.combinedStatusText, tint: row.hasPending ? AppPalette.warning : AppPalette.brand)
                     if row.hasDrawdownPlan {
                         ToolbarBadge(title: "涨跌幅 \(row.drawdownPlanCount)", tint: AppPalette.info)
@@ -3037,13 +3043,13 @@ private struct PersonalAssetTableRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(row.marketValue.map(currencyText) ?? "—")
+                Text(row.marketValue.map { currencyText($0, market: row.detectedMarket) } ?? "—")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
-                Text("总收益 \(signedCurrencyText(row.profitAmount)) · \(percentOptional(row.profitPct))")
+                Text("总收益 \(signedCurrencyText(row.profitAmount, market: row.detectedMarket)) · \(percentOptional(row.profitPct))")
                     .font(.system(size: 10))
                     .foregroundStyle(profitTint)
-                Text("今日涨跌 \(signedCurrencyText(row.estimateChangeAmount)) · \(percentOptional(row.estimateChangePct))")
+                Text("今日涨跌 \(signedCurrencyText(row.estimateChangeAmount, market: row.detectedMarket)) · \(percentOptional(row.estimateChangePct))")
                     .font(.system(size: 10))
                     .foregroundStyle(changeTint)
                 if row.holdingRow != nil {
@@ -3059,7 +3065,7 @@ private struct PersonalAssetTableRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 if row.pendingTradeCount > 0 {
-                    Text(row.pendingCashAmount > 0 ? currencyText(row.pendingCashAmount) : "\(unitsText(row.pendingUnitAmount)) 份")
+                    Text(row.pendingCashAmount > 0 ? currencyText(row.pendingCashAmount, market: row.detectedMarket) : "\(unitsText(row.pendingUnitAmount)) 份")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
                     Text("\(row.pendingTradeCount) 笔 · \(row.pendingTrades.first?.actionLabel ?? "待确认")")
@@ -3081,7 +3087,7 @@ private struct PersonalAssetTableRow: View {
                     Text("进行中 \(row.activePlanCount) · 暂停 \(row.pausedPlanCount) · 终止 \(row.endedPlanCount)")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
-                    Text("下次估算 \(currencyText(row.estimatedNextPlanAmount)) · 累计 \(currencyText(row.totalCumulativePlanAmount))\(row.hasDrawdownPlan ? " · 涨跌幅 \(row.drawdownPlanCount)" : "")")
+                    Text("下次估算 \(currencyText(row.estimatedNextPlanAmount, market: row.detectedMarket)) · 累计 \(currencyText(row.totalCumulativePlanAmount, market: row.detectedMarket))\(row.hasDrawdownPlan ? " · 涨跌幅 \(row.drawdownPlanCount)" : "")")
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
                 } else {

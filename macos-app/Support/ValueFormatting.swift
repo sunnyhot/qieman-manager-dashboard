@@ -1,7 +1,11 @@
 import Foundation
 
 func currencyText(_ value: Double) -> String {
-    "¥" + String(format: "%.2f", value)
+    currencyText(value, market: nil)
+}
+
+func currencyText(_ value: Double, market: StockMarket?) -> String {
+    (market?.currencySymbol ?? "¥") + String(format: "%.2f", value)
 }
 
 func currencyOptional(_ value: Double?) -> String {
@@ -9,10 +13,20 @@ func currencyOptional(_ value: Double?) -> String {
     return currencyText(value)
 }
 
+func currencyOptional(_ value: Double?, market: StockMarket?) -> String {
+    guard let value else { return "—" }
+    return currencyText(value, market: market)
+}
+
 func signedCurrencyText(_ value: Double?) -> String {
+    signedCurrencyText(value, market: nil)
+}
+
+func signedCurrencyText(_ value: Double?, market: StockMarket?) -> String {
     guard let value else { return "—" }
     let sign = value >= 0 ? "+" : "-"
-    return "¥\(sign)\(String(format: "%.2f", abs(value)))"
+    let symbol = market?.currencySymbol ?? "¥"
+    return "\(symbol)\(sign)\(String(format: "%.2f", abs(value)))"
 }
 
 func percentOptional(_ value: Double?) -> String {

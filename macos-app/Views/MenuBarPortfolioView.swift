@@ -313,10 +313,16 @@ private struct MenuBarHoldingRow: View {
                     Text("实时估值")
                         .font(.system(size: 9))
                         .foregroundStyle(AppPalette.muted)
-                    Text(currencyOptional(row.marketValue))
+                    Text(currencyOptional(row.marketValue, market: row.holding.detectedMarket))
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundStyle(AppPalette.ink)
-                    Text("\(unitsText(row.holding.units)) 份")
+                    HStack(spacing: 4) {
+                        if let marketLabel = row.holding.marketLabel {
+                            Text(marketLabel)
+                                .font(.system(size: 9, weight: .medium))
+                        }
+                        Text("\(unitsText(row.holding.units)) 份")
+                    }
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
                         .monospacedDigit()
@@ -326,13 +332,13 @@ private struct MenuBarHoldingRow: View {
             HStack(spacing: 8) {
                 HoldingMetricPill(
                     title: "总收益",
-                    amount: signedCurrencyOptional(row.profitAmount),
+                    amount: signedCurrencyOptional(row.profitAmount, market: row.holding.detectedMarket),
                     pct: percentOptional(row.profitPct),
                     tint: profitTint
                 )
                 HoldingMetricPill(
                     title: "今日涨跌",
-                    amount: signedCurrencyOptional(row.estimatedDailyChangeAmount),
+                    amount: signedCurrencyOptional(row.estimatedDailyChangeAmount, market: row.holding.detectedMarket),
                     pct: percentOptional(row.estimateChangePct),
                     tint: dailyTint
                 )
@@ -395,8 +401,9 @@ private struct HoldingMetricPill: View {
     }
 }
 
-private func signedCurrencyOptional(_ value: Double?) -> String {
+private func signedCurrencyOptional(_ value: Double?, market: StockMarket? = nil) -> String {
     guard let value else { return "—" }
     let sign = value >= 0 ? "+" : "-"
-    return "¥\(sign)\(String(format: "%.2f", abs(value)))"
+    let symbol = market?.currencySymbol ?? "¥"
+    return "\(symbol)\(sign)\(String(format: "%.2f", abs(value)))"
 }

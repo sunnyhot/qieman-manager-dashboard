@@ -975,12 +975,12 @@ final class AppModel: ObservableObject {
         if let cached = _cachedAssetRows { return cached }
         var valuationRowsByKey: [String: UserPortfolioValuationRow] = [:]
         for row in userPortfolioSnapshot?.rows ?? [] {
-            valuationRowsByKey[personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName)] = row
+            valuationRowsByKey[personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName, market: row.holding.detectedMarket)] = row
         }
 
         var rawHoldingsByKey: [String: UserPortfolioHolding] = [:]
         for holding in userPortfolioHoldings {
-            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName)
+            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName, market: holding.detectedMarket)
             rawHoldingsByKey[key] = rawHoldingsByKey[key] ?? holding
         }
 
@@ -1231,14 +1231,14 @@ final class AppModel: ObservableObject {
         var priceByKey: [String: Double] = [:]
 
         for row in userPortfolioSnapshot?.rows ?? [] {
-            let key = personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName)
+            let key = personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName, market: row.holding.detectedMarket)
             if let price = row.resolvedPrice, price > 0 {
                 priceByKey[key] = price
             }
         }
 
         for holding in holdings {
-            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName)
+            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName, market: holding.detectedMarket)
             if priceByKey[key] == nil, let costPrice = holding.costPrice, costPrice > 0 {
                 priceByKey[key] = costPrice
             }
@@ -1265,7 +1265,7 @@ final class AppModel: ObservableObject {
         do {
             let snapshot = try await platformClient.fetchUserPortfolioSnapshot(holdings: Array(syntheticHoldingsByKey.values))
             for row in snapshot.rows {
-                let key = personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName)
+                let key = personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName, market: row.holding.detectedMarket)
                 if let price = row.resolvedPrice, price > 0 {
                     priceByKey[key] = price
                 }
@@ -1303,7 +1303,7 @@ final class AppModel: ObservableObject {
     private func latestEstimateChangePct(for plan: PersonalInvestmentPlan) -> Double? {
         let key = personalFundKey(code: plan.fundCode, name: plan.fundName)
         return userPortfolioSnapshot?.rows.first { row in
-            personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName) == key
+            personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName, market: row.holding.detectedMarket) == key
         }?.estimateChangePct
     }
 
@@ -1859,13 +1859,14 @@ final class AppModel: ObservableObject {
         return 2
     }
 
-    private func personalFundKey(code: String?, name: String?) -> String {
-        personalAssetKey(assetType: .fund, code: code, name: name)
+    private func personalFundKey(code: String?, name: String?, market: StockMarket? = nil) -> String {
+        personalAssetKey(assetType: .fund, code: code, name: name, market: market)
     }
 
-    private func personalAssetKey(assetType: PersonalAssetType, code: String?, name: String?) -> String {
+    private func personalAssetKey(assetType: PersonalAssetType, code: String?, name: String?, market: StockMarket? = nil) -> String {
         if let code = normalizedCode(code) {
-            return "\(assetType.rawValue):code:\(code)"
+            let marketSegment = (assetType == .stock) ? ":mkt:\(market?.rawValue ?? "a")" : ""
+            return "\(assetType.rawValue)\(marketSegment):code:\(code)"
         }
         let normalizedName = (name ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1873,7 +1874,8 @@ final class AppModel: ObservableObject {
             .replacingOccurrences(of: "（", with: "(")
             .replacingOccurrences(of: "）", with: ")")
             .replacingOccurrences(of: " ", with: "")
-        return "\(assetType.rawValue):name:\(normalizedName)"
+        let marketSegment = (assetType == .stock) ? ":mkt:\(market?.rawValue ?? "a")" : ""
+        return "\(assetType.rawValue)\(marketSegment):name:\(normalizedName)"
     }
 
     private func normalizedCode(_ value: String?) -> String? {

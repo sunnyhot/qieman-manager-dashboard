@@ -738,9 +738,27 @@ final class QiemanPlatformNativeClient {
     }
 
     private func fetchTencentStockQuote(_ stockCode: String) async throws -> NativeStockQuote {
-        guard let symbol = tencentStockSymbol(for: stockCode) else {
+        let market = UserPortfolioHolding.detectStockMarket(from: stockCode)
+
+        guard let symbol = tencentStockSymbol(for: stockCode, market: market) else {
             return .empty(stockCode)
         }
+
+        let quote = try await fetchSingleTencentQuote(symbol: symbol, stockCode: stockCode)
+        if quote.hasUsableData { return quote }
+
+        if market == .us {
+            for suffix in [".O", ".N", ".A"] {
+                let altSymbol = "\(symbol)\(suffix)"
+                let altQuote = try? await fetchSingleTencentQuote(symbol: altSymbol, stockCode: stockCode)
+                if let altQuote, altQuote.hasUsableData { return altQuote }
+            }
+        }
+
+        return quote
+    }
+
+    private func fetchSingleTencentQuote(symbol: String, stockCode: String) async throws -> NativeStockQuote {
         let url = URL(string: "https://qt.gtimg.cn/q=\(symbol)")!
         let text = try await requestText(hostURL: url, absoluteURL: url, headers: [
             "Accept": "text/plain,*/*",
@@ -943,8 +961,10 @@ final class QiemanPlatformNativeClient {
         return raw / scale
     }
 
-    private func stockSecID(for stockCode: String) -> String? {
+    private func stockSecID(for stockCode: String, market: StockMarket? = nil) -> String? {
         let code = stockCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedMarket = market ?? UserPortfolioHolding.detectStockMarket(from: code)
+        guard resolvedMarket == nil || resolvedMarket == .aShare else { return nil }
         guard code.count == 6, CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: code)) else {
             return nil
         }
@@ -954,18 +974,27 @@ final class QiemanPlatformNativeClient {
         return "0.\(code)"
     }
 
-    private func tencentStockSymbol(for stockCode: String) -> String? {
+    private func tencentStockSymbol(for stockCode: String, market: StockMarket? = nil) -> String? {
         let code = stockCode.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard code.count == 6, CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: code)) else {
+        let resolvedMarket = market ?? UserPortfolioHolding.detectStockMarket(from: code)
+
+        switch resolvedMarket {
+        case .aShare:
+            guard code.count == 6, code.allSatisfy(\.isNumber) else { return nil }
+            if code.hasPrefix("6") || code.hasPrefix("9") {
+                return "sh\(code)"
+            }
+            if code.hasPrefix("4") || code.hasPrefix("8") {
+                return "bj\(code)"
+            }
+            return "sz\(code)"
+        case .hk:
+            return "hk\(code)"
+        case .us:
+            return "us\(code.uppercased())"
+        case nil:
             return nil
         }
-        if code.hasPrefix("6") || code.hasPrefix("9") {
-            return "sh\(code)"
-        }
-        if code.hasPrefix("4") || code.hasPrefix("8") {
-            return "bj\(code)"
-        }
-        return "sz\(code)"
     }
 
     private func formattedTencentQuoteTime(_ value: String?) -> String {
