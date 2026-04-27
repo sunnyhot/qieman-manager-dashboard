@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Charts
 import UniformTypeIdentifiers
 
 private enum PersonalAssetFilterScope: String, CaseIterable, Identifiable {
@@ -613,7 +614,16 @@ private struct OverviewSectionView: View {
                     }
                 }
 
-                SectionCard(title: "最近调仓", subtitle: "原生卡片直接消费平台接口", icon: "arrow.left.arrow.right") {
+                SectionCard(title: "最近调仓", subtitle: "原生卡片直接消费平台接口", icon: "arrow.left.arrow.right", trailing: {
+                    Spacer()
+                    Button("查看全部") {
+                        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+                            model.selectedSection = .platform
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }) {
                     if model.latestPlatformActions.isEmpty {
                         EmptySectionState(
                             title: "最近调仓暂时为空",
@@ -624,7 +634,7 @@ private struct OverviewSectionView: View {
                         }
                     } else {
                         VStack(spacing: 8) {
-                            ForEach(model.latestPlatformActions) { action in
+                            ForEach(Array(model.latestPlatformActions.prefix(3))) { action in
                                 Button {
                                     openPlatform(action)
                                 } label: {
@@ -641,11 +651,21 @@ private struct OverviewSectionView: View {
                 SectionCard(
                     title: model.currentSnapshot?.snapshotType == "posts" ? "最近发言" : "最近记录",
                     subtitle: model.currentSnapshot?.kindLabel == "帖子" ? "主理人发言摘要" : "当前模式下的最新原生结果",
-                    icon: "text.bubble"
+                    icon: "text.bubble",
+                    trailing: {
+                        Spacer()
+                        Button("查看全部") {
+                            withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+                                model.selectedSection = .forum
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
                 ) {
                     if model.hasForumPosts {
                         VStack(spacing: 8) {
-                            ForEach(Array(model.forumRecords.prefix(6))) { record in
+                            ForEach(Array(model.forumRecords.prefix(3))) { record in
                                 Button {
                                     openForum(record)
                                 } label: {
@@ -1084,8 +1104,10 @@ private struct ManagerWatchStatusTile: View {
 
 private struct PlatformSectionView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var platformListPage = 0
     private let compactThreshold: CGFloat = 1120
     private let detailAnchor = "platform-detail-panel"
+    private let pageSize = 10
 
     var body: some View {
         GeometryReader { proxy in
@@ -1172,12 +1194,20 @@ private struct PlatformSectionView: View {
     }
 
     private func platformListPanel(isCompact: Bool, scrollProxy: ScrollViewProxy) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let allActions = model.platformPayload?.actions ?? []
+        let totalCount = allActions.count
+        let totalPages = max(1, (totalCount + pageSize - 1) / pageSize)
+        let safePage = min(platformListPage, totalPages - 1)
+        let start = safePage * pageSize
+        let end = min(start + pageSize, totalCount)
+        let pageActions = Array(allActions[start..<end])
+
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Text("调仓动作列表")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
-                Text("\(model.platformPayload?.actions?.count ?? 0)")
+                Text("\(totalCount)")
                     .font(.system(size: 10, weight: .bold, design: .rounded))
                     .foregroundStyle(AppPalette.muted)
                     .padding(.horizontal, 8)
@@ -1193,7 +1223,7 @@ private struct PlatformSectionView: View {
             }
 
             LazyVStack(spacing: 8) {
-                ForEach(model.platformPayload?.actions ?? []) { action in
+                ForEach(pageActions) { action in
                     Button {
                         model.selectPlatformAction(action.id)
                         if isCompact {
@@ -1210,6 +1240,36 @@ private struct PlatformSectionView: View {
                     }
                     .buttonStyle(PressResponsiveButtonStyle())
                     .id(action.id)
+                }
+            }
+
+            if totalPages > 1 {
+                HStack(spacing: 8) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { platformListPage = max(0, safePage - 1) }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(safePage == 0)
+
+                    Text("\(safePage + 1) / \(totalPages)")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(AppPalette.muted)
+
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { platformListPage = min(totalPages - 1, safePage + 1) }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(safePage >= totalPages - 1)
+
+                    Spacer()
                 }
             }
         }
@@ -3298,13 +3358,19 @@ private struct PlatformActionRow: View {
                                 .foregroundStyle(AppPalette.muted)
                         }
                         Spacer()
-                        Text(isBuy ? "买入" : "卖出")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(sideColor)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(sideColor.opacity(0.10))
-                            .clipShape(Capsule())
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(isBuy ? "买入" : "卖出")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(sideColor)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(sideColor.opacity(0.10))
+                                .clipShape(Capsule())
+                            if let article = action.articleUrl, let url = URL(string: article) {
+                                Link("打开平台原文", destination: url)
+                                    .font(.system(size: 10))
+                            }
+                        }
                     }
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 128), spacing: 12)], spacing: 10) {
@@ -3312,11 +3378,6 @@ private struct PlatformActionRow: View {
                         LabeledValue(title: "调仓估值", value: decimalText(action.tradeValuation))
                         LabeledValue(title: "当前估值", value: decimalText(action.currentValuation))
                         LabeledValue(title: "变化", value: percentText(action.valuationChangePct), tint: changeTint)
-                    }
-
-                    if let article = action.articleUrl, let url = URL(string: article) {
-                        Link("打开平台原文", destination: url)
-                            .font(.system(size: 11))
                     }
                 }
             }
@@ -3614,12 +3675,12 @@ private struct PlatformMonthlyOverview: View {
             HStack(alignment: .top, spacing: 12) {
                 summaryPanel
                     .frame(width: 270)
-                monthGrid
+                monthChart
             }
 
             VStack(alignment: .leading, spacing: 12) {
                 summaryPanel
-                monthGrid
+                monthChart
             }
         }
     }
@@ -3678,13 +3739,141 @@ private struct PlatformMonthlyOverview: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    private var monthGrid: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 10)], spacing: 10) {
+    @State private var selectedMonth: PlatformMonthSummary?
+    @State private var hoverLocation: CGPoint = .zero
+
+    private var monthChart: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            chartLegend
+            chartBody
+                .overlay { chartTooltip }
+                .frame(height: 200)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(AppPalette.card.opacity(0.72))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppPalette.line.opacity(0.32), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var chartLegend: some View {
+        HStack(spacing: 12) {
+            Label("买入", systemImage: "square.fill")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppPalette.positive)
+            Label("卖出", systemImage: "square.fill")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppPalette.warning)
+        }
+    }
+
+    private var chartBody: some View {
+        Chart {
             ForEach(months) { month in
-                MonthSummaryCard(month: month)
+                BarMark(
+                    x: .value("月", String(month.month.suffix(2))),
+                    y: .value("买入", month.buyCount)
+                )
+                .foregroundStyle(AppPalette.positive)
+                .position(by: .value("类型", "买入"))
+
+                BarMark(
+                    x: .value("月", String(month.month.suffix(2))),
+                    y: .value("卖出", month.sellCount)
+                )
+                .foregroundStyle(AppPalette.warning)
+                .position(by: .value("类型", "卖出"))
+            }
+
+            if let selectedMonth {
+                RuleMark(x: .value("月", String(selectedMonth.month.suffix(2))))
+                    .foregroundStyle(AppPalette.line.opacity(0.5))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
             }
         }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .chartOverlay { proxy in
+            GeometryReader { geo in
+                Rectangle()
+                    .fill(Color.clear)
+                    .contentShape(Rectangle())
+                    .onContinuousHover { phase in
+                        switch phase {
+                        case .active(let location):
+                            guard let frame = proxy.plotFrame else { return }
+                            let plotRect = geo[frame]
+                            let relX = location.x - plotRect.origin.x
+                            let relY = location.y - plotRect.origin.y
+                            guard relX >= 0, relX <= plotRect.width, relY >= 0, relY <= plotRect.height else {
+                                selectedMonth = nil
+                                return
+                            }
+                            hoverLocation = location
+                            if let xVal: String = proxy.value(atX: relX) {
+                                selectedMonth = months.first { String($0.month.suffix(2)) == xVal }
+                            }
+                        case .ended:
+                            selectedMonth = nil
+                        }
+                    }
+            }
+        }
+        .chartYAxis {
+            AxisMarks(position: .leading) { _ in
+                AxisValueLabel()
+                    .font(.system(size: 9, design: .rounded))
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                    .foregroundStyle(AppPalette.line.opacity(0.4))
+            }
+        }
+        .chartXAxis {
+            AxisMarks { _ in
+                AxisValueLabel()
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(AppPalette.muted)
+            }
+        }
+    }
+
+    private var chartTooltip: some View {
+        GeometryReader { geo in
+            if let m = selectedMonth {
+                let tooltipWidth: CGFloat = 160
+                let tooltipHeight: CGFloat = 60
+                let tipX = min(max(hoverLocation.x + 12, 0), geo.size.width - tooltipWidth)
+                let tipY = min(max(hoverLocation.y - tooltipHeight - 8, 0), geo.size.height - tooltipHeight)
+                tooltipContent(month: m)
+                    .frame(width: tooltipWidth, alignment: .leading)
+                    .position(x: tipX + tooltipWidth / 2, y: tipY + tooltipHeight / 2)
+                    .transition(.opacity)
+                    .animation(.easeOut(duration: 0.12), value: selectedMonth?.id)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func tooltipContent(month m: PlatformMonthSummary) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(m.month)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(AppPalette.ink)
+            HStack(spacing: 8) {
+                Text("买入 \(m.buyCount)")
+                    .foregroundStyle(AppPalette.positive)
+                Text("卖出 \(m.sellCount)")
+                    .foregroundStyle(AppPalette.warning)
+            }
+            .font(.system(size: 10, weight: .semibold))
+            Text("共 \(m.totalCount) 笔 · 活跃 \(m.activeDays) 天")
+                .font(.system(size: 9))
+                .foregroundStyle(AppPalette.muted)
+        }
+        .padding(8)
+        .background(AppPalette.cardStrong)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
     }
 
     private func rhythmLine(title: String, value: Int, tint: Color) -> some View {
@@ -3709,88 +3898,6 @@ private struct PlatformMonthlyOverview: View {
                 }
             }
             .frame(height: 7)
-        }
-    }
-}
-
-private struct MonthSummaryCard: View {
-    let month: PlatformMonthSummary
-
-    private var total: Int {
-        max(month.totalCount, 1)
-    }
-
-    private var buyRatio: Double {
-        Double(month.buyCount) / Double(total)
-    }
-
-    private var sellRatio: Double {
-        Double(month.sellCount) / Double(total)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(month.month)
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-                    .foregroundStyle(AppPalette.ink)
-                    .lineLimit(1)
-                Spacer(minLength: 8)
-                Text("\(month.totalCount)")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(AppPalette.ink)
-                Text("笔")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(AppPalette.muted)
-            }
-
-            GeometryReader { proxy in
-                HStack(spacing: 2) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(AppPalette.positive.opacity(0.72))
-                        .frame(width: max(month.buyCount > 0 ? 6 : 0, proxy.size.width * buyRatio))
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(AppPalette.warning.opacity(0.72))
-                        .frame(width: max(month.sellCount > 0 ? 6 : 0, proxy.size.width * sellRatio))
-                }
-            }
-            .frame(height: 8)
-
-            HStack(spacing: 6) {
-                miniCount(title: "买", value: month.buyCount, tint: AppPalette.positive)
-                miniCount(title: "卖", value: month.sellCount, tint: AppPalette.warning)
-                Spacer(minLength: 4)
-                Text("活跃 \(month.activeDays) 天")
-                    .font(.system(size: 9))
-                    .foregroundStyle(AppPalette.muted)
-                    .lineLimit(1)
-            }
-
-            Text("每活跃日 \(month.perActiveDayText) 笔")
-                .font(.system(size: 9))
-                .foregroundStyle(AppPalette.muted)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(AppPalette.card.opacity(0.72))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(AppPalette.line.opacity(0.32), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    private func miniCount(title: String, value: Int, tint: Color) -> some View {
-        HStack(spacing: 3) {
-            Circle()
-                .fill(tint)
-                .frame(width: 5, height: 5)
-            Text("\(title) \(value)")
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(AppPalette.ink)
-                .lineLimit(1)
         }
     }
 }
