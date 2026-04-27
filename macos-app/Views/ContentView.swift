@@ -1435,24 +1435,20 @@ private struct PortfolioSectionView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(AppPalette.muted)
 
-                SectionCard(title: "导入中心", subtitle: "支持手动录入、上传图片 OCR、上传表格到三类资产区", icon: "square.and.arrow.down") {
-                    HStack(spacing: 10) {
-                        ToolbarBadge(
-                            title: hasAnyPersonalData ? "已导入资产数据" : "尚未导入",
-                            tint: hasAnyPersonalData ? AppPalette.positive : AppPalette.warning
-                        )
-                        Spacer()
-                        Button("打开导入中心") {
-                            withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
-                                model.selectedSection = .importCenter
-                            }
+                SectionCard(title: "资产全貌总表", subtitle: "把「已持有 + 待确认 + 计划档案」聚合到同一行", icon: "tablecells", trailing: {
+                    Spacer()
+                    Text(hasAnyPersonalData ? "已导入" : "未导入")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(hasAnyPersonalData ? AppPalette.positive : AppPalette.warning)
+                    Button("打开导入中心") {
+                        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+                            model.selectedSection = .importCenter
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(AppPalette.brand)
                     }
-                }
-
-                SectionCard(title: "资产全貌总表", subtitle: "把「已持有 + 待确认 + 计划档案」聚合到同一行", icon: "tablecells") {
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppPalette.brand)
+                    .controlSize(.small)
+                }) {
                     if model.personalAssetRows.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("还没有可聚合的资产数据。先导入持仓、买入中或定投计划。")
@@ -1465,26 +1461,6 @@ private struct PortfolioSectionView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     } else {
                         PersonalAssetBrowser(rows: model.personalAssetRows)
-                    }
-                }
-
-                SectionCard(title: "实时估值", subtitle: "和平台持仓共用同一套原生估值口径", icon: "waveform.path.ecg.rectangle") {
-                    if let snapshot = model.userPortfolioSnapshot, !snapshot.rows.isEmpty {
-                        VStack(spacing: 10) {
-                            ForEach(snapshot.rows) { row in
-                                PersonalHoldingCard(row: row)
-                            }
-                        }
-                    } else {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(model.hasPersonalPortfolio ? "持仓已保存，点「刷新估值」即可拉最新价格。" : "还没有个人持仓。先在上面粘贴代码和份额。")
-                                .font(.system(size: 12))
-                                .foregroundStyle(AppPalette.muted)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .background(AppPalette.cardStrong)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
 
@@ -2462,12 +2438,14 @@ private struct SectionCard<Content: View>: View {
     let title: String
     let subtitle: String
     let icon: String
+    let trailing: AnyView
     let content: Content
 
-    init(title: String, subtitle: String, icon: String, @ViewBuilder content: () -> Content) {
+    init(title: String, subtitle: String, icon: String, @ViewBuilder trailing: () -> some View = { EmptyView() }, @ViewBuilder content: () -> Content) {
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
+        self.trailing = AnyView(trailing())
         self.content = content()
     }
 
@@ -2485,6 +2463,7 @@ private struct SectionCard<Content: View>: View {
                         .font(.system(size: 11))
                         .foregroundStyle(AppPalette.muted)
                 }
+                trailing
             }
             content
         }
@@ -2949,7 +2928,8 @@ private struct PersonalAssetGroupedTable: View {
     }
 
     private func group(title: String, rows: [PersonalAssetAggregateRow]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let latestTime = rows.compactMap(\.holdingRow?.resolvedPriceTime).sorted().last
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text(title)
                     .font(.system(size: 12, weight: .bold))
@@ -2958,6 +2938,11 @@ private struct PersonalAssetGroupedTable: View {
                 Text("市值 \(currencyText(rows.compactMap(\.marketValue).reduce(0, +)))")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
+                if let time = latestTime {
+                    Text("估值 \(time)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted.opacity(0.7))
+                }
             }
             PersonalAssetTable(rows: rows)
         }
@@ -2973,7 +2958,7 @@ private struct PersonalAssetTable: View {
                 Text("标的")
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("实时估值 / 收益")
-                    .frame(width: 220, alignment: .leading)
+                    .frame(width: 260, alignment: .leading)
                 Text("待确认")
                     .frame(width: 150, alignment: .leading)
                 Text("计划档案")
@@ -3049,8 +3034,16 @@ private struct PersonalAssetTableRow: View {
                 Text("今日涨跌 \(signedCurrencyText(row.estimateChangeAmount)) · \(percentOptional(row.estimateChangePct))")
                     .font(.system(size: 10))
                     .foregroundStyle(changeTint)
+                if row.holdingRow != nil {
+                    HStack(spacing: 6) {
+                        Text("现价 \(row.currentPrice.map(decimalText) ?? "—")")
+                        Text("成本 \(row.costPrice.map(decimalText) ?? "—")")
+                    }
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+                }
             }
-            .frame(width: 220, alignment: .leading)
+            .frame(width: 260, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 4) {
                 if row.pendingTradeCount > 0 {
@@ -3097,7 +3090,7 @@ private struct PersonalAssetTableRow: View {
                 Text(
                     row.hasDrawdownPlan
                     ? "含 \(row.drawdownPlanCount) 条涨跌幅计划"
-                    : (row.currentPrice.map { "现价 \(decimalText($0))" } ?? "等待估值")
+                    : (row.holdingRow != nil ? "已估值" : "等待估值")
                 )
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
@@ -4004,62 +3997,3 @@ private struct PendingTradeCard: View {
     }
 }
 
-private struct PersonalHoldingCard: View {
-    let row: UserPortfolioValuationRow
-
-    private var profitTint: Color {
-        let value = row.profitPct ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
-    }
-
-    private var changeTint: Color {
-        let value = row.estimateChangePct ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(row.fundName)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(AppPalette.ink)
-                    Text("\(row.holding.normalizedFundCode) · \(unitsText(row.holding.units)) 份")
-                        .font(.system(size: 11))
-                        .foregroundStyle(AppPalette.muted)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(currencyOptional(row.marketValue))
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppPalette.ink)
-                    Text(percentOptional(row.profitPct))
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle((row.profitPct ?? 0) >= 0 ? AppPalette.positive : AppPalette.danger)
-                }
-            }
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 12)], spacing: 10) {
-                LabeledValue(title: "现价", value: decimalOptional(row.resolvedPrice))
-                LabeledValue(title: "成本", value: row.holding.costPrice.map(decimalText) ?? "—")
-                LabeledValue(title: "浮盈", value: currencyOptional(row.profitAmount), tint: profitTint)
-                LabeledValue(title: "涨跌", value: row.estimateChangePct.map { String(format: "%+.2f%%", $0) } ?? "—", tint: changeTint)
-            }
-
-            HStack {
-                Text("来源：\(row.resolvedPriceSource ?? "未知")")
-                Spacer()
-                Text("时间：\(row.resolvedPriceTime ?? "未知")")
-            }
-            .font(.system(size: 10))
-            .foregroundStyle(AppPalette.muted)
-        }
-        .padding(12)
-        .background(AppPalette.card)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-}
