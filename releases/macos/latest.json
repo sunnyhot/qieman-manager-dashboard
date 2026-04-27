@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.1.12",
-  "name": "QiemanDashboard 2.1.12",
-  "body": "设置页新增账号登录和检查更新；移除工具栏登录/验证/更多按钮；检查更新通栏展示当前版本号。",
+  "tag_name": "v2.1.13",
+  "name": "QiemanDashboard 2.1.13",
+  "body": "交易时间总览改用 Swift Charts 柱状图展示买卖分布，支持 hover 查看详情；总览最近调仓/发言限制 3 条并加查看全部按钮；调仓浏览加分页每页 10 条；打开平台原文移至操作类型 tag 下方。",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/tree/main/releases/macos",
-  "published_at": "2026-04-27T16:30:00Z",
+  "published_at": "2026-04-27T17:30:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.1.12.zip",
-      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.1.12.zip",
-      "size": 3135520,
+      "name": "QiemanDashboard-2.1.13.zip",
+      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.1.13.zip",
+      "size": 3161675,
       "content_type": "application/zip"
     }
   ]
