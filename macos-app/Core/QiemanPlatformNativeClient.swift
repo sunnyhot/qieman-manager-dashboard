@@ -1004,20 +1004,36 @@ final class QiemanPlatformNativeClient {
         return isoDateTime(Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
     }
 
+    private static let dateOnlyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    private static let isoDateTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        return f
+    }()
+
+    private static let displayTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return f
+    }()
+
     private func dateTextFromTimestampMs(_ value: Int) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date(timeIntervalSince1970: TimeInterval(value) / 1000))
+        Self.dateOnlyFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(value) / 1000))
     }
 
     private func isoDateTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        return formatter.string(from: date)
+        Self.isoDateTimeFormatter.string(from: date)
     }
 
     private func formatTime(_ value: String) -> String {
@@ -1043,11 +1059,7 @@ final class QiemanPlatformNativeClient {
     }
 
     private func isoTimestampNow() -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter.string(from: Date())
+        Self.displayTimeFormatter.string(from: Date())
     }
 
     private func zipOptional(_ lhs: Double?, _ rhs: Double?) -> (Double, Double)? {
@@ -1055,10 +1067,17 @@ final class QiemanPlatformNativeClient {
         return (lhs, rhs)
     }
 
+    private static var regexCache: [String: NSRegularExpression] = [:]
+
     private func firstMatch(in text: String, pattern: String) -> String? {
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
-            return nil
-        }
+        let regex = Self.regexCache[pattern] ?? {
+            guard let compiled = try? NSRegularExpression(pattern: pattern, options: []) else {
+                return nil
+            }
+            Self.regexCache[pattern] = compiled
+            return compiled
+        }()
+        guard let regex else { return nil }
         let range = NSRange(location: 0, length: text.utf16.count)
         guard let match = regex.firstMatch(in: text, options: [], range: range),
               match.numberOfRanges > 1,

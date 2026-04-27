@@ -132,34 +132,19 @@ struct MenuBarPortfolioView: View {
     }
 
     private func sortedHoldingRows(_ rows: [UserPortfolioValuationRow]) -> [UserPortfolioValuationRow] {
-        rows.sorted { lhs, rhs in
-            switch holdingSort {
-            case .dailyChange:
-                let left = estimatedDailyChangeAmount(for: lhs) ?? -.greatestFiniteMagnitude
-                let right = estimatedDailyChangeAmount(for: rhs) ?? -.greatestFiniteMagnitude
-                if abs(left - right) > 0.001 {
-                    return left > right
-                }
-            case .totalProfit:
-                let left = lhs.profitAmount ?? -.greatestFiniteMagnitude
-                let right = rhs.profitAmount ?? -.greatestFiniteMagnitude
-                if abs(left - right) > 0.001 {
-                    return left > right
-                }
-            case .marketValue:
-                let left = lhs.marketValue ?? -.greatestFiniteMagnitude
-                let right = rhs.marketValue ?? -.greatestFiniteMagnitude
-                if abs(left - right) > 0.001 {
-                    return left > right
-                }
-            }
-
-            let leftMarketValue = lhs.marketValue ?? -.greatestFiniteMagnitude
-            let rightMarketValue = rhs.marketValue ?? -.greatestFiniteMagnitude
-            if abs(leftMarketValue - rightMarketValue) > 0.001 {
-                return leftMarketValue > rightMarketValue
-            }
-            return lhs.fundName.localizedStandardCompare(rhs.fundName) == .orderedAscending
+        switch holdingSort {
+        case .dailyChange:
+            return rows.map { ($0, $0.estimatedDailyChangeAmount ?? -.greatestFiniteMagnitude) }
+                .sorted { $0.1 > $1.1 }
+                .map(\.0)
+        case .totalProfit:
+            return rows.map { ($0, $0.profitAmount ?? -.greatestFiniteMagnitude) }
+                .sorted { $0.1 > $1.1 }
+                .map(\.0)
+        case .marketValue:
+            return rows.map { ($0, $0.marketValue ?? -.greatestFiniteMagnitude) }
+                .sorted { $0.1 > $1.1 }
+                .map(\.0)
         }
     }
 
@@ -201,25 +186,22 @@ private struct MenuBarSummaryCard: View {
     let personalSummary: PersonalAssetAggregateSummary?
 
     private var totalDailyChangeAmount: Double? {
-        let values = snapshot.rows.compactMap { estimatedDailyChangeAmount(for: $0) }
+        let values = snapshot.rows.compactMap(\.estimatedDailyChangeAmount)
         guard !values.isEmpty else { return nil }
         return values.reduce(0, +)
     }
 
     private var totalDailyChangePct: Double? {
-        let pairs: [(change: Double, previous: Double)] = snapshot.rows.compactMap { row in
-            guard
-                let change = estimatedDailyChangeAmount(for: row),
-                let previous = previousMarketValue(for: row),
-                previous > 0
-            else {
-                return nil
-            }
+        let pairs = snapshot.rows.compactMap { row -> (Double, Double)? in
+            guard let change = row.estimatedDailyChangeAmount,
+                  let previous = row.previousMarketValue,
+                  previous > 0
+            else { return nil }
             return (change, previous)
         }
         guard !pairs.isEmpty else { return nil }
-        let totalChange = pairs.reduce(0) { $0 + $1.change }
-        let totalPrevious = pairs.reduce(0) { $0 + $1.previous }
+        let totalChange = pairs.reduce(0) { $0 + $1.0 }
+        let totalPrevious = pairs.reduce(0) { $0 + $1.1 }
         guard totalPrevious > 0 else { return nil }
         return totalChange / totalPrevious * 100
     }
@@ -299,12 +281,8 @@ private struct SummaryPill: View {
 private struct MenuBarHoldingRow: View {
     let row: UserPortfolioValuationRow
 
-    private var dailyChangeAmount: Double? {
-        estimatedDailyChangeAmount(for: row)
-    }
-
     private var dailyTint: Color {
-        let value = dailyChangeAmount ?? 0
+        let value = row.estimatedDailyChangeAmount ?? 0
         if value > 0 { return AppPalette.positive }
         if value < 0 { return AppPalette.danger }
         return AppPalette.muted
@@ -354,7 +332,7 @@ private struct MenuBarHoldingRow: View {
                 )
                 HoldingMetricPill(
                     title: "今日涨跌",
-                    amount: signedCurrencyOptional(dailyChangeAmount),
+                    amount: signedCurrencyOptional(row.estimatedDailyChangeAmount),
                     pct: percentOptional(row.estimateChangePct),
                     tint: dailyTint
                 )
@@ -415,28 +393,6 @@ private struct HoldingMetricPill: View {
         .background(tint.opacity(0.09))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
-}
-
-private func previousMarketValue(for row: UserPortfolioValuationRow) -> Double? {
-    guard
-        let marketValue = row.marketValue,
-        let pct = row.estimateChangePct
-    else {
-        return nil
-    }
-    let factor = 1 + pct / 100
-    guard factor > 0 else { return nil }
-    return marketValue / factor
-}
-
-private func estimatedDailyChangeAmount(for row: UserPortfolioValuationRow) -> Double? {
-    guard
-        let marketValue = row.marketValue,
-        let previous = previousMarketValue(for: row)
-    else {
-        return nil
-    }
-    return marketValue - previous
 }
 
 private func signedCurrencyOptional(_ value: Double?) -> String {

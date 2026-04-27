@@ -940,20 +940,28 @@ final class QiemanNativeClient {
         return Int(digits)
     }
 
+    private static let fileStemFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyyMMdd-HHmmss-SSSSSS"
+        return f
+    }()
+
+    private static let isoFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        return f
+    }()
+
     private func timestampString() -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyyMMdd-HHmmss-SSSSSS"
-        return formatter.string(from: Date())
+        Self.fileStemFormatter.string(from: Date())
     }
 
     private func isoTimestampNow() -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        return formatter.string(from: Date())
+        Self.isoFormatter.string(from: Date())
     }
 
     private func groupIDFromURL(_ value: String) -> Int? {

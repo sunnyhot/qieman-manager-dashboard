@@ -83,6 +83,26 @@ final class AppModel: ObservableObject {
     private var isApplyingPersonalAssetAutomation = false
     private var cancellables = Set<AnyCancellable>()
 
+    private var _cachedAssetRows: [PersonalAssetAggregateRow]?
+    private var _cachedAssetSummary: PersonalAssetAggregateSummary?
+    private var _cachedMonthlyPlatformSummary: [PlatformMonthSummary]?
+    private var _cachedActiveInvestmentPlans: [PersonalInvestmentPlan]?
+    private var _cachedPausedInvestmentPlans: [PersonalInvestmentPlan]?
+    private var _cachedEndedInvestmentPlans: [PersonalInvestmentPlan]?
+    private var _cachedInvestmentPlanSummary: PersonalInvestmentPlanSummary?
+    private var _cachedPendingTradeSummary: PersonalPendingTradeSummary?
+
+    private func clearCachedComputedProperties() {
+        _cachedAssetRows = nil
+        _cachedAssetSummary = nil
+        _cachedMonthlyPlatformSummary = nil
+        _cachedActiveInvestmentPlans = nil
+        _cachedPausedInvestmentPlans = nil
+        _cachedEndedInvestmentPlans = nil
+        _cachedInvestmentPlanSummary = nil
+        _cachedPendingTradeSummary = nil
+    }
+
     init() {
         NotificationCenter.default.publisher(for: .qiemanNotificationDeepLink)
             .sink { [weak self] note in
@@ -180,6 +200,7 @@ final class AppModel: ObservableObject {
 
         if let platform = refreshedPlatform {
             platformPayload = platform
+            _cachedMonthlyPlatformSummary = nil
             ensureSelectedPlatformAction()
         }
 
@@ -442,6 +463,7 @@ final class AppModel: ObservableObject {
             try portfolioStore.delete(at: portfolioFileURL)
             userPortfolioHoldings = []
             userPortfolioSnapshot = nil
+            clearCachedComputedProperties()
             portfolioDraft = ""
             noticeMessage = "已清空个人持仓。"
         } catch {
@@ -541,6 +563,7 @@ final class AppModel: ObservableObject {
     func refreshUserPortfolio(updateNotice: Bool = true) async throws {
         guard !userPortfolioHoldings.isEmpty else {
             userPortfolioSnapshot = nil
+            clearCachedComputedProperties()
             return
         }
         isRefreshingPortfolio = true
@@ -548,6 +571,7 @@ final class AppModel: ObservableObject {
 
         let snapshot = try await platformClient.fetchUserPortfolioSnapshot(holdings: userPortfolioHoldings)
         userPortfolioSnapshot = snapshot
+        clearCachedComputedProperties()
         if updateNotice {
             noticeMessage = "个人持仓估值已刷新。"
         }
@@ -591,6 +615,7 @@ final class AppModel: ObservableObject {
 
         do {
             userPortfolioHoldings = enrichedHoldings
+            clearCachedComputedProperties()
             try portfolioStore.save(enrichedHoldings, to: portfolioFileURL)
             return resolvedCount
         } catch {
@@ -832,11 +857,10 @@ final class AppModel: ObservableObject {
         !(platformPayload?.actions?.isEmpty ?? true)
     }
 
-    private var nativeClient: QiemanNativeClient {
-        QiemanNativeClient(cookieFileURL: serverController.cookieFileURL)
-    }
+    private lazy var nativeClient = QiemanNativeClient(cookieFileURL: serverController.cookieFileURL)
 
     var monthlyPlatformSummary: [PlatformMonthSummary] {
+        if let cached = _cachedMonthlyPlatformSummary { return cached }
         let actions = platformPayload?.actions ?? []
         var buckets: [String: (buy: Int, sell: Int, days: Set<String>)] = [:]
 
@@ -855,7 +879,7 @@ final class AppModel: ObservableObject {
             buckets[month] = bucket
         }
 
-        return buckets
+        let result = buckets
             .map { month, bucket in
                 PlatformMonthSummary(
                     month: month,
@@ -868,42 +892,57 @@ final class AppModel: ObservableObject {
             .sorted(by: { $0.month > $1.month })
             .prefix(12)
             .map { $0 }
+        _cachedMonthlyPlatformSummary = result
+        return result
     }
 
     var pendingTradeSummary: PersonalPendingTradeSummary? {
-        guard !pendingTrades.isEmpty else { return nil }
+        if let cached = _cachedPendingTradeSummary { return cached }
+        guard !pendingTrades.isEmpty else { _cachedPendingTradeSummary = nil; return nil }
         let totalCashAmount = pendingTrades.compactMap(\.amountValue).reduce(0, +)
         let cashTradeCount = pendingTrades.filter { $0.isCashTrade }.count
         let unitTradeCount = pendingTrades.filter { !$0.isCashTrade }.count
-        return PersonalPendingTradeSummary(
+        let result = PersonalPendingTradeSummary(
             totalCashAmount: totalCashAmount,
             cashTradeCount: cashTradeCount,
             unitTradeCount: unitTradeCount,
             latestTime: pendingTrades.first?.occurredAt,
             actionCount: pendingTrades.count
         )
+        _cachedPendingTradeSummary = result
+        return result
     }
 
     var activeInvestmentPlans: [PersonalInvestmentPlan] {
-        investmentPlans
+        if let cached = _cachedActiveInvestmentPlans { return cached }
+        let result = investmentPlans
             .filter(\.isActivePlan)
             .sorted(by: sortInvestmentPlans)
+        _cachedActiveInvestmentPlans = result
+        return result
     }
 
     var pausedInvestmentPlans: [PersonalInvestmentPlan] {
-        investmentPlans
+        if let cached = _cachedPausedInvestmentPlans { return cached }
+        let result = investmentPlans
             .filter(\.isPausedPlan)
             .sorted(by: sortInvestmentPlans)
+        _cachedPausedInvestmentPlans = result
+        return result
     }
 
     var endedInvestmentPlans: [PersonalInvestmentPlan] {
-        investmentPlans
+        if let cached = _cachedEndedInvestmentPlans { return cached }
+        let result = investmentPlans
             .filter(\.isEndedPlan)
             .sorted(by: sortInvestmentPlans)
+        _cachedEndedInvestmentPlans = result
+        return result
     }
 
     var investmentPlanSummary: PersonalInvestmentPlanSummary? {
-        guard !investmentPlans.isEmpty else { return nil }
+        if let cached = _cachedInvestmentPlanSummary { return cached }
+        guard !investmentPlans.isEmpty else { _cachedInvestmentPlanSummary = nil; return nil }
         let activePlans = activeInvestmentPlans
         let pausedPlans = pausedInvestmentPlans
         let endedPlans = endedInvestmentPlans
@@ -917,7 +956,7 @@ final class AppModel: ObservableObject {
             .sorted()
             .first
 
-        return PersonalInvestmentPlanSummary(
+        let result = PersonalInvestmentPlanSummary(
             planCount: investmentPlans.count,
             activePlanCount: activePlans.count,
             pausedPlanCount: pausedPlans.count,
@@ -928,9 +967,12 @@ final class AppModel: ObservableObject {
             totalCumulativeInvestedAmount: totalCumulativeInvestedAmount,
             nextExecutionDate: nextExecutionDate
         )
+        _cachedInvestmentPlanSummary = result
+        return result
     }
 
     var personalAssetRows: [PersonalAssetAggregateRow] {
+        if let cached = _cachedAssetRows { return cached }
         var valuationRowsByKey: [String: UserPortfolioValuationRow] = [:]
         for row in userPortfolioSnapshot?.rows ?? [] {
             valuationRowsByKey[personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName)] = row
@@ -959,7 +1001,7 @@ final class AppModel: ObservableObject {
             .union(pendingByKey.keys)
             .union(plansByKey.keys)
 
-        return keys
+        let result = keys
             .map { key in
                 let holdingRow = valuationRowsByKey[key]
                 let rawHolding = rawHoldingsByKey[key]
@@ -1003,12 +1045,16 @@ final class AppModel: ObservableObject {
                 }
                 return left.fundName.localizedStandardCompare(right.fundName) == .orderedAscending
             }
+        _cachedAssetRows = result
+        _cachedAssetSummary = nil
+        return result
     }
 
     var personalAssetSummary: PersonalAssetAggregateSummary? {
+        if let cached = _cachedAssetSummary { return cached }
         let rows = personalAssetRows
-        guard !rows.isEmpty else { return nil }
-        return PersonalAssetAggregateSummary(
+        guard !rows.isEmpty else { _cachedAssetSummary = nil; return nil }
+        let result = PersonalAssetAggregateSummary(
             fundCount: rows.count,
             holdingFundCount: rows.filter(\.hasHolding).count,
             pendingFundCount: rows.filter(\.hasPending).count,
@@ -1022,6 +1068,8 @@ final class AppModel: ObservableObject {
             totalEstimatedNextPlanAmount: rows.map(\.estimatedNextPlanAmount).reduce(0, +),
             totalEffectiveHoldingAmount: rows.map(\.effectiveHoldingAmount).reduce(0, +)
         )
+        _cachedAssetSummary = result
+        return result
     }
 
     private func filteredHistory(_ items: [SnapshotPayload]) -> [SnapshotPayload] {
@@ -1062,6 +1110,7 @@ final class AppModel: ObservableObject {
         do {
             let holdings = try portfolioStore.load(from: portfolioFileURL)
             userPortfolioHoldings = holdings
+            clearCachedComputedProperties()
             portfolioDraft = ""
         } catch {
             errorMessage = error.localizedDescription
@@ -1073,6 +1122,7 @@ final class AppModel: ObservableObject {
         do {
             pendingTrades = try pendingTradesStore.load(from: pendingTradeFileURL)
                 .sorted { $0.occurredAt > $1.occurredAt }
+            clearCachedComputedProperties()
             pendingTradesDraft = ""
         } catch {
             errorMessage = error.localizedDescription
@@ -1084,6 +1134,7 @@ final class AppModel: ObservableObject {
         do {
             investmentPlans = try investmentPlansStore.load(from: investmentPlanFileURL)
                 .sorted(by: sortInvestmentPlans)
+            clearCachedComputedProperties()
             investmentPlansDraft = ""
         } catch {
             errorMessage = error.localizedDescription
@@ -1155,6 +1206,9 @@ final class AppModel: ObservableObject {
             if plansChanged, let investmentPlanFileURL {
                 investmentPlans = nextInvestmentPlans
                 try investmentPlansStore.save(nextInvestmentPlans, to: investmentPlanFileURL)
+            }
+            if holdingsChanged || pendingChanged || plansChanged {
+                clearCachedComputedProperties()
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -1699,6 +1753,7 @@ final class AppModel: ObservableObject {
             do {
                 let platform = try await platformClient.fetchPlatformPayload(prodCode: prodCode)
                 platformPayload = platform
+                _cachedMonthlyPlatformSummary = nil
                 ensureSelectedPlatformAction(preferredID: payload.targetID)
                 if selectedPlatformActionID == payload.targetID {
                     noticeMessage = "已定位到通知对应的调仓详情。"
@@ -1826,10 +1881,14 @@ final class AppModel: ObservableObject {
         return trimmed.isEmpty ? nil : trimmed
     }
 
+    private static let timestampFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return f
+    }()
+
     private static func timestampString() -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter.string(from: Date())
+        timestampFormatter.string(from: Date())
     }
 }
