@@ -1435,14 +1435,11 @@ private struct PortfolioSectionView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(AppPalette.muted)
 
-                HStack(spacing: 8) {
-                    Image(systemName: "square.and.arrow.down")
-                        .font(.system(size: 11))
-                        .foregroundStyle(AppPalette.brand)
-                    Text(hasAnyPersonalData ? "已导入资产数据" : "尚未导入")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(hasAnyPersonalData ? AppPalette.positive : AppPalette.warning)
+                SectionCard(title: "资产全貌总表", subtitle: "把「已持有 + 待确认 + 计划档案」聚合到同一行", icon: "tablecells", trailing: {
                     Spacer()
+                    Text(hasAnyPersonalData ? "已导入" : "未导入")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(hasAnyPersonalData ? AppPalette.positive : AppPalette.warning)
                     Button("打开导入中心") {
                         withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
                             model.selectedSection = .importCenter
@@ -1451,17 +1448,7 @@ private struct PortfolioSectionView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(AppPalette.brand)
                     .controlSize(.small)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(AppPalette.paper.opacity(0.96))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(AppPalette.line.opacity(0.6), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                SectionCard(title: "资产全貌总表", subtitle: "把「已持有 + 待确认 + 计划档案」聚合到同一行", icon: "tablecells") {
+                }) {
                     if model.personalAssetRows.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("还没有可聚合的资产数据。先导入持仓、买入中或定投计划。")
@@ -2451,12 +2438,14 @@ private struct SectionCard<Content: View>: View {
     let title: String
     let subtitle: String
     let icon: String
+    let trailing: AnyView
     let content: Content
 
-    init(title: String, subtitle: String, icon: String, @ViewBuilder content: () -> Content) {
+    init(title: String, subtitle: String, icon: String, @ViewBuilder trailing: () -> some View = { EmptyView() }, @ViewBuilder content: () -> Content) {
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
+        self.trailing = AnyView(trailing())
         self.content = content()
     }
 
@@ -2474,6 +2463,7 @@ private struct SectionCard<Content: View>: View {
                         .font(.system(size: 11))
                         .foregroundStyle(AppPalette.muted)
                 }
+                trailing
             }
             content
         }
@@ -2938,7 +2928,8 @@ private struct PersonalAssetGroupedTable: View {
     }
 
     private func group(title: String, rows: [PersonalAssetAggregateRow]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let latestTime = rows.compactMap(\.holdingRow?.resolvedPriceTime).sorted().last
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text(title)
                     .font(.system(size: 12, weight: .bold))
@@ -2947,6 +2938,11 @@ private struct PersonalAssetGroupedTable: View {
                 Text("市值 \(currencyText(rows.compactMap(\.marketValue).reduce(0, +)))")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
+                if let time = latestTime {
+                    Text("估值 \(time)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted.opacity(0.7))
+                }
             }
             PersonalAssetTable(rows: rows)
         }
@@ -3045,11 +3041,6 @@ private struct PersonalAssetTableRow: View {
                     }
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
-                    if let source = row.holdingRow?.resolvedPriceSource, let time = row.holdingRow?.resolvedPriceTime {
-                        Text("\(source) · \(time)")
-                            .font(.system(size: 9))
-                            .foregroundStyle(AppPalette.muted.opacity(0.7))
-                    }
                 }
             }
             .frame(width: 260, alignment: .leading)
