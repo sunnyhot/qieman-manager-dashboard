@@ -2,7 +2,7 @@
   "tag_name": "v2.1.10",
   "name": "QiemanDashboard 2.1.10",
   "body": "性能优化：缓存昂贵 computed properties（personalAssetRows 等），静态化 DateFormatter/NSRegularExpression，优化菜单栏持仓排序。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/tree/main/releases/macos",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.1.10",
   "published_at": "2026-04-27T15:25:00Z",
   "assets": [
     {
