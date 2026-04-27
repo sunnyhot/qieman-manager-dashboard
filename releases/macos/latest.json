@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.1.9",
-  "name": "QiemanDashboard 2.1.9",
-  "body": "导入中心入口移至资产全貌总表标题旁；盘中估值时间显示在基金/股票分组标题旁；去除每行重复的估值来源信息。",
+  "tag_name": "v2.1.10",
+  "name": "QiemanDashboard 2.1.10",
+  "body": "性能优化：缓存昂贵 computed properties（personalAssetRows 等），静态化 DateFormatter/NSRegularExpression，优化菜单栏持仓排序。",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/tree/main/releases/macos",
-  "published_at": "2026-04-27T13:00:00Z",
+  "published_at": "2026-04-27T15:25:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.1.9.zip",
-      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.1.9.zip",
-      "size": 3131188,
+      "name": "QiemanDashboard-2.1.10.zip",
+      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.1.10.zip",
+      "size": 3394867,
       "content_type": "application/zip"
     }
   ]
