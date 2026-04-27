@@ -3,10 +3,10 @@ import Foundation
 enum AppSection: String, CaseIterable, Identifiable {
     case overview = "总览"
     case portfolio = "我的持仓"
-    case settings = "设置"
     case platform = "平台调仓"
     case forum = "论坛发言"
     case snapshots = "历史快照"
+    case settings = "设置"
 
     var id: String { rawValue }
 

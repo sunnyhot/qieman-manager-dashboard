@@ -343,58 +343,6 @@ struct ContentView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.regular)
             .disabled(model.isRefreshing || (!model.hasLiveService && !model.canRefreshWithoutLiveService))
-
-            Button("登录且慢") {
-                model.presentLoginSheet()
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.regular)
-
-            Button(model.isCheckingAuth ? "验证中…" : "验证登录态") {
-                Task { await model.validateAuth() }
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.regular)
-            .disabled(model.isCheckingAuth)
-
-            Menu {
-                Button("刷新并保存") {
-                    Task { try? await model.refreshLatest(persist: true) }
-                }
-                .disabled(model.isRefreshing || (!model.hasLiveService && !model.canRefreshWithoutLiveService))
-
-                Divider()
-
-                Button(model.isCheckingForUpdates ? "检查更新中…" : "检查更新") {
-                    Task { await model.checkForUpdates(userInitiated: true) }
-                }
-                .disabled(model.isCheckingForUpdates)
-
-                if model.availableUpdate != nil {
-                    Button(model.isInstallingUpdate ? "安装更新中…" : "下载并重启安装") {
-                        Task { await model.downloadAndInstallAvailableUpdate() }
-                    }
-                    .disabled(model.isInstallingUpdate)
-
-                    Button("打开 Release 页面") {
-                        model.openAvailableUpdateReleasePage()
-                    }
-                }
-
-                Divider()
-
-                Button(model.showAdvancedParams ? "收起高级参数" : "展开高级参数") {
-                    model.showAdvancedParams.toggle()
-                }
-            } label: {
-                Label("更多", systemImage: "slider.horizontal.3")
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            .menuStyle(.borderlessButton)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .background(AppPalette.cardStrong)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
 
@@ -1576,6 +1524,31 @@ private struct SettingsSectionView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                SectionCard(title: "账号与登录", subtitle: "管理且慢登录态，验证 Cookie 有效性", icon: "person.circle") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 10) {
+                            ToolbarBadge(
+                                title: model.cookieAvailable ? "Cookie 可用" : "Cookie 缺失",
+                                tint: model.cookieAvailable ? AppPalette.positive : AppPalette.warning
+                            )
+                            Spacer()
+                        }
+                        HStack(spacing: 10) {
+                            Button("登录且慢") {
+                                model.presentLoginSheet()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(AppPalette.brand)
+
+                            Button(model.isCheckingAuth ? "验证中…" : "验证登录态") {
+                                Task { await model.validateAuth() }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(model.isCheckingAuth)
+                        }
+                    }
+                }
+
                 ManagerWatchControlCard()
 
                 SectionCard(title: "导入中心", subtitle: "支持手动录入、上传图片 OCR、上传表格到三类资产区", icon: "square.and.arrow.down") {
@@ -1713,6 +1686,46 @@ private struct SettingsSectionView: View {
                         }
                     }
                 }
+
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppPalette.brand)
+                    Text("当前 \(AppUpdateChecker.bundleVersion)")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(AppPalette.muted)
+                    Spacer()
+                    Button(model.isCheckingForUpdates ? "检查更新中…" : "检查更新") {
+                        Task { await model.checkForUpdates(userInitiated: true) }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppPalette.brand)
+                    .controlSize(.small)
+                    .disabled(model.isCheckingForUpdates)
+
+                    if model.availableUpdate != nil {
+                        Button(model.isInstallingUpdate ? "安装更新中…" : "下载并重启安装") {
+                            Task { await model.downloadAndInstallAvailableUpdate() }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .disabled(model.isInstallingUpdate)
+
+                        Button("查看 Release") {
+                            model.openAvailableUpdateReleasePage()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(AppPalette.paper.opacity(0.96))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(AppPalette.line.opacity(0.6), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .padding(16)
         }

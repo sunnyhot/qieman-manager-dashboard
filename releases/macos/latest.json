@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.1.11",
-  "name": "QiemanDashboard 2.1.11",
-  "body": "导入中心更名为设置，主理人提醒从总览移入设置页；持仓页导入入口并入资产全貌总表标题。",
+  "tag_name": "v2.1.12",
+  "name": "QiemanDashboard 2.1.12",
+  "body": "设置页新增账号登录和检查更新；移除工具栏登录/验证/更多按钮；检查更新通栏展示当前版本号。",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/tree/main/releases/macos",
-  "published_at": "2026-04-27T16:00:00Z",
+  "published_at": "2026-04-27T16:30:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.1.11.zip",
-      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.1.11.zip",
-      "size": 3135535,
+      "name": "QiemanDashboard-2.1.12.zip",
+      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.1.12.zip",
+      "size": 3135520,
       "content_type": "application/zip"
     }
   ]
