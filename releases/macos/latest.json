@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.1.7",
-  "name": "QiemanDashboard 2.1.7",
-  "body": "把导入中心从持仓页提取为独立页面，侧边栏和持仓页均可进入；修复 Swift 6.1 编译兼容性问题。",
+  "tag_name": "v2.1.8",
+  "name": "QiemanDashboard 2.1.8",
+  "body": "合并实时估值到资产全貌总表，去除重复卡片；压缩持仓页导入中心入口高度。",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/tree/main/releases/macos",
-  "published_at": "2026-04-24T12:00:00Z",
+  "published_at": "2026-04-27T12:00:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.1.7.zip",
-      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.1.7.zip",
-      "size": 3136969,
+      "name": "QiemanDashboard-2.1.8.zip",
+      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.1.8.zip",
+      "size": 3134664,
       "content_type": "application/zip"
     }
   ]
