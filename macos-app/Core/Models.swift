@@ -3,7 +3,7 @@ import Foundation
 enum AppSection: String, CaseIterable, Identifiable {
     case overview = "总览"
     case portfolio = "我的持仓"
-    case importCenter = "导入中心"
+    case settings = "设置"
     case platform = "平台调仓"
     case forum = "论坛发言"
     case snapshots = "历史快照"
@@ -16,8 +16,8 @@ enum AppSection: String, CaseIterable, Identifiable {
             return "rectangle.grid.2x2"
         case .portfolio:
             return "briefcase"
-        case .importCenter:
-            return "square.and.arrow.down"
+        case .settings:
+            return "gearshape"
         case .platform:
             return "chart.bar.xaxis"
         case .forum:

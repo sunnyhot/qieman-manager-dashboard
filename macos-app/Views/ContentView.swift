@@ -32,7 +32,7 @@ struct ContentView: View {
         switch model.selectedSection {
         case .platform, .forum:
             return true
-        case .overview, .portfolio, .importCenter, .snapshots:
+        case .overview, .portfolio, .settings, .snapshots:
             return false
         }
     }
@@ -463,8 +463,8 @@ struct ContentView: View {
             OverviewSectionView()
         case .portfolio:
             PortfolioSectionView()
-        case .importCenter:
-            ImportCenterSectionView()
+        case .settings:
+            SettingsSectionView()
         case .platform:
             PlatformSectionView()
         case .forum:
@@ -640,8 +640,6 @@ private struct OverviewSectionView: View {
                         openPortfolio()
                     }
                 }
-
-                ManagerWatchControlCard()
 
                 SectionCard(title: "资产总览卡片", subtitle: "按基金汇总「已持有 + 待确认 + 定投档案」", icon: "rectangle.grid.2x2") {
                     if model.personalAssetRows.isEmpty {
@@ -1424,7 +1422,6 @@ private struct PortfolioSectionView: View {
                 }
 
                 HStack(spacing: 10) {
-                    Text("估值更新时间：\(model.userPortfolioSnapshot?.refreshedAt ?? "未刷新")")
                     if let latestTime = model.pendingTradeSummary?.latestTime {
                         Text("待确认最新：\(latestTime)")
                     }
@@ -1440,9 +1437,9 @@ private struct PortfolioSectionView: View {
                     Text(hasAnyPersonalData ? "已导入" : "未导入")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(hasAnyPersonalData ? AppPalette.positive : AppPalette.warning)
-                    Button("打开导入中心") {
+                    Button("打开设置") {
                         withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
-                            model.selectedSection = .importCenter
+                            model.selectedSection = .settings
                         }
                     }
                     .buttonStyle(.borderedProminent)
@@ -1567,9 +1564,9 @@ private struct PortfolioSectionView: View {
     }
 }
 
-// MARK: - Import Center
+// MARK: - Settings
 
-private struct ImportCenterSectionView: View {
+private struct SettingsSectionView: View {
     @EnvironmentObject private var model: AppModel
     @AppStorage("portfolio.import.center.expanded") private var isImportCenterExpanded = false
     @AppStorage("portfolio.import.show_imported_targets") private var shouldShowImportedImportTargets = false
@@ -1579,6 +1576,8 @@ private struct ImportCenterSectionView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                ManagerWatchControlCard()
+
                 SectionCard(title: "导入中心", subtitle: "支持手动录入、上传图片 OCR、上传表格到三类资产区", icon: "square.and.arrow.down") {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 10) {
