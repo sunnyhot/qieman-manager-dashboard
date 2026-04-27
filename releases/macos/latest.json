@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.1.13",
-  "name": "QiemanDashboard 2.1.13",
-  "body": "交易时间总览改用 Swift Charts 柱状图展示买卖分布，支持 hover 查看详情；总览最近调仓/发言限制 3 条并加查看全部按钮；调仓浏览加分页每页 10 条；打开平台原文移至操作类型 tag 下方。",
+  "tag_name": "v2.2.0",
+  "name": "QiemanDashboard 2.2.0",
+  "body": "支持港股和美股行情查询：5位数字代码自动识别港股（如 00700），字母代码识别美股（如 AAPL）；持仓显示对应币种（HK$/$）和市场标签；Tencent API 多市场行情支持，美股自动尝试 .O/.N/.A 后缀。",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/tree/main/releases/macos",
-  "published_at": "2026-04-27T17:30:00Z",
+  "published_at": "2026-04-27T18:45:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.1.13.zip",
-      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.1.13.zip",
-      "size": 3161675,
+      "name": "QiemanDashboard-2.2.0.zip",
+      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.2.0.zip",
+      "size": 3435101,
       "content_type": "application/zip"
     }
   ]
