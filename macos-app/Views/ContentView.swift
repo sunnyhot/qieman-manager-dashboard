@@ -33,7 +33,7 @@ struct ContentView: View {
         switch model.selectedSection {
         case .platform, .forum:
             return true
-        case .overview, .portfolio, .settings, .snapshots:
+        case .overview, .portfolio, .settings:
             return false
         }
     }
@@ -143,10 +143,6 @@ struct ContentView: View {
                             .fill(model.cookieAvailable ? AppPalette.positive : AppPalette.warning)
                             .frame(width: 7, height: 7)
 
-                        Text("\(model.history.count)")
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
-                            .foregroundStyle(AppPalette.muted)
-
                         Button {
                             model.openDataDirectory()
                         } label: {
@@ -164,10 +160,6 @@ struct ContentView: View {
                             .fill(model.cookieAvailable ? AppPalette.positive : AppPalette.warning)
                             .frame(width: 6, height: 6)
                         Text(model.cookieAvailable ? "Cookie 可用" : "Cookie 缺失")
-                            .font(.system(size: 10))
-                            .foregroundStyle(AppPalette.muted)
-                        Spacer()
-                        Text("\(model.history.count) 快照")
                             .font(.system(size: 10))
                             .foregroundStyle(AppPalette.muted)
                     }
@@ -418,8 +410,6 @@ struct ContentView: View {
             PlatformSectionView()
         case .forum:
             ForumSectionView()
-        case .snapshots:
-            SnapshotsSectionView()
         }
     }
 }
@@ -683,7 +673,7 @@ private struct OverviewSectionView: View {
                     } else {
                         EmptySectionState(
                             title: "最近发言暂时为空",
-                            subtitle: "论坛页会自动补拉帖子流；这里也会跟着恢复，不需要再去历史快照里切换。",
+                            subtitle: "论坛页会自动补拉帖子流；这里也会跟着恢复到最新发言。",
                             actionTitle: "刷新"
                         ) {
                             Task { try? await model.refreshLatest(persist: false) }
@@ -2213,276 +2203,6 @@ private struct ForumSectionView: View {
     }
 }
 
-// MARK: - Snapshots
-
-private struct SnapshotsSectionView: View {
-    @EnvironmentObject private var model: AppModel
-
-    var body: some View {
-        GeometryReader { proxy in
-            if proxy.size.width < 920 {
-                compactLayout
-            } else {
-                desktopLayout
-            }
-        }
-    }
-
-    private var desktopLayout: some View {
-        HStack(alignment: .top, spacing: 0) {
-            historyPanel
-                .frame(width: 320)
-            Divider()
-                .overlay(AppPalette.line.opacity(0.5))
-            detailPanel
-        }
-        .background(AppPalette.paper.opacity(0.82))
-    }
-
-    private var compactLayout: some View {
-        VStack(spacing: 0) {
-            historyPanel
-                .frame(height: 300)
-            Divider()
-                .overlay(AppPalette.line.opacity(0.5))
-            detailPanel
-        }
-        .background(AppPalette.paper.opacity(0.82))
-    }
-
-    private var historyPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Label("快照索引", systemImage: "clock.arrow.circlepath")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(AppPalette.ink)
-                    Text("按创建时间倒序，本地保留 \(model.history.count) 个快照")
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppPalette.muted)
-                }
-                Spacer()
-                ToolbarBadge(title: "\(model.history.count)", tint: AppPalette.brand)
-            }
-
-            ScrollView {
-                LazyVStack(spacing: 8) {
-                    if model.history.isEmpty {
-                        SnapshotEmptyInlineState()
-                    } else {
-                        ForEach(model.history, id: \.id) { snapshot in
-                            SnapshotHistoryRow(
-                                snapshot: snapshot,
-                                isSelected: model.currentSnapshot?.id == snapshot.id
-                            ) {
-                                Task { await model.loadSnapshot(snapshot) }
-                            }
-                        }
-                    }
-                }
-                .padding(.bottom, 8)
-            }
-        }
-        .padding(16)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(AppPalette.cardStrong.opacity(0.34))
-    }
-
-    private var detailPanel: some View {
-        ScrollView {
-            if let snapshot = model.currentSnapshot {
-                VStack(alignment: .leading, spacing: 16) {
-                    SnapshotDetailHeader(snapshot: snapshot)
-
-                    if let stats = snapshot.stats {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                            SnapshotMetricTile(title: "用户", value: "\(stats.uniqueUsers ?? 0)", subtitle: "快照统计", icon: "person.2", accent: AppPalette.info)
-                            SnapshotMetricTile(title: "分组", value: "\(stats.uniqueGroups ?? 0)", subtitle: "快照统计", icon: "square.grid.2x2", accent: AppPalette.positive)
-                            SnapshotMetricTile(title: "点赞", value: "\(stats.totalLikes ?? 0)", subtitle: "累计互动", icon: "heart", accent: AppPalette.accentWarm)
-                            SnapshotMetricTile(title: "评论", value: "\(stats.totalComments ?? 0)", subtitle: "累计互动", icon: "bubble.left", accent: AppPalette.warning)
-                        }
-                    }
-
-                    SnapshotRecordsPreview(snapshot: snapshot)
-                }
-                .padding(18)
-            } else {
-                EmptySectionState(
-                    title: "还没有选中的历史快照",
-                    subtitle: "左侧选择一个快照后，这里会展示统计、来源和记录预览。",
-                    actionTitle: "刷新"
-                ) {
-                    Task { try? await model.refreshLatest(persist: false) }
-                }
-                .padding(18)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-}
-
-private struct SnapshotHistoryRow: View {
-    let snapshot: SnapshotPayload
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(snapshot.displayTitle)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(AppPalette.ink)
-                        .lineLimit(1)
-                    Spacer(minLength: 8)
-                    Text("\(snapshot.count)")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(isSelected ? AppPalette.brand : AppPalette.muted)
-                }
-
-                Text(snapshot.subtitle)
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted)
-                    .lineLimit(1)
-
-                HStack(spacing: 6) {
-                    SnapshotMiniBadge(text: snapshot.kindLabel ?? snapshot.snapshotType, tint: AppPalette.info)
-                    SnapshotMiniBadge(text: snapshot.mode, tint: AppPalette.brand)
-                }
-
-                Text(snapshot.createdAt)
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(AppPalette.muted)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(11)
-            .background(isSelected ? AppPalette.brand.opacity(0.12) : AppPalette.card.opacity(0.72))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(isSelected ? AppPalette.brand.opacity(0.62) : AppPalette.line.opacity(0.42), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-        .buttonStyle(PressResponsiveButtonStyle())
-    }
-}
-
-private struct SnapshotDetailHeader: View {
-    let snapshot: SnapshotPayload
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(snapshot.displayTitle)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppPalette.ink)
-                        .lineLimit(2)
-                    Text(snapshot.subtitle)
-                        .font(.system(size: 12))
-                        .foregroundStyle(AppPalette.muted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 12)
-                SnapshotMiniBadge(text: snapshot.persisted == true ? "已保存" : "临时", tint: snapshot.persisted == true ? AppPalette.positive : AppPalette.warning)
-            }
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
-                StatChip(title: "类型", value: snapshot.kindLabel ?? snapshot.snapshotType)
-                StatChip(title: "模式", value: snapshot.mode)
-                StatChip(title: "条数", value: "\(snapshot.count)")
-                StatChip(title: "创建时间", value: snapshot.createdAt)
-            }
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppPalette.cardStrong.opacity(0.76))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(AppPalette.line.opacity(0.56), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-    }
-}
-
-private struct SnapshotMetricTile: View {
-    let title: String
-    let value: String
-    let subtitle: String
-    let icon: String
-    let accent: Color
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 15))
-                .foregroundStyle(accent)
-                .frame(width: 34, height: 34)
-                .background(accent.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted)
-                Text(value)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(AppPalette.ink)
-                    .lineLimit(1)
-                Text(subtitle)
-                    .font(.system(size: 9))
-                    .foregroundStyle(AppPalette.muted)
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
-        .padding(12)
-        .background(AppPalette.card.opacity(0.86))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(AppPalette.line.opacity(0.42), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-}
-
-private struct SnapshotRecordsPreview: View {
-    let snapshot: SnapshotPayload
-
-    private var previewRecords: [SnapshotRecordPayload] {
-        Array(snapshot.records.prefix(16))
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(snapshot.snapshotType == "posts" ? "发言预览" : "记录预览")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(AppPalette.ink)
-                    Text("展示前 \(previewRecords.count) 条，保留原始快照顺序")
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppPalette.muted)
-                }
-                Spacer()
-                SnapshotMiniBadge(text: "\(snapshot.records.count) 条", tint: AppPalette.brand)
-            }
-
-            if previewRecords.isEmpty {
-                SnapshotEmptyInlineState()
-            } else {
-                LazyVStack(spacing: 8) {
-                    ForEach(previewRecords) { record in
-                        ForumRecordRow(record: record)
-                    }
-                }
-            }
-        }
-    }
-}
-
 private struct SnapshotMiniBadge: View {
     let text: String
     let tint: Color
@@ -2496,18 +2216,6 @@ private struct SnapshotMiniBadge: View {
             .padding(.vertical, 3)
             .background(tint.opacity(0.11))
             .clipShape(Capsule())
-    }
-}
-
-private struct SnapshotEmptyInlineState: View {
-    var body: some View {
-        Text("暂无可展示内容")
-            .font(.system(size: 11))
-            .foregroundStyle(AppPalette.muted)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(AppPalette.card.opacity(0.62))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -4188,4 +3896,3 @@ private struct PendingTradeCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
-

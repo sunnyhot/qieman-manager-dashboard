@@ -411,22 +411,10 @@ final class QiemanNativeClient {
         return try buildSnapshot(raw: raw, fileStem: fileStem, suffix: "space-items", persist: persist, outputDirectory: outputDirectory)
     }
 
-    private func buildSnapshot(raw: [String: Any], fileStem: String, suffix: String, persist: Bool, outputDirectory: URL?) throws -> SnapshotPayload {
+    private func buildSnapshot(raw: [String: Any], fileStem: String, suffix: String, persist _: Bool, outputDirectory _: URL?) throws -> SnapshotPayload {
         let timestamp = timestampString()
         let fileName = "\(fileStem)-\(suffix)-\(timestamp).json"
-        let fileURL: URL
-        if let outputDirectory {
-            fileURL = outputDirectory.appendingPathComponent(fileName, isDirectory: false)
-        } else {
-            fileURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(fileName, isDirectory: false)
-        }
-
-        if persist, let outputDirectory {
-            try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
-            let data = try JSONSerialization.data(withJSONObject: raw, options: [.prettyPrinted, .sortedKeys])
-            try data.write(to: outputDirectory.appendingPathComponent(fileName, isDirectory: false), options: .atomic)
-            return try snapshotStore.loadSnapshot(named: fileName, from: outputDirectory)
-        }
+        let fileURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(fileName, isDirectory: false)
 
         return snapshotStore.snapshot(
             from: raw,

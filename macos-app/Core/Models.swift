@@ -5,7 +5,6 @@ enum AppSection: String, CaseIterable, Identifiable {
     case portfolio = "我的持仓"
     case platform = "平台调仓"
     case forum = "论坛发言"
-    case snapshots = "历史快照"
     case settings = "设置"
 
     var id: String { rawValue }
@@ -22,8 +21,6 @@ enum AppSection: String, CaseIterable, Identifiable {
             return "chart.bar.xaxis"
         case .forum:
             return "text.bubble"
-        case .snapshots:
-            return "clock.arrow.circlepath"
         }
     }
 }
@@ -300,18 +297,12 @@ struct QueryFormState {
 
 struct BootstrapPayload: Decodable {
     let status: StatusPayload
-    let history: [SnapshotPayload]
-    let preferredSnapshotName: String?
-    let preferredSnapshot: SnapshotPayload?
 }
 
 struct StatusPayload: Decodable {
     let cookieExists: Bool
     let cookieFile: String
     let outputDir: String
-    let snapshotCount: Int
-    let latestSnapshot: SnapshotPayload?
-    let preferredSnapshotName: String?
     let defaultForm: DefaultFormPayload
 }
 
@@ -321,10 +312,6 @@ struct DefaultFormPayload: Decodable {
     let userName: String
     let pages: String
     let pageSize: String
-}
-
-struct HistoryPayload: Decodable {
-    let items: [SnapshotPayload]
 }
 
 struct FetchResponsePayload: Decodable {
@@ -353,7 +340,7 @@ struct SnapshotPayload: Decodable, Identifiable, Hashable {
     }
 
     var displayTitle: String {
-        title.isEmpty ? "未命名快照" : title
+        title.isEmpty ? "未命名结果" : title
     }
 }
 

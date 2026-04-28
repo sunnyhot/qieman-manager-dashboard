@@ -23,7 +23,6 @@ Use when the user wants:
 - the local web UI
 - platform trades and holdings
 - forum details and comments
-- historical snapshots
 
 ### Public Content Search
 
@@ -84,6 +83,6 @@ Dashboard behavior updates:
 
 ## Output Notes
 
-- Local snapshots are written under `output/`.
+- Local runtime data is written under `output/`.
 - Do not expose raw `qieman.cookie`.
 - When discussing valuation, mention that current estimate may be intraday estimate or latest NAV fallback.

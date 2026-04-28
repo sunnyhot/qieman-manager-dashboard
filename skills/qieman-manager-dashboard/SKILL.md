@@ -1,6 +1,6 @@
 ---
 name: qieman-manager-dashboard
-description: Qieman manager/community crawler and local dashboard for inspecting manager posts, comments, platform rebalancing, holdings, average cost, and valuation. Use when Codex, OpenClaw, or Hermes needs to launch or reuse the local Qieman dashboard, refresh Qieman snapshots, validate Qieman login cookies, pull public or logged-in manager feeds, or analyze platform holdings and trades for managers such as ETF拯救世界.
+description: Qieman manager/community crawler and local dashboard for inspecting manager posts, comments, platform rebalancing, holdings, average cost, and valuation. Use when Codex, OpenClaw, or Hermes needs to launch or reuse the local Qieman dashboard, refresh current Qieman data, validate Qieman login cookies, pull public or logged-in manager feeds, or analyze platform holdings and trades for managers such as ETF拯救世界.
 ---
 
 # Qieman Manager Dashboard
@@ -87,7 +87,7 @@ python /Users/xufan65/.codex/skills/qieman-manager-dashboard/scripts/qieman_tool
 - Login validation in dashboard is non-sticky:
   - validate button runs async `/api/check-auth`
   - feedback is dismissible and auto-hides after a short delay
-- `output/` contains local snapshots; treat it as working data, not source code.
+- `output/` contains local runtime data; treat it as working data, not source code.
 
 ## Resources
 

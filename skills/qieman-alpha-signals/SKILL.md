@@ -1,6 +1,6 @@
 ---
 name: qieman-alpha-signals
-description: Atomic Qieman toolkit for OpenClaw and Hermes with fine-grained commands across auth status, followed users, group resolution, following/group/space/public speech feeds, post comments, platform launch actions, holdings, timelines, valuation lookup, snapshot index/read, and signal extraction. Use when agents need single-purpose Chinese investment data operations without branching logic.
+description: Atomic Qieman toolkit for OpenClaw and Hermes with fine-grained commands across auth status, followed users, group resolution, following/group/space/public speech feeds, post comments, platform launch actions, holdings, timelines, valuation lookup, and JSON-based signal extraction. Use when agents need single-purpose Chinese investment data operations without branching logic.
 ---
 
 # Qieman Alpha Signals
@@ -57,8 +57,7 @@ python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/updates_watch.p
 6. Need platform adjustments/positions: run `manager_launch.py`, `platform_holdings_query.py`, `platform_timeline_query.py`, `platform_monthly_overview_query.py`.
 7. Need near-real-time incremental watch for new trades/posts: run `updates_watch.py`.
 8. Need valuation only: run `valuation_query.py`.
-9. Need local snapshots: run `snapshot_index.py`, `snapshot_read.py`.
-10. Need signal inference from posts/snapshots: run `signal_extract.py`.
+9. Need signal inference from posts JSON: run `signal_extract.py --json-path ...`.
 
 ## Atomic Commands
 
@@ -92,10 +91,8 @@ python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/updates_watch.p
 - `scripts/platform_monthly_overview_query.py`
 - `scripts/valuation_query.py`
 
-### Snapshot and Signal Processing
+### Signal Processing
 
-- `scripts/snapshot_index.py`
-- `scripts/snapshot_read.py`
 - `scripts/signal_extract.py`
 
 ### Incremental Monitoring

@@ -66,7 +66,6 @@ final class LocalServerController {
         let supportDirectory = try prepareSupportDirectory()
         self.supportDirectory = supportDirectory
         try setupLogFile()
-        try seedBundledBackupIfNeeded(projectDirectory: projectDirectory, supportDirectory: supportDirectory)
         return supportDirectory
     }
 
@@ -153,7 +152,7 @@ final class LocalServerController {
             Qieman Dashboard App 数据目录
 
             - qieman.cookie: 登录态 Cookie（可选）
-            - output/: 历史快照与抓取结果
+            - output/: 抓取输出与运行数据
             - dashboard.log: 应用运行日志
             """
             try text.write(to: readme, atomically: true, encoding: .utf8)
@@ -178,51 +177,6 @@ final class LocalServerController {
         logQueue.sync {
             self.logHandle?.closeFile()
             self.logHandle = nil
-        }
-    }
-
-    private func seedBundledBackupIfNeeded(projectDirectory: URL, supportDirectory: URL) throws {
-        let fm = FileManager.default
-        let targetOutput = supportDirectory.appendingPathComponent("output", isDirectory: true)
-        let existingFiles = try fm.contentsOfDirectory(
-            at: targetOutput,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        )
-        if existingFiles.contains(where: { $0.pathExtension == "json" || $0.pathExtension == "md" }) {
-            return
-        }
-
-        let bundledOutput = projectDirectory.appendingPathComponent("output", isDirectory: true)
-        guard fm.fileExists(atPath: bundledOutput.path) else {
-            return
-        }
-
-        let bundledFiles = try fm.contentsOfDirectory(
-            at: bundledOutput,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        )
-
-        var importedCount = 0
-        for fileURL in bundledFiles {
-            let name = fileURL.lastPathComponent
-            if name.hasPrefix("watch-state-") {
-                continue
-            }
-            guard ["json", "md"].contains(fileURL.pathExtension.lowercased()) else {
-                continue
-            }
-            let destination = targetOutput.appendingPathComponent(name, isDirectory: false)
-            if fm.fileExists(atPath: destination.path) {
-                continue
-            }
-            try fm.copyItem(at: fileURL, to: destination)
-            importedCount += 1
-        }
-
-        if importedCount > 0 {
-            appendLog("首次启动已导入内置备份快照 \(importedCount) 份")
         }
     }
 
