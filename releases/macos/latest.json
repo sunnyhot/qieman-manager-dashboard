@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.6",
-  "name": "QiemanDashboard 2.2.6",
-  "body": "ContentView 组件拆分为独立文件；股票行显示涨跌幅和涨跌额替代待确认和计划档案；修复总持仓 icon。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.6",
-  "published_at": "2026-04-28T11:00:00Z",
+  "tag_name": "v2.2.7",
+  "name": "QiemanDashboard 2.2.7",
+  "body": "平台调仓页新增当前持仓分布饼图；压缩当前持仓卡片高度，改为更紧凑的资产行布局。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.7",
+  "published_at": "2026-04-28T10:47:30Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.6.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.6/QiemanDashboard-2.2.6.zip",
-      "size": 3197574,
+      "name": "QiemanDashboard-2.2.7.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.7/QiemanDashboard-2.2.7.zip",
+      "size": 3153282,
       "content_type": "application/zip"
     }
   ]

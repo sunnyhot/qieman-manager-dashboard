@@ -27,16 +27,22 @@ struct PlatformSectionView: View {
                         }
 
                         SectionCard(title: "交易时间总览", subtitle: "按月看买卖节奏", icon: "calendar") {
-                            if model.monthlyPlatformSummary.isEmpty {
-                                EmptySectionState(
-                                    title: "还没有平台调仓数据",
-                                    subtitle: "右上角点「刷新」后会重新直拉平台调仓；即使论坛抓取失败，调仓也会单独更新。",
-                                    actionTitle: "立即刷新"
-                                ) {
-                                    Task { try? await model.refreshLatest(persist: false) }
+                            VStack(alignment: .leading, spacing: 12) {
+                                if model.monthlyPlatformSummary.isEmpty {
+                                    EmptySectionState(
+                                        title: "还没有平台调仓数据",
+                                        subtitle: "右上角点「刷新」后会重新直拉平台调仓；即使论坛抓取失败，调仓也会单独更新。",
+                                        actionTitle: "立即刷新"
+                                    ) {
+                                        Task { try? await model.refreshLatest(persist: false) }
+                                    }
+                                } else {
+                                    PlatformMonthlyOverview(months: model.monthlyPlatformSummary)
                                 }
-                            } else {
-                                PlatformMonthlyOverview(months: model.monthlyPlatformSummary)
+
+                                if !model.platformHoldings.isEmpty {
+                                    PlatformHoldingsPieChart(holdings: model.platformHoldings)
+                                }
                             }
                         }
 
@@ -227,4 +233,3 @@ struct PlatformSectionView: View {
         )
     }
 }
-
