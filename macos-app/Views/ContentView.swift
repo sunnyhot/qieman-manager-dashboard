@@ -178,7 +178,7 @@ struct ContentView: View {
                         if let logURL = model.logFileURL {
                             Text(logURL.lastPathComponent)
                                 .font(.system(size: 9))
-                                .foregroundStyle(AppPalette.muted.opacity(0.7))
+                                .foregroundStyle(AppPalette.muted)
                                 .lineLimit(1)
                         }
                     }
@@ -186,10 +186,10 @@ struct ContentView: View {
             }
             .padding(isCompact ? 10 : 14)
         }
-        .background(AppPalette.paper.opacity(0.96))
+        .background(AppPalette.paper)
         .overlay(alignment: .trailing) {
             Rectangle()
-                .fill(AppPalette.line.opacity(0.7))
+                .fill(AppPalette.lineBright.opacity(0.4))
                 .frame(width: 1)
         }
     }
@@ -217,7 +217,7 @@ struct ContentView: View {
             .padding(.horizontal, isCompact ? 8 : 12)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? AppPalette.brand.opacity(0.10) : Color.clear)
+                    .fill(isSelected ? AppPalette.brand.opacity(0.08) : Color.clear)
             )
             .overlay(alignment: .leading) {
                 if isSelected && !isCompact {
@@ -297,17 +297,17 @@ struct ContentView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(AppPalette.paper.opacity(0.92))
+            .background(AppPalette.paper)
 
             Divider()
         }
-        .background(AppPalette.paper.opacity(0.85))
+        .background(AppPalette.canvas)
     }
 
     private var toolbarTitleBlock: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(model.selectedSection.rawValue)
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: 20, weight: .bold, design: .monospaced))
                 .foregroundStyle(AppPalette.ink)
             HStack(spacing: 6) {
                 ToolbarBadge(
@@ -348,7 +348,7 @@ struct ContentView: View {
                 .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                        .stroke(AppPalette.lineBright.opacity(0.5), lineWidth: 1)
                 )
                 .controlSize(.regular)
         }
@@ -441,7 +441,7 @@ private struct AppUpdateSheet: View {
                     .font(.system(size: 34, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
                     .frame(width: 48, height: 48)
-                    .background(AppPalette.brandSoft, in: RoundedRectangle(cornerRadius: 12))
+                    .background(AppPalette.brand.opacity(0.15), in: RoundedRectangle(cornerRadius: 12))
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("发现新版本")

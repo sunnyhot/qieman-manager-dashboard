@@ -182,13 +182,14 @@ struct OverviewSectionView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text(title)
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: 15, weight: .bold, design: .monospaced))
                         .foregroundStyle(AppPalette.ink)
                     ToolbarBadge(title: "\(rows.count) 只", tint: tint)
                     Spacer()
                     Text(currencyText(totalMarketValue))
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: 20, weight: .bold, design: .monospaced))
                         .foregroundStyle(AppPalette.ink)
+                        .monospacedDigit()
                 }
 
                 let profitTint: Color = totalProfit >= 0 ? AppPalette.positive : AppPalette.danger
@@ -199,16 +200,18 @@ struct OverviewSectionView: View {
                             .font(.system(size: 10))
                             .foregroundStyle(AppPalette.muted)
                         Text(signedCurrencyText(totalProfit))
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
                             .foregroundStyle(profitTint)
+                            .monospacedDigit()
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text("今日涨跌")
                             .font(.system(size: 10))
                             .foregroundStyle(AppPalette.muted)
                         Text(signedCurrencyText(totalChange))
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
                             .foregroundStyle(changeTint)
+                            .monospacedDigit()
                     }
                     if totalPending > 0 {
                         VStack(alignment: .leading, spacing: 2) {
@@ -216,8 +219,9 @@ struct OverviewSectionView: View {
                                 .font(.system(size: 10))
                                 .foregroundStyle(AppPalette.muted)
                             Text(currencyText(totalPending))
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .font(.system(size: 13, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(AppPalette.ink)
+                                .monospacedDigit()
                         }
                     }
                 }
@@ -309,7 +313,7 @@ struct OverviewHeroCard: View {
     private var heroCopy: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("资产主屏")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: 28, weight: .bold, design: .monospaced))
                 .foregroundStyle(AppPalette.ink)
             Text("这页现在先看你的资产全貌，再看主理人动态。每个标的会把「已持有、买入中、定投计划」聚合到同一个原生视图里，避免来回切页面对账。")
                 .font(.system(size: 13))
@@ -334,8 +338,9 @@ struct OverviewHeroCard: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(AppPalette.muted)
             Text(model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? (model.hasPersonalPortfolio ? "待刷新" : "未配置"))
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .font(.system(size: 24, weight: .bold, design: .monospaced))
                 .foregroundStyle(AppPalette.ink)
+                .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Text(
@@ -619,8 +624,9 @@ struct ManagerWatchStatusTile: View {
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(AppPalette.muted)
             Text(value)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
                 .foregroundStyle(AppPalette.ink)
+                .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }

@@ -2,29 +2,40 @@ import AppKit
 import SwiftUI
 
 enum AppPalette {
-    static let brand = adaptive(light: rgb(0.15, 0.40, 0.39), dark: rgb(0.31, 0.67, 0.63))
-    static let brandSoft = adaptive(light: rgb(0.84, 0.92, 0.89), dark: rgb(0.10, 0.22, 0.21))
-    static let sand = adaptive(light: rgb(0.95, 0.92, 0.86), dark: rgb(0.18, 0.16, 0.13))
-    static let paper = adaptive(light: rgb(0.99, 0.98, 0.95), dark: rgb(0.08, 0.09, 0.10))
-    static let card = adaptive(light: rgb(0.97, 0.95, 0.91), dark: rgb(0.13, 0.13, 0.12))
-    static let cardStrong = adaptive(light: rgb(0.985, 0.975, 0.95), dark: rgb(0.16, 0.16, 0.145))
-    static let ink = adaptive(light: rgb(0.16, 0.20, 0.24), dark: rgb(0.90, 0.92, 0.91))
-    static let muted = adaptive(light: rgb(0.42, 0.47, 0.48), dark: rgb(0.64, 0.68, 0.68))
-    static let line = adaptive(light: rgb(0.83, 0.81, 0.76), dark: rgb(0.29, 0.30, 0.29))
-    static let onBrand = adaptive(light: rgb(1.00, 1.00, 1.00), dark: rgb(0.04, 0.08, 0.08))
+    // MARK: - Core
+    static let brand = rgb(0.00, 0.90, 0.63)
+    static let brandSoft = rgb(0.00, 0.90, 0.63, 0.12)
+    static let onBrand = rgb(0.04, 0.10, 0.08)
 
-    static let positive = adaptive(light: rgb(0.23, 0.56, 0.34), dark: rgb(0.46, 0.78, 0.53))
-    static let warning = adaptive(light: rgb(0.76, 0.46, 0.25), dark: rgb(0.96, 0.64, 0.35))
-    static let danger = adaptive(light: rgb(0.72, 0.28, 0.25), dark: rgb(0.96, 0.44, 0.40))
-    static let info = adaptive(light: rgb(0.24, 0.47, 0.62), dark: rgb(0.50, 0.72, 0.88))
-    static let accentWarm = adaptive(light: rgb(0.67, 0.49, 0.26), dark: rgb(0.90, 0.70, 0.42))
+    // MARK: - Surfaces
+    static let canvas = rgb(0.04, 0.05, 0.10)
+    static let paper = rgb(0.05, 0.07, 0.13)
+    static let card = rgb(0.07, 0.10, 0.18)
+    static let cardStrong = rgb(0.10, 0.13, 0.24)
 
+    // MARK: - Text
+    static let ink = rgb(0.89, 0.93, 0.95)
+    static let muted = rgb(0.39, 0.45, 0.54)
+
+    // MARK: - Borders
+    static let line = rgb(0.12, 0.16, 0.24)
+    static let lineBright = rgb(0.18, 0.23, 0.35)
+
+    // MARK: - Semantic
+    static let positive = rgb(0.00, 1.00, 0.53)
+    static let negative = rgb(1.00, 0.23, 0.36)
+    static let warning = rgb(1.00, 0.69, 0.13)
+    static let info = rgb(0.22, 0.74, 0.97)
+    static let accentWarm = rgb(1.00, 0.78, 0.26)
+    static let danger = negative
+
+    // MARK: - Gradients
     static var canvasGradient: LinearGradient {
         LinearGradient(
             colors: [
-                sand,
+                canvas,
                 paper,
-                brandSoft.opacity(0.72),
+                rgb(0.00, 0.90, 0.63, 0.03),
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -34,27 +45,16 @@ enum AppPalette {
     static var heroGradient: LinearGradient {
         LinearGradient(
             colors: [
-                brand.opacity(0.18),
-                accentWarm.opacity(0.12),
-                paper.opacity(0.62),
+                rgb(0.00, 0.90, 0.63, 0.08),
+                rgb(0.00, 0.40, 0.80, 0.05),
+                paper,
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
     }
 
-    private static func adaptive(light: NSColor, dark: NSColor) -> Color {
-        Color(nsColor: NSColor(name: nil) { appearance in
-            switch appearance.bestMatch(from: [.darkAqua, .aqua]) {
-            case .darkAqua:
-                return dark
-            default:
-                return light
-            }
-        })
-    }
-
-    private static func rgb(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat, _ alpha: CGFloat = 1) -> NSColor {
-        NSColor(srgbRed: red, green: green, blue: blue, alpha: alpha)
+    private static func rgb(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat, _ alpha: CGFloat = 1) -> Color {
+        Color(nsColor: NSColor(srgbRed: red, green: green, blue: blue, alpha: alpha))
     }
 }

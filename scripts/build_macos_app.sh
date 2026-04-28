@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="${APP_NAME:-QiemanDashboard}"
 APP_DISPLAY_NAME="${APP_DISPLAY_NAME:-且慢主理人}"
-APP_VERSION="${APP_VERSION:-2.2.8}"
+APP_VERSION="${APP_VERSION:-2.3.0}"
 APP_BUILD="${APP_BUILD:-$(date +%Y%m%d%H%M)}"
 BUNDLE_ID="${BUNDLE_ID:-com.sunnyhot.qieman.manager.dashboard}"
 MIN_MACOS_VERSION="${MIN_MACOS_VERSION:-14.0}"

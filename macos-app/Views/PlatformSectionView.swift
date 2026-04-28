@@ -117,8 +117,9 @@ struct PlatformSectionView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
                 Text("\(totalCount)")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(AppPalette.muted)
+                    .monospacedDigit()
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(AppPalette.card, in: Capsule())
@@ -164,8 +165,9 @@ struct PlatformSectionView: View {
                     .disabled(safePage == 0)
 
                     Text("\(safePage + 1) / \(totalPages)")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .foregroundStyle(AppPalette.muted)
+                        .monospacedDigit()
 
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) { platformListPage = min(totalPages - 1, safePage + 1) }

@@ -126,8 +126,9 @@ struct PersonalAssetBrowser: View {
             HStack(spacing: 8) {
                 Text(scope.rawValue)
                 Text("\(count)")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundStyle(isSelected ? AppPalette.onBrand.opacity(0.88) : AppPalette.muted)
+                    .monospacedDigit()
             }
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
@@ -368,8 +369,9 @@ struct PersonalAssetTableRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(row.marketValue.map { currencyText($0, market: row.detectedMarket) } ?? "—")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
                     .foregroundStyle(AppPalette.ink)
+                    .monospacedDigit()
                 Text("总收益 \(signedCurrencyText(row.profitAmount, market: row.detectedMarket)) · \(percentOptional(row.profitPct))")
                     .font(.system(size: 10))
                     .foregroundStyle(profitTint)
@@ -381,8 +383,9 @@ struct PersonalAssetTableRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("现价 \(row.currentPrice.map(decimalText) ?? "—")")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
                     .foregroundStyle(AppPalette.ink)
+                    .monospacedDigit()
                 Text("成本 \(row.costPrice.map(decimalText) ?? "—")")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
@@ -393,8 +396,9 @@ struct PersonalAssetTableRow: View {
                 Group {
                     if let changePct = row.estimateChangePct {
                         Text(String(format: "%+.2f%%", changePct))
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .font(.system(size: 14, weight: .bold, design: .monospaced))
                             .foregroundStyle(changePct >= 0 ? AppPalette.positive : AppPalette.danger)
+                            .monospacedDigit()
                     } else {
                         Text("—")
                             .font(.system(size: 12, weight: .semibold))
@@ -406,8 +410,9 @@ struct PersonalAssetTableRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     if row.pendingTradeCount > 0 {
                         Text(row.pendingCashAmount > 0 ? currencyText(row.pendingCashAmount, market: row.detectedMarket) : "\(unitsText(row.pendingUnitAmount)) 份")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
                             .foregroundStyle(AppPalette.ink)
+                            .monospacedDigit()
                         Text("\(row.pendingTradeCount) 笔 · \(row.pendingTrades.first?.actionLabel ?? "待确认")")
                             .font(.system(size: 10))
                             .foregroundStyle(AppPalette.muted)
@@ -427,8 +432,9 @@ struct PersonalAssetTableRow: View {
                 Group {
                     if let changeAmt = row.estimateChangeAmount {
                         Text(signedCurrencyText(changeAmt, market: row.detectedMarket))
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .font(.system(size: 14, weight: .bold, design: .monospaced))
                             .foregroundStyle(changeAmt >= 0 ? AppPalette.positive : AppPalette.danger)
+                            .monospacedDigit()
                     } else {
                         Text("—")
                             .font(.system(size: 12, weight: .semibold))
@@ -440,8 +446,9 @@ struct PersonalAssetTableRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                 if row.totalPlanCount > 0 {
                     Text("进行中 \(row.activePlanCount) · 暂停 \(row.pausedPlanCount) · 终止 \(row.endedPlanCount)")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .foregroundStyle(AppPalette.ink)
+                        .monospacedDigit()
                     Text("下次估算 \(currencyText(row.estimatedNextPlanAmount, market: row.detectedMarket)) · 累计 \(currencyText(row.totalCumulativePlanAmount, market: row.detectedMarket))\(row.hasDrawdownPlan ? " · 涨跌幅 \(row.drawdownPlanCount)" : "")")
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)

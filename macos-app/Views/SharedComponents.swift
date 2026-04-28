@@ -9,12 +9,12 @@ struct SnapshotMiniBadge: View {
 
     var body: some View {
         Text(text.isEmpty ? "未标注" : text)
-            .font(.system(size: 9, weight: .semibold))
+            .font(.system(size: 10, weight: .medium, design: .monospaced))
             .foregroundStyle(tint)
             .lineLimit(1)
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
-            .background(tint.opacity(0.11), in: Capsule())
+            .background(tint.opacity(0.10), in: Capsule())
     }
 }
 
@@ -39,18 +39,21 @@ struct MetricCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundStyle(accent)
-                .frame(width: 38, height: 38)
-                .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+            RoundedRectangle(cornerRadius: 2)
+                .fill(accent)
+                .frame(width: 3)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 11))
-                    .foregroundStyle(AppPalette.muted)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Image(systemName: icon)
+                        .font(.system(size: 10))
+                        .foregroundStyle(accent)
+                    Text(title)
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(AppPalette.muted)
+                }
                 Text(value)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .font(.system(size: 22, weight: .bold, design: .monospaced))
                     .monospacedDigit()
                     .lineLimit(1)
                     .foregroundStyle(valueTint)
@@ -63,10 +66,10 @@ struct MetricCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(minHeight: 96, alignment: .leading)
         .padding(14)
-        .background(AppPalette.cardStrong.opacity(0.92), in: RoundedRectangle(cornerRadius: 14))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppPalette.lineBright.opacity(0.5), lineWidth: 1)
         )
     }
 }
@@ -74,9 +77,9 @@ struct MetricCard: View {
 struct PressResponsiveButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.975 : 1)
-            .opacity(configuration.isPressed ? 0.92 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .brightness(configuration.isPressed ? -0.08 : 0)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .animation(.easeOut(duration: 0.10), value: configuration.isPressed)
     }
 }
 
@@ -99,14 +102,14 @@ struct SectionCard<Trailing: View, Content: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
                     .foregroundStyle(AppPalette.brand)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(AppPalette.ink)
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(AppPalette.brand)
                     Text(subtitle)
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
                 }
                 trailing
@@ -114,12 +117,11 @@ struct SectionCard<Trailing: View, Content: View>: View {
             content
         }
         .padding(16)
-        .background(AppPalette.paper.opacity(0.96), in: RoundedRectangle(cornerRadius: 16))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 14))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(AppPalette.line.opacity(0.6), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(AppPalette.lineBright.opacity(0.4), lineWidth: 1)
         )
-        .shadow(color: AppPalette.brand.opacity(0.06), radius: 10, y: 4)
     }
 }
 
@@ -132,7 +134,7 @@ struct EmptySectionState: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold, design: .monospaced))
                 .foregroundStyle(AppPalette.ink)
             Text(subtitle)
                 .font(.system(size: 11))
@@ -145,7 +147,7 @@ struct EmptySectionState: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -154,18 +156,24 @@ struct StatChip: View {
     let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.system(size: 10))
-                .foregroundStyle(AppPalette.muted)
-            Text(value)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(AppPalette.ink)
-                .lineLimit(1)
+        HStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 1)
+                .fill(AppPalette.brand.opacity(0.5))
+                .frame(width: 2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundStyle(AppPalette.muted)
+                Text(value)
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(AppPalette.ink)
+                    .lineLimit(1)
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 8))
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 6))
     }
 }
 
@@ -175,11 +183,12 @@ struct ToolbarBadge: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: 10, weight: .medium))
+            .font(.system(size: 10, weight: .medium, design: .monospaced))
+            .monospacedDigit()
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(tint.opacity(0.12), in: Capsule())
+            .background(tint.opacity(0.10), in: Capsule())
     }
 }
 
@@ -189,17 +198,18 @@ struct ToastBar: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: 1)
                 .fill(tint)
                 .frame(width: 3, height: 14)
             Text(text)
-                .font(.system(size: 11))
+                .font(.system(size: 11, design: .monospaced))
+                .monospacedDigit()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundStyle(AppPalette.ink)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        .background(tint.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
     }
 }
 
@@ -218,14 +228,14 @@ struct LabeledValue: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(.system(size: 10))
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
                 .foregroundStyle(AppPalette.muted)
             Text(value)
                 .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .monospacedDigit()
                 .foregroundStyle(tint)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
     }
 }
-

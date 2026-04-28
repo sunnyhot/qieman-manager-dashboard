@@ -101,8 +101,9 @@ struct InvestmentPlanCard: View {
 
                 VStack(alignment: .trailing, spacing: 3) {
                     Text(plan.amountRangeText)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15, weight: .bold, design: .monospaced))
                         .foregroundStyle(AppPalette.ink)
+                        .monospacedDigit()
                     Text(plan.normalizedStatus)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(accent)
@@ -167,8 +168,9 @@ struct PendingTradeCard: View {
 
                 VStack(alignment: .trailing, spacing: 3) {
                     Text(trade.amountText)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15, weight: .bold, design: .monospaced))
                         .foregroundStyle(AppPalette.ink)
+                        .monospacedDigit()
                     Text(trade.status)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(AppPalette.brand)
