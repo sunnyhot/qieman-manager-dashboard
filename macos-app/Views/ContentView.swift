@@ -199,9 +199,7 @@ struct ContentView: View {
         let isSelected = model.selectedSection == section
         return Button {
             guard model.selectedSection != section else { return }
-            withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
-                model.selectedSection = section
-            }
+            model.selectedSection = section
         } label: {
             HStack(spacing: isCompact ? 0 : 10) {
                 Image(systemName: section.systemImage)
@@ -399,17 +397,22 @@ struct ContentView: View {
 
     @ViewBuilder
     private var detailPanel: some View {
-        switch model.selectedSection {
-        case .overview:
+        ZStack {
             OverviewSectionView()
-        case .portfolio:
+                .opacity(model.selectedSection == .overview ? 1 : 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             PortfolioSectionView()
-        case .settings:
+                .opacity(model.selectedSection == .portfolio ? 1 : 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             SettingsSectionView()
-        case .platform:
+                .opacity(model.selectedSection == .settings ? 1 : 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             PlatformSectionView()
-        case .forum:
+                .opacity(model.selectedSection == .platform ? 1 : 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             ForumSectionView()
+                .opacity(model.selectedSection == .forum ? 1 : 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
