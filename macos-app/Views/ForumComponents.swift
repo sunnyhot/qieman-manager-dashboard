@@ -26,6 +26,7 @@ struct CommentBlock: View {
             Text(comment.content ?? "无内容")
                 .font(.system(size: 12))
                 .foregroundStyle(AppPalette.ink)
+                .lineLimit(8)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             if !comment.children.isEmpty {
@@ -45,16 +46,14 @@ struct CommentBlock: View {
                             }
                         }
                         .padding(8)
-                        .background(AppPalette.cardStrong)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 8))
                     }
                 }
                 .padding(.leading, 8)
             }
         }
         .padding(12)
-        .background(AppPalette.card)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -121,11 +120,11 @@ struct InvestmentPlanCard: View {
                 Text(note)
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
+                    .lineLimit(5)
             }
         }
         .padding(12)
-        .background(AppPalette.card)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -187,7 +186,6 @@ struct PendingTradeCard: View {
             .foregroundStyle(AppPalette.muted)
         }
         .padding(12)
-        .background(AppPalette.card)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
     }
 }

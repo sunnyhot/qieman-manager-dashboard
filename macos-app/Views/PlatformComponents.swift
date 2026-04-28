@@ -31,8 +31,7 @@ struct ForumRecordRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(AppPalette.card)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -69,12 +68,11 @@ struct ForumSelectableRow: View {
         }
         .padding(isCompact ? 9 : 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(isSelected ? AppPalette.brand.opacity(0.12) : AppPalette.cardStrong.opacity(0.22))
+        .background(isSelected ? AppPalette.brand.opacity(0.12) : AppPalette.cardStrong.opacity(0.22), in: RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isSelected ? AppPalette.brand.opacity(0.55) : AppPalette.line.opacity(0.45), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -117,8 +115,7 @@ struct PlatformActionRow: View {
                             .foregroundStyle(sideColor)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(sideColor.opacity(0.10))
-                            .clipShape(Capsule())
+                            .background(sideColor.opacity(0.10), in: Capsule())
                     }
 
                     HStack(spacing: 10) {
@@ -144,8 +141,7 @@ struct PlatformActionRow: View {
                                 .foregroundStyle(sideColor)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(sideColor.opacity(0.10))
-                                .clipShape(Capsule())
+                                .background(sideColor.opacity(0.10), in: Capsule())
                             if let article = action.articleUrl, let url = URL(string: article) {
                                 Link("打开平台原文", destination: url)
                                     .font(.system(size: 10))
@@ -163,12 +159,11 @@ struct PlatformActionRow: View {
             }
         }
         .padding(isCompact ? 10 : 12)
-        .background(isSelected ? AppPalette.brand.opacity(0.14) : AppPalette.card)
+        .background(isSelected ? AppPalette.brand.opacity(0.14) : AppPalette.card, in: RoundedRectangle(cornerRadius: 10))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
                 .stroke(isSelected ? AppPalette.brand.opacity(0.6) : AppPalette.line.opacity(0.35), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private func decimalText(_ value: Double?) -> String {
@@ -196,8 +191,7 @@ struct PlatformActionRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
-        .background(tint.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 9))
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
     }
 }
 
@@ -237,8 +231,7 @@ struct PlatformActionDetailCard: View {
                             .foregroundStyle(sideColor)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 4)
-                            .background(sideColor.opacity(0.12))
-                            .clipShape(Capsule())
+                            .background(sideColor.opacity(0.12), in: Capsule())
                     }
 
                     Text("\(action.fundName ?? action.title ?? "未命名标的") · \(action.fundCode ?? "无代码")")
@@ -287,12 +280,11 @@ struct PlatformActionDetailCard: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(AppPalette.card)
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private func detailMetric(_ title: String, _ value: String, tint: Color) -> some View {
@@ -309,8 +301,7 @@ struct PlatformActionDetailCard: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 9)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(tint.opacity(0.07))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(tint.opacity(0.07), in: RoundedRectangle(cornerRadius: 10))
     }
 
     private func sourceText(_ title: String, source: String?, date: String?) -> String? {
@@ -348,8 +339,7 @@ struct WrapLine: View {
                 .foregroundStyle(AppPalette.muted)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
-                .background(AppPalette.cardStrong)
-                .clipShape(Capsule())
+                .background(AppPalette.cardStrong, in: Capsule())
         }
     }
 }
@@ -371,12 +361,11 @@ struct HoldingCard: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .background(AppPalette.cardStrong.opacity(0.72))
+        .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: 10))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
                 .stroke(AppPalette.line.opacity(0.5), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private var horizontalLayout: some View {
@@ -598,12 +587,11 @@ struct PlatformHoldingsPieChart: View {
                 }
             }
             .padding(14)
-            .background(AppPalette.card.opacity(0.72))
+            .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(AppPalette.line.opacity(0.32), lineWidth: 1)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }
 
@@ -761,8 +749,7 @@ struct PlatformMonthlyOverview: View {
                     .font(.system(size: 18))
                     .foregroundStyle(AppPalette.brand)
                     .frame(width: 38, height: 38)
-                    .background(AppPalette.brand.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .background(AppPalette.brand.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("近 12 个月")
@@ -800,12 +787,11 @@ struct PlatformMonthlyOverview: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(AppPalette.card.opacity(0.82))
+        .background(AppPalette.card.opacity(0.82), in: RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     @State private var selectedMonth: PlatformMonthSummary?
@@ -820,12 +806,11 @@ struct PlatformMonthlyOverview: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(AppPalette.card.opacity(0.72))
+        .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(AppPalette.line.opacity(0.32), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private var chartLegend: some View {
@@ -940,8 +925,7 @@ struct PlatformMonthlyOverview: View {
                 .foregroundStyle(AppPalette.muted)
         }
         .padding(8)
-        .background(AppPalette.cardStrong)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 8))
         .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
     }
 

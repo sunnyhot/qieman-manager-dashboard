@@ -48,12 +48,11 @@ struct PersonalAssetBrowser: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(AppPalette.cardStrong)
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 12))
                 .frame(maxWidth: 320)
 
                 Spacer()
@@ -78,12 +77,11 @@ struct PersonalAssetBrowser: View {
                         .font(.system(size: 12, weight: .semibold))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(AppPalette.cardStrong)
+                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .menuStyle(.borderlessButton)
             }
@@ -108,8 +106,7 @@ struct PersonalAssetBrowser: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .background(AppPalette.cardStrong)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
             } else {
                 PersonalAssetGroupedTable(rows: displayedRows)
             }
@@ -136,8 +133,7 @@ struct PersonalAssetBrowser: View {
             .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(isSelected ? AppPalette.brand : AppPalette.cardStrong)
-            .clipShape(Capsule())
+            .background(isSelected ? AppPalette.brand : AppPalette.cardStrong, in: Capsule())
         }
         .buttonStyle(PressResponsiveButtonStyle())
         .contentShape(Capsule())
@@ -306,8 +302,7 @@ struct PersonalAssetTable: View {
             .foregroundStyle(AppPalette.muted)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(AppPalette.cardStrong)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
 
             LazyVStack(spacing: 8) {
                 ForEach(rows) { row in
@@ -472,8 +467,7 @@ struct PersonalAssetTableRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(AppPalette.card)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
         .alert(deleteConfirmationTitle, isPresented: deleteConfirmationBinding) {
             Button("删除", role: .destructive) {
                 if let pendingDeleteScope {
@@ -584,8 +578,7 @@ struct PersonalAssetTableRow: View {
             }
             .foregroundStyle(AppPalette.brand)
             .frame(width: 42, height: 28)
-            .background(AppPalette.brand.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .background(AppPalette.brand.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)

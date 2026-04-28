@@ -14,8 +14,7 @@ struct SnapshotMiniBadge: View {
             .lineLimit(1)
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
-            .background(tint.opacity(0.11))
-            .clipShape(Capsule())
+            .background(tint.opacity(0.11), in: Capsule())
     }
 }
 
@@ -44,8 +43,7 @@ struct MetricCard: View {
                 .font(.system(size: 18))
                 .foregroundStyle(accent)
                 .frame(width: 38, height: 38)
-                .background(accent.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -65,12 +63,11 @@ struct MetricCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(minHeight: 96, alignment: .leading)
         .padding(14)
-        .background(AppPalette.cardStrong.opacity(0.92))
+        .background(AppPalette.cardStrong.opacity(0.92), in: RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 
@@ -79,28 +76,22 @@ struct PressResponsiveButtonStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.975 : 1)
             .opacity(configuration.isPressed ? 0.92 : 1)
-            .brightness(configuration.isPressed ? -0.02 : 0)
-            .shadow(
-                color: Color.black.opacity(configuration.isPressed ? 0.04 : 0.08),
-                radius: configuration.isPressed ? 4 : 8,
-                y: configuration.isPressed ? 1 : 4
-            )
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
-struct SectionCard<Content: View>: View {
+struct SectionCard<Trailing: View, Content: View>: View {
     let title: String
     let subtitle: String
     let icon: String
-    let trailing: AnyView
+    let trailing: Trailing
     let content: Content
 
-    init(title: String, subtitle: String, icon: String, @ViewBuilder trailing: () -> some View = { EmptyView() }, @ViewBuilder content: () -> Content) {
+    init(title: String, subtitle: String, icon: String, @ViewBuilder trailing: () -> Trailing = { EmptyView() }, @ViewBuilder content: () -> Content) {
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
-        self.trailing = AnyView(trailing())
+        self.trailing = trailing()
         self.content = content()
     }
 
@@ -123,12 +114,11 @@ struct SectionCard<Content: View>: View {
             content
         }
         .padding(16)
-        .background(AppPalette.paper.opacity(0.96))
+        .background(AppPalette.paper.opacity(0.96), in: RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(AppPalette.line.opacity(0.6), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: AppPalette.brand.opacity(0.06), radius: 10, y: 4)
     }
 }
@@ -155,8 +145,7 @@ struct EmptySectionState: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(AppPalette.card)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -176,28 +165,7 @@ struct StatChip: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(AppPalette.card)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-    }
-}
-
-struct StatPill: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.system(size: 10))
-                .foregroundStyle(AppPalette.muted)
-            Text(value)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(AppPalette.ink)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(AppPalette.card)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 8))
     }
 }
 
@@ -211,8 +179,7 @@ struct ToolbarBadge: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(tint.opacity(0.12))
-            .clipShape(Capsule())
+            .background(tint.opacity(0.12), in: Capsule())
     }
 }
 
@@ -232,8 +199,7 @@ struct ToastBar: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(tint.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 }
 

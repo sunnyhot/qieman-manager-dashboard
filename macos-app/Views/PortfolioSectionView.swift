@@ -139,8 +139,7 @@ struct PortfolioSectionView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
-                            .background(AppPalette.cardStrong)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
                     } else {
                         PersonalAssetBrowser(rows: model.personalAssetRows)
                     }
@@ -171,8 +170,7 @@ struct PortfolioSectionView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(AppPalette.cardStrong)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
                     }
                 }
 
@@ -223,8 +221,7 @@ struct PortfolioSectionView: View {
                                 }
                                 .padding(12)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(AppPalette.cardStrong)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
                             }
                         }
                     } else {
@@ -235,8 +232,7 @@ struct PortfolioSectionView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(AppPalette.cardStrong)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
                     }
                 }
             }

@@ -121,8 +121,7 @@ struct PlatformSectionView: View {
                     .foregroundStyle(AppPalette.muted)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(AppPalette.card)
-                    .clipShape(Capsule())
+                    .background(AppPalette.card, in: Capsule())
                 Spacer()
                 if isCompact {
                     Text("点一下自动跳到详情")
@@ -184,8 +183,7 @@ struct PlatformSectionView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(AppPalette.cardStrong)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
@@ -219,14 +217,12 @@ struct PlatformSectionView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .background(AppPalette.card)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
             }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(AppPalette.cardStrong)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)

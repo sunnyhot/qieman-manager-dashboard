@@ -69,8 +69,7 @@ struct ForumSectionView: View {
                         .foregroundStyle(AppPalette.muted)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(AppPalette.cardStrong)
-                        .clipShape(Capsule())
+                        .background(AppPalette.cardStrong, in: Capsule())
                     Spacer()
                     if isCompact {
                         Text("点一下直接看详情")
@@ -185,7 +184,7 @@ struct ForumSectionView: View {
                             }
                         } else {
                             Text(model.isLoadingComments ? "正在加载评论…" : "暂无评论，或当前登录态无法读取评论。")
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(AppPalette.muted)
                         }
                     }
                 }

@@ -65,8 +65,7 @@ struct OverviewSectionView: View {
                             .foregroundStyle(AppPalette.muted)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
-                            .background(AppPalette.card)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 10))
                     } else {
                         let fundRows = model.personalAssetRows.filter { $0.assetType == .fund }
                         let stockRows = model.personalAssetRows.filter { $0.assetType == .stock }
@@ -233,8 +232,7 @@ struct OverviewSectionView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppPalette.card)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(PressResponsiveButtonStyle())
     }
@@ -275,8 +273,7 @@ struct OverviewJumpMetricCard: View {
                     .foregroundStyle(accent)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 5)
-                    .background(accent.opacity(0.10))
-                    .clipShape(Capsule())
+                    .background(accent.opacity(0.10), in: Capsule())
                     .padding(9)
                 }
         }
@@ -302,12 +299,11 @@ struct OverviewHeroCard: View {
             }
         }
         .padding(20)
-        .background(AppPalette.heroGradient)
+        .background(AppPalette.heroGradient, in: RoundedRectangle(cornerRadius: 22))
         .overlay(
             RoundedRectangle(cornerRadius: 22)
                 .stroke(AppPalette.line.opacity(0.65), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 22))
     }
 
     private var heroCopy: some View {
@@ -365,8 +361,7 @@ struct OverviewHeroCard: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(width: fixedWidth, alignment: .leading)
-        .background(AppPalette.cardStrong.opacity(0.92))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .background(AppPalette.cardStrong.opacity(0.92), in: RoundedRectangle(cornerRadius: 18))
     }
 }
 
@@ -491,8 +486,7 @@ struct ManagerWatchControlCard: View {
             }
         }
         .padding(14)
-        .background(AppPalette.cardStrong.opacity(0.72))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
@@ -506,8 +500,7 @@ struct ManagerWatchControlCard: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
                     .frame(width: 34, height: 34)
-                    .background(AppPalette.brandSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .background(AppPalette.brandSoft, in: RoundedRectangle(cornerRadius: 10))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("巡检状态")
@@ -556,13 +549,11 @@ struct ManagerWatchControlCard: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(AppPalette.warning.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .background(AppPalette.warning.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
             }
         }
         .padding(14)
-        .background(AppPalette.card.opacity(0.82))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background(AppPalette.card.opacity(0.82), in: RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
@@ -589,12 +580,11 @@ struct ManagerWatchControlCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(AppPalette.cardStrong)
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .menuStyle(.borderlessButton)
     }
@@ -608,12 +598,11 @@ struct ManagerWatchControlCard: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppPalette.cardStrong)
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .frame(minWidth: minWidth, maxWidth: .infinity, alignment: .leading)
     }
@@ -638,8 +627,7 @@ struct ManagerWatchStatusTile: View {
         .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(tint.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
     }
 }
 

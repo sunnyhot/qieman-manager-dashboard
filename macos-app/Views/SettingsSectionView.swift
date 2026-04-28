@@ -108,8 +108,7 @@ struct SettingsSectionView: View {
                                 .font(.system(size: 12, design: .monospaced))
                                 .frame(height: 220)
                                 .padding(10)
-                                .background(AppPalette.cardStrong)
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 14))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 14)
                                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
@@ -123,8 +122,7 @@ struct SettingsSectionView: View {
                                     .padding(10)
                             }
                             .frame(height: 122)
-                            .background(AppPalette.cardStrong)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 14))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14)
                                     .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)

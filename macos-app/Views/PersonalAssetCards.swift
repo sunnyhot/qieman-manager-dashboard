@@ -94,8 +94,7 @@ struct PersonalAssetOverviewCard: View {
             .lineLimit(1)
         }
         .padding(14)
-        .background(AppPalette.card)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 14))
         .frame(minHeight: 246, alignment: .top)
     }
 }
@@ -201,8 +200,7 @@ struct PersonalAssetAddHoldingSheet: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(nameStatusTint.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(nameStatusTint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
     }
 
     private var nameStatusIcon: String {
@@ -265,12 +263,11 @@ struct PersonalAssetAddHoldingSheet: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppPalette.cardStrong)
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
 
@@ -379,12 +376,11 @@ struct PersonalAssetUnitAdjustmentSheet: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppPalette.cardStrong)
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
 }
@@ -431,8 +427,7 @@ struct AssetMiniStat: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(tint.opacity(0.10))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
     }
 }
 
