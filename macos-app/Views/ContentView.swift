@@ -1654,7 +1654,7 @@ private struct SettingsSectionView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 SectionCard(title: "账号与登录", subtitle: "管理且慢登录态，验证 Cookie 有效性", icon: "person.circle") {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 10) {
                             ToolbarBadge(
                                 title: model.cookieAvailable ? "Cookie 可用" : "Cookie 缺失",
@@ -1681,7 +1681,7 @@ private struct SettingsSectionView: View {
                 ManagerWatchControlCard()
 
                 SectionCard(title: "导入中心", subtitle: "支持手动录入、上传图片 OCR、上传表格到三类资产区", icon: "square.and.arrow.down") {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 10) {
                             ToolbarBadge(
                                 title: hasAnyPersonalData ? "已导入资产数据" : "尚未导入",
@@ -1709,6 +1709,7 @@ private struct SettingsSectionView: View {
                                     }
                                 }
                                 .buttonStyle(.bordered)
+                                .controlSize(.small)
                             }
                         } else if unimportedImportTargets.isEmpty {
                             Text("持仓中、买入中和定投计划都已导入成功。仍可选择任一对象继续补录或重导，股票录入在「持仓中」。")
@@ -1737,6 +1738,7 @@ private struct SettingsSectionView: View {
                                 }
                             }
                             .buttonStyle(.bordered)
+                            .controlSize(.small)
                         }
 
                         if isDraftEditorExpanded {
@@ -1816,45 +1818,42 @@ private struct SettingsSectionView: View {
                     }
                 }
 
-                HStack(spacing: 12) {
-                    Image(systemName: "arrow.down.circle")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(AppPalette.brand)
-                    Text("当前 \(AppUpdateChecker.bundleVersion)")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(AppPalette.ink)
-                    Spacer()
-                    Button(model.isCheckingForUpdates ? "检查更新中…" : "检查更新") {
-                        Task { await model.checkForUpdates(userInitiated: true) }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(AppPalette.brand)
-                    .controlSize(.regular)
-                    .disabled(model.isCheckingForUpdates)
+                SectionCard(title: "应用版本", subtitle: "当前版本 \(AppUpdateChecker.bundleVersion)", icon: "arrow.down.circle") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 10) {
+                            Text(AppUpdateChecker.bundleVersion)
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .foregroundStyle(AppPalette.ink)
+                            Spacer()
+                            Button(model.isCheckingForUpdates ? "检查更新中…" : "检查更新") {
+                                Task { await model.checkForUpdates(userInitiated: true) }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(AppPalette.brand)
+                            .disabled(model.isCheckingForUpdates)
 
-                    if model.availableUpdate != nil {
-                        Button(model.isInstallingUpdate ? "安装更新中…" : "下载并重启安装") {
-                            Task { await model.downloadAndInstallAvailableUpdate() }
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.regular)
-                        .disabled(model.isInstallingUpdate)
+                            if model.availableUpdate != nil {
+                                Button(model.isInstallingUpdate ? "安装更新中…" : "下载并重启安装") {
+                                    Task { await model.downloadAndInstallAvailableUpdate() }
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(model.isInstallingUpdate)
 
-                        Button("查看 Release") {
-                            model.openAvailableUpdateReleasePage()
+                                Button("查看 Release") {
+                                    model.openAvailableUpdateReleasePage()
+                                }
+                                .buttonStyle(.bordered)
+                            }
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.regular)
+
+                        if let update = model.availableUpdate {
+                            HStack(spacing: 8) {
+                                ToolbarBadge(title: "新版本 \(update.version)", tint: AppPalette.positive)
+                                ToolbarBadge(title: update.asset?.name ?? "", tint: AppPalette.info)
+                            }
+                        }
                     }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(AppPalette.paper.opacity(0.96))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(AppPalette.line.opacity(0.6), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .padding(16)
         }
