@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.4",
-  "name": "QiemanDashboard 2.2.4",
-  "body": "优化我的持仓明细：新增单按钮添加持仓并按代码自动判断基金/股票、实时识别名称；支持按条目添加/删除份额并更新成本，支持删除已持有/买入中/计划档案记录；精简明细表列布局，新增独立现价/成本列和最右侧操作列。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.4",
-  "published_at": "2026-04-28T08:10:17Z",
+  "tag_name": "v2.2.5",
+  "name": "QiemanDashboard 2.2.5",
+  "body": "修复 tab 切换卡顿：用 opacity 替换视图销毁重建，保持各页面视图常驻；统一设置页布局风格，版本区改用 SectionCard 样式。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.5",
+  "published_at": "2026-04-28T08:28:06Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.4.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.4/QiemanDashboard-2.2.4.zip",
-      "size": 3071926,
+      "name": "QiemanDashboard-2.2.5.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.5/QiemanDashboard-2.2.5.zip",
+      "size": 3095255,
       "content_type": "application/zip"
     }
   ]
