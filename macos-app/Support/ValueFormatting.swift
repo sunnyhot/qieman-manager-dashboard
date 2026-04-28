@@ -13,7 +13,11 @@ private func formattedNumber(_ value: Double) -> String {
 }
 
 func currencyText(_ value: Double) -> String {
-    "¥" + formattedNumber(value)
+    currencyText(value, market: nil)
+}
+
+func currencyText(_ value: Double, market: StockMarket?) -> String {
+    (market?.currencySymbol ?? "¥") + formattedNumber(value)
 }
 
 func currencyOptional(_ value: Double?) -> String {
@@ -21,10 +25,20 @@ func currencyOptional(_ value: Double?) -> String {
     return currencyText(value)
 }
 
+func currencyOptional(_ value: Double?, market: StockMarket?) -> String {
+    guard let value else { return "—" }
+    return currencyText(value, market: market)
+}
+
 func signedCurrencyText(_ value: Double?) -> String {
+    signedCurrencyText(value, market: nil)
+}
+
+func signedCurrencyText(_ value: Double?, market: StockMarket?) -> String {
     guard let value else { return "—" }
     let sign = value >= 0 ? "+" : "-"
-    return "¥\(sign)\(formattedNumber(abs(value)))"
+    let symbol = market?.currencySymbol ?? "¥"
+    return "\(symbol)\(sign)\(formattedNumber(abs(value)))"
 }
 
 func percentOptional(_ value: Double?) -> String {

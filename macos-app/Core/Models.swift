@@ -5,7 +5,6 @@ enum AppSection: String, CaseIterable, Identifiable {
     case portfolio = "我的持仓"
     case platform = "平台调仓"
     case forum = "论坛发言"
-    case snapshots = "历史快照"
     case settings = "设置"
 
     var id: String { rawValue }
@@ -22,8 +21,6 @@ enum AppSection: String, CaseIterable, Identifiable {
             return "chart.bar.xaxis"
         case .forum:
             return "text.bubble"
-        case .snapshots:
-            return "clock.arrow.circlepath"
         }
     }
 }
@@ -49,7 +46,7 @@ enum PersonalDataImportTarget: String, CaseIterable, Identifiable {
     var sampleText: String {
         switch self {
         case .holdings:
-            return "示例：021550 1200 1.1304；股票 600519 10 1500"
+            return "示例：021550 1200 1.1304；股票 600519 10 1500；港股 00700 100 350；美股 AAPL 50 180"
         case .pendingTrades:
             return "示例：2026-04-23 09:48:33 | 定投 | 019524 | 10.00元 | 交易进行中"
         case .investmentPlans:
@@ -60,7 +57,7 @@ enum PersonalDataImportTarget: String, CaseIterable, Identifiable {
     var helpText: String {
         switch self {
         case .holdings:
-            return "支持“代码 份额 成本价”和“股票 代码 数量 成本价”；名称会保存时按代码自动补全，也支持上传图片或表格后自动填入草稿区。"
+            return "支持 代码 份额 成本价 和 股票/港股/美股 代码 数量 成本价 格式；5位数字自动识别港股，字母代码识别美股。名称会保存时按代码自动补全。"
         case .pendingTrades:
             return "支持时间、动作、基金代码或名称、金额/份额、状态五列；保存时会按基金代码自动补全名称。"
         case .investmentPlans:
@@ -334,18 +331,12 @@ struct QueryFormState {
 
 struct BootstrapPayload: Decodable {
     let status: StatusPayload
-    let history: [SnapshotPayload]
-    let preferredSnapshotName: String?
-    let preferredSnapshot: SnapshotPayload?
 }
 
 struct StatusPayload: Decodable {
     let cookieExists: Bool
     let cookieFile: String
     let outputDir: String
-    let snapshotCount: Int
-    let latestSnapshot: SnapshotPayload?
-    let preferredSnapshotName: String?
     let defaultForm: DefaultFormPayload
 }
 
@@ -355,10 +346,6 @@ struct DefaultFormPayload: Decodable {
     let userName: String
     let pages: String
     let pageSize: String
-}
-
-struct HistoryPayload: Decodable {
-    let items: [SnapshotPayload]
 }
 
 struct FetchResponsePayload: Decodable {
@@ -387,7 +374,7 @@ struct SnapshotPayload: Decodable, Identifiable, Hashable {
     }
 
     var displayTitle: String {
-        title.isEmpty ? "未命名快照" : title
+        title.isEmpty ? "未命名结果" : title
     }
 }
 
@@ -758,6 +745,28 @@ enum PersonalAssetType: String, Codable, Hashable, Identifiable {
     }
 }
 
+enum StockMarket: String, Codable, Hashable, CaseIterable {
+    case aShare = "a"
+    case hk = "hk"
+    case us = "us"
+
+    var displayName: String {
+        switch self {
+        case .aShare: return "A股"
+        case .hk: return "港股"
+        case .us: return "美股"
+        }
+    }
+
+    var currencySymbol: String {
+        switch self {
+        case .aShare: return "¥"
+        case .hk: return "HK$"
+        case .us: return "$"
+        }
+    }
+}
+
 struct UserPortfolioHolding: Codable, Hashable, Identifiable {
     let id: UUID
     let fundCode: String
@@ -765,6 +774,7 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
     let units: Double
     let costPrice: Double?
     let displayName: String?
+    let stockMarket: StockMarket?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -773,15 +783,17 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
         case units
         case costPrice
         case displayName
+        case stockMarket
     }
 
-    init(id: UUID = UUID(), fundCode: String, assetType: PersonalAssetType = .fund, units: Double, costPrice: Double?, displayName: String?) {
+    init(id: UUID = UUID(), fundCode: String, assetType: PersonalAssetType = .fund, units: Double, costPrice: Double?, displayName: String?, stockMarket: StockMarket? = nil) {
         self.id = id
         self.fundCode = fundCode
         self.assetType = assetType
         self.units = units
         self.costPrice = costPrice
         self.displayName = displayName
+        self.stockMarket = stockMarket
     }
 
     init(from decoder: Decoder) throws {
@@ -792,6 +804,7 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
         self.units = try container.decode(Double.self, forKey: .units)
         self.costPrice = try container.decodeIfPresent(Double.self, forKey: .costPrice)
         self.displayName = try container.decodeIfPresent(String.self, forKey: .displayName)
+        self.stockMarket = try container.decodeIfPresent(StockMarket.self, forKey: .stockMarket)
     }
 
     var normalizedFundCode: String {
@@ -803,9 +816,45 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
         return value.isEmpty ? nil : value
     }
 
+    var detectedMarket: StockMarket? {
+        if let stockMarket { return stockMarket }
+        guard assetType == .stock else { return nil }
+        return UserPortfolioHolding.detectStockMarket(from: normalizedFundCode)
+    }
+
+    var marketLabel: String? {
+        detectedMarket?.displayName
+    }
+
+    static func detectStockMarket(from code: String) -> StockMarket? {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !trimmed.isEmpty else { return nil }
+        if trimmed.hasPrefix("SH") || trimmed.hasPrefix("SZ") || trimmed.hasPrefix("BJ") {
+            return .aShare
+        }
+        if trimmed.hasPrefix("HK") {
+            return .hk
+        }
+        if trimmed.hasPrefix("US") {
+            return .us
+        }
+        if trimmed.count == 6, trimmed.allSatisfy(\.isNumber) {
+            return .aShare
+        }
+        if trimmed.count == 5, trimmed.allSatisfy(\.isNumber) {
+            return .hk
+        }
+        if trimmed.allSatisfy({ $0.isLetter }) {
+            return .us
+        }
+        return nil
+    }
+
     var draftLine: String {
         var parts: [String] = []
-        if let draftPrefix = assetType.draftPrefix {
+        if assetType == .stock, let market = detectedMarket {
+            parts.append(market.displayName)
+        } else if let draftPrefix = assetType.draftPrefix {
             parts.append(draftPrefix)
         }
         parts.append(contentsOf: [normalizedFundCode, Self.decimalText(units)])
@@ -1080,6 +1129,10 @@ struct PersonalAssetAggregateRow: Identifiable, Hashable {
 
     var assetTypeLabel: String {
         assetType.displayName
+    }
+
+    var detectedMarket: StockMarket? {
+        rawHolding?.detectedMarket ?? holdingRow?.holding.detectedMarket
     }
 
     var marketValue: Double? {

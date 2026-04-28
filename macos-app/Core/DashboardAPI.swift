@@ -30,27 +30,6 @@ final class DashboardAPIClient {
         )
     }
 
-    func fetchHistory(baseURL: URL) async throws -> HistoryPayload {
-        try await request(
-            url: baseURL.appendingPathComponent("api/history"),
-            method: "GET",
-            body: Optional<Data>.none
-        )
-    }
-
-    func fetchSnapshot(baseURL: URL, name: String) async throws -> SnapshotPayload {
-        var components = URLComponents(url: baseURL.appendingPathComponent("api/snapshot"), resolvingAgainstBaseURL: false)
-        components?.queryItems = [URLQueryItem(name: "name", value: name)]
-        guard let url = components?.url else {
-            throw APIClientError.invalidResponse
-        }
-        struct SnapshotEnvelope: Decodable {
-            let snapshot: SnapshotPayload
-        }
-        let payload: SnapshotEnvelope = try await request(url: url, method: "GET", body: Optional<Data>.none)
-        return payload.snapshot
-    }
-
     func fetchLatestSnapshot(baseURL: URL, form: QueryFormState, persist: Bool) async throws -> SnapshotPayload {
         let body = try JSONSerialization.data(withJSONObject: form.fetchPayload(persist: persist), options: [])
         let payload: FetchResponsePayload = try await request(

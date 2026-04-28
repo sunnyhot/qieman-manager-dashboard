@@ -20,7 +20,6 @@ final class AppModel: ObservableObject {
     @Published var form = QueryFormState()
 
     @Published var status: StatusPayload?
-    @Published var history: [SnapshotPayload] = []
     @Published var currentSnapshot: SnapshotPayload?
     @Published var platformPayload: PlatformPayload?
     @Published var authPayload: AuthCheckPayload?
@@ -63,7 +62,6 @@ final class AppModel: ObservableObject {
     @Published private(set) var dataDirectoryURL: URL?
 
     private let serverController = LocalServerController()
-    private let snapshotStore = NativeSnapshotStore()
     private let platformClient = QiemanPlatformNativeClient()
     private let portfolioStore = UserPortfolioStore()
     private let pendingTradesStore = PendingTradesStore()
@@ -128,7 +126,6 @@ final class AppModel: ObservableObject {
             let supportDirectory = try serverController.prepareEnvironment()
             logFileURL = serverController.logFileURL
             dataDirectoryURL = supportDirectory
-            loadLocalSnapshots()
             loadSavedPortfolio()
             loadPendingTrades()
             loadInvestmentPlans()
@@ -149,7 +146,7 @@ final class AppModel: ObservableObject {
             if currentSnapshot == nil {
                 errorMessage = error.localizedDescription
             } else {
-                noticeMessage = "已加载本地快照备份，原生直连暂时不可用。"
+                noticeMessage = "原生直连暂时不可用，已保留当前界面数据。"
             }
         }
 
@@ -169,9 +166,7 @@ final class AppModel: ObservableObject {
         defer { isRefreshing = false }
 
         let currentForm = form
-        let currentOutputDirectory = outputDirectoryURL
-
-        async let snapshotTask = nativeClient.fetchSnapshot(form: currentForm, persist: persist, outputDirectory: currentOutputDirectory)
+        async let snapshotTask = nativeClient.fetchSnapshot(form: currentForm, persist: false, outputDirectory: nil)
         async let platformTask = fetchPlatformIfPossible()
 
         var refreshedSnapshot: SnapshotPayload?
@@ -204,11 +199,7 @@ final class AppModel: ObservableObject {
             ensureSelectedPlatformAction()
         }
 
-        if persist, refreshedSnapshot != nil {
-            loadLocalSnapshots()
-        } else {
-            rebuildNativeStatus()
-        }
+        rebuildNativeStatus()
 
         guard refreshedSnapshot != nil || refreshedPlatform != nil else {
             let message = failures.isEmpty ? "原生刷新失败，论坛和平台数据都没有拉到。" : failures.joined(separator: "；")
@@ -218,7 +209,7 @@ final class AppModel: ObservableObject {
 
         if failures.isEmpty {
             if updateNotice {
-                noticeMessage = persist ? "已原生刷新并保存当前结果。" : "已通过原生抓取刷新到最新结果。"
+                noticeMessage = "已通过原生抓取刷新到最新结果。"
             }
         } else {
             errorMessage = failures.joined(separator: "；")
@@ -236,21 +227,6 @@ final class AppModel: ObservableObject {
         let payload = await nativeClient.validateAuth()
         authPayload = payload
         noticeMessage = payload.ok ? "登录态有效：\(payload.userName.isEmpty ? "未知用户" : payload.userName)" : payload.message
-    }
-
-    func loadSnapshot(_ snapshot: SnapshotPayload) async {
-        guard let fileName = snapshot.fileName, let outputDirectory = outputDirectoryURL else { return }
-        errorMessage = ""
-        do {
-            let payload = try snapshotStore.loadSnapshot(named: fileName, from: outputDirectory)
-            currentSnapshot = payload
-            commentsPayload = nil
-            selectedSection = .snapshots
-            selectedPostID = payload.records.first?.id
-            noticeMessage = "已切换到快照：\(payload.displayTitle)"
-        } catch {
-            errorMessage = error.localizedDescription
-        }
     }
 
     func loadCommentsForSelectedPost() async {
@@ -1284,12 +1260,12 @@ final class AppModel: ObservableObject {
         if let cached = _cachedAssetRows { return cached }
         var valuationRowsByKey: [String: UserPortfolioValuationRow] = [:]
         for row in userPortfolioSnapshot?.rows ?? [] {
-            valuationRowsByKey[personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName)] = row
+            valuationRowsByKey[personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName, market: row.holding.detectedMarket)] = row
         }
 
         var rawHoldingsByKey: [String: UserPortfolioHolding] = [:]
         for holding in userPortfolioHoldings {
-            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName)
+            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName, market: holding.detectedMarket)
             rawHoldingsByKey[key] = rawHoldingsByKey[key] ?? holding
         }
 
@@ -1381,37 +1357,8 @@ final class AppModel: ObservableObject {
         return result
     }
 
-    private func filteredHistory(_ items: [SnapshotPayload]) -> [SnapshotPayload] {
-        items.filter { item in
-            let fileName = item.fileName ?? ""
-            if fileName.hasPrefix("watch-state-") {
-                return false
-            }
-            return true
-        }
-    }
-
     private var outputDirectoryURL: URL? {
         dataDirectoryURL?.appendingPathComponent("output", isDirectory: true)
-    }
-
-    private func loadLocalSnapshots() {
-        guard let outputDirectory = outputDirectoryURL else { return }
-        do {
-            let localHistory = filteredHistory(try snapshotStore.loadHistory(from: outputDirectory))
-            if !localHistory.isEmpty {
-                history = localHistory
-            }
-            if currentSnapshot == nil,
-               let preferred = snapshotStore.preferredSnapshot(from: localHistory, preferPosts: true),
-               let fileName = preferred.fileName {
-                currentSnapshot = try snapshotStore.loadSnapshot(named: fileName, from: outputDirectory)
-                selectedPostID = currentSnapshot?.records.first?.id
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        rebuildNativeStatus()
     }
 
     private func loadSavedPortfolio() {
@@ -1540,14 +1487,14 @@ final class AppModel: ObservableObject {
         var priceByKey: [String: Double] = [:]
 
         for row in userPortfolioSnapshot?.rows ?? [] {
-            let key = personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName)
+            let key = personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName, market: row.holding.detectedMarket)
             if let price = row.resolvedPrice, price > 0 {
                 priceByKey[key] = price
             }
         }
 
         for holding in holdings {
-            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName)
+            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName, market: holding.detectedMarket)
             if priceByKey[key] == nil, let costPrice = holding.costPrice, costPrice > 0 {
                 priceByKey[key] = costPrice
             }
@@ -1574,7 +1521,7 @@ final class AppModel: ObservableObject {
         do {
             let snapshot = try await platformClient.fetchUserPortfolioSnapshot(holdings: Array(syntheticHoldingsByKey.values))
             for row in snapshot.rows {
-                let key = personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName)
+                let key = personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName, market: row.holding.detectedMarket)
                 if let price = row.resolvedPrice, price > 0 {
                     priceByKey[key] = price
                 }
@@ -1612,7 +1559,7 @@ final class AppModel: ObservableObject {
     private func latestEstimateChangePct(for plan: PersonalInvestmentPlan) -> Double? {
         let key = personalFundKey(code: plan.fundCode, name: plan.fundName)
         return userPortfolioSnapshot?.rows.first { row in
-            personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName) == key
+            personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName, market: row.holding.detectedMarket) == key
         }?.estimateChangePct
     }
 
@@ -2121,9 +2068,6 @@ final class AppModel: ObservableObject {
             cookieExists: nativeCookieExists,
             cookieFile: serverController.cookieFileURL?.path ?? "",
             outputDir: outputDirectoryURL?.path ?? "",
-            snapshotCount: history.count,
-            latestSnapshot: history.first,
-            preferredSnapshotName: snapshotStore.preferredSnapshot(from: history, preferPosts: true)?.fileName,
             defaultForm: defaultForm
         )
     }
@@ -2168,13 +2112,14 @@ final class AppModel: ObservableObject {
         return 2
     }
 
-    private func personalFundKey(code: String?, name: String?) -> String {
-        personalAssetKey(assetType: .fund, code: code, name: name)
+    private func personalFundKey(code: String?, name: String?, market: StockMarket? = nil) -> String {
+        personalAssetKey(assetType: .fund, code: code, name: name, market: market)
     }
 
-    private func personalAssetKey(assetType: PersonalAssetType, code: String?, name: String?) -> String {
+    private func personalAssetKey(assetType: PersonalAssetType, code: String?, name: String?, market: StockMarket? = nil) -> String {
         if let code = normalizedCode(code) {
-            return "\(assetType.rawValue):code:\(code)"
+            let marketSegment = (assetType == .stock) ? ":mkt:\(market?.rawValue ?? "a")" : ""
+            return "\(assetType.rawValue)\(marketSegment):code:\(code)"
         }
         let normalizedName = (name ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2182,7 +2127,8 @@ final class AppModel: ObservableObject {
             .replacingOccurrences(of: "（", with: "(")
             .replacingOccurrences(of: "）", with: ")")
             .replacingOccurrences(of: " ", with: "")
-        return "\(assetType.rawValue):name:\(normalizedName)"
+        let marketSegment = (assetType == .stock) ? ":mkt:\(market?.rawValue ?? "a")" : ""
+        return "\(assetType.rawValue)\(marketSegment):name:\(normalizedName)"
     }
 
     private func normalizedCode(_ value: String?) -> String? {
