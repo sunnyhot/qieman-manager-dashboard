@@ -1462,7 +1462,7 @@ private struct PortfolioSectionView: View {
                         subtitle: model.personalAssetSummary.map {
                             "已持有 \(currencyText($0.totalMarketValue)) + 待确认 \(currencyText($0.totalPendingCashAmount)) + 下次计划 \(currencyText($0.totalEstimatedNextPlanAmount))"
                         } ?? "自动聚合你的已持有、买入中和计划档案",
-                        icon: "yenign.circle",
+                        icon: "yensign.circle",
                         accent: AppPalette.brand
                     )
                     MetricCard(
@@ -1534,6 +1534,7 @@ private struct PortfolioSectionView: View {
                             Text("还没有可聚合的资产数据。先导入持仓、买入中或定投计划。")
                                 .font(.system(size: 12))
                                 .foregroundStyle(AppPalette.muted)
+                            PersonalAssetAddButtons()
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
@@ -2823,6 +2824,202 @@ private struct PersonalAssetOverviewCard: View {
     }
 }
 
+private struct PersonalAssetAddButtons: View {
+    @State private var isPresentingAddSheet = false
+
+    var body: some View {
+        Button {
+            isPresentingAddSheet = true
+        } label: {
+            Label("添加持仓", systemImage: "plus.circle")
+                .font(.system(size: 12, weight: .semibold))
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .sheet(isPresented: $isPresentingAddSheet) {
+            PersonalAssetAddHoldingSheet()
+        }
+    }
+}
+
+private struct PersonalAssetAddHoldingSheet: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var codeText = ""
+    @State private var unitsText = ""
+    @State private var costPriceText = ""
+    @State private var codeResolution: PersonalAssetCodeResolution?
+    @State private var isResolvingName = false
+    @State private var hasResolvedName = false
+
+    private var lookupKey: String {
+        codeText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: codeResolution?.assetType == .stock ? "chart.line.uptrend.xyaxis" : "chart.pie")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(codeResolution?.assetType == .stock ? AppPalette.info : AppPalette.brand)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("添加持仓")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text("填写代码、份额和成本，系统会按代码自动判断基金或股票。")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                Spacer()
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                addHoldingField("代码", text: $codeText, placeholder: "例如 021550 / 600519 / SH600519")
+                addHoldingField("份额", text: $unitsText, placeholder: "例如 100.00")
+                addHoldingField("成本", text: $costPriceText, placeholder: "例如 1.2345")
+            }
+
+            nameLookupStatus
+
+            HStack(spacing: 10) {
+                Spacer()
+                Button("取消") {
+                    dismiss()
+                }
+                .buttonStyle(.bordered)
+
+                Button("添加") {
+                    guard let codeResolution else { return }
+                    if model.addPersonalAssetHolding(
+                        assetType: codeResolution.assetType,
+                        codeText: codeResolution.code,
+                        unitsText: unitsText,
+                        costPriceText: costPriceText,
+                        displayName: codeResolution.displayName
+                    ) {
+                        dismiss()
+                    }
+                }
+                .disabled(codeResolution == nil || isResolvingName)
+                .buttonStyle(.borderedProminent)
+                .tint(codeResolution?.assetType == .stock ? AppPalette.info : AppPalette.brand)
+            }
+        }
+        .padding(18)
+        .frame(width: 400)
+        .task(id: lookupKey) {
+            await resolveName(for: codeText)
+        }
+    }
+
+    private var nameLookupStatus: some View {
+        HStack(spacing: 8) {
+            Image(systemName: nameStatusIcon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(nameStatusTint)
+            Text(nameStatusText)
+                .font(.system(size: 11))
+                .foregroundStyle(nameStatusTint)
+            Spacer()
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(nameStatusTint.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var nameStatusIcon: String {
+        if codeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "magnifyingglass"
+        }
+        if isResolvingName {
+            return "arrow.clockwise"
+        }
+        if codeResolution?.displayName != nil {
+            return "checkmark.circle"
+        }
+        if codeResolution != nil {
+            return "checkmark.circle"
+        }
+        return "exclamationmark.circle"
+    }
+
+    private var nameStatusText: String {
+        if codeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "输入代码后自动判断类型并识别名称"
+        }
+        if isResolvingName {
+            return "正在判断类型和识别名称…"
+        }
+        if let codeResolution {
+            if let displayName = codeResolution.displayName, !displayName.isEmpty {
+                return "判断为：\(codeResolution.assetType.displayName) · \(displayName)"
+            }
+            return "判断为：\(codeResolution.assetType.displayName)，暂未识别到名称"
+        }
+        if hasResolvedName {
+            return "暂时无法判断类型，请检查代码"
+        }
+        return "输入代码后自动判断类型并识别名称"
+    }
+
+    private var nameStatusTint: Color {
+        if isResolvingName {
+            return AppPalette.info
+        }
+        if codeResolution?.displayName != nil {
+            return AppPalette.positive
+        }
+        if codeResolution != nil {
+            return AppPalette.info
+        }
+        if hasResolvedName {
+            return AppPalette.warning
+        }
+        return AppPalette.muted
+    }
+
+    private func addHoldingField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(AppPalette.muted)
+            TextField(placeholder, text: text)
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(AppPalette.cardStrong)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    private func resolveName(for rawCode: String) async {
+        let code = rawCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        codeResolution = nil
+        hasResolvedName = false
+        guard !code.isEmpty else {
+            isResolvingName = false
+            return
+        }
+
+        isResolvingName = true
+        try? await Task.sleep(nanoseconds: 350_000_000)
+        if Task.isCancelled { return }
+
+        let resolution = await model.resolvePersonalAssetCode(code)
+        if Task.isCancelled { return }
+
+        codeResolution = resolution
+        hasResolvedName = true
+        isResolvingName = false
+    }
+}
+
 private struct PersonalAssetBrowser: View {
     let rows: [PersonalAssetAggregateRow]
 
@@ -2877,6 +3074,8 @@ private struct PersonalAssetBrowser: View {
                 .frame(maxWidth: 320)
 
                 Spacer()
+
+                PersonalAssetAddButtons()
 
                 Menu {
                     ForEach(PersonalAssetSortOption.allCases) { option in
@@ -3098,12 +3297,14 @@ private struct PersonalAssetTable: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("实时估值 / 收益")
                     .frame(width: 260, alignment: .leading)
+                Text("现价 / 成本")
+                    .frame(width: 120, alignment: .leading)
                 Text("待确认")
                     .frame(width: 150, alignment: .leading)
                 Text("计划档案")
                     .frame(width: 190, alignment: .leading)
-                Text("观察点")
-                    .frame(width: 170, alignment: .leading)
+                Text("操作")
+                    .frame(width: 52, alignment: .trailing)
             }
             .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(AppPalette.muted)
@@ -3123,7 +3324,12 @@ private struct PersonalAssetTable: View {
 }
 
 private struct PersonalAssetTableRow: View {
+    @EnvironmentObject private var model: AppModel
+
     let row: PersonalAssetAggregateRow
+
+    @State private var pendingDeleteScope: PersonalAssetDeleteScope?
+    @State private var pendingUnitAdjustmentMode: PersonalAssetUnitAdjustmentMode?
 
     private var profitTint: Color {
         (row.profitAmount ?? 0) >= 0 ? AppPalette.positive : AppPalette.danger
@@ -3157,6 +3363,9 @@ private struct PersonalAssetTableRow: View {
                     if row.pendingTradeCount > 0, let latest = row.pendingTrades.first?.occurredAt {
                         Text("最新待确认 \(latest)")
                     }
+                    if row.hasDrawdownPlan {
+                        Text("含 \(row.drawdownPlanCount) 条涨跌幅计划")
+                    }
                 }
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
@@ -3173,16 +3382,18 @@ private struct PersonalAssetTableRow: View {
                 Text("今日涨跌 \(signedCurrencyText(row.estimateChangeAmount)) · \(percentOptional(row.estimateChangePct))")
                     .font(.system(size: 10))
                     .foregroundStyle(changeTint)
-                if row.holdingRow != nil {
-                    HStack(spacing: 6) {
-                        Text("现价 \(row.currentPrice.map(decimalText) ?? "—")")
-                        Text("成本 \(row.costPrice.map(decimalText) ?? "—")")
-                    }
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted)
-                }
             }
             .frame(width: 260, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("现价 \(row.currentPrice.map(decimalText) ?? "—")")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                Text("成本 \(row.costPrice.map(decimalText) ?? "—")")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+            }
+            .frame(width: 120, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 4) {
                 if row.pendingTradeCount > 0 {
@@ -3222,24 +3433,278 @@ private struct PersonalAssetTableRow: View {
             }
             .frame(width: 190, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(row.nextExecutionDate ?? (row.hasDrawdownPlan ? "涨跌幅模式" : (row.pendingTrades.first?.status ?? "—")))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(AppPalette.ink)
-                Text(
-                    row.hasDrawdownPlan
-                    ? "含 \(row.drawdownPlanCount) 条涨跌幅计划"
-                    : (row.holdingRow != nil ? "已估值" : "等待估值")
-                )
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted)
+            HStack {
+                Spacer()
+                if hasRowActions {
+                    actionMenu
+                }
             }
-            .frame(width: 170, alignment: .leading)
+            .frame(width: 52, alignment: .trailing)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(AppPalette.card)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .alert(deleteConfirmationTitle, isPresented: deleteConfirmationBinding) {
+            Button("删除", role: .destructive) {
+                if let pendingDeleteScope {
+                    model.deletePersonalAssetEntry(row, scope: pendingDeleteScope)
+                }
+                pendingDeleteScope = nil
+            }
+            Button("取消", role: .cancel) {
+                pendingDeleteScope = nil
+            }
+        } message: {
+            Text(deleteConfirmationMessage)
+        }
+        .sheet(item: $pendingUnitAdjustmentMode) { mode in
+            PersonalAssetUnitAdjustmentSheet(row: row, mode: mode) { unitsText, unitNetValueText in
+                model.adjustPersonalAssetHoldingUnits(
+                    row,
+                    mode: mode,
+                    unitsText: unitsText,
+                    unitNetValueText: unitNetValueText
+                )
+            }
+        }
+    }
+
+    private var deleteConfirmationBinding: Binding<Bool> {
+        Binding(
+            get: { pendingDeleteScope != nil },
+            set: { isPresented in
+                if !isPresented {
+                    pendingDeleteScope = nil
+                }
+            }
+        )
+    }
+
+    private var sourceDeleteScopes: [PersonalAssetDeleteScope] {
+        var scopes: [PersonalAssetDeleteScope] = []
+        if row.rawHolding != nil || row.holdingRow != nil {
+            scopes.append(.holding)
+        }
+        if !row.pendingTrades.isEmpty {
+            scopes.append(.pendingTrades)
+        }
+        if !row.plans.isEmpty {
+            scopes.append(.investmentPlans)
+        }
+        return scopes
+    }
+
+    private var canAddHoldingUnits: Bool {
+        guard let fundCode = row.fundCode else { return false }
+        return !fundCode.isEmpty
+    }
+
+    private var canRemoveHoldingUnits: Bool {
+        (row.holdingUnits ?? 0) > 0 && (row.rawHolding != nil || row.holdingRow != nil)
+    }
+
+    private var hasRowActions: Bool {
+        canAddHoldingUnits || canRemoveHoldingUnits || !sourceDeleteScopes.isEmpty
+    }
+
+    private var actionMenu: some View {
+        Menu {
+            if canAddHoldingUnits {
+                Button {
+                    pendingUnitAdjustmentMode = .add
+                } label: {
+                    Label("添加份额", systemImage: "plus.circle")
+                }
+            }
+
+            if canRemoveHoldingUnits {
+                Button {
+                    pendingUnitAdjustmentMode = .remove
+                } label: {
+                    Label("删除份额", systemImage: "minus.circle")
+                }
+            }
+
+            if (canAddHoldingUnits || canRemoveHoldingUnits) && !sourceDeleteScopes.isEmpty {
+                Divider()
+            }
+
+            ForEach(sourceDeleteScopes) { scope in
+                Button(role: .destructive) {
+                    pendingDeleteScope = scope
+                } label: {
+                    Label(deleteTitle(for: scope), systemImage: deleteIcon(for: scope))
+                }
+            }
+
+            if sourceDeleteScopes.count > 1 {
+                Divider()
+                Button(role: .destructive) {
+                    pendingDeleteScope = .all
+                } label: {
+                    Label(deleteTitle(for: .all), systemImage: deleteIcon(for: .all))
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 12, weight: .semibold))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .foregroundStyle(AppPalette.brand)
+            .frame(width: 42, height: 28)
+            .background(AppPalette.brand.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("调整条目")
+    }
+
+    private var deleteConfirmationTitle: String {
+        guard let pendingDeleteScope else { return "删除条目" }
+        return "\(deleteTitle(for: pendingDeleteScope))？"
+    }
+
+    private var deleteConfirmationMessage: String {
+        guard let pendingDeleteScope else { return "" }
+        let itemText = row.fundCode.map { "\(row.fundName)（\($0)）" } ?? row.fundName
+        return "会从本地保存的数据中删除 \(itemText) 的\(deleteDescription(for: pendingDeleteScope))。这个操作不会影响且慢账户。"
+    }
+
+    private func deleteTitle(for scope: PersonalAssetDeleteScope) -> String {
+        switch scope {
+        case .holding:
+            return "删除已持有"
+        case .pendingTrades:
+            return row.pendingTradeCount > 1 ? "删除买入中 \(row.pendingTradeCount) 条" : "删除买入中"
+        case .investmentPlans:
+            return row.totalPlanCount > 1 ? "删除计划档案 \(row.totalPlanCount) 条" : "删除计划档案"
+        case .all:
+            return "删除整条明细"
+        }
+    }
+
+    private func deleteDescription(for scope: PersonalAssetDeleteScope) -> String {
+        switch scope {
+        case .holding:
+            return "已持有记录"
+        case .pendingTrades:
+            return row.pendingTradeCount > 1 ? "\(row.pendingTradeCount) 条买入中记录" : "买入中记录"
+        case .investmentPlans:
+            return row.totalPlanCount > 1 ? "\(row.totalPlanCount) 条计划档案" : "计划档案"
+        case .all:
+            return "所有本地明细记录"
+        }
+    }
+
+    private func deleteIcon(for scope: PersonalAssetDeleteScope) -> String {
+        switch scope {
+        case .holding:
+            return "briefcase"
+        case .pendingTrades:
+            return "clock"
+        case .investmentPlans:
+            return "calendar"
+        case .all:
+            return "trash"
+        }
+    }
+}
+
+private struct PersonalAssetUnitAdjustmentSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let row: PersonalAssetAggregateRow
+    let mode: PersonalAssetUnitAdjustmentMode
+    let onSubmit: (String, String) -> Bool
+
+    @State private var adjustmentUnitsText: String
+    @State private var adjustmentUnitNetValueText: String
+
+    init(
+        row: PersonalAssetAggregateRow,
+        mode: PersonalAssetUnitAdjustmentMode,
+        onSubmit: @escaping (String, String) -> Bool
+    ) {
+        self.row = row
+        self.mode = mode
+        self.onSubmit = onSubmit
+        _adjustmentUnitsText = State(initialValue: "")
+        _adjustmentUnitNetValueText = State(initialValue: row.currentPrice.map(decimalText) ?? row.costPrice.map(decimalText) ?? "")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: mode == .add ? "plus.circle" : "minus.circle")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(mode == .add ? AppPalette.positive : AppPalette.warning)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(mode == .add ? "添加份额" : "删除份额")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text(row.fundCode.map { "\(row.fundName)（\($0)）" } ?? row.fundName)
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                Spacer()
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                adjustmentField("份额", text: $adjustmentUnitsText, placeholder: "例如 100.00")
+                adjustmentField("单位净值", text: $adjustmentUnitNetValueText, placeholder: "例如 1.2345")
+            }
+
+            if mode == .remove, let holdingUnits = row.holdingUnits {
+                Text("当前份额 \(unitsText(holdingUnits))。删除份额会按填写的单位净值扣减成本金额。")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+            } else {
+                Text("添加份额会用填写的单位净值和现有成本加权重算成本价。")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+            }
+
+            HStack(spacing: 10) {
+                Spacer()
+                Button("取消") {
+                    dismiss()
+                }
+                .buttonStyle(.bordered)
+
+                Button(mode == .add ? "添加" : "删除") {
+                    if onSubmit(adjustmentUnitsText, adjustmentUnitNetValueText) {
+                        dismiss()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(mode == .add ? AppPalette.positive : AppPalette.warning)
+            }
+        }
+        .padding(18)
+        .frame(width: 380)
+    }
+
+    private func adjustmentField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(AppPalette.muted)
+            TextField(placeholder, text: text)
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(AppPalette.cardStrong)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
     }
 }
 
@@ -4182,4 +4647,3 @@ private struct PendingTradeCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
-

@@ -196,6 +196,17 @@ final class QiemanPlatformNativeClient {
         return names
     }
 
+    func resolveAssetName(assetType: PersonalAssetType, code: String) async -> String? {
+        let holding = UserPortfolioHolding(
+            fundCode: code,
+            assetType: assetType,
+            units: 1,
+            costPrice: nil,
+            displayName: nil
+        )
+        return await resolveAssetNames(holdings: [holding])[holding.id]
+    }
+
     func resolveFundNames(fundCodes: [String]) async -> [String: String] {
         let normalizedCodes = Array(Set(fundCodes.map(normalizedString).filter { !$0.isEmpty }))
         guard !normalizedCodes.isEmpty else { return [:] }

@@ -83,6 +83,40 @@ enum PersonalDataImportSource {
     }
 }
 
+enum PersonalAssetDeleteScope: String, CaseIterable, Identifiable {
+    case holding
+    case pendingTrades
+    case investmentPlans
+    case all
+
+    var id: String { rawValue }
+
+    var includesHolding: Bool {
+        self == .holding || self == .all
+    }
+
+    var includesPendingTrades: Bool {
+        self == .pendingTrades || self == .all
+    }
+
+    var includesInvestmentPlans: Bool {
+        self == .investmentPlans || self == .all
+    }
+}
+
+enum PersonalAssetUnitAdjustmentMode: String, Identifiable {
+    case add
+    case remove
+
+    var id: String { rawValue }
+}
+
+struct PersonalAssetCodeResolution: Hashable {
+    let assetType: PersonalAssetType
+    let code: String
+    let displayName: String?
+}
+
 extension PersonalDataImportTarget {
     var prepareTargetValue: String {
         switch self {
@@ -699,9 +733,11 @@ struct PlatformMonthSummary: Identifiable, Hashable {
     }
 }
 
-enum PersonalAssetType: String, Codable, Hashable {
+enum PersonalAssetType: String, Codable, Hashable, Identifiable {
     case fund
     case stock
+
+    var id: String { rawValue }
 
     var displayName: String {
         switch self {

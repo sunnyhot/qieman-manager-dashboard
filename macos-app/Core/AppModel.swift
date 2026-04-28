@@ -471,6 +471,315 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func deletePersonalAssetEntry(_ row: PersonalAssetAggregateRow, scope: PersonalAssetDeleteScope) {
+        let holdingIDs = Set(scope.includesHolding ? [row.rawHolding?.id ?? row.holdingRow?.holding.id].compactMap { $0 } : [])
+        let pendingTradeIDs = Set(scope.includesPendingTrades ? row.pendingTrades.map(\.id) : [])
+        let investmentPlanIDs = Set(scope.includesInvestmentPlans ? row.plans.map(\.id) : [])
+
+        do {
+            var deletedParts: [String] = []
+            var shouldRefreshPortfolio = false
+
+            if !holdingIDs.isEmpty {
+                guard let portfolioFileURL else {
+                    throw LiveRefreshError(message: "应用数据目录还没准备好，暂时无法删除持仓。")
+                }
+
+                let nextHoldings = userPortfolioHoldings.filter { !holdingIDs.contains($0.id) }
+                if nextHoldings.count != userPortfolioHoldings.count {
+                    userPortfolioHoldings = nextHoldings
+                    userPortfolioSnapshot = nil
+                    if nextHoldings.isEmpty {
+                        try portfolioStore.delete(at: portfolioFileURL)
+                    } else {
+                        try portfolioStore.save(nextHoldings, to: portfolioFileURL)
+                        shouldRefreshPortfolio = true
+                    }
+                    deletedParts.append("已持有")
+                }
+            }
+
+            if !pendingTradeIDs.isEmpty {
+                guard let pendingTradeFileURL else {
+                    throw LiveRefreshError(message: "应用数据目录还没准备好，暂时无法删除买入中记录。")
+                }
+
+                let nextTrades = pendingTrades.filter { !pendingTradeIDs.contains($0.id) }
+                let deletedCount = pendingTrades.count - nextTrades.count
+                if deletedCount > 0 {
+                    pendingTrades = nextTrades.sorted { $0.occurredAt > $1.occurredAt }
+                    if pendingTrades.isEmpty {
+                        try pendingTradesStore.delete(at: pendingTradeFileURL)
+                    } else {
+                        try pendingTradesStore.save(pendingTrades, to: pendingTradeFileURL)
+                    }
+                    deletedParts.append("买入中 \(deletedCount) 条")
+                }
+            }
+
+            if !investmentPlanIDs.isEmpty {
+                guard let investmentPlanFileURL else {
+                    throw LiveRefreshError(message: "应用数据目录还没准备好，暂时无法删除定投计划。")
+                }
+
+                let nextPlans = investmentPlans.filter { !investmentPlanIDs.contains($0.id) }
+                let deletedCount = investmentPlans.count - nextPlans.count
+                if deletedCount > 0 {
+                    investmentPlans = nextPlans.sorted(by: sortInvestmentPlans)
+                    if investmentPlans.isEmpty {
+                        try investmentPlansStore.delete(at: investmentPlanFileURL)
+                    } else {
+                        try investmentPlansStore.save(investmentPlans, to: investmentPlanFileURL)
+                    }
+                    deletedParts.append("计划档案 \(deletedCount) 条")
+                }
+            }
+
+            guard !deletedParts.isEmpty else {
+                noticeMessage = "没有找到可删除的本地记录。"
+                return
+            }
+
+            clearCachedComputedProperties()
+            let itemText = row.fundCode.map { "\(row.fundName)（\($0)）" } ?? row.fundName
+            noticeMessage = "已删除 \(itemText) 的\(deletedParts.joined(separator: "、"))记录。"
+
+            if shouldRefreshPortfolio {
+                Task { try? await refreshUserPortfolio(updateNotice: false) }
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    @discardableResult
+    func addPersonalAssetHolding(
+        assetType: PersonalAssetType,
+        codeText: String,
+        unitsText: String,
+        costPriceText: String,
+        displayName: String?
+    ) -> Bool {
+        let fundCode = normalizedManualAssetCode(assetType: assetType, codeText: codeText)
+        guard !fundCode.isEmpty else {
+            errorMessage = "请输入\(assetType.displayName)代码。"
+            return false
+        }
+        guard let units = decimalInputValue(unitsText), units > 0 else {
+            errorMessage = "请输入大于 0 的份额。"
+            return false
+        }
+        guard let costPrice = decimalInputValue(costPriceText), costPrice > 0 else {
+            errorMessage = "请输入大于 0 的成本。"
+            return false
+        }
+        guard let portfolioFileURL else {
+            errorMessage = "应用数据目录还没准备好，暂时无法添加持仓。"
+            return false
+        }
+
+        do {
+            let normalizedDisplayName: String? = {
+                let value = displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                return value.isEmpty ? nil : value
+            }()
+            var nextHoldings = userPortfolioHoldings
+            if let existingIndex = nextHoldings.firstIndex(where: {
+                $0.assetType == assetType && $0.normalizedFundCode.caseInsensitiveCompare(fundCode) == .orderedSame
+            }) {
+                let existing = nextHoldings[existingIndex]
+                let nextUnits = existing.units + units
+                let existingCostPrice = existing.costPrice ?? costPrice
+                let nextCostPrice = ((existing.units * existingCostPrice) + (units * costPrice)) / nextUnits
+                nextHoldings[existingIndex] = UserPortfolioHolding(
+                    id: existing.id,
+                    fundCode: existing.normalizedFundCode,
+                    assetType: existing.assetType,
+                    units: nextUnits,
+                    costPrice: normalizedCostPrice(nextCostPrice),
+                    displayName: normalizedDisplayName ?? existing.normalizedName
+                )
+            } else {
+                nextHoldings.append(
+                    UserPortfolioHolding(
+                        fundCode: fundCode,
+                        assetType: assetType,
+                        units: units,
+                        costPrice: costPrice,
+                        displayName: normalizedDisplayName
+                    )
+                )
+            }
+
+            userPortfolioHoldings = nextHoldings
+            userPortfolioSnapshot = nil
+            clearCachedComputedProperties()
+            try portfolioStore.save(nextHoldings, to: portfolioFileURL)
+
+            let nameText = normalizedDisplayName.map { "\($0)（\(fundCode)）" } ?? fundCode
+            noticeMessage = "已添加\(assetType.displayName) \(nameText)，\(personalAssetDecimalText(units)) 份，成本 \(personalAssetDecimalText(costPrice))。"
+            Task { try? await refreshUserPortfolio(updateNotice: false) }
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    func resolvePersonalAssetCode(_ codeText: String) async -> PersonalAssetCodeResolution? {
+        let rawCode = normalizedManualAssetRawCode(codeText)
+        guard !rawCode.isEmpty else { return nil }
+
+        let fundCode = normalizedManualAssetCode(assetType: .fund, codeText: rawCode)
+        let stockCode = normalizedManualAssetCode(assetType: .stock, codeText: rawCode)
+        guard !fundCode.isEmpty || !stockCode.isEmpty else { return nil }
+
+        if hasExplicitStockMarket(rawCode) {
+            let stockName = stockCode.isEmpty ? nil : await platformClient.resolveAssetName(assetType: .stock, code: stockCode)
+            return PersonalAssetCodeResolution(assetType: .stock, code: stockCode, displayName: normalizedOptionalName(stockName))
+        }
+
+        async let fundNameTask = fundCode.isEmpty ? nil : platformClient.resolveAssetName(assetType: .fund, code: fundCode)
+        async let stockNameTask = stockCode.isEmpty ? nil : platformClient.resolveAssetName(assetType: .stock, code: stockCode)
+        let fundName = normalizedOptionalName(await fundNameTask)
+        let stockName = normalizedOptionalName(await stockNameTask)
+
+        switch (fundName, stockName) {
+        case let (fundName?, nil):
+            return PersonalAssetCodeResolution(assetType: .fund, code: fundCode, displayName: fundName)
+        case let (nil, stockName?):
+            return PersonalAssetCodeResolution(assetType: .stock, code: stockCode, displayName: stockName)
+        case let (fundName?, stockName?):
+            if isLikelyStockCode(stockCode) {
+                return PersonalAssetCodeResolution(assetType: .stock, code: stockCode, displayName: stockName)
+            }
+            return PersonalAssetCodeResolution(assetType: .fund, code: fundCode, displayName: fundName)
+        case (nil, nil):
+            if isLikelyStockCode(stockCode) {
+                return PersonalAssetCodeResolution(assetType: .stock, code: stockCode, displayName: nil)
+            }
+            return PersonalAssetCodeResolution(assetType: .fund, code: fundCode, displayName: nil)
+        }
+    }
+
+    @discardableResult
+    func adjustPersonalAssetHoldingUnits(
+        _ row: PersonalAssetAggregateRow,
+        mode: PersonalAssetUnitAdjustmentMode,
+        unitsText: String,
+        unitNetValueText: String
+    ) -> Bool {
+        guard let units = decimalInputValue(unitsText), units > 0 else {
+            errorMessage = "请输入大于 0 的份额。"
+            return false
+        }
+        guard let unitNetValue = decimalInputValue(unitNetValueText), unitNetValue > 0 else {
+            errorMessage = "请输入大于 0 的单位净值。"
+            return false
+        }
+        guard let portfolioFileURL else {
+            errorMessage = "应用数据目录还没准备好，暂时无法调整持仓份额。"
+            return false
+        }
+
+        do {
+            let existingHolding = row.rawHolding ?? row.holdingRow?.holding
+            let existingIndex = existingHolding.flatMap { holding in
+                userPortfolioHoldings.firstIndex { $0.id == holding.id }
+            }
+            var nextHoldings = userPortfolioHoldings
+
+            switch mode {
+            case .add:
+                if let existingHolding {
+                    let oldUnits = existingHolding.units
+                    let nextUnits = oldUnits + units
+                    let existingCostPrice = existingHolding.costPrice ?? unitNetValue
+                    let nextCostPrice = ((oldUnits * existingCostPrice) + (units * unitNetValue)) / nextUnits
+                    let nextHolding = UserPortfolioHolding(
+                        id: existingHolding.id,
+                        fundCode: existingHolding.normalizedFundCode,
+                        assetType: existingHolding.assetType,
+                        units: nextUnits,
+                        costPrice: normalizedCostPrice(nextCostPrice),
+                        displayName: existingHolding.normalizedName ?? row.fundName
+                    )
+                    if let existingIndex {
+                        nextHoldings[existingIndex] = nextHolding
+                    } else {
+                        nextHoldings.append(nextHolding)
+                    }
+                } else {
+                    guard let fundCode = row.fundCode, !fundCode.isEmpty else {
+                        errorMessage = "这个标的缺少代码，暂时无法新增持仓份额。"
+                        return false
+                    }
+                    nextHoldings.append(
+                        UserPortfolioHolding(
+                            fundCode: fundCode,
+                            assetType: row.assetType,
+                            units: units,
+                            costPrice: unitNetValue,
+                            displayName: row.fundName
+                        )
+                    )
+                }
+
+            case .remove:
+                guard let existingHolding, let existingIndex else {
+                    errorMessage = "这个标的还没有已持有记录，无法删除份额。"
+                    return false
+                }
+                guard units <= existingHolding.units + 0.0000001 else {
+                    errorMessage = "删除份额不能超过当前份额 \(personalAssetDecimalText(existingHolding.units))。"
+                    return false
+                }
+
+                let nextUnits = existingHolding.units - units
+                if nextUnits <= 0.0000001 {
+                    nextHoldings.remove(at: existingIndex)
+                } else {
+                    let nextCostPrice: Double?
+                    if let costPrice = existingHolding.costPrice {
+                        let nextCostValue = (existingHolding.units * costPrice) - (units * unitNetValue)
+                        nextCostPrice = normalizedCostPrice(nextCostValue / nextUnits)
+                    } else {
+                        nextCostPrice = nil
+                    }
+                    nextHoldings[existingIndex] = UserPortfolioHolding(
+                        id: existingHolding.id,
+                        fundCode: existingHolding.normalizedFundCode,
+                        assetType: existingHolding.assetType,
+                        units: nextUnits,
+                        costPrice: nextCostPrice,
+                        displayName: existingHolding.normalizedName ?? row.fundName
+                    )
+                }
+            }
+
+            userPortfolioHoldings = nextHoldings
+            userPortfolioSnapshot = nil
+            clearCachedComputedProperties()
+            if nextHoldings.isEmpty {
+                try portfolioStore.delete(at: portfolioFileURL)
+            } else {
+                try portfolioStore.save(nextHoldings, to: portfolioFileURL)
+            }
+
+            let itemText = row.fundCode.map { "\(row.fundName)（\($0)）" } ?? row.fundName
+            let actionText = mode == .add ? "添加" : "删除"
+            noticeMessage = "已为 \(itemText) \(actionText) \(personalAssetDecimalText(units)) 份，单位净值 \(personalAssetDecimalText(unitNetValue))。"
+
+            if !nextHoldings.isEmpty {
+                Task { try? await refreshUserPortfolio(updateNotice: false) }
+            }
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
     func reloadPortfolioFromDisk() {
         loadSavedPortfolio()
         if userPortfolioHoldings.isEmpty {
@@ -1879,6 +2188,87 @@ final class AppModel: ObservableObject {
     private func normalizedCode(_ value: String?) -> String? {
         let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func normalizedManualAssetRawCode(_ codeText: String) -> String {
+        codeText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: " ", with: "")
+    }
+
+    private func normalizedManualAssetCode(assetType: PersonalAssetType, codeText: String) -> String {
+        let trimmed = normalizedManualAssetRawCode(codeText)
+        guard assetType == .stock else {
+            return trimmed
+        }
+
+        let upper = trimmed.uppercased()
+        if upper.count == 8,
+           (upper.hasPrefix("SH") || upper.hasPrefix("SZ")),
+           CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: String(upper.dropFirst(2)))) {
+            return String(upper.dropFirst(2))
+        }
+        if upper.count == 9,
+           (upper.hasSuffix(".SH") || upper.hasSuffix(".SZ")),
+           CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: String(upper.prefix(6)))) {
+            return String(upper.prefix(6))
+        }
+        return trimmed
+    }
+
+    private func hasExplicitStockMarket(_ codeText: String) -> Bool {
+        let upper = normalizedManualAssetRawCode(codeText).uppercased()
+        return upper.hasPrefix("SH")
+            || upper.hasPrefix("SZ")
+            || upper.hasSuffix(".SH")
+            || upper.hasSuffix(".SZ")
+    }
+
+    private func isLikelyStockCode(_ code: String) -> Bool {
+        let value = normalizedManualAssetRawCode(code)
+        guard value.count == 6, CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: value)) else {
+            return false
+        }
+        return value.hasPrefix("00")
+            || value.hasPrefix("30")
+            || value.hasPrefix("60")
+            || value.hasPrefix("68")
+            || value.hasPrefix("90")
+            || value.hasPrefix("20")
+            || value.hasPrefix("43")
+            || value.hasPrefix("83")
+            || value.hasPrefix("87")
+            || value.hasPrefix("88")
+            || value.hasPrefix("92")
+    }
+
+    private func normalizedOptionalName(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func decimalInputValue(_ text: String) -> Double? {
+        let normalized = text
+            .replacingOccurrences(of: "，", with: ",")
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: "份", with: "")
+            .replacingOccurrences(of: "元", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return Double(normalized)
+    }
+
+    private func normalizedCostPrice(_ value: Double) -> Double {
+        abs(value) < 0.0000001 ? 0 : value
+    }
+
+    private func personalAssetDecimalText(_ value: Double) -> String {
+        let rounded = value.rounded()
+        if abs(value - rounded) < 0.0000001 {
+            return String(format: "%.0f", value)
+        }
+        return String(format: "%.4f", value)
+            .replacingOccurrences(of: #"0+$"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"\.$"#, with: "", options: .regularExpression)
     }
 
     private static let timestampFormatter: DateFormatter = {
