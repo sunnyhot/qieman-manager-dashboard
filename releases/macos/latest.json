@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.1.13",
-  "name": "QiemanDashboard 2.1.13",
-  "body": "交易时间总览改用 Swift Charts 柱状图展示买卖分布，支持 hover 查看详情；总览最近调仓/发言限制 3 条并加查看全部按钮；调仓浏览加分页每页 10 条；打开平台原文移至操作类型 tag 下方。",
+  "tag_name": "v2.2.2",
+  "name": "QiemanDashboard 2.2.2",
+  "body": "资产总览改为按基金/股票汇总卡片展示；移除逐条标的卡片。",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/tree/main/releases/macos",
-  "published_at": "2026-04-27T17:30:00Z",
+  "published_at": "2026-04-28T10:00:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.1.13.zip",
-      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.1.13.zip",
-      "size": 3161675,
+      "name": "QiemanDashboard-2.2.2.zip",
+      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.2.2.zip",
+      "size": 3157831,
       "content_type": "application/zip"
     }
   ]

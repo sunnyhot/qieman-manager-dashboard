@@ -590,7 +590,7 @@ private struct OverviewSectionView: View {
                     }
                 }
 
-                SectionCard(title: "资产总览卡片", subtitle: "按基金汇总「已持有 + 待确认 + 定投档案」", icon: "rectangle.grid.2x2") {
+                SectionCard(title: "资产总览", subtitle: "按类型汇总已持有、待确认、定投计划", icon: "rectangle.grid.2x2") {
                     if model.personalAssetRows.isEmpty {
                         Text("还没有可展示的个人资产。去「我的持仓」里导入持仓、买入中或定投计划后，这里会自动聚合。")
                             .font(.system(size: 12))
@@ -600,15 +600,20 @@ private struct OverviewSectionView: View {
                             .background(AppPalette.card)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                     } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 270), spacing: 12)], spacing: 12) {
-                            ForEach(model.personalAssetRows) { row in
-                                Button {
-                                    openPortfolio()
-                                } label: {
-                                    PersonalAssetOverviewCard(row: row)
-                                }
-                                .buttonStyle(PressResponsiveButtonStyle())
-                                .help("打开我的持仓")
+                        let fundRows = model.personalAssetRows.filter { $0.assetType == .fund }
+                        let stockRows = model.personalAssetRows.filter { $0.assetType == .stock }
+                        HStack(spacing: 12) {
+                            assetTypeSummaryCard(
+                                title: "基金",
+                                rows: fundRows,
+                                tint: AppPalette.brand
+                            )
+                            if !stockRows.isEmpty {
+                                assetTypeSummaryCard(
+                                    title: "股票",
+                                    rows: stockRows,
+                                    tint: AppPalette.info
+                                )
                             }
                         }
                     }
@@ -694,6 +699,76 @@ private struct OverviewSectionView: View {
         withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
             model.selectedSection = .portfolio
         }
+    }
+
+    @ViewBuilder
+    private func assetTypeSummaryCard(title: String, rows: [PersonalAssetAggregateRow], tint: Color) -> some View {
+        let totalMarketValue = rows.compactMap(\.marketValue).reduce(0, +)
+        let totalPending = rows.map(\.pendingCashAmount).reduce(0, +)
+        let totalProfit = rows.compactMap(\.profitAmount).reduce(0, +)
+        let totalChange = rows.compactMap(\.estimateChangeAmount).reduce(0, +)
+        let holdingCount = rows.filter(\.hasHolding).count
+        let pendingCount = rows.filter(\.hasPending).count
+        let planCount = rows.filter { $0.activePlanCount > 0 }.count
+
+        Button { openPortfolio() } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text(title)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                    ToolbarBadge(title: "\(rows.count) 只", tint: tint)
+                    Spacer()
+                    Text(currencyText(totalMarketValue))
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppPalette.ink)
+                }
+
+                let profitTint: Color = totalProfit >= 0 ? AppPalette.positive : AppPalette.danger
+                let changeTint: Color = totalChange >= 0 ? AppPalette.positive : AppPalette.danger
+                HStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("总收益")
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppPalette.muted)
+                        Text(signedCurrencyText(totalProfit))
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(profitTint)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("今日涨跌")
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppPalette.muted)
+                        Text(signedCurrencyText(totalChange))
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(changeTint)
+                    }
+                    if totalPending > 0 {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("待确认")
+                                .font(.system(size: 10))
+                                .foregroundStyle(AppPalette.muted)
+                            Text(currencyText(totalPending))
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundStyle(AppPalette.ink)
+                        }
+                    }
+                }
+
+                HStack(spacing: 10) {
+                    Text("持有 \(holdingCount)")
+                    Text("待确认 \(pendingCount)")
+                    Text("有计划 \(planCount)")
+                }
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.muted)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppPalette.card)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
     }
 
     private func openPlatform(_ action: PlatformActionPayload) {
@@ -1747,20 +1822,20 @@ private struct SettingsSectionView: View {
                     }
                 }
 
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     Image(systemName: "arrow.down.circle")
-                        .font(.system(size: 11))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(AppPalette.brand)
                     Text("当前 \(AppUpdateChecker.bundleVersion)")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(AppPalette.muted)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
                     Spacer()
                     Button(model.isCheckingForUpdates ? "检查更新中…" : "检查更新") {
                         Task { await model.checkForUpdates(userInitiated: true) }
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(AppPalette.brand)
-                    .controlSize(.small)
+                    .controlSize(.regular)
                     .disabled(model.isCheckingForUpdates)
 
                     if model.availableUpdate != nil {
@@ -1768,18 +1843,18 @@ private struct SettingsSectionView: View {
                             Task { await model.downloadAndInstallAvailableUpdate() }
                         }
                         .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .controlSize(.regular)
                         .disabled(model.isInstallingUpdate)
 
                         Button("查看 Release") {
                             model.openAvailableUpdateReleasePage()
                         }
                         .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .controlSize(.regular)
                     }
                 }
                 .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .padding(.vertical, 12)
                 .background(AppPalette.paper.opacity(0.96))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
@@ -2841,14 +2916,6 @@ private struct PersonalAssetBrowser: View {
                     }
                 }
                 .padding(.vertical, 2)
-            }
-
-            HStack(spacing: 10) {
-                StatChip(title: "显示", value: "\(displayedRows.count) / \(rows.count)")
-                StatChip(title: "总收益", value: signedCurrencyText(totalDisplayedProfit))
-                StatChip(title: "今日涨跌", value: signedCurrencyText(totalDisplayedChange))
-                StatChip(title: "待确认", value: totalPendingAmount > 0 ? currencyText(totalPendingAmount) : "—")
-                StatChip(title: "涨跌幅模式", value: "\(drawdownFundCount)")
             }
 
             if displayedRows.isEmpty {
