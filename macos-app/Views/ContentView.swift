@@ -1447,7 +1447,7 @@ private struct PortfolioSectionView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            LazyVStack(alignment: .leading, spacing: 16) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
                     MetricCard(
                         title: "总持仓",
@@ -1514,9 +1514,7 @@ private struct PortfolioSectionView: View {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(hasAnyPersonalData ? AppPalette.positive : AppPalette.warning)
                     Button("打开设置") {
-                        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
-                            model.selectedSection = .settings
-                        }
+                        model.selectedSection = .settings
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(AppPalette.brand)
@@ -1549,7 +1547,7 @@ private struct PortfolioSectionView: View {
                                 }
                             }
 
-                            VStack(spacing: 10) {
+                            LazyVStack(spacing: 10) {
                                 ForEach(model.pendingTrades) { trade in
                                     PendingTradeCard(trade: trade)
                                 }
