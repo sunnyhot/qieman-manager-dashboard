@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.3",
-  "name": "QiemanDashboard 2.2.3",
-  "body": "移除历史结果读取能力：原生 App 删除历史结果入口，本地浏览器看板只保留实时刷新，打包产物不再内置旧结果备份；Agent 脚本删除本地结果索引/读取命令，信号提取改为显式 JSON 文件输入。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.3",
-  "published_at": "2026-04-28T07:16:19Z",
+  "tag_name": "v2.2.4",
+  "name": "QiemanDashboard 2.2.4",
+  "body": "优化我的持仓明细：新增单按钮添加持仓并按代码自动判断基金/股票、实时识别名称；支持按条目添加/删除份额并更新成本，支持删除已持有/买入中/计划档案记录；精简明细表列布局，新增独立现价/成本列和最右侧操作列。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.4",
+  "published_at": "2026-04-28T08:05:24Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.3.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.3/QiemanDashboard-2.2.3.zip",
-      "size": 3001182,
+      "name": "QiemanDashboard-2.2.4.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.4/QiemanDashboard-2.2.4.zip",
+      "size": 3071408,
       "content_type": "application/zip"
     }
   ]
