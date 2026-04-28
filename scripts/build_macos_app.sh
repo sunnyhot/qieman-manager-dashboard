@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="${APP_NAME:-QiemanDashboard}"
 APP_DISPLAY_NAME="${APP_DISPLAY_NAME:-且慢主理人}"
-APP_VERSION="${APP_VERSION:-2.1.13}"
+APP_VERSION="${APP_VERSION:-2.2.3}"
 APP_BUILD="${APP_BUILD:-$(date +%Y%m%d%H%M)}"
 BUNDLE_ID="${BUNDLE_ID:-com.sunnyhot.qieman.manager.dashboard}"
 MIN_MACOS_VERSION="${MIN_MACOS_VERSION:-14.0}"
@@ -103,11 +103,6 @@ cp "$ROOT_DIR/qieman_scraper.py" "$PAYLOAD_DIR/"
 cp "$ROOT_DIR/README.md" "$PAYLOAD_DIR/"
 cp -R "$ROOT_DIR/scripts" "$PAYLOAD_DIR/"
 cp -R "$ROOT_DIR/skills" "$PAYLOAD_DIR/"
-if [ -d "$ROOT_DIR/output" ]; then
-  rsync -a \
-    --exclude 'watch-state-*' \
-    "$ROOT_DIR/output/" "$PAYLOAD_DIR/output/"
-fi
 
 cat > "$PAYLOAD_DIR/APP_BUNDLE_README.txt" <<'TXT'
 This app bundle contains a copy of the Python project files.
@@ -117,8 +112,6 @@ Runtime data location:
 
 Put your login cookie here if needed:
 ~/Library/Application Support/QiemanDashboard/qieman.cookie
-
-The bundled app also ships with snapshot backups from the legacy web dashboard.
 TXT
 
 echo "[6/8] 进行 Bundle 签名"

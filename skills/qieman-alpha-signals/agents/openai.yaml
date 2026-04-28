@@ -1,4 +1,4 @@
 interface:
   display_name: "Qieman Alpha Signals"
   short_description: "Atomic Qieman commands for runtime, data, valuation, and signals"
-  default_prompt: "Use $qieman-alpha-signals and prefer atomic scripts for one-click project runtime, incremental watch alerts (new trades/posts), auth status, context lists, speech feeds, comments, platform actions/holdings/timelines, valuations, snapshots, and signal extraction for OpenClaw or Hermes."
+  default_prompt: "Use $qieman-alpha-signals and prefer atomic scripts for one-click project runtime, incremental watch alerts (new trades/posts), auth status, context lists, speech feeds, comments, platform actions/holdings/timelines, valuations, and JSON-based signal extraction for OpenClaw or Hermes."

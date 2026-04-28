@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.0",
-  "name": "QiemanDashboard 2.2.0",
-  "body": "支持港股和美股行情查询：5位数字代码自动识别港股（如 00700），字母代码识别美股（如 AAPL）；持仓显示对应币种（HK$/$）和市场标签；Tencent API 多市场行情支持，美股自动尝试 .O/.N/.A 后缀。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/tree/main/releases/macos",
-  "published_at": "2026-04-27T18:45:00Z",
+  "tag_name": "v2.2.3",
+  "name": "QiemanDashboard 2.2.3",
+  "body": "移除历史结果读取能力：原生 App 删除历史结果入口，本地浏览器看板只保留实时刷新，打包产物不再内置旧结果备份；Agent 脚本删除本地结果索引/读取命令，信号提取改为显式 JSON 文件输入。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.3",
+  "published_at": "2026-04-28T07:16:19Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.0.zip",
-      "browser_download_url": "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/releases/macos/QiemanDashboard-2.2.0.zip",
-      "size": 3435101,
+      "name": "QiemanDashboard-2.2.3.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.3/QiemanDashboard-2.2.3.zip",
+      "size": 3001182,
       "content_type": "application/zip"
     }
   ]

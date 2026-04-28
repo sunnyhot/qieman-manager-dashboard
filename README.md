@@ -9,7 +9,7 @@
 1. **原生 macOS App**
    - SwiftUI 原生界面
    - 原生登录窗口，自动抓取并保存且慢登录态
-   - 原生“我的持仓 / 平台调仓 / 论坛发言 / 历史快照”
+   - 原生“我的持仓 / 平台调仓 / 论坛发言”
    - 菜单栏弹框显示个人持仓的实时估值、今日涨跌、总收益，并支持排序
    - 关闭主窗口后可只保留菜单栏，支持开机自启
    - 可定时巡检主理人调仓和发言，并通过系统通知推送，点击通知可直接跳到对应详情
@@ -25,7 +25,7 @@
 
 4. **给 OpenClaw / Hermes / Codex 的技能层**
    - `skills/qieman-alpha-signals/` 提供原子化脚本能力
-   - 支持一键拉起整个项目、增量监听新调仓/新发言、估值查询、调仓时间线、快照读取、信号提取等
+   - 支持一键拉起整个项目、增量监听新调仓/新发言、估值查询、调仓时间线、信号提取等
 
 ## 现在能做什么
 
@@ -89,7 +89,7 @@
 ├── macos-app/                           # 原生 macOS App（SwiftUI）
 ├── scripts/                             # 打包、导入、辅助脚本
 ├── skills/qieman-alpha-signals/         # 给 Agent 用的原子能力 skill
-├── output/                              # 本地快照与历史抓取结果
+├── output/                              # 本地运行数据与抓取输出
 ├── qieman.cookie                        # 本地登录态（不要提交）
 └── README.md
 ```
@@ -126,7 +126,7 @@ bash scripts/build_macos_app.sh
 ### 产物
 
 - App Bundle：`dist/macos-app/QiemanDashboard.app`
-- 分发压缩包：`dist/macos-app/QiemanDashboard-2.1.6.zip`
+- 分发压缩包：`dist/macos-app/QiemanDashboard-2.2.3.zip`
 
 ### 运行
 
@@ -145,7 +145,7 @@ open dist/macos-app/QiemanDashboard.app
 ### 自定义构建参数
 
 ```bash
-APP_VERSION=2.1.6 \
+APP_VERSION=2.2.3 \
 APP_BUILD=210 \
 BUNDLE_ID=com.sunnyhot.qieman.manager.dashboard \
 MIN_MACOS_VERSION=14.0 \
@@ -163,11 +163,11 @@ https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/main/release
 发布新版本时：
 
 ```bash
-APP_VERSION=2.1.6 bash scripts/build_macos_app.sh
-cp dist/macos-app/QiemanDashboard-2.1.6.zip releases/macos/
+APP_VERSION=2.2.3 bash scripts/build_macos_app.sh
+cp dist/macos-app/QiemanDashboard-2.2.3.zip releases/macos/
 # 同步更新 releases/macos/latest.json 里的 tag_name、资源 URL 和 size
-git add releases/macos/latest.json releases/macos/QiemanDashboard-2.1.6.zip
-git commit -m "Publish QiemanDashboard 2.1.6"
+git add releases/macos/latest.json releases/macos/QiemanDashboard-2.2.3.zip
+git commit -m "Publish QiemanDashboard 2.2.3"
 git push
 ```
 
@@ -464,7 +464,6 @@ python3 skills/qieman-alpha-signals/scripts/updates_watch.py \
 - 调仓时间线
 - 月度交易概览
 - 估值查询
-- 快照索引 / 快照读取
 - 信号提取
 - 增量巡检
 - 一键拉起整个项目
@@ -483,7 +482,7 @@ python3 skills/qieman-alpha-signals/scripts/project_runtime.py --open-browser --
 
 ### 仓库里的本地输出
 
-- `output/`：主理人抓取结果、历史快照、监控状态文件
+- `output/`：主理人抓取结果、监控状态文件
 
 ### App 运行时数据目录
 

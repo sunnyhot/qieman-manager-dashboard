@@ -1,50 +1,8 @@
 import Foundation
 
 struct NativeSnapshotStore {
-    func loadHistory(from outputDirectory: URL) throws -> [SnapshotPayload] {
-        try sortedJSONFiles(in: outputDirectory).compactMap { fileURL in
-            try? loadNormalizedSnapshot(fileURL: fileURL, includeRecords: false)
-        }
-    }
-
-    func preferredSnapshot(from history: [SnapshotPayload], preferPosts: Bool = true) -> SnapshotPayload? {
-        if preferPosts, let posts = history.first(where: { $0.snapshotType == "posts" }) {
-            return posts
-        }
-        return history.first
-    }
-
-    func loadSnapshot(named fileName: String, from outputDirectory: URL) throws -> SnapshotPayload {
-        let safeName = URL(fileURLWithPath: fileName).lastPathComponent
-        let targetURL = outputDirectory.appendingPathComponent(safeName, isDirectory: false)
-        return try loadNormalizedSnapshot(fileURL: targetURL, includeRecords: true)
-    }
-
     func snapshot(from raw: Any, fileURL: URL, createdAt: String? = nil, includeRecords: Bool, persisted: Bool) -> SnapshotPayload {
         normalizeSnapshot(raw: raw, fileURL: fileURL, createdAt: createdAt ?? formatNow(), includeRecords: includeRecords, persisted: persisted)
-    }
-
-    private func sortedJSONFiles(in directory: URL) throws -> [URL] {
-        let fileURLs = try FileManager.default.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: [.contentModificationDateKey, .isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        )
-        return fileURLs
-            .filter { $0.pathExtension.lowercased() == "json" }
-            .sorted { lhs, rhs in
-                modificationDate(of: lhs) > modificationDate(of: rhs)
-            }
-    }
-
-    private func modificationDate(of fileURL: URL) -> Date {
-        let values = try? fileURL.resourceValues(forKeys: [.contentModificationDateKey])
-        return values?.contentModificationDate ?? .distantPast
-    }
-
-    private func loadNormalizedSnapshot(fileURL: URL, includeRecords: Bool) throws -> SnapshotPayload {
-        let raw = try loadJSON(fileURL: fileURL)
-        return normalizeSnapshot(raw: raw, fileURL: fileURL, createdAt: formatFileTime(fileURL), includeRecords: includeRecords, persisted: true)
     }
 
     private func normalizeSnapshot(raw: Any, fileURL: URL, createdAt: String, includeRecords: Bool, persisted: Bool) -> SnapshotPayload {
@@ -237,11 +195,6 @@ struct NativeSnapshotStore {
         )
     }
 
-    private func loadJSON(fileURL: URL) throws -> Any {
-        let data = try Data(contentsOf: fileURL)
-        return try JSONSerialization.jsonObject(with: data)
-    }
-
     private func normalizePostRecords(_ records: [[String: Any]]) -> [SnapshotRecordPayload] {
         records.map(buildRecord).sorted {
             normalizedString($0.createdAt) > normalizedString($1.createdAt)
@@ -350,14 +303,6 @@ struct NativeSnapshotStore {
             return parts.dropLast(1).joined(separator: "-").isEmpty ? stem : parts.dropLast(1).joined(separator: "-")
         }
         return stem
-    }
-
-    private func formatFileTime(_ fileURL: URL) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        return formatter.string(from: modificationDate(of: fileURL))
     }
 
     private func formatNow() -> String {

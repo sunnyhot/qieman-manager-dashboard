@@ -41,13 +41,11 @@
 |---|---|---|
 | `updates_watch.py` | Watch new platform actions and new forum posts with local dedup state | `--prod-code LONG_WIN --manager-name "ETF拯救世界" --forum-mode auto --json` |
 
-## Snapshot and Signal Processing
+## Signal Processing
 
 | Script | Purpose | Typical Args |
 |---|---|---|
-| `snapshot_index.py` | List local snapshots in `output/` | `--limit 30 --json` |
-| `snapshot_read.py` | Read one snapshot metadata + preview records | `--latest --preview 10 --json` |
-| `signal_extract.py` | Extract high-confidence buy/sell signals from snapshot/JSON | `--latest --json` |
+| `signal_extract.py` | Extract high-confidence buy/sell signals from a JSON file | `--json-path /path/to/posts.json --json` |
 
 ## Compatibility Wrapper
 
@@ -70,6 +68,5 @@ python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/manager_launch.
 python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/platform_monthly_overview_query.py --prod-code LONG_WIN --months 12 --json
 python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/updates_watch.py --prod-code LONG_WIN --manager-name "ETF拯救世界" --forum-mode auto --json
 python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/platform_holdings_query.py --prod-code LONG_WIN --json
-python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/snapshot_index.py --search ETF拯救世界 --json
-python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/signal_extract.py --latest --json
+python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/signal_extract.py --json-path /path/to/posts.json --json
 ```
