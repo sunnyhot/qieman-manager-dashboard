@@ -45,9 +45,8 @@ struct PersonalAssetOverviewCard: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 3) {
                     Text(currencyText(row.effectiveHoldingAmount))
-                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(AppPalette.ink)
-                        .monospacedDigit()
                     Text("总持仓")
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
@@ -422,9 +421,8 @@ struct AssetMiniStat: View {
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
             Text(value)
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(tint)
-                .monospacedDigit()
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)

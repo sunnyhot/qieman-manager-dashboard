@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.3.0",
-  "name": "QiemanDashboard 2.3.0",
-  "body": "深色金融终端重设计：深海蓝黑色板 + 电子青品牌色 + 等宽数字字体 + 发光边线 + 玻璃卡片。Bloomberg/TradingView 风格高对比度数据展示。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.0",
-  "published_at": "2026-04-28T14:00:00Z",
+  "tag_name": "v2.2.8",
+  "name": "QiemanDashboard 2.2.8",
+  "body": "UI 质量优化：全面消除两步 clipShape GPU mask 操作，统一为单步 background(in:)；移除按钮阴影提升滚动流畅度；SectionCard 去除 AnyView 类型擦除；统一空状态组件；替换系统语义色为 AppPalette.muted；长文本补 lineLimit；清理重复类型定义，ContentView 从 4289 行精简到 525 行。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.8",
+  "published_at": "2026-04-28T12:00:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.3.0.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.0/QiemanDashboard-2.3.0.zip",
-      "size": 3163313,
+      "name": "QiemanDashboard-2.2.8.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.8/QiemanDashboard-2.2.8.zip",
+      "size": 3165535,
       "content_type": "application/zip"
     }
   ]

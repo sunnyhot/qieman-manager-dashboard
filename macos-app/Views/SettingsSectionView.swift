@@ -182,9 +182,8 @@ struct SettingsSectionView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 10) {
                             Text(AppUpdateChecker.bundleVersion)
-                                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
                                 .foregroundStyle(AppPalette.ink)
-                                .monospacedDigit()
                             Spacer()
                             Button(model.isCheckingForUpdates ? "检查更新中…" : "检查更新") {
                                 Task { await model.checkForUpdates(userInitiated: true) }

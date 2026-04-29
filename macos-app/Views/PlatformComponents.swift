@@ -443,7 +443,7 @@ struct HoldingCard: View {
     private var trailingSummary: some View {
         VStack(alignment: .trailing, spacing: 3) {
             Text("\(holding.currentUnits ?? 0) 份")
-                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(AppPalette.ink)
                 .monospacedDigit()
                 .lineLimit(1)
@@ -611,7 +611,7 @@ struct PlatformHoldingsPieChart: View {
 
             VStack(spacing: 1) {
                 Text("\(totalUnits)")
-                    .font(.system(size: 24, weight: .bold, design: .monospaced))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(AppPalette.ink)
                 Text("当前份数")
@@ -763,7 +763,7 @@ struct PlatformMonthlyOverview: View {
 
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("\(totalCount)")
-                    .font(.system(size: 34, weight: .bold, design: .monospaced))
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(AppPalette.ink)
                 Text("笔")
@@ -877,7 +877,7 @@ struct PlatformMonthlyOverview: View {
         .chartYAxis {
             AxisMarks(position: .leading) { _ in
                 AxisValueLabel()
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 9, design: .rounded))
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                     .foregroundStyle(AppPalette.line.opacity(0.4))
             }
