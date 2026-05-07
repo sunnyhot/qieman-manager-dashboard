@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.15",
-  "name": "QiemanDashboard 2.2.15",
-  "body": "优化我的持仓页面滚动稳定性，减少嵌套滚动和 Lazy 容器导致的滑动抖动。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.15",
-  "published_at": "2026-05-07T12:46:33Z",
+  "tag_name": "v2.2.16",
+  "name": "QiemanDashboard 2.2.16",
+  "body": "优化总览页通栏宽度和指标卡对齐；修正月度调仓图表跨年份同月份合并和时间顺序问题。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.16",
+  "published_at": "2026-05-07T13:18:06Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.15.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.15/QiemanDashboard-2.2.15.zip",
-      "size": 3238405,
+      "name": "QiemanDashboard-2.2.16.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.16/QiemanDashboard-2.2.16.zip",
+      "size": 3240333,
       "content_type": "application/zip"
     }
   ]

@@ -828,14 +828,14 @@ struct PlatformMonthlyOverview: View {
         Chart {
             ForEach(months) { month in
                 BarMark(
-                    x: .value("月", String(month.month.suffix(2))),
+                    x: .value("月", month.month),
                     y: .value("买入", month.buyCount)
                 )
                 .foregroundStyle(AppPalette.positive)
                 .position(by: .value("类型", "买入"))
 
                 BarMark(
-                    x: .value("月", String(month.month.suffix(2))),
+                    x: .value("月", month.month),
                     y: .value("卖出", month.sellCount)
                 )
                 .foregroundStyle(AppPalette.warning)
@@ -843,7 +843,7 @@ struct PlatformMonthlyOverview: View {
             }
 
             if let selectedMonth {
-                RuleMark(x: .value("月", String(selectedMonth.month.suffix(2))))
+                RuleMark(x: .value("月", selectedMonth.month))
                     .foregroundStyle(AppPalette.line.opacity(0.5))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
             }
@@ -866,7 +866,7 @@ struct PlatformMonthlyOverview: View {
                             }
                             hoverLocation = location
                             if let xVal: String = proxy.value(atX: relX) {
-                                selectedMonth = months.first { String($0.month.suffix(2)) == xVal }
+                                selectedMonth = months.first { $0.month == xVal }
                             }
                         case .ended:
                             selectedMonth = nil
@@ -883,12 +883,28 @@ struct PlatformMonthlyOverview: View {
             }
         }
         .chartXAxis {
-            AxisMarks { _ in
-                AxisValueLabel()
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(AppPalette.muted)
+            AxisMarks(values: months.map(\.month)) { value in
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                    .foregroundStyle(AppPalette.line.opacity(0.22))
+                if let month = value.as(String.self) {
+                    AxisValueLabel {
+                        Text(monthAxisLabel(month))
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(AppPalette.muted)
+                    }
+                }
             }
         }
+    }
+
+    private func monthAxisLabel(_ month: String) -> String {
+        guard month.count >= 7 else { return month }
+        let year = String(month.prefix(4).suffix(2))
+        let monthNumber = String(month.suffix(2))
+        let hasRepeatedMonth = months.contains { other in
+            other.month != month && other.month.hasSuffix("-\(monthNumber)")
+        }
+        return hasRepeatedMonth ? "\(year)-\(monthNumber)" : monthNumber
     }
 
     private var chartTooltip: some View {

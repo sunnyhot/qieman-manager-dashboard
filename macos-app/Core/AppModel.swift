@@ -1755,19 +1755,20 @@ final class AppModel: ObservableObject {
         for action in actions {
             let rawDate = action.txnDate ?? action.createdAt ?? ""
             guard rawDate.count >= 10 else { continue }
+            guard let direction = platformActionDirection(action) else { continue }
             let month = String(rawDate.prefix(7))
             let day = String(rawDate.prefix(10))
             var bucket = buckets[month] ?? (0, 0, [])
-            if action.side == "buy" {
+            if direction == .buy {
                 bucket.buy += 1
-            } else if action.side == "sell" {
+            } else {
                 bucket.sell += 1
             }
             bucket.days.insert(day)
             buckets[month] = bucket
         }
 
-        let result = buckets
+        let latestMonths = buckets
             .map { month, bucket in
                 PlatformMonthSummary(
                     month: month,
@@ -1780,8 +1781,36 @@ final class AppModel: ObservableObject {
             .sorted(by: { $0.month > $1.month })
             .prefix(12)
             .map { $0 }
+        let result = latestMonths.sorted(by: { $0.month < $1.month })
         _cachedMonthlyPlatformSummary = result
         return result
+    }
+
+    private enum PlatformActionDirection {
+        case buy
+        case sell
+    }
+
+    private func platformActionDirection(_ action: PlatformActionPayload) -> PlatformActionDirection? {
+        let candidates = [
+            action.side,
+            action.action,
+            action.actionTitle,
+            action.title,
+        ]
+        for candidate in candidates {
+            let value = candidate?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased() ?? ""
+            guard !value.isEmpty else { continue }
+            if value == "buy" || value.contains("买") || value.contains("申购") {
+                return .buy
+            }
+            if value == "sell" || value.contains("卖") || value.contains("赎回") {
+                return .sell
+            }
+        }
+        return nil
     }
 
     var pendingTradeSummary: PersonalPendingTradeSummary? {

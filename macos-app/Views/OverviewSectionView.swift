@@ -27,8 +27,8 @@ struct OverviewSectionView: View {
             VStack(alignment: .leading, spacing: 16) {
                 OverviewHeroCard()
 
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) {
+                ViewThatFits {
+                    LazyVGrid(columns: overviewMetricWideColumns, spacing: 12) {
                         overviewJumpMetricCards
                     }
 
@@ -139,6 +139,10 @@ struct OverviewSectionView: View {
         withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
             model.selectedSection = .portfolio
         }
+    }
+
+    private var overviewMetricWideColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 220), spacing: 12), count: 4)
     }
 
     @ViewBuilder
@@ -369,6 +373,7 @@ struct OverviewHeroCard: View {
                 heroSummaryCard(fixedWidth: nil)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
         .background(AppPalette.heroGradient, in: RoundedRectangle(cornerRadius: 22))
         .overlay(
