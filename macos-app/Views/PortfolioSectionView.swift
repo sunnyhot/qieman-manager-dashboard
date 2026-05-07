@@ -60,8 +60,8 @@ struct PortfolioSectionView: View {
     }
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
+        ScrollView(.vertical) {
+            VStack(alignment: .leading, spacing: 16) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
                     MetricCard(
                         title: "总持仓",
@@ -170,7 +170,7 @@ struct PortfolioSectionView: View {
                                 }
                             }
 
-                            LazyVStack(spacing: 10) {
+                            VStack(spacing: 10) {
                                 ForEach(model.pendingTrades) { trade in
                                     PendingTradeCard(
                                         trade: trade,

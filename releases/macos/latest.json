@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.14",
-  "name": "QiemanDashboard 2.2.14",
-  "body": "修复 519xxx 场外基金误识别为场内基金的问题；持有份额列改为千分位数字展示并去掉单位。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.14",
-  "published_at": "2026-05-07T12:21:05Z",
+  "tag_name": "v2.2.15",
+  "name": "QiemanDashboard 2.2.15",
+  "body": "优化我的持仓页面滚动稳定性，减少嵌套滚动和 Lazy 容器导致的滑动抖动。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.15",
+  "published_at": "2026-05-07T12:46:33Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.14.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.14/QiemanDashboard-2.2.14.zip",
-      "size": 3237444,
+      "name": "QiemanDashboard-2.2.15.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.15/QiemanDashboard-2.2.15.zip",
+      "size": 3238405,
       "content_type": "application/zip"
     }
   ]

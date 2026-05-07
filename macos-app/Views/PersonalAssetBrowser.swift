@@ -70,8 +70,15 @@ struct PersonalAssetBrowser: View {
                 .menuStyle(.borderlessButton)
             }
 
-            ScrollView(.horizontal, showsIndicators: false) {
+            ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) {
+                    ForEach(PersonalAssetFilterScope.allCases) { scope in
+                        filterChip(scope: scope, counts: presentation.filterCounts)
+                    }
+                }
+                .padding(.vertical, 2)
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], alignment: .leading, spacing: 8) {
                     ForEach(PersonalAssetFilterScope.allCases) { scope in
                         filterChip(scope: scope, counts: presentation.filterCounts)
                     }
@@ -322,7 +329,7 @@ struct PersonalAssetTable: View {
             .padding(.vertical, 8)
             .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
 
-            LazyVStack(spacing: 8) {
+            VStack(spacing: 8) {
                 ForEach(rows) { row in
                     PersonalAssetTableRow(row: row)
                 }
