@@ -108,8 +108,12 @@ final class QiemanPlatformNativeClient {
             )
         }
 
-        let fundCodes = Array(Set(normalizedHoldings.filter { $0.assetType == .fund }.map(\.normalizedFundCode)))
-        let stockCodes = Array(Set(normalizedHoldings.filter { $0.assetType == .stock }.map(\.normalizedFundCode)))
+        let fundCodes = Array(Set(normalizedHoldings.filter {
+            $0.assetType == .fund && $0.detectedFundMarket != .onExchange
+        }.map(\.normalizedFundCode)))
+        let stockCodes = Array(Set(normalizedHoldings.filter {
+            $0.assetType == .stock || ($0.assetType == .fund && $0.detectedFundMarket == .onExchange)
+        }.map(\.normalizedFundCode)))
         async let stockQuotesTask = preloadStockQuotes(stockCodes)
         let histories = await preloadHistories(fundCodes)
         let quotes = await preloadQuotes(fundCodes, histories: histories)
@@ -176,8 +180,12 @@ final class QiemanPlatformNativeClient {
     }
 
     func resolveAssetNames(holdings: [UserPortfolioHolding]) async -> [UUID: String] {
-        let fundCodes = Array(Set(holdings.filter { $0.assetType == .fund }.map(\.normalizedFundCode).filter { !$0.isEmpty }))
-        let stockCodes = Array(Set(holdings.filter { $0.assetType == .stock }.map(\.normalizedFundCode).filter { !$0.isEmpty }))
+        let fundCodes = Array(Set(holdings.filter {
+            $0.assetType == .fund && $0.detectedFundMarket != .onExchange
+        }.map(\.normalizedFundCode).filter { !$0.isEmpty }))
+        let stockCodes = Array(Set(holdings.filter {
+            $0.assetType == .stock || ($0.assetType == .fund && $0.detectedFundMarket == .onExchange)
+        }.map(\.normalizedFundCode).filter { !$0.isEmpty }))
 
         async let fundNamesByCodeTask = resolveFundNames(fundCodes: fundCodes)
         async let stockQuotesTask = preloadStockQuotes(stockCodes)
@@ -188,7 +196,11 @@ final class QiemanPlatformNativeClient {
         for holding in holdings {
             switch holding.assetType {
             case .fund:
-                if let name = fundNamesByCode[holding.normalizedFundCode], !name.isEmpty {
+                if holding.detectedFundMarket == .onExchange,
+                   let name = stockQuotes[holding.normalizedFundCode]?.stockName,
+                   !name.isEmpty {
+                    names[holding.id] = name
+                } else if let name = fundNamesByCode[holding.normalizedFundCode], !name.isEmpty {
                     names[holding.id] = name
                 }
             case .stock:
@@ -239,6 +251,18 @@ final class QiemanPlatformNativeClient {
     ) -> NativeUserPortfolioPricePayload {
         switch holding.assetType {
         case .fund:
+            if holding.detectedFundMarket == .onExchange {
+                let quote = stockQuotes[holding.normalizedFundCode]
+                return NativeUserPortfolioPricePayload(
+                    assetName: quote?.stockName ?? "",
+                    currentPrice: (quote?.price ?? 0) > 0 ? quote?.price : nil,
+                    priceTime: quote?.priceTime ?? "",
+                    priceSource: quote?.priceSourceLabel ?? "",
+                    officialNav: (quote?.previousClose ?? 0) > 0 ? quote?.previousClose : nil,
+                    officialNavDate: quote?.priceTime ?? "",
+                    estimateChangePct: quote?.changePct
+                )
+            }
             let history = histories[holding.normalizedFundCode]
             let quote = quotes[holding.normalizedFundCode]
             let latestNav = history?.series.last
@@ -723,20 +747,36 @@ final class QiemanPlatformNativeClient {
 
         if let payloadText = firstMatch(in: text, pattern: #"jsonpgz\((\{[\s\S]*\})\);"#),
            let data = payloadText.data(using: .utf8),
-           let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let estimatePrice = doubleValue(object["gsz"]),
-           estimatePrice > 0 {
-            return NativeFundQuote(
-                fundCode: fundCode,
-                fundName: normalizedString(object["name"]),
-                price: estimatePrice,
-                priceTime: normalizedString(object["gztime"]),
-                priceSource: "estimate",
-                priceSourceLabel: "盘中估值",
-                officialNav: doubleValue(object["dwjz"]),
-                officialNavDate: normalizedString(object["jzrq"]),
-                estimateChangePct: doubleValue(object["gszzl"])
-            )
+           let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let officialNav = doubleValue(object["dwjz"])
+            let officialNavDate = normalizedString(object["jzrq"])
+            if let officialNav, officialNav > 0 {
+                return NativeFundQuote(
+                    fundCode: fundCode,
+                    fundName: normalizedString(object["name"]),
+                    price: officialNav,
+                    priceTime: officialNavDate,
+                    priceSource: "official_nav",
+                    priceSourceLabel: "最新净值",
+                    officialNav: officialNav,
+                    officialNavDate: officialNavDate,
+                    estimateChangePct: nil
+                )
+            }
+
+            if let estimatePrice = doubleValue(object["gsz"]), estimatePrice > 0 {
+                return NativeFundQuote(
+                    fundCode: fundCode,
+                    fundName: normalizedString(object["name"]),
+                    price: estimatePrice,
+                    priceTime: normalizedString(object["gztime"]),
+                    priceSource: "estimate",
+                    priceSourceLabel: "盘中估值",
+                    officialNav: nil,
+                    officialNavDate: "",
+                    estimateChangePct: doubleValue(object["gszzl"])
+                )
+            }
         }
 
         if let latest = history?.series.last {
@@ -1029,7 +1069,7 @@ final class QiemanPlatformNativeClient {
         guard code.count == 6, CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: code)) else {
             return nil
         }
-        if code.hasPrefix("6") || code.hasPrefix("9") {
+        if code.hasPrefix("5") || code.hasPrefix("6") || code.hasPrefix("9") {
             return "1.\(code)"
         }
         return "0.\(code)"
@@ -1042,7 +1082,7 @@ final class QiemanPlatformNativeClient {
         switch resolvedMarket {
         case .aShare:
             guard code.count == 6, code.allSatisfy(\.isNumber) else { return nil }
-            if code.hasPrefix("6") || code.hasPrefix("9") {
+            if code.hasPrefix("5") || code.hasPrefix("6") || code.hasPrefix("9") {
                 return "sh\(code)"
             }
             if code.hasPrefix("4") || code.hasPrefix("8") {
