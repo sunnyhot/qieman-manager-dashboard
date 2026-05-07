@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.9",
-  "name": "QiemanDashboard 2.2.9",
-  "body": "设置页精简为账号、巡检、版本三项，账号与主理人提醒改为点击后展开；论坛发言页默认选中最新一条；我的持仓支持买入中与计划档案增删改，并自动识别场内/场外基金、A 股、美股和港股；移除导入中心入口，优化聚合与行情查询性能。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.9",
-  "published_at": "2026-05-07T07:27:27Z",
+  "tag_name": "v2.2.10",
+  "name": "QiemanDashboard 2.2.10",
+  "body": "设置页避免重复显示当前版本；我的持仓新增场内基金独立分组，添加持仓时优化场内/场外基金识别，避免 163402 等场外基金误判，并移除条目里的基金/股票大类标签。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.10",
+  "published_at": "2026-05-07T09:32:10Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.9.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.9/QiemanDashboard-2.2.9.zip",
-      "size": 3203955,
+      "name": "QiemanDashboard-2.2.10.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.10/QiemanDashboard-2.2.10.zip",
+      "size": 3176244,
       "content_type": "application/zip"
     }
   ]
