@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.10",
-  "name": "QiemanDashboard 2.2.10",
-  "body": "设置页避免重复显示当前版本；我的持仓新增场内基金独立分组，添加持仓时优化场内/场外基金识别，避免 163402 等场外基金误判，并移除条目里的基金/股票大类标签。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.10",
-  "published_at": "2026-05-07T09:32:10Z",
+  "tag_name": "v2.2.11",
+  "name": "QiemanDashboard 2.2.11",
+  "body": "修复行情来源：场外基金优先使用官方最新单位净值，避免把盘中估值当作最新净值；场内基金改走交易所行情，并修正 5 开头 ETF 的上海行情映射。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.11",
+  "published_at": "2026-05-07T10:12:41Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.10.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.10/QiemanDashboard-2.2.10.zip",
-      "size": 3176244,
+      "name": "QiemanDashboard-2.2.11.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.11/QiemanDashboard-2.2.11.zip",
+      "size": 3178142,
       "content_type": "application/zip"
     }
   ]
