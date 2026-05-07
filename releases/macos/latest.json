@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.12",
-  "name": "QiemanDashboard 2.2.12",
-  "body": "场外基金新增当前估值显示，并保留官方最新净值；所有个人资产明细补充份额展示，归档份额统一显示单位。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.12",
-  "published_at": "2026-05-07T10:28:23Z",
+  "tag_name": "v2.2.13",
+  "name": "QiemanDashboard 2.2.13",
+  "body": "优化总览页宽屏布局；资产全貌明细新增独立份额列，并放在现价/成本前面。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.13",
+  "published_at": "2026-05-07T11:02:29Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.12.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.12/QiemanDashboard-2.2.12.zip",
-      "size": 3182361,
+      "name": "QiemanDashboard-2.2.13.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.13/QiemanDashboard-2.2.13.zip",
+      "size": 3236191,
       "content_type": "application/zip"
     }
   ]

@@ -5,6 +5,20 @@ import UniformTypeIdentifiers
 
 // MARK: - Overview
 
+private struct OverviewAssetTypeSummaryGroup: Identifiable {
+    let id: String
+    let title: String
+    let rows: [PersonalAssetAggregateRow]
+    let tint: Color
+
+    init(title: String, rows: [PersonalAssetAggregateRow], tint: Color) {
+        self.id = title
+        self.title = title
+        self.rows = rows
+        self.tint = tint
+    }
+}
+
 struct OverviewSectionView: View {
     @EnvironmentObject private var model: AppModel
 
@@ -13,48 +27,13 @@ struct OverviewSectionView: View {
             VStack(alignment: .leading, spacing: 16) {
                 OverviewHeroCard()
 
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
-                    OverviewJumpMetricCard(
-                        title: "总持仓",
-                        value: model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? "—",
-                        subtitle: model.personalAssetSummary.map {
-                            "已持有 \(currencyText($0.totalMarketValue)) + 待确认 \(currencyText($0.totalPendingCashAmount)) + 下次计划 \(currencyText($0.totalEstimatedNextPlanAmount))"
-                        } ?? "个人资产还未导入完整",
-                        icon: "wallet.bifold",
-                        accent: AppPalette.brand,
-                        destination: "我的持仓"
-                    ) {
-                        openPortfolio()
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        overviewJumpMetricCards
                     }
-                    OverviewJumpMetricCard(
-                        title: "待确认买入",
-                        value: model.personalAssetSummary.map { currencyText($0.totalPendingCashAmount) } ?? "—",
-                        subtitle: model.pendingTradeSummary.map { "\($0.actionCount) 笔交易进行中" } ?? "暂无买入中",
-                        icon: "clock.badge.exclamationmark",
-                        accent: AppPalette.warning,
-                        destination: "我的持仓"
-                    ) {
-                        openPortfolio()
-                    }
-                    OverviewJumpMetricCard(
-                        title: "计划档案",
-                        value: model.investmentPlanSummary.map { "\($0.activePlanCount) / \($0.pausedPlanCount) / \($0.endedPlanCount)" } ?? "—",
-                        subtitle: model.investmentPlanSummary.map { "进行中 / 暂停 / 终止 · 共 \($0.planCount) 条" } ?? "还没有计划档案",
-                        icon: "calendar.badge.clock",
-                        accent: AppPalette.info,
-                        destination: "我的持仓"
-                    ) {
-                        openPortfolio()
-                    }
-                    OverviewJumpMetricCard(
-                        title: "覆盖标的",
-                        value: model.personalAssetSummary.map { "\($0.fundCount)" } ?? "0",
-                        subtitle: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "先导入你的个人资产",
-                        icon: "square.grid.3x2",
-                        accent: AppPalette.accentWarm,
-                        destination: "我的持仓"
-                    ) {
-                        openPortfolio()
+
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
+                        overviewJumpMetricCards
                     }
                 }
 
@@ -67,30 +46,14 @@ struct OverviewSectionView: View {
                             .padding(12)
                             .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 10))
                     } else {
-                        let offExchangeFundRows = model.personalAssetRows.filter { $0.assetType == .fund && !$0.isOnExchangeFund }
-                        let onExchangeFundRows = model.personalAssetRows.filter(\.isOnExchangeFund)
-                        let stockRows = model.personalAssetRows.filter { $0.assetType == .stock }
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
-                            if !offExchangeFundRows.isEmpty {
-                                assetTypeSummaryCard(
-                                    title: "场外基金",
-                                    rows: offExchangeFundRows,
-                                    tint: AppPalette.brand
-                                )
+                        let groups = assetTypeSummaryGroups
+                        ViewThatFits(in: .horizontal) {
+                            HStack(alignment: .top, spacing: 12) {
+                                assetTypeSummaryCards(groups)
                             }
-                            if !onExchangeFundRows.isEmpty {
-                                assetTypeSummaryCard(
-                                    title: "场内基金",
-                                    rows: onExchangeFundRows,
-                                    tint: AppPalette.accentWarm
-                                )
-                            }
-                            if !stockRows.isEmpty {
-                                assetTypeSummaryCard(
-                                    title: "股票",
-                                    rows: stockRows,
-                                    tint: AppPalette.info
-                                )
+
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 12)], spacing: 12) {
+                                assetTypeSummaryCards(groups)
                             }
                         }
                     }
@@ -179,6 +142,91 @@ struct OverviewSectionView: View {
     }
 
     @ViewBuilder
+    private var overviewJumpMetricCards: some View {
+        OverviewJumpMetricCard(
+            title: "总持仓",
+            value: model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? "—",
+            subtitle: model.personalAssetSummary.map {
+                "已持有 \(currencyText($0.totalMarketValue)) + 待确认 \(currencyText($0.totalPendingCashAmount)) + 下次计划 \(currencyText($0.totalEstimatedNextPlanAmount))"
+            } ?? "个人资产还未导入完整",
+            icon: "wallet.bifold",
+            accent: AppPalette.brand,
+            destination: "我的持仓"
+        ) {
+            openPortfolio()
+        }
+        .frame(minWidth: 220, maxWidth: .infinity)
+
+        OverviewJumpMetricCard(
+            title: "待确认买入",
+            value: model.personalAssetSummary.map { currencyText($0.totalPendingCashAmount) } ?? "—",
+            subtitle: model.pendingTradeSummary.map { "\($0.actionCount) 笔交易进行中" } ?? "暂无买入中",
+            icon: "clock.badge.exclamationmark",
+            accent: AppPalette.warning,
+            destination: "我的持仓"
+        ) {
+            openPortfolio()
+        }
+        .frame(minWidth: 220, maxWidth: .infinity)
+
+        OverviewJumpMetricCard(
+            title: "计划档案",
+            value: model.investmentPlanSummary.map { "\($0.activePlanCount) / \($0.pausedPlanCount) / \($0.endedPlanCount)" } ?? "—",
+            subtitle: model.investmentPlanSummary.map { "进行中 / 暂停 / 终止 · 共 \($0.planCount) 条" } ?? "还没有计划档案",
+            icon: "calendar.badge.clock",
+            accent: AppPalette.info,
+            destination: "我的持仓"
+        ) {
+            openPortfolio()
+        }
+        .frame(minWidth: 220, maxWidth: .infinity)
+
+        OverviewJumpMetricCard(
+            title: "覆盖标的",
+            value: model.personalAssetSummary.map { "\($0.fundCount)" } ?? "0",
+            subtitle: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "先导入你的个人资产",
+            icon: "square.grid.3x2",
+            accent: AppPalette.accentWarm,
+            destination: "我的持仓"
+        ) {
+            openPortfolio()
+        }
+        .frame(minWidth: 220, maxWidth: .infinity)
+    }
+
+    private var assetTypeSummaryGroups: [OverviewAssetTypeSummaryGroup] {
+        [
+            OverviewAssetTypeSummaryGroup(
+                title: "场外基金",
+                rows: model.personalAssetRows.filter { $0.assetType == .fund && !$0.isOnExchangeFund },
+                tint: AppPalette.brand
+            ),
+            OverviewAssetTypeSummaryGroup(
+                title: "场内基金",
+                rows: model.personalAssetRows.filter(\.isOnExchangeFund),
+                tint: AppPalette.accentWarm
+            ),
+            OverviewAssetTypeSummaryGroup(
+                title: "股票",
+                rows: model.personalAssetRows.filter { $0.assetType == .stock },
+                tint: AppPalette.info
+            )
+        ].filter { !$0.rows.isEmpty }
+    }
+
+    @ViewBuilder
+    private func assetTypeSummaryCards(_ groups: [OverviewAssetTypeSummaryGroup]) -> some View {
+        ForEach(groups) { group in
+            assetTypeSummaryCard(
+                title: group.title,
+                rows: group.rows,
+                tint: group.tint
+            )
+            .frame(minWidth: 260, maxWidth: .infinity)
+        }
+    }
+
+    @ViewBuilder
     private func assetTypeSummaryCard(title: String, rows: [PersonalAssetAggregateRow], tint: Color) -> some View {
         let totalMarketValue = rows.compactMap(\.marketValue).reduce(0, +)
         let totalPending = rows.map(\.pendingCashAmount).reduce(0, +)
@@ -199,6 +247,9 @@ struct OverviewSectionView: View {
                     Text(currencyText(totalMarketValue))
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundStyle(AppPalette.ink)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
                 }
 
                 let profitTint: Color = totalProfit >= 0 ? AppPalette.positive : AppPalette.danger
@@ -211,6 +262,9 @@ struct OverviewSectionView: View {
                         Text(signedCurrencyText(totalProfit))
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(profitTint)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text("今日涨跌")
@@ -219,6 +273,9 @@ struct OverviewSectionView: View {
                         Text(signedCurrencyText(totalChange))
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(changeTint)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
                     }
                     if totalPending > 0 {
                         VStack(alignment: .leading, spacing: 2) {
@@ -228,6 +285,9 @@ struct OverviewSectionView: View {
                             Text(currencyText(totalPending))
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 .foregroundStyle(AppPalette.ink)
+                                .monospacedDigit()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
                         }
                     }
                 }
@@ -297,11 +357,12 @@ struct OverviewHeroCard: View {
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 18) {
+            HStack(alignment: .center, spacing: 18) {
                 heroCopy
-                Spacer(minLength: 16)
-                heroSummaryCard(fixedWidth: 280)
+                    .frame(minWidth: 520, maxWidth: 760, alignment: .leading)
+                heroSummaryCard(fixedWidth: 420)
             }
+            .frame(maxWidth: 1_220, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 16) {
                 heroCopy
@@ -339,39 +400,80 @@ struct OverviewHeroCard: View {
     }
 
     private func heroSummaryCard(fixedWidth: CGFloat?) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("总览摘要")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(AppPalette.muted)
-            Text(model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? (model.hasPersonalPortfolio ? "待刷新" : "未配置"))
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(AppPalette.ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            Text(
-                model.personalAssetSummary.map { "已持有 \(currencyText($0.totalMarketValue)) · 待确认 \(currencyText($0.totalPendingCashAmount)) · 下次计划 \(currencyText($0.totalEstimatedNextPlanAmount))" }
-                ?? model.investmentPlanSummary.map { "\($0.activePlanCount) 个进行中计划 · 下次 \($0.nextExecutionDate ?? "待定")" }
-                ?? model.pendingTradeSummary.map { "待确认 \(currencyText($0.totalCashAmount)) · \($0.actionCount) 笔" }
-                ?? model.userPortfolioSnapshot.map { "浮盈 \(currencyOptional($0.totalProfitAmount)) · \($0.holdingCount) 个标的" }
-                ?? "去「我的持仓」里粘贴代码和份额"
-            )
-                .font(.system(size: 12))
-                .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
-            Button {
-                model.selectedSection = .portfolio
-            } label: {
-                Label("打开我的持仓", systemImage: "arrow.right")
-                    .font(.system(size: 12, weight: .semibold))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("总览摘要")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(AppPalette.muted)
+                    Text(model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? (model.hasPersonalPortfolio ? "待刷新" : "未配置"))
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppPalette.ink)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.76)
+                }
+                Spacer(minLength: 8)
+                Button {
+                    model.selectedSection = .portfolio
+                } label: {
+                    Label("我的持仓", systemImage: "arrow.right")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppPalette.brand)
+                .controlSize(.small)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(AppPalette.brand)
-            .controlSize(.small)
+
+            if let summary = model.personalAssetSummary {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        heroSummaryMetric(title: "已持有", value: currencyText(summary.totalMarketValue), tint: AppPalette.brand)
+                        heroSummaryMetric(title: "待确认", value: currencyText(summary.totalPendingCashAmount), tint: AppPalette.warning)
+                        heroSummaryMetric(title: "下次计划", value: currencyText(summary.totalEstimatedNextPlanAmount), tint: AppPalette.info)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        heroSummaryMetric(title: "已持有", value: currencyText(summary.totalMarketValue), tint: AppPalette.brand)
+                        heroSummaryMetric(title: "待确认", value: currencyText(summary.totalPendingCashAmount), tint: AppPalette.warning)
+                        heroSummaryMetric(title: "下次计划", value: currencyText(summary.totalEstimatedNextPlanAmount), tint: AppPalette.info)
+                    }
+                }
+            } else {
+                Text(
+                    model.investmentPlanSummary.map { "\($0.activePlanCount) 个进行中计划 · 下次 \($0.nextExecutionDate ?? "待定")" }
+                    ?? model.pendingTradeSummary.map { "待确认 \(currencyText($0.totalCashAmount)) · \($0.actionCount) 笔" }
+                    ?? model.userPortfolioSnapshot.map { "浮盈 \(currencyOptional($0.totalProfitAmount)) · \($0.holdingCount) 个标的" }
+                    ?? "去「我的持仓」里粘贴代码和份额"
+                )
+                    .font(.system(size: 12))
+                    .foregroundStyle(AppPalette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .padding(14)
+        .padding(16)
+        .frame(minHeight: 136, alignment: .topLeading)
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(width: fixedWidth, alignment: .leading)
         .background(AppPalette.cardStrong.opacity(0.92), in: RoundedRectangle(cornerRadius: 18))
+    }
+
+    private func heroSummaryMetric(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppPalette.muted)
+            Text(value)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(AppPalette.ink)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
     }
 }
 

@@ -298,6 +298,8 @@ struct PersonalAssetTable: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("实时估值 / 收益")
                     .frame(width: 260, alignment: .leading)
+                Text("份额")
+                    .frame(width: 100, alignment: .leading)
                 Text("现价 / 成本")
                     .frame(width: 120, alignment: .leading)
                 if usesMarketTradeColumns {
@@ -371,19 +373,14 @@ struct PersonalAssetTableRow: View {
                         Text(fundCode)
                             .font(.system(size: 10, design: .monospaced))
                     }
-                    if let holdingUnits = row.holdingUnits {
-                        Text("份额 \(unitsText(holdingUnits)) 份")
-                    }
                     if row.pendingTradeCount > 0, let latest = row.pendingTrades.first?.occurredAt {
                         Text("最新待确认 \(latest)")
                     }
                     if row.hasDrawdownPlan {
                         Text("含 \(row.drawdownPlanCount) 条涨跌幅计划")
                     }
-                    if let archivedHolding = row.archivedHolding {
-                        let units = unitsText(archivedHolding.units)
-                        let archivedAt = archivedHolding.archivedAt.map { " · \($0.prefix(10))" } ?? ""
-                        Text("归档份额 \(units) 份\(archivedAt)")
+                    if let archivedAt = row.archivedHolding?.archivedAt {
+                        Text("归档 \(archivedAt.prefix(10))")
                     }
                 }
                 .font(.system(size: 10))
@@ -403,6 +400,18 @@ struct PersonalAssetTableRow: View {
                     .foregroundStyle(changeTint)
             }
             .frame(width: 260, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(unitsColumnValue)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                if let unitsColumnCaption {
+                    Text(unitsColumnCaption)
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                }
+            }
+            .frame(width: 100, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(row.usesMarketTradeColumns ? "现价" : "净值") \(row.currentPrice.map(decimalText) ?? "—")")
@@ -583,6 +592,26 @@ struct PersonalAssetTableRow: View {
 
     private var hasRowActions: Bool {
         canEditHolding || canArchiveHolding || canRestoreArchivedHolding || canAddHoldingUnits || canRemoveHoldingUnits || canArchivePlans || !sourceDeleteScopes.isEmpty
+    }
+
+    private var unitsColumnValue: String {
+        if let holdingUnits = row.holdingUnits {
+            return "\(unitsText(holdingUnits)) 份"
+        }
+        if let archivedUnits = row.archivedHolding?.units {
+            return "\(unitsText(archivedUnits)) 份"
+        }
+        return "—"
+    }
+
+    private var unitsColumnCaption: String? {
+        if row.holdingUnits != nil {
+            return "持有份额"
+        }
+        if row.archivedHolding != nil {
+            return "归档份额"
+        }
+        return nil
     }
 
     private var actionMenu: some View {
