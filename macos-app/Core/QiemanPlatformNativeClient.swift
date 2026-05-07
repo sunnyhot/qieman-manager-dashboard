@@ -149,6 +149,8 @@ final class QiemanPlatformNativeClient {
                 priceSource: pricePayload.priceSource.nilIfEmpty,
                 officialNav: pricePayload.officialNav.map { round($0, digits: 4) },
                 officialNavDate: pricePayload.officialNavDate.nilIfEmpty,
+                estimatePrice: pricePayload.estimatePrice.map { round($0, digits: 4) },
+                estimatePriceTime: pricePayload.estimatePriceTime.nilIfEmpty,
                 marketValue: marketValue,
                 costValue: costValue,
                 profitAmount: profitAmount,
@@ -260,6 +262,8 @@ final class QiemanPlatformNativeClient {
                     priceSource: quote?.priceSourceLabel ?? "",
                     officialNav: (quote?.previousClose ?? 0) > 0 ? quote?.previousClose : nil,
                     officialNavDate: quote?.priceTime ?? "",
+                    estimatePrice: nil,
+                    estimatePriceTime: "",
                     estimateChangePct: quote?.changePct
                 )
             }
@@ -273,6 +277,8 @@ final class QiemanPlatformNativeClient {
                 priceSource: firstNonEmpty([quote?.priceSourceLabel ?? "", quote?.priceSource ?? "", "最新净值"]),
                 officialNav: quote?.officialNav ?? latestNav?.nav,
                 officialNavDate: firstNonEmpty([quote?.officialNavDate ?? "", latestNav?.date ?? ""]),
+                estimatePrice: quote?.estimatePrice,
+                estimatePriceTime: quote?.estimateTime ?? "",
                 estimateChangePct: quote?.estimateChangePct
             )
         case .stock:
@@ -284,6 +290,8 @@ final class QiemanPlatformNativeClient {
                 priceSource: quote?.priceSourceLabel ?? "",
                 officialNav: (quote?.previousClose ?? 0) > 0 ? quote?.previousClose : nil,
                 officialNavDate: quote?.priceTime ?? "",
+                estimatePrice: nil,
+                estimatePriceTime: "",
                 estimateChangePct: quote?.changePct
             )
         }
@@ -760,7 +768,9 @@ final class QiemanPlatformNativeClient {
                     priceSourceLabel: "最新净值",
                     officialNav: officialNav,
                     officialNavDate: officialNavDate,
-                    estimateChangePct: nil
+                    estimatePrice: doubleValue(object["gsz"]),
+                    estimateTime: normalizedString(object["gztime"]),
+                    estimateChangePct: doubleValue(object["gszzl"])
                 )
             }
 
@@ -774,6 +784,8 @@ final class QiemanPlatformNativeClient {
                     priceSourceLabel: "盘中估值",
                     officialNav: nil,
                     officialNavDate: "",
+                    estimatePrice: estimatePrice,
+                    estimateTime: normalizedString(object["gztime"]),
                     estimateChangePct: doubleValue(object["gszzl"])
                 )
             }
@@ -789,6 +801,8 @@ final class QiemanPlatformNativeClient {
                 priceSourceLabel: "最近净值",
                 officialNav: latest.nav,
                 officialNavDate: latest.date,
+                estimatePrice: nil,
+                estimateTime: "",
                 estimateChangePct: nil
             )
         }
@@ -1299,6 +1313,8 @@ private struct NativeFundQuote {
     let priceSourceLabel: String
     let officialNav: Double?
     let officialNavDate: String
+    let estimatePrice: Double?
+    let estimateTime: String
     let estimateChangePct: Double?
 
     static func empty(_ fundCode: String) -> NativeFundQuote {
@@ -1311,6 +1327,8 @@ private struct NativeFundQuote {
             priceSourceLabel: "",
             officialNav: nil,
             officialNavDate: "",
+            estimatePrice: nil,
+            estimateTime: "",
             estimateChangePct: nil
         )
     }
@@ -1358,6 +1376,8 @@ private struct NativeUserPortfolioPricePayload {
     let priceSource: String
     let officialNav: Double?
     let officialNavDate: String
+    let estimatePrice: Double?
+    let estimatePriceTime: String
     let estimateChangePct: Double?
 }
 

@@ -58,7 +58,10 @@ struct PersonalAssetOverviewCard: View {
             }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: 10)], spacing: 10) {
-                AssetMiniStat(title: "实时估值", value: row.marketValue.map { currencyText($0, market: row.detectedMarket) } ?? "—", tint: AppPalette.brand)
+                AssetMiniStat(title: row.usesMarketTradeColumns ? "实时估值" : "最新净值", value: row.marketValue.map { currencyText($0, market: row.detectedMarket) } ?? "—", tint: AppPalette.brand)
+                if let estimateValue = row.currentEstimateMarketValue {
+                    AssetMiniStat(title: "当前估值", value: currencyText(estimateValue, market: row.detectedMarket), tint: changeTint)
+                }
                 AssetMiniStat(title: "总收益", value: signedCurrencyText(row.profitAmount, market: row.detectedMarket), tint: profitTint)
                 AssetMiniStat(title: "今日涨跌", value: signedCurrencyText(row.estimateChangeAmount, market: row.detectedMarket), tint: changeTint)
                 AssetMiniStat(
@@ -70,13 +73,16 @@ struct PersonalAssetOverviewCard: View {
 
             HStack(spacing: 18) {
                 LabeledValue(title: "份额", value: row.holdingUnits.map { "\(unitsText($0)) 份" } ?? "—")
-                LabeledValue(title: "现价", value: decimalOptional(row.currentPrice))
+                LabeledValue(title: row.usesMarketTradeColumns ? "现价" : "净值", value: decimalOptional(row.currentPrice))
+                if let estimatePrice = row.currentEstimatePrice {
+                    LabeledValue(title: "估值", value: decimalText(estimatePrice), tint: changeTint)
+                }
                 LabeledValue(title: "成本", value: row.costPrice.map(decimalText) ?? "—")
             }
 
             HStack(spacing: 12) {
                 if let archivedUnits = row.archivedUnits, !row.hasHolding {
-                    Text("归档份额 \(unitsText(archivedUnits))")
+                    Text("归档份额 \(unitsText(archivedUnits)) 份")
                 }
                 if row.pendingTradeCount > 0 {
                     Text("待确认 \(row.pendingTradeCount) 笔")

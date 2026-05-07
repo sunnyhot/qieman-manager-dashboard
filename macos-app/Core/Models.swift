@@ -996,6 +996,8 @@ struct UserPortfolioValuationRow: Hashable, Identifiable {
     let priceSource: String?
     let officialNav: Double?
     let officialNavDate: String?
+    let estimatePrice: Double?
+    let estimatePriceTime: String?
     let marketValue: Double?
     let costValue: Double?
     let profitAmount: Double?
@@ -1016,6 +1018,11 @@ struct UserPortfolioValuationRow: Hashable, Identifiable {
         priceSource ?? (officialNav != nil ? "最新净值" : nil)
     }
 
+    var estimatedMarketValue: Double? {
+        guard let estimatePrice, holding.units > 0 else { return nil }
+        return estimatePrice * holding.units
+    }
+
     var previousMarketValue: Double? {
         guard
             let marketValue,
@@ -1029,6 +1036,9 @@ struct UserPortfolioValuationRow: Hashable, Identifiable {
     }
 
     var estimatedDailyChangeAmount: Double? {
+        if let estimatedMarketValue, let marketValue {
+            return estimatedMarketValue - marketValue
+        }
         guard
             let marketValue,
             let previousMarketValue
@@ -1461,6 +1471,14 @@ struct PersonalAssetAggregateRow: Identifiable, Hashable {
 
     var currentPrice: Double? {
         holdingRow?.resolvedPrice
+    }
+
+    var currentEstimatePrice: Double? {
+        holdingRow?.estimatePrice
+    }
+
+    var currentEstimateMarketValue: Double? {
+        holdingRow?.estimatedMarketValue
     }
 
     var costPrice: Double? {

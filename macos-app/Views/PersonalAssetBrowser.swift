@@ -371,6 +371,9 @@ struct PersonalAssetTableRow: View {
                         Text(fundCode)
                             .font(.system(size: 10, design: .monospaced))
                     }
+                    if let holdingUnits = row.holdingUnits {
+                        Text("份额 \(unitsText(holdingUnits)) 份")
+                    }
                     if row.pendingTradeCount > 0, let latest = row.pendingTrades.first?.occurredAt {
                         Text("最新待确认 \(latest)")
                     }
@@ -380,7 +383,7 @@ struct PersonalAssetTableRow: View {
                     if let archivedHolding = row.archivedHolding {
                         let units = unitsText(archivedHolding.units)
                         let archivedAt = archivedHolding.archivedAt.map { " · \($0.prefix(10))" } ?? ""
-                        Text("归档份额 \(units)\(archivedAt)")
+                        Text("归档份额 \(units) 份\(archivedAt)")
                     }
                 }
                 .font(.system(size: 10))
@@ -402,9 +405,14 @@ struct PersonalAssetTableRow: View {
             .frame(width: 260, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("现价 \(row.currentPrice.map(decimalText) ?? "—")")
+                Text("\(row.usesMarketTradeColumns ? "现价" : "净值") \(row.currentPrice.map(decimalText) ?? "—")")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
+                if let estimatePrice = row.currentEstimatePrice {
+                    Text("估值 \(decimalText(estimatePrice)) · \(percentOptional(row.estimateChangePct))")
+                        .font(.system(size: 10))
+                        .foregroundStyle(changeTint)
+                }
                 Text("成本 \(row.costPrice.map(decimalText) ?? "—")")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
