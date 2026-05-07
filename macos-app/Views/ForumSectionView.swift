@@ -11,45 +11,53 @@ struct ForumSectionView: View {
     private let detailAnchor = "forum-detail-panel"
 
     var body: some View {
-        if !model.hasForumPosts {
-            ScrollView {
-                SectionCard(title: "论坛发言", subtitle: "原生抓取主理人帖子与评论入口", icon: "text.bubble") {
-                    EmptySectionState(
-                        title: model.currentSnapshot?.snapshotType == "posts" ? "当前还没拉到帖子" : "当前查询结果不是帖子流",
-                        subtitle: "我已经补上了切到论坛页时的自动补拉。点一次刷新后，会优先回到帖子流并恢复发言列表。",
-                        actionTitle: "刷新发言"
-                    ) {
-                        Task { try? await model.refreshLatest(persist: false) }
+        Group {
+            if !model.hasForumPosts {
+                ScrollView {
+                    SectionCard(title: "论坛发言", subtitle: "原生抓取主理人帖子与评论入口", icon: "text.bubble") {
+                        EmptySectionState(
+                            title: model.currentSnapshot?.snapshotType == "posts" ? "当前还没拉到帖子" : "当前查询结果不是帖子流",
+                            subtitle: "我已经补上了切到论坛页时的自动补拉。点一次刷新后，会优先回到帖子流并恢复发言列表。",
+                            actionTitle: "刷新发言"
+                        ) {
+                            Task { try? await model.refreshLatest(persist: false) }
+                        }
                     }
                 }
-            }
-            .padding(16)
-        } else {
-            GeometryReader { proxy in
-                let isCompact = proxy.size.width < compactThreshold
+                .padding(16)
+            } else {
+                GeometryReader { proxy in
+                    let isCompact = proxy.size.width < compactThreshold
 
-                ScrollViewReader { scrollProxy in
-                    ScrollView {
-                        if isCompact {
-                            VStack(alignment: .leading, spacing: 14) {
-                                forumListPanel(isCompact: true, scrollProxy: scrollProxy)
-                                forumDetailPanel
-                                    .id(detailAnchor)
-                            }
-                            .padding(16)
-                        } else {
-                            HStack(alignment: .top, spacing: 14) {
-                                forumListPanel(isCompact: false, scrollProxy: scrollProxy)
-                                    .frame(width: min(max(proxy.size.width * 0.34, 320), 420), alignment: .top)
+                    ScrollViewReader { scrollProxy in
+                        ScrollView {
+                            if isCompact {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    forumListPanel(isCompact: true, scrollProxy: scrollProxy)
+                                    forumDetailPanel
+                                        .id(detailAnchor)
+                                }
+                                .padding(16)
+                            } else {
+                                HStack(alignment: .top, spacing: 14) {
+                                    forumListPanel(isCompact: false, scrollProxy: scrollProxy)
+                                        .frame(width: min(max(proxy.size.width * 0.34, 320), 420), alignment: .top)
 
-                                forumDetailPanel
-                                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                                    forumDetailPanel
+                                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                                }
+                                .padding(16)
                             }
-                            .padding(16)
                         }
                     }
                 }
             }
+        }
+        .onAppear {
+            model.ensureSelectedForumPost()
+        }
+        .onChange(of: model.currentSnapshot?.id) { _, _ in
+            model.ensureSelectedForumPost()
         }
     }
 
@@ -212,4 +220,3 @@ struct ForumSectionView: View {
         ].joined(separator: "|")
     }
 }
-

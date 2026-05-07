@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.8",
-  "name": "QiemanDashboard 2.2.8",
-  "body": "UI 质量优化：全面消除两步 clipShape GPU mask 操作，统一为单步 background(in:)；移除按钮阴影提升滚动流畅度；SectionCard 去除 AnyView 类型擦除；统一空状态组件；替换系统语义色为 AppPalette.muted；长文本补 lineLimit；清理重复类型定义，ContentView 从 4289 行精简到 525 行。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.8",
-  "published_at": "2026-04-28T12:00:00Z",
+  "tag_name": "v2.2.9",
+  "name": "QiemanDashboard 2.2.9",
+  "body": "设置页精简为账号、巡检、版本三项，账号与主理人提醒改为点击后展开；论坛发言页默认选中最新一条；我的持仓支持买入中与计划档案增删改，并自动识别场内/场外基金、A 股、美股和港股；移除导入中心入口，优化聚合与行情查询性能。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.9",
+  "published_at": "2026-05-07T07:27:27Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.8.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.8/QiemanDashboard-2.2.8.zip",
-      "size": 3165535,
+      "name": "QiemanDashboard-2.2.9.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.9/QiemanDashboard-2.2.9.zip",
+      "size": 3203955,
       "content_type": "application/zip"
     }
   ]

@@ -311,10 +311,16 @@ struct PersonalAssetAutomation {
             price: price
         )
         let mergedHolding = UserPortfolioHolding(
+            id: existing?.id ?? UUID(),
             fundCode: fundCode,
+            assetType: existing?.assetType ?? .fund,
             units: newUnits,
             costPrice: newCostPrice,
-            displayName: existing?.displayName ?? targetName
+            displayName: existing?.displayName ?? targetName,
+            stockMarket: existing?.stockMarket,
+            fundMarket: existing?.fundMarket,
+            isArchived: false,
+            archivedAt: nil
         )
 
         var result = holdings

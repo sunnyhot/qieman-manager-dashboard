@@ -74,7 +74,15 @@ def load_known_assets() -> tuple[dict[str, str], dict[str, str]]:
 
 
 def parse_money(text: str) -> tuple[float | None, float | None]:
-    normalized = text.replace(",", "").replace("元", "").strip()
+    normalized = (
+        text.replace(",", "")
+        .replace("，", "")
+        .replace("元", "")
+        .replace("～", "~")
+        .replace("—", "~")
+        .replace("－", "~")
+        .strip()
+    )
     if "~" in normalized:
         start, end = [part.strip() for part in normalized.split("~", 1)]
         return float(start), float(end)

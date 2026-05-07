@@ -7,6 +7,10 @@ import UniformTypeIdentifiers
 
 struct PortfolioSectionView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var isPresentingAddPendingTrade = false
+    @State private var editingPendingTrade: PersonalPendingTrade?
+    @State private var deletingPendingTrade: PersonalPendingTrade?
+    @State private var isPresentingAddInvestmentPlan = false
 
     private var totalProfitAmount: Double? {
         model.userPortfolioSnapshot?.totalProfitAmount
@@ -108,6 +112,7 @@ struct PortfolioSectionView: View {
                 }
 
                 HStack(spacing: 10) {
+                    Text(model.portfolioAutoRefreshStatusText)
                     if let latestTime = model.pendingTradeSummary?.latestTime {
                         Text("待确认最新：\(latestTime)")
                     }
@@ -145,7 +150,16 @@ struct PortfolioSectionView: View {
                     }
                 }
 
-                SectionCard(title: "买入中", subtitle: "待确认交易单独展示，不并入已成交持仓收益", icon: "clock.badge.exclamationmark") {
+                SectionCard(title: "买入中", subtitle: "待确认交易单独展示，不并入已成交持仓收益", icon: "clock.badge.exclamationmark", trailing: {
+                    Spacer()
+                    Button {
+                        isPresentingAddPendingTrade = true
+                    } label: {
+                        Label("添加买入中", systemImage: "plus.circle")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }) {
                     if let summary = model.pendingTradeSummary, !model.pendingTrades.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(spacing: 10) {
@@ -158,15 +172,27 @@ struct PortfolioSectionView: View {
 
                             LazyVStack(spacing: 10) {
                                 ForEach(model.pendingTrades) { trade in
-                                    PendingTradeCard(trade: trade)
+                                    PendingTradeCard(
+                                        trade: trade,
+                                        onEdit: { editingPendingTrade = trade },
+                                        onDelete: { deletingPendingTrade = trade }
+                                    )
                                 }
                             }
                         }
                     } else {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("还没有买入中记录。可以直接手动录入，或在导入中心上传图片、表格。")
+                            Text("还没有买入中记录。可以直接手动添加待确认买入、定投或转换。")
                                 .font(.system(size: 12))
                                 .foregroundStyle(AppPalette.muted)
+                            Button {
+                                isPresentingAddPendingTrade = true
+                            } label: {
+                                Label("添加买入中", systemImage: "plus.circle")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(AppPalette.warning)
+                            .controlSize(.small)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
@@ -174,28 +200,22 @@ struct PortfolioSectionView: View {
                     }
                 }
 
-                SectionCard(title: "计划档案", subtitle: "按进行中、已暂停、已终止完整归档", icon: "calendar.badge.clock") {
+                SectionCard(title: "计划档案", subtitle: "按进行中、已暂停、已终止完整归档", icon: "calendar.badge.clock", trailing: {
+                    Spacer()
+                    Button {
+                        isPresentingAddInvestmentPlan = true
+                    } label: {
+                        Label("添加计划", systemImage: "plus.circle")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }) {
                     if let summary = model.investmentPlanSummary, !model.investmentPlans.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(spacing: 10) {
-                                StatChip(title: "进行中", value: "\(summary.activePlanCount)")
-                                StatChip(title: "已暂停", value: "\(summary.pausedPlanCount)")
-                                StatChip(title: "已终止", value: "\(summary.endedPlanCount)")
-                                StatChip(title: "总数", value: "\(summary.planCount)")
-                            }
-
-                            HStack(spacing: 10) {
-                                StatChip(title: "智能定投", value: "\(summary.smartPlanCount)")
-                                StatChip(title: "日定投", value: "\(summary.dailyPlanCount)")
-                                StatChip(title: "周定投", value: "\(summary.weeklyPlanCount)")
-                                StatChip(title: "涨跌幅模式", value: "\(model.investmentPlans.filter(\.isDrawdownMode).count)")
-                            }
-
-                            HStack(spacing: 10) {
                                 StatChip(title: "累计投入", value: currencyText(summary.totalCumulativeInvestedAmount))
-                                if let nextDate = summary.nextExecutionDate {
-                                    StatChip(title: "最近执行", value: nextDate)
-                                }
+                                StatChip(title: "最近执行", value: summary.nextExecutionDate ?? "—")
+                                StatChip(title: "计划状态", value: "进行中 \(summary.activePlanCount) · 暂停 \(summary.pausedPlanCount) · 终止 \(summary.endedPlanCount) · 总数 \(summary.planCount)")
                             }
 
                             if !model.activeInvestmentPlans.isEmpty {
@@ -226,9 +246,17 @@ struct PortfolioSectionView: View {
                         }
                     } else {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("还没有定投计划记录。可以直接手动录入，或在导入中心上传图片、表格。")
+                            Text("还没有定投计划记录。可以直接手动添加计划档案。")
                                 .font(.system(size: 12))
                                 .foregroundStyle(AppPalette.muted)
+                            Button {
+                                isPresentingAddInvestmentPlan = true
+                            } label: {
+                                Label("添加计划", systemImage: "plus.circle")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(AppPalette.info)
+                            .controlSize(.small)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
@@ -238,10 +266,47 @@ struct PortfolioSectionView: View {
             }
             .padding(16)
         }
+        .sheet(isPresented: $isPresentingAddPendingTrade) {
+            PersonalPendingTradeEditSheet()
+        }
+        .sheet(item: $editingPendingTrade) { trade in
+            PersonalPendingTradeEditSheet(trade: trade)
+        }
+        .sheet(isPresented: $isPresentingAddInvestmentPlan) {
+            PersonalInvestmentPlanAddSheet()
+        }
+        .alert("删除买入中记录？", isPresented: deletePendingConfirmationBinding) {
+            Button("删除", role: .destructive) {
+                if let deletingPendingTrade {
+                    model.deletePendingTrade(deletingPendingTrade.id)
+                }
+                deletingPendingTrade = nil
+            }
+            Button("取消", role: .cancel) {
+                deletingPendingTrade = nil
+            }
+        } message: {
+            Text(deletePendingConfirmationMessage)
+        }
     }
 
     private var hasAnyPersonalData: Bool {
-        model.hasPersonalPortfolio || model.hasPendingTrades || model.hasInvestmentPlans
+        model.hasAnyPortfolioRecords || model.hasPendingTrades || model.hasInvestmentPlans
+    }
+
+    private var deletePendingConfirmationBinding: Binding<Bool> {
+        Binding(
+            get: { deletingPendingTrade != nil },
+            set: { isPresented in
+                if !isPresented {
+                    deletingPendingTrade = nil
+                }
+            }
+        )
+    }
+
+    private var deletePendingConfirmationMessage: String {
+        guard let deletingPendingTrade else { return "" }
+        return "会从本地保存的数据中删除 \(deletingPendingTrade.displayTitle) 的这条买入中记录。"
     }
 }
-

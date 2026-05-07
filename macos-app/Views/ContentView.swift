@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 enum PersonalAssetFilterScope: String, CaseIterable, Identifiable {
     case all = "全部"
     case holding = "已持有"
+    case archivedHolding = "已归档"
     case pending = "待确认"
     case activePlan = "进行中计划"
     case archivedPlan = "已暂停/终止"
@@ -375,40 +376,66 @@ struct ContentView: View {
 
     @ViewBuilder
     private var notifications: some View {
-        if !model.noticeMessage.isEmpty || !model.errorMessage.isEmpty || (model.authPayload?.ok == true) {
+        if !model.noticeMessage.isEmpty || !model.errorMessage.isEmpty {
             VStack(spacing: 4) {
                 if !model.noticeMessage.isEmpty {
                     ToastBar(text: model.noticeMessage, tint: AppPalette.positive)
+                        .task(id: model.noticeMessage) {
+                            await dismissNoticeToast(model.noticeMessage, after: 4.5)
+                        }
                 }
                 if !model.errorMessage.isEmpty {
                     ToastBar(text: model.errorMessage, tint: AppPalette.danger)
-                }
-                if let auth = model.authPayload, auth.ok {
-                    ToastBar(text: "登录态有效：\(auth.userName) / brokerUserId \(auth.brokerUserId)", tint: AppPalette.info)
+                        .task(id: model.errorMessage) {
+                            await dismissErrorToast(model.errorMessage, after: 8)
+                        }
                 }
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
+    private func dismissNoticeToast(_ message: String, after seconds: Double) async {
+        guard !message.isEmpty else { return }
+        try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+        await MainActor.run {
+            guard model.noticeMessage == message else { return }
+            withAnimation(.easeOut(duration: 0.18)) {
+                model.noticeMessage = ""
+            }
+        }
+    }
+
+    private func dismissErrorToast(_ message: String, after seconds: Double) async {
+        guard !message.isEmpty else { return }
+        try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+        await MainActor.run {
+            guard model.errorMessage == message else { return }
+            withAnimation(.easeOut(duration: 0.18)) {
+                model.errorMessage = ""
+            }
         }
     }
 
     @ViewBuilder
     private var detailPanel: some View {
-        ZStack {
+        switch model.selectedSection {
+        case .overview:
             OverviewSectionView()
-                .opacity(model.selectedSection == .overview ? 1 : 0)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .portfolio:
             PortfolioSectionView()
-                .opacity(model.selectedSection == .portfolio ? 1 : 0)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .settings:
             SettingsSectionView()
-                .opacity(model.selectedSection == .settings ? 1 : 0)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .platform:
             PlatformSectionView()
-                .opacity(model.selectedSection == .platform ? 1 : 0)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .forum:
             ForumSectionView()
-                .opacity(model.selectedSection == .forum ? 1 : 0)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
@@ -429,10 +456,15 @@ private struct AppUpdateSheet: View {
 
     private var publishedText: String? {
         guard let publishedAt = release.publishedAt else { return nil }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        return formatter.string(from: publishedAt)
+        return Self.releaseDateFormatter.string(from: publishedAt)
     }
+
+    private static let releaseDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "yyyy-MM-dd HH:mm"
+        return f
+    }()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -522,4 +554,3 @@ private struct AppUpdateSheet: View {
         .background(AppPalette.paper)
     }
 }
-

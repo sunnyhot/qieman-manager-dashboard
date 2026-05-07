@@ -76,8 +76,9 @@ final class QiemanPlatformNativeClient {
     private let anonymousID = "anon-\(QiemanPlatformNativeClient.sha256Hex(UUID().uuidString).prefix(16))"
     private let payloadTTL: TimeInterval = 120
     private let historyTTL: TimeInterval = 12 * 60 * 60
-    private let quoteTTL: TimeInterval = 5 * 60
+    private let quoteTTL: TimeInterval = 45
     private let cache = QiemanPlatformCache()
+    private static let preloadConcurrencyLimit = 6
 
     func fetchPlatformPayload(prodCode: String) async throws -> PlatformPayload {
         let target = normalizedString(prodCode)
@@ -109,9 +110,10 @@ final class QiemanPlatformNativeClient {
 
         let fundCodes = Array(Set(normalizedHoldings.filter { $0.assetType == .fund }.map(\.normalizedFundCode)))
         let stockCodes = Array(Set(normalizedHoldings.filter { $0.assetType == .stock }.map(\.normalizedFundCode)))
+        async let stockQuotesTask = preloadStockQuotes(stockCodes)
         let histories = await preloadHistories(fundCodes)
         let quotes = await preloadQuotes(fundCodes, histories: histories)
-        let stockQuotes = await preloadStockQuotes(stockCodes)
+        let stockQuotes = await stockQuotesTask
 
         let rows = normalizedHoldings.map { holding -> UserPortfolioValuationRow in
             let pricePayload = userPortfolioPricePayload(
@@ -177,8 +179,10 @@ final class QiemanPlatformNativeClient {
         let fundCodes = Array(Set(holdings.filter { $0.assetType == .fund }.map(\.normalizedFundCode).filter { !$0.isEmpty }))
         let stockCodes = Array(Set(holdings.filter { $0.assetType == .stock }.map(\.normalizedFundCode).filter { !$0.isEmpty }))
 
-        let fundNamesByCode = await resolveFundNames(fundCodes: fundCodes)
-        let stockQuotes = await preloadStockQuotes(stockCodes)
+        async let fundNamesByCodeTask = resolveFundNames(fundCodes: fundCodes)
+        async let stockQuotesTask = preloadStockQuotes(stockCodes)
+        let fundNamesByCode = await fundNamesByCodeTask
+        let stockQuotes = await stockQuotesTask
 
         var names: [UUID: String] = [:]
         for holding in holdings {
@@ -556,12 +560,21 @@ final class QiemanPlatformNativeClient {
         }
 
         return grouped.map { label, entries in
+            var buyCount = 0
+            var sellCount = 0
+            for entry in entries {
+                if entry.side == "buy" {
+                    buyCount += 1
+                } else if entry.side == "sell" {
+                    sellCount += 1
+                }
+            }
             let sortedEntries = entries.sorted { actionTimestamp($0.txnTs, createdTs: $0.createdTs) > actionTimestamp($1.txnTs, createdTs: $1.createdTs) }
             return PlatformTimelinePayload(
                 label: label,
                 entries: Array(sortedEntries.prefix(12)),
-                buyCount: entries.filter { $0.side == "buy" }.count,
-                sellCount: entries.filter { $0.side == "sell" }.count,
+                buyCount: buyCount,
+                sellCount: sellCount,
                 eventCount: entries.count,
                 latestTime: sortedEntries.first?.txnDate ?? sortedEntries.first?.createdAt,
                 latestTs: sortedEntries.first.map { actionTimestamp($0.txnTs, createdTs: $0.createdTs) }
@@ -577,9 +590,10 @@ final class QiemanPlatformNativeClient {
 
     private func preloadHistories(_ fundCodes: [String]) async -> [String: NativeFundHistory] {
         var results: [String: NativeFundHistory] = [:]
-        let uniqueCodes = Array(Set(fundCodes.filter { !$0.isEmpty }))
+        let uniqueCodes = uniqueNonEmptyCodes(fundCodes)
         await withTaskGroup(of: (String, NativeFundHistory).self) { group in
-            for code in uniqueCodes {
+            var nextIndex = 0
+            func enqueue(_ code: String) {
                 group.addTask {
                     if let cached = await self.cache.history(for: code, ttl: self.historyTTL) {
                         return (code, cached)
@@ -589,8 +603,18 @@ final class QiemanPlatformNativeClient {
                     return (code, history)
                 }
             }
-            for await (code, history) in group {
+
+            while nextIndex < Swift.min(uniqueCodes.count, Self.preloadConcurrencyLimit) {
+                enqueue(uniqueCodes[nextIndex])
+                nextIndex += 1
+            }
+
+            while let (code, history) = await group.next() {
                 results[code] = history
+                if nextIndex < uniqueCodes.count {
+                    enqueue(uniqueCodes[nextIndex])
+                    nextIndex += 1
+                }
             }
         }
         return results
@@ -598,9 +622,10 @@ final class QiemanPlatformNativeClient {
 
     private func preloadQuotes(_ fundCodes: [String], histories: [String: NativeFundHistory]) async -> [String: NativeFundQuote] {
         var results: [String: NativeFundQuote] = [:]
-        let uniqueCodes = Array(Set(fundCodes.filter { !$0.isEmpty }))
+        let uniqueCodes = uniqueNonEmptyCodes(fundCodes)
         await withTaskGroup(of: (String, NativeFundQuote).self) { group in
-            for code in uniqueCodes {
+            var nextIndex = 0
+            func enqueue(_ code: String) {
                 group.addTask {
                     if let cached = await self.cache.quote(for: code, ttl: self.quoteTTL) {
                         return (code, cached)
@@ -610,8 +635,18 @@ final class QiemanPlatformNativeClient {
                     return (code, quote)
                 }
             }
-            for await (code, quote) in group {
+
+            while nextIndex < Swift.min(uniqueCodes.count, Self.preloadConcurrencyLimit) {
+                enqueue(uniqueCodes[nextIndex])
+                nextIndex += 1
+            }
+
+            while let (code, quote) = await group.next() {
                 results[code] = quote
+                if nextIndex < uniqueCodes.count {
+                    enqueue(uniqueCodes[nextIndex])
+                    nextIndex += 1
+                }
             }
         }
         return results
@@ -619,9 +654,10 @@ final class QiemanPlatformNativeClient {
 
     private func preloadStockQuotes(_ stockCodes: [String]) async -> [String: NativeStockQuote] {
         var results: [String: NativeStockQuote] = [:]
-        let uniqueCodes = Array(Set(stockCodes.filter { !$0.isEmpty }))
+        let uniqueCodes = uniqueNonEmptyCodes(stockCodes)
         await withTaskGroup(of: (String, NativeStockQuote).self) { group in
-            for code in uniqueCodes {
+            var nextIndex = 0
+            func enqueue(_ code: String) {
                 group.addTask {
                     if let cached = await self.cache.stockQuote(for: code, ttl: self.quoteTTL) {
                         return (code, cached)
@@ -631,11 +667,25 @@ final class QiemanPlatformNativeClient {
                     return (code, quote)
                 }
             }
-            for await (code, quote) in group {
+
+            while nextIndex < Swift.min(uniqueCodes.count, Self.preloadConcurrencyLimit) {
+                enqueue(uniqueCodes[nextIndex])
+                nextIndex += 1
+            }
+
+            while let (code, quote) = await group.next() {
                 results[code] = quote
+                if nextIndex < uniqueCodes.count {
+                    enqueue(uniqueCodes[nextIndex])
+                    nextIndex += 1
+                }
             }
         }
         return results
+    }
+
+    private func uniqueNonEmptyCodes(_ codes: [String]) -> [String] {
+        Array(Set(codes.map(normalizedString).filter { !$0.isEmpty })).sorted()
     }
 
     private func fetchFundHistorySeries(_ fundCode: String) async throws -> NativeFundHistory {
@@ -1107,17 +1157,25 @@ final class QiemanPlatformNativeClient {
         return (lhs, rhs)
     }
 
-    private static var regexCache: [String: NSRegularExpression] = [:]
-
-    private func firstMatch(in text: String, pattern: String) -> String? {
-        let regex = Self.regexCache[pattern] ?? {
-            guard let compiled = try? NSRegularExpression(pattern: pattern, options: []) else {
+    private static let regexCache: [String: NSRegularExpression] = {
+        let patterns = [
+            #"var\s+fS_name\s*=\s*"([^"]*)";"#,
+            #"var\s+Data_netWorthTrend\s*=\s*(\[[\s\S]*?\]);"#,
+            #"jsonpgz\((\{[\s\S]*\})\);"#,
+            #"="([^"]*)";"#,
+        ]
+        return Dictionary(uniqueKeysWithValues: patterns.compactMap { pattern in
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
                 return nil
             }
-            Self.regexCache[pattern] = compiled
-            return compiled
-        }()
-        guard let regex else { return nil }
+            return (pattern, regex)
+        })
+    }()
+
+    private func firstMatch(in text: String, pattern: String) -> String? {
+        guard let regex = Self.regexCache[pattern] ?? (try? NSRegularExpression(pattern: pattern, options: [])) else {
+            return nil
+        }
         let range = NSRange(location: 0, length: text.utf16.count)
         guard let match = regex.firstMatch(in: text, options: [], range: range),
               match.numberOfRanges > 1,

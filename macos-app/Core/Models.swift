@@ -80,6 +80,22 @@ enum PersonalDataImportSource {
     }
 }
 
+enum PersonalDataSaveMode: String, CaseIterable, Identifiable {
+    case merge = "合并更新"
+    case replace = "替换该类"
+
+    var id: String { rawValue }
+
+    var actionText: String {
+        switch self {
+        case .merge:
+            return "合并"
+        case .replace:
+            return "替换"
+        }
+    }
+}
+
 enum PersonalAssetDeleteScope: String, CaseIterable, Identifiable {
     case holding
     case pendingTrades
@@ -112,6 +128,22 @@ struct PersonalAssetCodeResolution: Hashable {
     let assetType: PersonalAssetType
     let code: String
     let displayName: String?
+    let stockMarket: StockMarket?
+    let fundMarket: FundMarket?
+
+    init(
+        assetType: PersonalAssetType,
+        code: String,
+        displayName: String?,
+        stockMarket: StockMarket? = nil,
+        fundMarket: FundMarket? = nil
+    ) {
+        self.assetType = assetType
+        self.code = code
+        self.displayName = displayName
+        self.stockMarket = stockMarket
+        self.fundMarket = fundMarket
+    }
 }
 
 extension PersonalDataImportTarget {
@@ -767,6 +799,20 @@ enum StockMarket: String, Codable, Hashable, CaseIterable {
     }
 }
 
+enum FundMarket: String, Codable, Hashable, CaseIterable {
+    case offExchange = "off_exchange"
+    case onExchange = "on_exchange"
+
+    var displayName: String {
+        switch self {
+        case .offExchange:
+            return "场外基金"
+        case .onExchange:
+            return "场内基金"
+        }
+    }
+}
+
 struct UserPortfolioHolding: Codable, Hashable, Identifiable {
     let id: UUID
     let fundCode: String
@@ -775,6 +821,9 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
     let costPrice: Double?
     let displayName: String?
     let stockMarket: StockMarket?
+    let fundMarket: FundMarket?
+    let isArchived: Bool
+    let archivedAt: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -784,9 +833,23 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
         case costPrice
         case displayName
         case stockMarket
+        case fundMarket
+        case isArchived
+        case archivedAt
     }
 
-    init(id: UUID = UUID(), fundCode: String, assetType: PersonalAssetType = .fund, units: Double, costPrice: Double?, displayName: String?, stockMarket: StockMarket? = nil) {
+    init(
+        id: UUID = UUID(),
+        fundCode: String,
+        assetType: PersonalAssetType = .fund,
+        units: Double,
+        costPrice: Double?,
+        displayName: String?,
+        stockMarket: StockMarket? = nil,
+        fundMarket: FundMarket? = nil,
+        isArchived: Bool = false,
+        archivedAt: String? = nil
+    ) {
         self.id = id
         self.fundCode = fundCode
         self.assetType = assetType
@@ -794,6 +857,9 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
         self.costPrice = costPrice
         self.displayName = displayName
         self.stockMarket = stockMarket
+        self.fundMarket = fundMarket
+        self.isArchived = isArchived
+        self.archivedAt = archivedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -805,6 +871,9 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
         self.costPrice = try container.decodeIfPresent(Double.self, forKey: .costPrice)
         self.displayName = try container.decodeIfPresent(String.self, forKey: .displayName)
         self.stockMarket = try container.decodeIfPresent(StockMarket.self, forKey: .stockMarket)
+        self.fundMarket = try container.decodeIfPresent(FundMarket.self, forKey: .fundMarket)
+        self.isArchived = try container.decodeIfPresent(Bool.self, forKey: .isArchived) ?? false
+        self.archivedAt = try container.decodeIfPresent(String.self, forKey: .archivedAt)
     }
 
     var normalizedFundCode: String {
@@ -822,8 +891,16 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
         return UserPortfolioHolding.detectStockMarket(from: normalizedFundCode)
     }
 
+    var detectedFundMarket: FundMarket? {
+        guard assetType == .fund else { return nil }
+        return fundMarket ?? UserPortfolioHolding.detectFundMarket(from: normalizedFundCode)
+    }
+
     var marketLabel: String? {
-        detectedMarket?.displayName
+        if assetType == .stock {
+            return detectedMarket?.displayName
+        }
+        return detectedFundMarket?.displayName
     }
 
     static func detectStockMarket(from code: String) -> StockMarket? {
@@ -850,9 +927,29 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
         return nil
     }
 
+    static func detectFundMarket(from code: String) -> FundMarket {
+        let upper = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let normalized = upper
+            .replacingOccurrences(of: "ETF:", with: "")
+            .replacingOccurrences(of: "LOF:", with: "")
+            .replacingOccurrences(of: "FUND:", with: "")
+            .replacingOccurrences(of: "EX:", with: "")
+            .replacingOccurrences(of: "OTC:", with: "")
+        guard normalized.count == 6, normalized.allSatisfy(\.isNumber) else {
+            return .offExchange
+        }
+        let exchangePrefixes = ["15", "16", "18", "50", "51", "52", "56", "58"]
+        if exchangePrefixes.contains(where: { normalized.hasPrefix($0) }) {
+            return .onExchange
+        }
+        return .offExchange
+    }
+
     var draftLine: String {
         var parts: [String] = []
         if assetType == .stock, let market = detectedMarket {
+            parts.append(market.displayName)
+        } else if assetType == .fund, let market = detectedFundMarket {
             parts.append(market.displayName)
         } else if let draftPrefix = assetType.draftPrefix {
             parts.append(draftPrefix)
@@ -1101,6 +1198,108 @@ struct PersonalInvestmentPlan: Codable, Hashable, Identifiable {
     var amountRangeText: String {
         amountText
     }
+
+    var normalizedAmountBounds: (min: Double?, max: Double?) {
+        let parsed = Self.parsedAmountRange(from: amountText)
+        let minValue = minAmount ?? parsed.min
+        let maxValue = maxAmount ?? parsed.max
+        switch (minValue, maxValue) {
+        case let (min?, max?) where max < min:
+            return (max, min)
+        case let (min?, max?):
+            return (min, max)
+        case let (min?, nil):
+            return (min, min)
+        case let (nil, max?):
+            return (max, max)
+        default:
+            return (nil, nil)
+        }
+    }
+
+    var alipayBaseAmount: Double? {
+        let bounds = normalizedAmountBounds
+        switch (bounds.min, bounds.max) {
+        case let (min?, max?) where abs(max - min) < 0.001:
+            return min
+        case let (min?, max?):
+            let baseFromMax = max / 2
+            if abs(min - baseFromMax * 0.5) <= Swift.max(0.01, baseFromMax * 0.01) {
+                return baseFromMax
+            }
+            return (min + max) / 2
+        case let (min?, nil):
+            return min
+        case let (nil, max?):
+            return max
+        default:
+            return nil
+        }
+    }
+
+    func estimatedExecutionAmount(costDeviationPct: Double?) -> Double {
+        let bounds = normalizedAmountBounds
+        guard let low = bounds.min else { return 0 }
+        let high = bounds.max ?? low
+
+        if !isDrawdownMode {
+            if abs(high - low) < 0.001 {
+                return low
+            }
+            return (low + high) / 2
+        }
+
+        guard let base = alipayBaseAmount else {
+            return abs(high - low) < 0.001 ? low : (low + high) / 2
+        }
+        guard let costDeviationPct else {
+            return clamped(base, min: low, max: high)
+        }
+        let multiplier = Self.alipayDrawdownMultiplier(for: costDeviationPct)
+        return clamped(base * multiplier, min: low, max: high)
+    }
+
+    static func drawdownCostDeviationPct(currentPrice: Double?, costPrice: Double?) -> Double? {
+        guard let currentPrice, let costPrice, costPrice > 0 else {
+            return nil
+        }
+        return ((currentPrice - costPrice) / costPrice) * 100
+    }
+
+    static func alipayDrawdownMultiplier(for costDeviationPct: Double) -> Double {
+        if costDeviationPct < 0 {
+            return min(2.0, 1 + abs(costDeviationPct) * 0.08)
+        }
+        if costDeviationPct > 0 {
+            return max(0.5, 1 - costDeviationPct * 0.04)
+        }
+        return 1
+    }
+
+    private func clamped(_ value: Double, min minValue: Double, max maxValue: Double) -> Double {
+        Swift.min(Swift.max(value, minValue), maxValue)
+    }
+
+    private static func parsedAmountRange(from text: String) -> (min: Double?, max: Double?) {
+        let cleaned = text
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: "，", with: "")
+            .replacingOccurrences(of: "元", with: "")
+            .replacingOccurrences(of: "～", with: "~")
+            .replacingOccurrences(of: "—", with: "~")
+            .replacingOccurrences(of: "－", with: "~")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let numbers = cleaned
+            .split { !"0123456789.".contains($0) }
+            .compactMap { Double($0) }
+        guard let first = numbers.first else {
+            return (nil, nil)
+        }
+        if numbers.count >= 2, let second = numbers.dropFirst().first {
+            return (first, second)
+        }
+        return (first, first)
+    }
 }
 
 struct PersonalInvestmentPlanSummary: Hashable {
@@ -1122,8 +1321,93 @@ struct PersonalAssetAggregateRow: Identifiable, Hashable {
     let fundCode: String?
     let holdingRow: UserPortfolioValuationRow?
     let rawHolding: UserPortfolioHolding?
+    let archivedHolding: UserPortfolioHolding?
     let pendingTrades: [PersonalPendingTrade]
     let plans: [PersonalInvestmentPlan]
+    let pendingCashAmount: Double
+    let pendingUnitAmount: Double
+    let activePlanCount: Int
+    let pausedPlanCount: Int
+    let endedPlanCount: Int
+    let drawdownPlanCount: Int
+    let totalCumulativePlanAmount: Double
+    let estimatedNextPlanAmount: Double
+    let nextExecutionDate: String?
+
+    init(
+        key: String,
+        assetType: PersonalAssetType,
+        fundName: String,
+        fundCode: String?,
+        holdingRow: UserPortfolioValuationRow?,
+        rawHolding: UserPortfolioHolding?,
+        archivedHolding: UserPortfolioHolding?,
+        pendingTrades: [PersonalPendingTrade],
+        plans: [PersonalInvestmentPlan]
+    ) {
+        self.key = key
+        self.assetType = assetType
+        self.fundName = fundName
+        self.fundCode = fundCode
+        self.holdingRow = holdingRow
+        self.rawHolding = rawHolding
+        self.archivedHolding = archivedHolding
+        self.pendingTrades = pendingTrades
+        self.plans = plans
+
+        var pendingCashTotal = 0.0
+        var pendingUnitTotal = 0.0
+        for trade in pendingTrades {
+            pendingCashTotal += trade.amountValue ?? 0
+            pendingUnitTotal += trade.unitValue ?? 0
+        }
+
+        let drawdownDeviationPct = Self.drawdownCostDeviationPct(
+            currentPrice: holdingRow?.resolvedPrice,
+            costPrice: holdingRow?.holding.costPrice ?? rawHolding?.costPrice ?? archivedHolding?.costPrice
+        )
+
+        var activeCount = 0
+        var pausedCount = 0
+        var endedCount = 0
+        var drawdownCount = 0
+        var cumulativeAmount = 0.0
+        var nextPlanAmount = 0.0
+        var earliestExecutionDate: String?
+
+        for plan in plans {
+            switch plan.normalizedStatus {
+            case "进行中":
+                activeCount += 1
+                nextPlanAmount += plan.estimatedExecutionAmount(costDeviationPct: drawdownDeviationPct)
+                let executionDate = plan.nextExecutionDate.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !executionDate.isEmpty,
+                   earliestExecutionDate == nil || executionDate < earliestExecutionDate! {
+                    earliestExecutionDate = executionDate
+                }
+            case "已暂停":
+                pausedCount += 1
+            case "已终止":
+                endedCount += 1
+            default:
+                endedCount += 1
+            }
+            if plan.isDrawdownMode {
+                drawdownCount += 1
+            }
+            cumulativeAmount += plan.cumulativeInvestedAmount ?? 0
+        }
+
+        pendingCashAmount = pendingCashTotal
+        pendingUnitAmount = pendingUnitTotal
+        activePlanCount = activeCount
+        pausedPlanCount = pausedCount
+        endedPlanCount = endedCount
+        drawdownPlanCount = drawdownCount
+        totalCumulativePlanAmount = cumulativeAmount
+        estimatedNextPlanAmount = nextPlanAmount
+        nextExecutionDate = earliestExecutionDate
+    }
 
     var id: String { key }
 
@@ -1132,7 +1416,11 @@ struct PersonalAssetAggregateRow: Identifiable, Hashable {
     }
 
     var detectedMarket: StockMarket? {
-        rawHolding?.detectedMarket ?? holdingRow?.holding.detectedMarket
+        rawHolding?.detectedMarket ?? holdingRow?.holding.detectedMarket ?? archivedHolding?.detectedMarket
+    }
+
+    var detectedFundMarket: FundMarket? {
+        rawHolding?.detectedFundMarket ?? holdingRow?.holding.detectedFundMarket ?? archivedHolding?.detectedFundMarket
     }
 
     var marketValue: Double? {
@@ -1143,12 +1431,16 @@ struct PersonalAssetAggregateRow: Identifiable, Hashable {
         holdingRow?.holding.units ?? rawHolding?.units
     }
 
+    var archivedUnits: Double? {
+        archivedHolding?.units
+    }
+
     var currentPrice: Double? {
         holdingRow?.resolvedPrice
     }
 
     var costPrice: Double? {
-        holdingRow?.holding.costPrice ?? rawHolding?.costPrice
+        holdingRow?.holding.costPrice ?? rawHolding?.costPrice ?? archivedHolding?.costPrice
     }
 
     var profitAmount: Double? {
@@ -1167,78 +1459,28 @@ struct PersonalAssetAggregateRow: Identifiable, Hashable {
         holdingRow?.estimatedDailyChangeAmount
     }
 
-    var pendingCashAmount: Double {
-        pendingTrades.compactMap(\.amountValue).reduce(0, +)
-    }
-
-    var pendingUnitAmount: Double {
-        pendingTrades.compactMap(\.unitValue).reduce(0, +)
-    }
-
     var pendingTradeCount: Int {
         pendingTrades.count
-    }
-
-    var activePlans: [PersonalInvestmentPlan] {
-        plans.filter(\.isActivePlan)
-    }
-
-    var pausedPlans: [PersonalInvestmentPlan] {
-        plans.filter(\.isPausedPlan)
-    }
-
-    var endedPlans: [PersonalInvestmentPlan] {
-        plans.filter(\.isEndedPlan)
-    }
-
-    var activePlanCount: Int {
-        activePlans.count
-    }
-
-    var pausedPlanCount: Int {
-        pausedPlans.count
-    }
-
-    var endedPlanCount: Int {
-        endedPlans.count
     }
 
     var totalPlanCount: Int {
         plans.count
     }
 
-    var drawdownPlanCount: Int {
-        plans.filter(\.isDrawdownMode).count
-    }
-
     var hasDrawdownPlan: Bool {
         drawdownPlanCount > 0
-    }
-
-    var totalCumulativePlanAmount: Double {
-        plans.compactMap(\.cumulativeInvestedAmount).reduce(0, +)
-    }
-
-    var estimatedNextPlanAmount: Double {
-        activePlans.reduce(0) { partial, plan in
-            partial + estimatedNextPlanAmount(for: plan)
-        }
     }
 
     var effectiveHoldingAmount: Double {
         (marketValue ?? 0) + pendingCashAmount + estimatedNextPlanAmount
     }
 
-    var nextExecutionDate: String? {
-        activePlans
-            .map(\.nextExecutionDate)
-            .filter { !$0.isEmpty }
-            .sorted()
-            .first
-    }
-
     var hasHolding: Bool {
         marketValue != nil || holdingUnits != nil
+    }
+
+    var hasArchivedHolding: Bool {
+        archivedHolding != nil
     }
 
     var hasPending: Bool {
@@ -1250,83 +1492,23 @@ struct PersonalAssetAggregateRow: Identifiable, Hashable {
     }
 
     var combinedStatusText: String {
-        switch (hasHolding, hasPending, hasPlans) {
-        case (true, true, true):
-            return "已持有 + 待确认 + 计划中"
-        case (true, true, false):
-            return "已持有 + 待确认"
-        case (true, false, true):
-            return "已持有 + 计划中"
-        case (false, true, true):
-            return "待确认 + 计划中"
-        case (true, false, false):
-            return "已持有"
-        case (false, true, false):
-            return "待确认"
-        case (false, false, true):
-            return "计划中"
-        default:
-            return "未归类"
+        var parts: [String] = []
+        if hasHolding {
+            parts.append("已持有")
+        } else if hasArchivedHolding {
+            parts.append("已归档")
         }
+        if hasPending {
+            parts.append("待确认")
+        }
+        if hasPlans {
+            parts.append("计划中")
+        }
+        return parts.isEmpty ? "未归类" : parts.joined(separator: " + ")
     }
 
-    private func estimatedNextPlanAmount(for plan: PersonalInvestmentPlan) -> Double {
-        let amountRange = normalizedAmountRange(for: plan)
-        guard let low = amountRange.min else { return 0 }
-        let high = amountRange.max ?? low
-
-        if !plan.isDrawdownMode {
-            if abs(high - low) < 0.001 {
-                return low
-            }
-            return (low + high) / 2
-        }
-
-        guard let changePct = estimateChangePct else {
-            return abs(high - low) < 0.001 ? low : (low + high) / 2
-        }
-        if changePct < 0 {
-            return high
-        }
-        if changePct > 0 {
-            return low
-        }
-        return abs(high - low) < 0.001 ? low : (low + high) / 2
-    }
-
-    private func normalizedAmountRange(for plan: PersonalInvestmentPlan) -> (min: Double?, max: Double?) {
-        let parsed = parsedAmountRange(from: plan.amountText)
-        let minValue = plan.minAmount ?? parsed.min
-        let maxValue = plan.maxAmount ?? parsed.max
-        switch (minValue, maxValue) {
-        case let (min?, max?) where max < min:
-            return (max, min)
-        case let (min?, max?):
-            return (min, max)
-        case let (min?, nil):
-            return (min, min)
-        case let (nil, max?):
-            return (max, max)
-        default:
-            return (nil, nil)
-        }
-    }
-
-    private func parsedAmountRange(from text: String) -> (min: Double?, max: Double?) {
-        let cleaned = text
-            .replacingOccurrences(of: ",", with: "")
-            .replacingOccurrences(of: "元", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let numbers = cleaned
-            .split { !"0123456789.".contains($0) }
-            .compactMap { Double($0) }
-        guard let first = numbers.first else {
-            return (nil, nil)
-        }
-        if numbers.count >= 2, let second = numbers.dropFirst().first {
-            return (first, second)
-        }
-        return (first, first)
+    private static func drawdownCostDeviationPct(currentPrice: Double?, costPrice: Double?) -> Double? {
+        PersonalInvestmentPlan.drawdownCostDeviationPct(currentPrice: currentPrice, costPrice: costPrice)
     }
 }
 

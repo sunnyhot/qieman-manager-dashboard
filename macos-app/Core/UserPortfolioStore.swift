@@ -82,7 +82,10 @@ struct UserPortfolioStore {
                     units: importedHolding.units,
                     costPrice: importedHolding.costPrice,
                     displayName: importedHolding.normalizedName ?? current.normalizedName,
-                    stockMarket: importedHolding.stockMarket ?? current.stockMarket
+                    stockMarket: importedHolding.stockMarket ?? current.stockMarket,
+                    fundMarket: importedHolding.fundMarket ?? current.fundMarket,
+                    isArchived: false,
+                    archivedAt: nil
                 )
             } else {
                 indexByKey[key] = merged.count
@@ -118,30 +121,37 @@ struct UserPortfolioStore {
         var tokens = cleaned
         var assetType: PersonalAssetType = .fund
         var marketHint: StockMarket?
+        var fundMarketHint: FundMarket?
         if let explicitType = parseAssetType(tokens[0]) {
             assetType = explicitType
             marketHint = parseStockMarketHint(tokens[0])
+            fundMarketHint = parseFundMarketHint(tokens[0])
             tokens.removeFirst()
         } else if tokens.count >= 2, let explicitType = parseAssetType(tokens[1]) {
             assetType = explicitType
             marketHint = parseStockMarketHint(tokens[1])
+            fundMarketHint = parseFundMarketHint(tokens[1])
             tokens.remove(at: 1)
         } else if let parsedCode = parseAssetCode(tokens[0]), parsedCode.assetType == .stock {
             assetType = .stock
             marketHint = parsedCode.stockMarket
+            fundMarketHint = parsedCode.fundMarket
         } else if tokens.count >= 2, let parsedCode = parseAssetCode(tokens[1]), parsedCode.assetType == .stock {
             assetType = .stock
             marketHint = parsedCode.stockMarket
+            fundMarketHint = parsedCode.fundMarket
         }
 
         guard tokens.count >= 2 else { return nil }
 
         if let parsedCode = parseAssetCode(tokens[0]) {
             let resolvedMarket = parsedCode.stockMarket ?? marketHint
+            let resolvedFundMarket = parsedCode.fundMarket ?? fundMarketHint
             return buildHolding(
                 code: parsedCode.code,
                 assetType: parsedCode.assetType ?? assetType,
                 stockMarket: resolvedMarket,
+                fundMarket: resolvedFundMarket,
                 unitsText: tokens[safe: 1],
                 costText: tokens[safe: 2],
                 nameParts: Array(tokens.dropFirst(3))
@@ -150,10 +160,12 @@ struct UserPortfolioStore {
 
         if tokens.count >= 3, let parsedCode = parseAssetCode(tokens[1]) {
             let resolvedMarket = parsedCode.stockMarket ?? marketHint
+            let resolvedFundMarket = parsedCode.fundMarket ?? fundMarketHint
             return buildHolding(
                 code: parsedCode.code,
                 assetType: parsedCode.assetType ?? assetType,
                 stockMarket: resolvedMarket,
+                fundMarket: resolvedFundMarket,
                 unitsText: tokens[safe: 2],
                 costText: tokens[safe: 3],
                 nameParts: [tokens[0]] + Array(tokens.dropFirst(4))
@@ -163,7 +175,15 @@ struct UserPortfolioStore {
         return nil
     }
 
-    private func buildHolding(code: String, assetType: PersonalAssetType, stockMarket: StockMarket?, unitsText: String?, costText: String?, nameParts: [String]) -> UserPortfolioHolding? {
+    private func buildHolding(
+        code: String,
+        assetType: PersonalAssetType,
+        stockMarket: StockMarket?,
+        fundMarket: FundMarket?,
+        unitsText: String?,
+        costText: String?,
+        nameParts: [String]
+    ) -> UserPortfolioHolding? {
         guard let unitsText, let units = decimalValue(unitsText), units > 0 else {
             return nil
         }
@@ -181,7 +201,8 @@ struct UserPortfolioStore {
             units: units,
             costPrice: parsedCost,
             displayName: name.isEmpty ? nil : name,
-            stockMarket: stockMarket
+            stockMarket: stockMarket,
+            fundMarket: fundMarket ?? (assetType == .fund ? UserPortfolioHolding.detectFundMarket(from: code) : nil)
         )
     }
 
@@ -199,7 +220,7 @@ struct UserPortfolioStore {
         switch normalized {
         case "股票", "stock", "a股", "沪深", "港股", "hk", "美股", "us":
             return .stock
-        case "基金", "fund":
+        case "基金", "fund", "场内基金", "场内", "etf", "lof", "场外基金", "场外":
             return .fund
         default:
             return nil
@@ -222,52 +243,96 @@ struct UserPortfolioStore {
         }
     }
 
-    private func parseAssetCode(_ value: String) -> (code: String, assetType: PersonalAssetType?, stockMarket: StockMarket?)? {
+    private func parseFundMarketHint(_ value: String) -> FundMarket? {
+        let normalized = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        switch normalized {
+        case "场内基金", "场内", "etf", "lof", "exchange", "exchange-traded":
+            return .onExchange
+        case "场外基金", "场外", "otc", "off-exchange", "fund":
+            return .offExchange
+        default:
+            return nil
+        }
+    }
+
+    private func parseAssetCode(_ value: String) -> (code: String, assetType: PersonalAssetType?, stockMarket: StockMarket?, fundMarket: FundMarket?)? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         let upper = trimmed.uppercased()
 
+        if upper.hasPrefix("ETF:") || upper.hasPrefix("LOF:") || upper.hasPrefix("EX:") {
+            let code = String(upper.split(separator: ":", maxSplits: 1).last ?? "")
+            guard !code.isEmpty else { return nil }
+            return (code, .fund, nil, .onExchange)
+        }
+
+        if upper.hasPrefix("FUND:") || upper.hasPrefix("OTC:") {
+            let code = String(upper.split(separator: ":", maxSplits: 1).last ?? "")
+            guard !code.isEmpty else { return nil }
+            return (code, .fund, nil, .offExchange)
+        }
+
         if upper.count == 8,
-           (upper.hasPrefix("SH") || upper.hasPrefix("SZ")),
+           (upper.hasPrefix("SH") || upper.hasPrefix("SZ") || upper.hasPrefix("BJ")),
            isDigits(String(upper.dropFirst(2))) {
-            return (String(upper.dropFirst(2)), .stock, .aShare)
+            return (String(upper.dropFirst(2)), .stock, .aShare, nil)
         }
 
         if upper.count == 9,
-           (upper.hasSuffix(".SH") || upper.hasSuffix(".SZ")),
+           (upper.hasSuffix(".SH") || upper.hasSuffix(".SZ") || upper.hasSuffix(".BJ")),
            isDigits(String(upper.prefix(6))) {
-            return (String(upper.prefix(6)), .stock, .aShare)
+            return (String(upper.prefix(6)), .stock, .aShare, nil)
         }
 
         if upper.hasPrefix("HK:") {
-            let code = String(upper.dropFirst(3))
+            let code = normalizedHongKongStockCode(String(upper.dropFirst(3)))
             guard !code.isEmpty else { return nil }
-            return (code, .stock, .hk)
+            return (code, .stock, .hk, nil)
+        }
+        if upper.hasPrefix("HK"), upper.count > 2 {
+            let code = normalizedHongKongStockCode(String(upper.dropFirst(2)))
+            guard !code.isEmpty, isDigits(code) else { return nil }
+            return (code, .stock, .hk, nil)
         }
         if upper.hasPrefix("US:") {
             let code = String(upper.dropFirst(3))
             guard !code.isEmpty else { return nil }
-            return (code, .stock, .us)
+            return (code, .stock, .us, nil)
         }
 
         if upper.count == 5, isDigits(trimmed) {
-            return (trimmed, .stock, .hk)
+            return (trimmed, .stock, .hk, nil)
         }
 
         if upper.allSatisfy({ $0.isLetter }), upper.count >= 1, upper.count <= 5 {
-            return (upper, .stock, .us)
+            return (upper, .stock, .us, nil)
         }
 
         guard trimmed.count >= 5 && trimmed.count <= 6, isDigits(trimmed) else { return nil }
-        return (trimmed, nil, nil)
+        return (trimmed, nil, nil, UserPortfolioHolding.detectFundMarket(from: trimmed))
     }
 
     private func isDigits(_ value: String) -> Bool {
         CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: value))
     }
 
+    private func normalizedHongKongStockCode(_ value: String) -> String {
+        let code = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty, isDigits(code), code.count < 5 else {
+            return code
+        }
+        return String(repeating: "0", count: 5 - code.count) + code
+    }
+
     private func mergeKey(for holding: UserPortfolioHolding) -> String {
         let code = holding.normalizedFundCode.lowercased()
-        let marketSegment = (holding.assetType == .stock) ? ":mkt:\(holding.detectedMarket?.rawValue ?? "a")" : ""
+        let marketSegment: String
+        if holding.assetType == .stock {
+            marketSegment = ":mkt:\(holding.detectedMarket?.rawValue ?? "a")"
+        } else {
+            marketSegment = ":fundmkt:\(holding.detectedFundMarket?.rawValue ?? FundMarket.offExchange.rawValue)"
+        }
         if !code.isEmpty {
             return "\(holding.assetType.rawValue)\(marketSegment):code:\(code)"
         }

@@ -32,10 +32,10 @@ struct PersonalAssetOverviewCard: View {
                                 .foregroundStyle(AppPalette.muted)
                         }
                         ToolbarBadge(title: row.assetTypeLabel, tint: row.assetType == .stock ? AppPalette.info : AppPalette.brand)
-                        if let marketLabel = row.rawHolding?.marketLabel ?? row.holdingRow?.holding.marketLabel {
+                        if let marketLabel = row.rawHolding?.marketLabel ?? row.holdingRow?.holding.marketLabel ?? row.archivedHolding?.marketLabel {
                             ToolbarBadge(title: marketLabel, tint: AppPalette.info)
                         }
-                        ToolbarBadge(title: row.combinedStatusText, tint: row.hasPending ? AppPalette.warning : AppPalette.brand)
+                        ToolbarBadge(title: row.combinedStatusText, tint: row.hasPending ? AppPalette.warning : (row.hasArchivedHolding && !row.hasHolding ? AppPalette.muted : AppPalette.brand))
                         if row.hasDrawdownPlan {
                             ToolbarBadge(title: "涨跌幅 \(row.drawdownPlanCount)", tint: AppPalette.info)
                         }
@@ -76,6 +76,9 @@ struct PersonalAssetOverviewCard: View {
             }
 
             HStack(spacing: 12) {
+                if let archivedUnits = row.archivedUnits, !row.hasHolding {
+                    Text("归档份额 \(unitsText(archivedUnits))")
+                }
                 if row.pendingTradeCount > 0 {
                     Text("待确认 \(row.pendingTradeCount) 笔")
                 }
@@ -100,19 +103,43 @@ struct PersonalAssetOverviewCard: View {
 }
 
 struct PersonalAssetAddButtons: View {
-    @State private var isPresentingAddSheet = false
+    @State private var isPresentingAddHoldingSheet = false
+    @State private var isPresentingAddPendingTradeSheet = false
+    @State private var isPresentingAddInvestmentPlanSheet = false
 
     var body: some View {
-        Button {
-            isPresentingAddSheet = true
+        Menu {
+            Button {
+                isPresentingAddHoldingSheet = true
+            } label: {
+                Label("添加持仓", systemImage: "briefcase")
+            }
+
+            Button {
+                isPresentingAddPendingTradeSheet = true
+            } label: {
+                Label("添加买入中", systemImage: "clock.badge.exclamationmark")
+            }
+
+            Button {
+                isPresentingAddInvestmentPlanSheet = true
+            } label: {
+                Label("添加计划档案", systemImage: "calendar.badge.clock")
+            }
         } label: {
-            Label("添加持仓", systemImage: "plus.circle")
+            Label("添加", systemImage: "plus.circle")
                 .font(.system(size: 12, weight: .semibold))
         }
-        .buttonStyle(.bordered)
+        .menuStyle(.borderlessButton)
         .controlSize(.small)
-        .sheet(isPresented: $isPresentingAddSheet) {
+        .sheet(isPresented: $isPresentingAddHoldingSheet) {
             PersonalAssetAddHoldingSheet()
+        }
+        .sheet(isPresented: $isPresentingAddPendingTradeSheet) {
+            PersonalPendingTradeEditSheet()
+        }
+        .sheet(isPresented: $isPresentingAddInvestmentPlanSheet) {
+            PersonalInvestmentPlanAddSheet()
         }
     }
 }
@@ -171,7 +198,9 @@ struct PersonalAssetAddHoldingSheet: View {
                         codeText: codeResolution.code,
                         unitsText: unitsText,
                         costPriceText: costPriceText,
-                        displayName: codeResolution.displayName
+                        displayName: codeResolution.displayName,
+                        stockMarket: codeResolution.stockMarket,
+                        fundMarket: codeResolution.fundMarket
                     ) {
                         dismiss()
                     }
@@ -228,9 +257,9 @@ struct PersonalAssetAddHoldingSheet: View {
         }
         if let codeResolution {
             if let displayName = codeResolution.displayName, !displayName.isEmpty {
-                return "判断为：\(codeResolution.assetType.displayName) · \(displayName)"
+                return "判断为：\(resolutionTypeLabel(codeResolution)) · \(displayName)"
             }
-            return "判断为：\(codeResolution.assetType.displayName)，暂未识别到名称"
+            return "判断为：\(resolutionTypeLabel(codeResolution))，暂未识别到名称"
         }
         if hasResolvedName {
             return "暂时无法判断类型，请检查代码"
@@ -252,6 +281,13 @@ struct PersonalAssetAddHoldingSheet: View {
             return AppPalette.warning
         }
         return AppPalette.muted
+    }
+
+    private func resolutionTypeLabel(_ resolution: PersonalAssetCodeResolution) -> String {
+        if resolution.assetType == .stock {
+            return resolution.stockMarket?.displayName ?? resolution.assetType.displayName
+        }
+        return resolution.fundMarket?.displayName ?? resolution.assetType.displayName
     }
 
     private func addHoldingField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
@@ -290,6 +326,122 @@ struct PersonalAssetAddHoldingSheet: View {
         codeResolution = resolution
         hasResolvedName = true
         isResolvingName = false
+    }
+}
+
+struct PersonalAssetEditHoldingSheet: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+
+    let row: PersonalAssetAggregateRow
+
+    @State private var codeText: String
+    @State private var nameText: String
+    @State private var unitsText: String
+    @State private var costPriceText: String
+
+    private var holding: UserPortfolioHolding? {
+        row.rawHolding ?? row.holdingRow?.holding
+    }
+
+    init(row: PersonalAssetAggregateRow) {
+        self.row = row
+        let holding = row.rawHolding ?? row.holdingRow?.holding
+        _codeText = State(initialValue: holding?.normalizedFundCode ?? row.fundCode ?? "")
+        _nameText = State(initialValue: holding?.normalizedName ?? row.fundName)
+        _unitsText = State(initialValue: holding.map { Self.formattedUnitsText($0.units) } ?? "")
+        _costPriceText = State(initialValue: holding?.costPrice.map(decimalText) ?? "")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(AppPalette.brand)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("编辑持仓")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text(holdingMarketLabel)
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                Spacer()
+            }
+
+            if holding == nil {
+                Text("这条资产没有已持有记录。")
+                    .font(.system(size: 12))
+                    .foregroundStyle(AppPalette.muted)
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    editField("名称", text: $nameText, placeholder: "可留空，按代码自动补全")
+                    editField("代码", text: $codeText, placeholder: "例如 021550 / ETF:510300 / HK:00700 / US:AAPL")
+                    editField("份额", text: $unitsText, placeholder: "例如 100.00")
+                    editField("成本价", text: $costPriceText, placeholder: "可留空")
+                }
+            }
+
+            HStack(spacing: 10) {
+                Spacer()
+                Button("取消") {
+                    dismiss()
+                }
+                .buttonStyle(.bordered)
+
+                Button("保存") {
+                    if model.updatePersonalAssetHolding(
+                        row,
+                        codeText: codeText,
+                        unitsText: unitsText,
+                        costPriceText: costPriceText,
+                        displayNameText: nameText
+                    ) {
+                        dismiss()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppPalette.brand)
+                .disabled(holding == nil)
+            }
+        }
+        .padding(18)
+        .frame(width: 420)
+    }
+
+    private var holdingMarketLabel: String {
+        if row.assetType == .stock {
+            return holding?.detectedMarket?.displayName ?? row.detectedMarket?.displayName ?? row.assetType.displayName
+        }
+        return holding?.detectedFundMarket?.displayName ?? row.detectedFundMarket?.displayName ?? row.assetType.displayName
+    }
+
+    private func editField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(AppPalette.muted)
+            TextField(placeholder, text: text)
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                )
+        }
+    }
+
+    private static func formattedUnitsText(_ value: Double) -> String {
+        let rounded = value.rounded()
+        if abs(value - rounded) < 0.0000001 {
+            return String(format: "%.0f", value)
+        }
+        return String(format: "%.4f", value)
+            .replacingOccurrences(of: #"0+$"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"\.$"#, with: "", options: .regularExpression)
     }
 }
 
@@ -386,9 +538,14 @@ struct PersonalAssetUnitAdjustmentSheet: View {
 }
 
 struct PlanArchiveGroup: View {
+    @EnvironmentObject private var model: AppModel
+
     let title: String
     let tint: Color
     let plans: [PersonalInvestmentPlan]
+
+    @State private var editingPlan: PersonalInvestmentPlan?
+    @State private var deletingPlan: PersonalInvestmentPlan?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -403,10 +560,47 @@ struct PlanArchiveGroup: View {
 
             LazyVStack(spacing: 10) {
                 ForEach(plans) { plan in
-                    InvestmentPlanCard(plan: plan)
+                    InvestmentPlanCard(
+                        plan: plan,
+                        onEdit: { editingPlan = plan },
+                        onDelete: { deletingPlan = plan }
+                    )
                 }
             }
         }
+        .sheet(item: $editingPlan) { plan in
+            PersonalInvestmentPlanEditSheet(plan: plan)
+        }
+        .alert("删除定投计划？", isPresented: deleteConfirmationBinding) {
+            Button("删除", role: .destructive) {
+                if let deletingPlan {
+                    model.deleteInvestmentPlan(deletingPlan.id)
+                }
+                deletingPlan = nil
+            }
+            Button("取消", role: .cancel) {
+                deletingPlan = nil
+            }
+        } message: {
+            Text(deleteConfirmationMessage)
+        }
+    }
+
+    private var deleteConfirmationBinding: Binding<Bool> {
+        Binding(
+            get: { deletingPlan != nil },
+            set: { isPresented in
+                if !isPresented {
+                    deletingPlan = nil
+                }
+            }
+        )
+    }
+
+    private var deleteConfirmationMessage: String {
+        guard let deletingPlan else { return "" }
+        let itemText = deletingPlan.fundCode.map { "\(deletingPlan.fundName)（\($0)）" } ?? deletingPlan.fundName
+        return "会从本地保存的数据中删除 \(itemText) 的这条计划档案。"
     }
 }
 
@@ -430,4 +624,3 @@ struct AssetMiniStat: View {
         .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
     }
 }
-

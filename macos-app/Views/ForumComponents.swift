@@ -59,6 +59,8 @@ struct CommentBlock: View {
 
 struct InvestmentPlanCard: View {
     let plan: PersonalInvestmentPlan
+    var onEdit: (() -> Void)?
+    var onDelete: (() -> Void)?
 
     private var accent: Color {
         if plan.isEndedPlan {
@@ -122,6 +124,30 @@ struct InvestmentPlanCard: View {
                     .foregroundStyle(AppPalette.muted)
                     .lineLimit(5)
             }
+
+            if onEdit != nil || onDelete != nil {
+                HStack(spacing: 8) {
+                    Spacer()
+                    if let onEdit {
+                        Button {
+                            onEdit()
+                        } label: {
+                            Label("修改", systemImage: "square.and.pencil")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                    if let onDelete {
+                        Button(role: .destructive) {
+                            onDelete()
+                        } label: {
+                            Label("删除", systemImage: "trash")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+            }
         }
         .padding(12)
         .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
@@ -130,6 +156,8 @@ struct InvestmentPlanCard: View {
 
 struct PendingTradeCard: View {
     let trade: PersonalPendingTrade
+    var onEdit: (() -> Void)?
+    var onDelete: (() -> Void)?
 
     private var accent: Color {
         switch trade.actionLabel {
@@ -184,6 +212,30 @@ struct PendingTradeCard: View {
             }
             .font(.system(size: 10))
             .foregroundStyle(AppPalette.muted)
+
+            if onEdit != nil || onDelete != nil {
+                HStack(spacing: 8) {
+                    Spacer()
+                    if let onEdit {
+                        Button {
+                            onEdit()
+                        } label: {
+                            Label("修改", systemImage: "square.and.pencil")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                    if let onDelete {
+                        Button(role: .destructive) {
+                            onDelete()
+                        } label: {
+                            Label("删除", systemImage: "trash")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+            }
         }
         .padding(12)
         .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))

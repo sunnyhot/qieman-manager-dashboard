@@ -1,357 +1,655 @@
 import AppKit
 import SwiftUI
-import Charts
-import UniformTypeIdentifiers
 
 // MARK: - Settings
 
+private enum SettingsFocus: CaseIterable, Identifiable {
+    case account
+    case watch
+    case version
+
+    var id: Self { self }
+}
+
 struct SettingsSectionView: View {
     @EnvironmentObject private var model: AppModel
-    @AppStorage("portfolio.import.center.expanded") private var isImportCenterExpanded = false
-    @AppStorage("portfolio.import.show_imported_targets") private var shouldShowImportedImportTargets = false
-    @State private var importTarget: PersonalDataImportTarget = .holdings
-    @State private var isDraftEditorExpanded = false
+    @State private var selectedSettingsFocus: SettingsFocus = .version
+
+    private var enabledBinding: Binding<Bool> {
+        Binding(
+            get: { model.managerWatchSettings.isEnabled },
+            set: { model.updateManagerWatchEnabled($0) }
+        )
+    }
+
+    private var forumBinding: Binding<Bool> {
+        Binding(
+            get: { model.managerWatchSettings.watchForum },
+            set: { model.updateManagerWatchForumEnabled($0) }
+        )
+    }
+
+    private var platformBinding: Binding<Bool> {
+        Binding(
+            get: { model.managerWatchSettings.watchPlatform },
+            set: { model.updateManagerWatchPlatformEnabled($0) }
+        )
+    }
+
+    private var prodCodeBinding: Binding<String> {
+        Binding(
+            get: { model.managerWatchSettings.prodCode },
+            set: { model.managerWatchSettings.prodCode = $0 }
+        )
+    }
+
+    private var managerNameBinding: Binding<String> {
+        Binding(
+            get: { model.managerWatchSettings.managerName },
+            set: { model.managerWatchSettings.managerName = $0 }
+        )
+    }
+
+    private var launchAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: { model.launchAtLoginEnabled },
+            set: { model.updateLaunchAtLoginEnabled($0) }
+        )
+    }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                SectionCard(title: "账号与登录", subtitle: "管理且慢登录态，验证 Cookie 有效性", icon: "person.circle") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 10) {
-                            ToolbarBadge(
-                                title: model.cookieAvailable ? "Cookie 可用" : "Cookie 缺失",
-                                tint: model.cookieAvailable ? AppPalette.positive : AppPalette.warning
-                            )
-                            Spacer()
-                        }
-                        HStack(spacing: 10) {
-                            Button("登录且慢") {
-                                model.presentLoginSheet()
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(AppPalette.brand)
+            VStack(alignment: .leading, spacing: 18) {
+                overviewBand
+                selectedSettingsPanel
+                    .frame(maxWidth: selectedSettingsFocus == .watch ? 760 : 620, alignment: .topLeading)
+            }
+            .frame(maxWidth: 1480, alignment: .topLeading)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
+        }
+        .scrollIndicators(.visible)
+    }
 
-                            Button(model.isCheckingAuth ? "验证中…" : "验证登录态") {
-                                Task { await model.validateAuth() }
-                            }
-                            .buttonStyle(.bordered)
-                            .disabled(model.isCheckingAuth)
+    private var overviewBand: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            overviewIntro
+            overviewMetrics
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppPalette.paper.opacity(0.92), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
+        )
+    }
+
+    private var overviewIntro: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(AppPalette.brand)
+                    .frame(width: 30, height: 30)
+                    .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+                Text("设置中心")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 7) {
+                    overviewBadges
+                }
+
+                VStack(alignment: .leading, spacing: 7) {
+                    overviewBadges
+                }
+            }
+        }
+    }
+
+    private var overviewBadges: some View {
+        Group {
+            ToolbarBadge(title: model.cookieAvailable ? "Cookie 可用" : "需要登录", tint: model.cookieAvailable ? AppPalette.positive : AppPalette.warning)
+            ToolbarBadge(title: model.liveModeLabel, tint: model.hasLiveService ? AppPalette.brand : AppPalette.muted)
+            ToolbarBadge(title: model.managerWatchSettings.isEnabled ? "巡检已开" : "巡检关闭", tint: model.managerWatchSettings.isEnabled ? AppPalette.positive : AppPalette.muted)
+        }
+    }
+
+    private var overviewMetrics: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 176), spacing: 12)], spacing: 12) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.16)) {
+                    selectedSettingsFocus = .account
+                }
+            } label: {
+                SettingsMetric(
+                    title: "账号",
+                    value: model.cookieAvailable ? "登录态可用" : "等待登录",
+                    detail: model.isCheckingAuth ? "验证中" : model.cookieFileURL?.lastPathComponent ?? "未找到 Cookie",
+                    icon: "person.crop.circle.badge.checkmark",
+                    tint: model.cookieAvailable ? AppPalette.positive : AppPalette.warning,
+                    isSelected: selectedSettingsFocus == .account
+                )
+            }
+            .buttonStyle(PressResponsiveButtonStyle())
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.16)) {
+                    selectedSettingsFocus = .watch
+                }
+            } label: {
+                SettingsMetric(
+                    title: "巡检",
+                    value: model.managerWatchStatusText,
+                    detail: model.managerWatchScopeText,
+                    icon: "bell.and.waves.left.and.right",
+                    tint: model.managerWatchSettings.isEnabled ? AppPalette.positive : AppPalette.muted,
+                    isSelected: selectedSettingsFocus == .watch
+                )
+            }
+            .buttonStyle(PressResponsiveButtonStyle())
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.16)) {
+                    selectedSettingsFocus = .version
+                }
+            } label: {
+                SettingsMetric(
+                    title: "版本",
+                    value: AppUpdateChecker.bundleVersion,
+                    detail: model.isCheckingForUpdates ? "正在检查更新" : model.availableUpdate.map { "可更新到 \($0.version)" } ?? "当前构建",
+                    icon: "arrow.down.circle",
+                    tint: model.availableUpdate == nil ? AppPalette.info : AppPalette.positive,
+                    isSelected: selectedSettingsFocus == .version
+                )
+            }
+            .buttonStyle(PressResponsiveButtonStyle())
+        }
+    }
+
+    @ViewBuilder
+    private var selectedSettingsPanel: some View {
+        switch selectedSettingsFocus {
+        case .account:
+            accountPanel
+        case .watch:
+            watchPanel
+        case .version:
+            appPanel
+        }
+    }
+
+    private var accountPanel: some View {
+        SettingsPanel(title: "账号与登录", subtitle: "登录状态、Cookie 与身份验证", icon: "person.circle") {
+            VStack(alignment: .leading, spacing: 0) {
+                SettingsRow(
+                    title: "Cookie",
+                    value: model.cookieAvailable ? "可用" : "缺失",
+                    detail: model.cookieFileURL?.lastPathComponent ?? "未找到本地文件",
+                    icon: "key.horizontal",
+                    tint: model.cookieAvailable ? AppPalette.positive : AppPalette.warning
+                )
+                SettingsDivider()
+                SettingsRow(
+                    title: "登录态验证",
+                    value: model.isCheckingAuth ? "验证中" : "手动触发",
+                    detail: model.authPayload?.message ?? "尚未验证",
+                    icon: "checkmark.shield",
+                    tint: model.isCheckingAuth ? AppPalette.info : AppPalette.muted
+                )
+                SettingsDivider()
+
+                SettingsActionRow {
+                    Button {
+                        model.presentLoginSheet()
+                    } label: {
+                        Label("登录且慢", systemImage: "person.badge.key")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppPalette.brand)
+
+                    Button {
+                        Task { await model.validateAuth() }
+                    } label: {
+                        Label(model.isCheckingAuth ? "验证中…" : "验证登录态", systemImage: "checkmark.shield")
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(model.isCheckingAuth)
+                }
+            }
+        }
+    }
+
+    private var watchPanel: some View {
+        SettingsPanel(title: "主理人提醒", subtitle: "通知巡检、监控目标与启动项", icon: "bell.badge") {
+            VStack(alignment: .leading, spacing: 0) {
+                SettingsToggleRow(
+                    title: "通知巡检",
+                    detail: model.managerWatchStatusText,
+                    icon: "bell.and.waves.left.and.right",
+                    tint: model.managerWatchSettings.isEnabled ? AppPalette.positive : AppPalette.muted,
+                    isOn: enabledBinding
+                )
+                SettingsDivider()
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
+                    settingsField("产品", text: prodCodeBinding, placeholder: "LONG_WIN")
+                    settingsField("主理人", text: managerNameBinding, placeholder: "ETF拯救世界")
+                }
+                .padding(.vertical, 14)
+
+                SettingsDivider()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 16) {
+                        Toggle("调仓", isOn: platformBinding)
+                            .toggleStyle(.checkbox)
+                        Toggle("发言", isOn: forumBinding)
+                            .toggleStyle(.checkbox)
+                        Spacer()
+                    }
+                    intervalMenu
+                }
+                .font(.system(size: 12))
+                .padding(.vertical, 14)
+
+                SettingsDivider()
+
+                VStack(spacing: 0) {
+                    SettingsRow(title: "上次检查", value: model.managerWatchSettings.lastCheckedAt ?? "暂无", detail: "检查时间", icon: "clock", tint: AppPalette.muted)
+                    SettingsDivider(isInset: true)
+                    SettingsRow(title: "上次成功", value: model.managerWatchSettings.lastSuccessAt ?? "暂无", detail: "成功时间", icon: "checkmark.circle", tint: AppPalette.positive)
+                }
+
+                SettingsDivider()
+
+                SettingsActionRow {
+                    Button {
+                        model.saveManagerWatchConfiguration()
+                    } label: {
+                        Label("保存", systemImage: "checkmark.circle")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppPalette.brand)
+
+                    Button {
+                        model.syncManagerWatchTargetsFromCurrentForm()
+                    } label: {
+                        Label("同步当前查询", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        model.runManagerWatchNow()
+                    } label: {
+                        Label("立即巡检", systemImage: "play.circle")
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                SettingsDivider()
+
+                SettingsToggleRow(
+                    title: "开机自启",
+                    detail: model.launchAtLoginStatusText,
+                    icon: "power",
+                    tint: model.launchAtLoginEnabled ? AppPalette.positive : AppPalette.muted,
+                    isOn: launchAtLoginBinding
+                )
+
+                if let error = model.managerWatchSettings.lastErrorMessage, !error.isEmpty {
+                    ToastBar(text: error, tint: AppPalette.warning)
+                        .padding(.top, 12)
+                }
+            }
+        }
+    }
+
+    private var appPanel: some View {
+        SettingsPanel(title: "版本更新", subtitle: "当前版本与在线更新", icon: "arrow.down.circle") {
+            VStack(alignment: .leading, spacing: 0) {
+                SettingsRow(
+                    title: "版本",
+                    value: AppUpdateChecker.bundleVersion,
+                    detail: model.isCheckingForUpdates ? "正在检查更新" : model.availableUpdate.map { "可更新到 \($0.version)" } ?? "当前构建",
+                    icon: "app.badge",
+                    tint: AppPalette.info
+                )
+                if let update = model.availableUpdate {
+                    SettingsDivider()
+                    SettingsRow(
+                        title: "可用更新",
+                        value: update.version,
+                        detail: update.asset?.name ?? "Release 可查看",
+                        icon: "sparkles",
+                        tint: AppPalette.positive
+                    )
+                }
+
+                SettingsDivider()
+
+                SettingsActionRow {
+                    Button {
+                        Task { await model.checkForUpdates(userInitiated: true) }
+                    } label: {
+                        Label(model.isCheckingForUpdates ? "检查中…" : "检查更新", systemImage: "arrow.down.circle")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppPalette.brand)
+                    .disabled(model.isCheckingForUpdates)
+
+                    if model.availableUpdate != nil {
+                        Button {
+                            Task { await model.downloadAndInstallAvailableUpdate() }
+                        } label: {
+                            Label(model.isInstallingUpdate ? "安装中…" : "下载并安装", systemImage: "square.and.arrow.down")
                         }
+                        .buttonStyle(.bordered)
+                        .disabled(model.isInstallingUpdate)
+
+                        Button {
+                            model.openAvailableUpdateReleasePage()
+                        } label: {
+                            Label("Release", systemImage: "safari")
+                        }
+                        .buttonStyle(.bordered)
                     }
                 }
 
-                ManagerWatchControlCard()
-
-                SectionCard(title: "导入中心", subtitle: "支持手动录入、上传图片 OCR、上传表格到三类资产区", icon: "square.and.arrow.down") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 10) {
-                            ToolbarBadge(
-                                title: hasAnyPersonalData ? "已导入资产数据" : "尚未导入",
-                                tint: hasAnyPersonalData ? AppPalette.positive : AppPalette.warning
-                            )
-                            ToolbarBadge(
-                                title: hasCurrentDraft
-                                ? "草稿 \(currentDraftLineCount) 行 / \(currentDraftCharacterCount) 字"
-                                : "草稿为空",
-                                tint: hasCurrentDraft ? AppPalette.info : AppPalette.muted
-                            )
-                            Spacer()
-                        }
-
-                        if hiddenImportedTargetCount > 0 {
-                            HStack(spacing: 10) {
-                                Text(shouldShowImportedImportTargets ? "当前显示全部导入对象，可继续补录或重导。" : "已导入成功的对象已暂时收起，需要补录或重导时可以显示全部。")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(AppPalette.muted)
-                                Spacer()
-                                Button(shouldShowImportedImportTargets ? "只看未导入" : "显示已导入对象") {
-                                    withAnimation(.easeInOut(duration: 0.18)) {
-                                        shouldShowImportedImportTargets.toggle()
-                                        syncImportTargetWithVisibleTargets()
-                                    }
-                                }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-                            }
-                        } else if unimportedImportTargets.isEmpty {
-                            Text("持仓中、买入中和定投计划都已导入成功。仍可选择任一对象继续补录或重导，股票录入在「持仓中」。")
-                                .font(.system(size: 11))
-                                .foregroundStyle(AppPalette.muted)
-                                .padding(.horizontal, 2)
-                        }
-
-                        Picker("导入对象", selection: $importTarget) {
-                            ForEach(visibleImportTargets) { target in
-                                Text(target.rawValue).tag(target)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 520)
-
-                        Text(importTarget.helpText)
-                            .font(.system(size: 11))
-                            .foregroundStyle(AppPalette.muted)
-
-                        HStack(spacing: 8) {
-                            Spacer()
-                            Button(isDraftEditorExpanded ? "收起编辑" : "展开编辑") {
-                                withAnimation(.easeInOut(duration: 0.18)) {
-                                    isDraftEditorExpanded.toggle()
-                                }
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                        }
-
-                        if isDraftEditorExpanded {
-                            TextEditor(text: selectedDraftBinding)
-                                .font(.system(size: 12, design: .monospaced))
-                                .frame(height: 220)
-                                .padding(10)
-                                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 14))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
-                                )
-                        } else if hasCurrentDraft {
-                            ScrollView {
-                                Text(currentDraftPreviewText)
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .foregroundStyle(AppPalette.ink)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(10)
-                            }
-                            .frame(height: 122)
-                            .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 14))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
-                            )
-                        }
-
-                        HStack {
-                            Text(importTarget.sampleText)
-                                .font(.system(size: 11))
-                                .foregroundStyle(AppPalette.muted)
-                            Spacer()
-                        }
-
-                        HStack(spacing: 10) {
-                            Button(saveDraftButtonTitle) {
-                                model.saveDraft(for: importTarget)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(AppPalette.brand)
-                            .disabled(importTarget == .holdings && model.isResolvingPortfolioNames)
-
-                            Button("上传图片") {
-                                presentImportPanel(source: .image)
-                            }
-                            .buttonStyle(.bordered)
-                            .disabled(model.isProcessingImport)
-
-                            Button("上传表格") {
-                                presentImportPanel(source: .table)
-                            }
-                            .buttonStyle(.bordered)
-                            .disabled(model.isProcessingImport)
-
-                            Button(reloadButtonTitle) {
-                                model.reloadDraftTargetFromDisk(importTarget)
-                            }
-                            .buttonStyle(.bordered)
-
-                            if importTarget == .holdings {
-                                Button(model.isRefreshingPortfolio ? "刷新中…" : "刷新估值") {
-                                    Task { try? await model.refreshUserPortfolio() }
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(model.isRefreshingPortfolio || !model.hasPersonalPortfolio)
-                            }
-
-                            Button("清空草稿") {
-                                model.updateDraft("", for: importTarget)
-                            }
-                            .buttonStyle(.bordered)
-                            .disabled(model.draft(for: importTarget).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        }
-                    }
+                if !model.updateInstallProgress.isEmpty {
+                    ToastBar(text: model.updateInstallProgress, tint: AppPalette.info)
+                        .padding(.top, 12)
                 }
+            }
+        }
+    }
 
-                SectionCard(title: "应用版本", subtitle: "当前版本 \(AppUpdateChecker.bundleVersion)", icon: "arrow.down.circle") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 10) {
-                            Text(AppUpdateChecker.bundleVersion)
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
-                                .foregroundStyle(AppPalette.ink)
-                            Spacer()
-                            Button(model.isCheckingForUpdates ? "检查更新中…" : "检查更新") {
-                                Task { await model.checkForUpdates(userInitiated: true) }
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(AppPalette.brand)
-                            .disabled(model.isCheckingForUpdates)
+    private var settingsControlBackground: Color {
+        Color(nsColor: .controlBackgroundColor).opacity(0.72)
+    }
 
-                            if model.availableUpdate != nil {
-                                Button(model.isInstallingUpdate ? "安装更新中…" : "下载并重启安装") {
-                                    Task { await model.downloadAndInstallAvailableUpdate() }
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(model.isInstallingUpdate)
-
-                                Button("查看 Release") {
-                                    model.openAvailableUpdateReleasePage()
-                                }
-                                .buttonStyle(.bordered)
-                            }
-                        }
-
-                        if let update = model.availableUpdate {
-                            HStack(spacing: 8) {
-                                ToolbarBadge(title: "新版本 \(update.version)", tint: AppPalette.positive)
-                                ToolbarBadge(title: update.asset?.name ?? "", tint: AppPalette.info)
-                            }
+    private var intervalMenu: some View {
+        Menu {
+            ForEach(ManagerWatchIntervalOption.allCases) { option in
+                Button {
+                    model.updateManagerWatchInterval(option.rawValue)
+                } label: {
+                    HStack {
+                        Text(option.label)
+                        if model.managerWatchSettings.intervalMinutes == option.rawValue {
+                            Image(systemName: "checkmark")
                         }
                     }
                 }
             }
-            .padding(16)
+        } label: {
+            Label("频率：\(model.managerWatchSettings.intervalLabel)", systemImage: "timer")
+                .font(.system(size: 12, weight: .semibold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(settingsControlBackground, in: RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                )
         }
-        .onAppear {
-            syncImportTargetWithVisibleTargets()
-        }
-        .onChange(of: importTarget) { _, _ in
-            isDraftEditorExpanded = false
-        }
-        .onChange(of: importAvailabilityKey) { _, _ in
-            syncImportTargetWithVisibleTargets()
+        .menuStyle(.borderlessButton)
+    }
+
+    private func settingsField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppPalette.muted)
+            TextField(placeholder, text: text)
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(settingsControlBackground, in: RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                )
         }
     }
 
-    private var selectedDraftBinding: Binding<String> {
-        Binding(
-            get: { model.draft(for: importTarget) },
-            set: { model.updateDraft($0, for: importTarget) }
+}
+
+private struct SettingsPanel<Content: View>: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let content: Content
+
+    init(title: String, subtitle: String, icon: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.subtitle = subtitle
+        self.icon = icon
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(AppPalette.brand)
+                    .frame(width: 30, height: 30)
+                    .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text(subtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppPalette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+
+            content
+        }
+        .padding(15)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(AppPalette.line.opacity(0.58), lineWidth: 1)
         )
-    }
-
-    private var reloadButtonTitle: String {
-        switch importTarget {
-        case .holdings:
-            return "重载已保存"
-        case .pendingTrades:
-            return "重载买入中"
-        case .investmentPlans:
-            return "重载计划"
+        .overlay(alignment: .topLeading) {
+            Rectangle()
+                .fill(AppPalette.brand.opacity(0.22))
+                .frame(width: 72, height: 2)
+                .clipShape(Capsule())
+                .padding(.leading, 15)
         }
-    }
-
-    private var saveDraftButtonTitle: String {
-        if importTarget == .holdings, model.isResolvingPortfolioNames {
-            return "补全名称中…"
-        }
-        return importTarget.buttonTitle
-    }
-
-    private var tableImportTypes: [UTType] {
-        var types: [UTType] = [.plainText, .text, .commaSeparatedText, .json]
-        if let xlsx = UTType(filenameExtension: "xlsx") {
-            types.append(xlsx)
-        }
-        if let csv = UTType(filenameExtension: "csv") {
-            types.append(csv)
-        }
-        if let tsv = UTType(filenameExtension: "tsv") {
-            types.append(tsv)
-        }
-        return types
-    }
-
-    private var currentDraftText: String {
-        model.draft(for: importTarget)
-    }
-
-    private var visibleImportTargets: [PersonalDataImportTarget] {
-        if shouldShowImportedImportTargets || unimportedImportTargets.isEmpty {
-            return PersonalDataImportTarget.allCases
-        }
-        return unimportedImportTargets
-    }
-
-    private var unimportedImportTargets: [PersonalDataImportTarget] {
-        PersonalDataImportTarget.allCases.filter { !model.hasImportedData(for: $0) }
-    }
-
-    private var hiddenImportedTargetCount: Int {
-        guard !shouldShowImportedImportTargets else { return 0 }
-        guard !unimportedImportTargets.isEmpty else { return 0 }
-        return PersonalDataImportTarget.allCases.count - unimportedImportTargets.count
-    }
-
-    private var importAvailabilityKey: String {
-        PersonalDataImportTarget.allCases
-            .map { model.hasImportedData(for: $0) ? "1" : "0" }
-            .joined()
-    }
-
-    private var hasCurrentDraft: Bool {
-        !currentDraftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var currentDraftLineCount: Int {
-        currentDraftText
-            .split(whereSeparator: \.isNewline)
-            .count
-    }
-
-    private var currentDraftCharacterCount: Int {
-        currentDraftText.count
-    }
-
-    private var currentDraftPreviewText: String {
-        let lines = currentDraftText
-            .split(whereSeparator: \.isNewline)
-            .map(String.init)
-        guard !lines.isEmpty else { return "" }
-        let previewLines = Array(lines.prefix(8))
-        let suffix = lines.count > previewLines.count
-            ? "\n… 还有 \(lines.count - previewLines.count) 行，点击「展开编辑」查看完整草稿"
-            : ""
-        return previewLines.joined(separator: "\n") + suffix
-    }
-
-    private var hasAnyPersonalData: Bool {
-        model.hasPersonalPortfolio || model.hasPendingTrades || model.hasInvestmentPlans
-    }
-
-    private func syncImportTargetWithVisibleTargets() {
-        guard !visibleImportTargets.isEmpty else { return }
-        if !visibleImportTargets.contains(importTarget) {
-            importTarget = visibleImportTargets[0]
-            isDraftEditorExpanded = false
-        }
-    }
-
-    private func presentImportPanel(source: PersonalDataImportSource) {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-        panel.resolvesAliases = true
-        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
-        panel.allowedContentTypes = source == .image ? [.image] : tableImportTypes
-        panel.title = source == .image ? "选择要 OCR 的图片" : "选择要导入的表格或文本"
-        panel.message = source == .image
-            ? "图片会先识别成文字，再填入当前导入对象的草稿区。"
-            : "支持 txt、csv、tsv、json、xlsx，会转换成当前导入对象的草稿。"
-        panel.prompt = "选择"
-
-        let target = importTarget
-        let response = panel.runModal()
-        guard response == .OK, let url = panel.url else {
-            return
-        }
-        Task { await model.importExternalFile(at: url, source: source, target: target) }
     }
 }
 
+private struct SettingsMetric: View {
+    let title: String
+    let value: String
+    let detail: String
+    let icon: String
+    let tint: Color
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 30, height: 30)
+                .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(AppPalette.muted)
+                Text(value)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppPalette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+                Text(detail)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+
+            Spacer(minLength: 6)
+
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(tint)
+            }
+        }
+        .padding(11)
+        .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+        .background(AppPalette.cardStrong.opacity(isSelected ? 0.94 : 0.76), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isSelected ? tint.opacity(0.72) : AppPalette.line.opacity(0.42), lineWidth: isSelected ? 1.2 : 1)
+        )
+    }
+}
+
+private struct SettingsRow: View {
+    let title: String
+    let value: String
+    let detail: String
+    let icon: String
+    let tint: Color
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 11) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 28, height: 28)
+                .background(tint.opacity(0.09), in: RoundedRectangle(cornerRadius: 7))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                Text(detail)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+
+            Spacer(minLength: 12)
+
+            Text(value)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .multilineTextAlignment(.trailing)
+        }
+        .frame(minHeight: 54)
+    }
+}
+
+private struct SettingsToggleRow: View {
+    let title: String
+    let detail: String
+    let icon: String
+    let tint: Color
+    let isOn: Binding<Bool>
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 11) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 28, height: 28)
+                .background(tint.opacity(0.09), in: RoundedRectangle(cornerRadius: 7))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                Text(detail)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+
+            Spacer(minLength: 12)
+
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+        }
+        .frame(minHeight: 54)
+    }
+}
+
+private struct SettingsStatePill: View {
+    let title: String
+    let state: String
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(tint)
+                .frame(width: 6, height: 6)
+            Text(title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppPalette.muted)
+            Text(state)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppPalette.ink)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 6)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.62), in: Capsule())
+        .overlay(
+            Capsule()
+                .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
+        )
+    }
+}
+
+private struct SettingsActionRow<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                content
+                Spacer(minLength: 0)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                content
+            }
+        }
+        .padding(.vertical, 13)
+    }
+}
+
+private struct SettingsDivider: View {
+    var isInset = false
+
+    var body: some View {
+        Divider()
+            .overlay(AppPalette.line.opacity(0.35))
+            .padding(.leading, isInset ? 39 : 0)
+    }
+}

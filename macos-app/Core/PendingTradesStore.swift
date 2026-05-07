@@ -90,6 +90,26 @@ struct PendingTradesStore {
         }.joined(separator: "\n")
     }
 
+    func merging(_ imported: [PersonalPendingTrade], into existing: [PersonalPendingTrade]) -> [PersonalPendingTrade] {
+        var merged = existing
+        var indexByKey: [String: Int] = [:]
+        for (index, trade) in merged.enumerated() {
+            indexByKey[mergeKey(for: trade)] = index
+        }
+
+        for importedTrade in imported {
+            let key = mergeKey(for: importedTrade)
+            if let existingIndex = indexByKey[key] {
+                let current = merged[existingIndex]
+                merged[existingIndex] = replacingID(of: importedTrade, with: current.id)
+            } else {
+                indexByKey[key] = merged.count
+                merged.append(importedTrade)
+            }
+        }
+        return merged.sorted { $0.occurredAt > $1.occurredAt }
+    }
+
     func delete(at fileURL: URL) throws {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         try FileManager.default.removeItem(at: fileURL)
@@ -106,5 +126,44 @@ struct PendingTradesStore {
             return (nil, Double(raw))
         }
         return (nil, nil)
+    }
+
+    private func replacingID(of trade: PersonalPendingTrade, with id: UUID) -> PersonalPendingTrade {
+        PersonalPendingTrade(
+            id: id,
+            occurredAt: trade.occurredAt,
+            actionLabel: trade.actionLabel,
+            fundName: trade.fundName,
+            targetFundName: trade.targetFundName,
+            fundCode: trade.fundCode,
+            targetFundCode: trade.targetFundCode,
+            amountText: trade.amountText,
+            amountValue: trade.amountValue,
+            unitValue: trade.unitValue,
+            status: trade.status,
+            note: trade.note
+        )
+    }
+
+    private func mergeKey(for trade: PersonalPendingTrade) -> String {
+        [
+            trade.occurredAt,
+            trade.actionLabel,
+            trade.fundCode ?? normalizedKey(trade.fundName),
+            trade.targetFundCode ?? normalizedKey(trade.targetFundName ?? ""),
+            trade.amountText,
+            trade.status,
+        ]
+        .map(normalizedKey)
+        .joined(separator: "|")
+    }
+
+    private func normalizedKey(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "（", with: "(")
+            .replacingOccurrences(of: "）", with: ")")
+            .replacingOccurrences(of: " ", with: "")
     }
 }

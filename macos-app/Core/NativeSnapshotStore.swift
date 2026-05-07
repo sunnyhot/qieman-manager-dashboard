@@ -306,12 +306,16 @@ struct NativeSnapshotStore {
     }
 
     private func formatNow() -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        return formatter.string(from: Date())
+        Self.isoDateTimeFormatter.string(from: Date())
     }
+
+    private static let isoDateTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        return f
+    }()
 
     private func normalizedDay(_ value: String?) -> String {
         let text = normalizedString(value)
