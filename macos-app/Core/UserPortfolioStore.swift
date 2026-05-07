@@ -273,6 +273,11 @@ struct UserPortfolioStore {
             return (code, .fund, nil, .offExchange)
         }
 
+        let normalizedFundCode = UserPortfolioHolding.normalizedFundCode(from: trimmed)
+        if UserPortfolioHolding.detectFundMarket(from: normalizedFundCode) == .onExchange {
+            return (normalizedFundCode, .fund, nil, .onExchange)
+        }
+
         if upper.count == 8,
            (upper.hasPrefix("SH") || upper.hasPrefix("SZ") || upper.hasPrefix("BJ")),
            isDigits(String(upper.dropFirst(2))) {

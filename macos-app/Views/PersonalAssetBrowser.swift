@@ -236,33 +236,38 @@ struct PersonalAssetBrowser: View {
 }
 
 struct PersonalAssetGroupedTable: View {
-    let fundRows: [PersonalAssetAggregateRow]
+    let offExchangeFundRows: [PersonalAssetAggregateRow]
+    let onExchangeFundRows: [PersonalAssetAggregateRow]
     let stockRows: [PersonalAssetAggregateRow]
 
     init(rows: [PersonalAssetAggregateRow]) {
-        self.fundRows = rows.filter { $0.assetType == .fund }
+        self.offExchangeFundRows = rows.filter { $0.assetType == .fund && !$0.isOnExchangeFund }
+        self.onExchangeFundRows = rows.filter(\.isOnExchangeFund)
         self.stockRows = rows.filter { $0.assetType == .stock }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            if !fundRows.isEmpty {
-                group(title: "基金", rows: fundRows)
+            if !offExchangeFundRows.isEmpty {
+                group(title: "场外基金", rows: offExchangeFundRows, tint: AppPalette.brand, usesMarketTradeColumns: false)
+            }
+            if !onExchangeFundRows.isEmpty {
+                group(title: "场内基金", rows: onExchangeFundRows, tint: AppPalette.accentWarm, usesMarketTradeColumns: true)
             }
             if !stockRows.isEmpty {
-                group(title: "股票", rows: stockRows)
+                group(title: "股票", rows: stockRows, tint: AppPalette.info, usesMarketTradeColumns: true)
             }
         }
     }
 
-    private func group(title: String, rows: [PersonalAssetAggregateRow]) -> some View {
+    private func group(title: String, rows: [PersonalAssetAggregateRow], tint: Color, usesMarketTradeColumns: Bool) -> some View {
         let latestTime = rows.compactMap(\.holdingRow?.resolvedPriceTime).max()
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text(title)
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(AppPalette.ink)
-                ToolbarBadge(title: "\(rows.count) 只", tint: title == "股票" ? AppPalette.info : AppPalette.brand)
+                ToolbarBadge(title: "\(rows.count) 只", tint: tint)
                 Text("市值 \(currencyText(rows.compactMap(\.marketValue).reduce(0, +)))")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
@@ -272,18 +277,18 @@ struct PersonalAssetGroupedTable: View {
                         .foregroundStyle(AppPalette.muted.opacity(0.7))
                 }
             }
-            PersonalAssetTable(rows: rows, isStock: title == "股票")
+            PersonalAssetTable(rows: rows, usesMarketTradeColumns: usesMarketTradeColumns)
         }
     }
 }
 
 struct PersonalAssetTable: View {
     let rows: [PersonalAssetAggregateRow]
-    let isStock: Bool
+    let usesMarketTradeColumns: Bool
 
-    init(rows: [PersonalAssetAggregateRow], isStock: Bool = false) {
+    init(rows: [PersonalAssetAggregateRow], usesMarketTradeColumns: Bool = false) {
         self.rows = rows
-        self.isStock = isStock
+        self.usesMarketTradeColumns = usesMarketTradeColumns
     }
 
     var body: some View {
@@ -295,7 +300,7 @@ struct PersonalAssetTable: View {
                     .frame(width: 260, alignment: .leading)
                 Text("现价 / 成本")
                     .frame(width: 120, alignment: .leading)
-                if isStock {
+                if usesMarketTradeColumns {
                     Text("涨跌幅")
                         .frame(width: 150, alignment: .leading)
                     Text("涨跌额")
@@ -353,7 +358,6 @@ struct PersonalAssetTableRow: View {
                     Text(row.fundName)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
-                    ToolbarBadge(title: row.assetTypeLabel, tint: row.assetType == .stock ? AppPalette.info : AppPalette.brand)
                     if let marketLabel = row.rawHolding?.marketLabel ?? row.holdingRow?.holding.marketLabel ?? row.archivedHolding?.marketLabel {
                         ToolbarBadge(title: marketLabel, tint: AppPalette.info)
                     }
@@ -407,7 +411,7 @@ struct PersonalAssetTableRow: View {
             }
             .frame(width: 120, alignment: .leading)
 
-            if row.assetType == .stock {
+            if row.usesMarketTradeColumns {
                 Group {
                     if let changePct = row.estimateChangePct {
                         Text(String(format: "%+.2f%%", changePct))
@@ -441,7 +445,7 @@ struct PersonalAssetTableRow: View {
                 .frame(width: 150, alignment: .leading)
             }
 
-            if row.assetType == .stock {
+            if row.usesMarketTradeColumns {
                 Group {
                     if let changeAmt = row.estimateChangeAmount {
                         Text(signedCurrencyText(changeAmt, market: row.detectedMarket))

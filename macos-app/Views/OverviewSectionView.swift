@@ -67,14 +67,24 @@ struct OverviewSectionView: View {
                             .padding(12)
                             .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 10))
                     } else {
-                        let fundRows = model.personalAssetRows.filter { $0.assetType == .fund }
+                        let offExchangeFundRows = model.personalAssetRows.filter { $0.assetType == .fund && !$0.isOnExchangeFund }
+                        let onExchangeFundRows = model.personalAssetRows.filter(\.isOnExchangeFund)
                         let stockRows = model.personalAssetRows.filter { $0.assetType == .stock }
-                        HStack(spacing: 12) {
-                            assetTypeSummaryCard(
-                                title: "基金",
-                                rows: fundRows,
-                                tint: AppPalette.brand
-                            )
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
+                            if !offExchangeFundRows.isEmpty {
+                                assetTypeSummaryCard(
+                                    title: "场外基金",
+                                    rows: offExchangeFundRows,
+                                    tint: AppPalette.brand
+                                )
+                            }
+                            if !onExchangeFundRows.isEmpty {
+                                assetTypeSummaryCard(
+                                    title: "场内基金",
+                                    rows: onExchangeFundRows,
+                                    tint: AppPalette.accentWarm
+                                )
+                            }
                             if !stockRows.isEmpty {
                                 assetTypeSummaryCard(
                                     title: "股票",
@@ -630,4 +640,3 @@ struct ManagerWatchStatusTile: View {
         .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
     }
 }
-

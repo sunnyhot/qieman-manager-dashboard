@@ -31,7 +31,6 @@ struct PersonalAssetOverviewCard: View {
                                 .font(.system(size: 10, design: .monospaced))
                                 .foregroundStyle(AppPalette.muted)
                         }
-                        ToolbarBadge(title: row.assetTypeLabel, tint: row.assetType == .stock ? AppPalette.info : AppPalette.brand)
                         if let marketLabel = row.rawHolding?.marketLabel ?? row.holdingRow?.holding.marketLabel ?? row.archivedHolding?.marketLabel {
                             ToolbarBadge(title: marketLabel, tint: AppPalette.info)
                         }
@@ -169,7 +168,7 @@ struct PersonalAssetAddHoldingSheet: View {
                     Text("添加持仓")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(AppPalette.ink)
-                    Text("填写代码、份额和成本，系统会按代码自动判断基金或股票。")
+                    Text("填写代码、份额和成本，系统会按代码自动判断场外基金、场内基金或股票。")
                         .font(.system(size: 11))
                         .foregroundStyle(AppPalette.muted)
                 }

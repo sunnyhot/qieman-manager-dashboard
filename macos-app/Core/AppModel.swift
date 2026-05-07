@@ -1145,6 +1145,20 @@ final class AppModel: ObservableObject {
         let fundCode = normalizedManualAssetCode(assetType: .fund, codeText: rawCode)
         let stockCode = normalizedManualAssetCode(assetType: .stock, codeText: rawCode)
         guard !fundCode.isEmpty || !stockCode.isEmpty else { return nil }
+        let detectedFundMarket = UserPortfolioHolding.detectFundMarket(from: fundCode)
+
+        if hasExplicitFundMarket(rawCode) || detectedFundMarket == .onExchange {
+            let fundName = fundCode.isEmpty ? nil : await platformClient.resolveAssetName(assetType: .fund, code: fundCode)
+            let stockName = detectedFundMarket == .onExchange && !stockCode.isEmpty
+                ? await platformClient.resolveAssetName(assetType: .stock, code: stockCode)
+                : nil
+            return PersonalAssetCodeResolution(
+                assetType: .fund,
+                code: fundCode,
+                displayName: normalizedOptionalName(fundName) ?? normalizedOptionalName(stockName),
+                fundMarket: manualFundMarket(assetType: .fund, codeText: rawCode) ?? detectedFundMarket
+            )
+        }
 
         if hasExplicitStockMarket(rawCode) {
             let stockName = stockCode.isEmpty ? nil : await platformClient.resolveAssetName(assetType: .stock, code: stockCode)
@@ -1153,16 +1167,6 @@ final class AppModel: ObservableObject {
                 code: stockCode,
                 displayName: normalizedOptionalName(stockName),
                 stockMarket: manualStockMarket(assetType: .stock, codeText: rawCode)
-            )
-        }
-
-        if hasExplicitFundMarket(rawCode) {
-            let fundName = fundCode.isEmpty ? nil : await platformClient.resolveAssetName(assetType: .fund, code: fundCode)
-            return PersonalAssetCodeResolution(
-                assetType: .fund,
-                code: fundCode,
-                displayName: normalizedOptionalName(fundName),
-                fundMarket: manualFundMarket(assetType: .fund, codeText: rawCode) ?? UserPortfolioHolding.detectFundMarket(from: fundCode)
             )
         }
 
@@ -3076,11 +3080,7 @@ final class AppModel: ObservableObject {
     private func normalizedManualAssetCode(assetType: PersonalAssetType, codeText: String) -> String {
         let trimmed = normalizedManualAssetRawCode(codeText)
         guard assetType == .stock else {
-            let upper = trimmed.uppercased()
-            for prefix in ["ETF:", "LOF:", "EX:", "FUND:", "OTC:"] where upper.hasPrefix(prefix) {
-                return String(upper.dropFirst(prefix.count))
-            }
-            return trimmed
+            return UserPortfolioHolding.normalizedFundCode(from: trimmed)
         }
 
         let upper = trimmed.uppercased()

@@ -46,7 +46,7 @@ enum PersonalDataImportTarget: String, CaseIterable, Identifiable {
     var sampleText: String {
         switch self {
         case .holdings:
-            return "示例：021550 1200 1.1304；股票 600519 10 1500；港股 00700 100 350；美股 AAPL 50 180"
+            return "示例：021550 1200 1.1304；场内基金 510300 100 3.8；股票 600519 10 1500；港股 00700 100 350"
         case .pendingTrades:
             return "示例：2026-04-23 09:48:33 | 定投 | 019524 | 10.00元 | 交易进行中"
         case .investmentPlans:
@@ -57,7 +57,7 @@ enum PersonalDataImportTarget: String, CaseIterable, Identifiable {
     var helpText: String {
         switch self {
         case .holdings:
-            return "支持 代码 份额 成本价 和 股票/港股/美股 代码 数量 成本价 格式；5位数字自动识别港股，字母代码识别美股。名称会保存时按代码自动补全。"
+            return "支持 代码 份额 成本价 和 场内基金/股票/港股/美股 代码 数量 成本价 格式；ETF:、LOF:、EX: 或常见 ETF 前缀会归为场内基金。名称会保存时按代码自动补全。"
         case .pendingTrades:
             return "支持时间、动作、基金代码或名称、金额/份额、状态五列；保存时会按基金代码自动补全名称。"
         case .investmentPlans:
@@ -928,21 +928,34 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
     }
 
     static func detectFundMarket(from code: String) -> FundMarket {
-        let upper = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        let normalized = upper
-            .replacingOccurrences(of: "ETF:", with: "")
-            .replacingOccurrences(of: "LOF:", with: "")
-            .replacingOccurrences(of: "FUND:", with: "")
-            .replacingOccurrences(of: "EX:", with: "")
-            .replacingOccurrences(of: "OTC:", with: "")
+        let normalized = normalizedFundCode(from: code).uppercased()
         guard normalized.count == 6, normalized.allSatisfy(\.isNumber) else {
             return .offExchange
         }
-        let exchangePrefixes = ["15", "16", "18", "50", "51", "52", "56", "58"]
+        let exchangePrefixes = ["15", "50", "51", "52", "56", "58"]
         if exchangePrefixes.contains(where: { normalized.hasPrefix($0) }) {
             return .onExchange
         }
         return .offExchange
+    }
+
+    static func normalizedFundCode(from code: String) -> String {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        let upper = trimmed.uppercased()
+        for prefix in ["ETF:", "LOF:", "EX:", "FUND:", "OTC:"] where upper.hasPrefix(prefix) {
+            return String(upper.dropFirst(prefix.count))
+        }
+        if upper.count == 8,
+           (upper.hasPrefix("SH") || upper.hasPrefix("SZ") || upper.hasPrefix("BJ")),
+           upper.dropFirst(2).allSatisfy(\.isNumber) {
+            return String(upper.dropFirst(2))
+        }
+        if upper.count == 9,
+           (upper.hasSuffix(".SH") || upper.hasSuffix(".SZ") || upper.hasSuffix(".BJ")),
+           upper.prefix(6).allSatisfy(\.isNumber) {
+            return String(upper.prefix(6))
+        }
+        return trimmed
     }
 
     var draftLine: String {
@@ -1420,7 +1433,18 @@ struct PersonalAssetAggregateRow: Identifiable, Hashable {
     }
 
     var detectedFundMarket: FundMarket? {
-        rawHolding?.detectedFundMarket ?? holdingRow?.holding.detectedFundMarket ?? archivedHolding?.detectedFundMarket
+        rawHolding?.detectedFundMarket
+            ?? holdingRow?.holding.detectedFundMarket
+            ?? archivedHolding?.detectedFundMarket
+            ?? fundCode.map(UserPortfolioHolding.detectFundMarket)
+    }
+
+    var isOnExchangeFund: Bool {
+        assetType == .fund && detectedFundMarket == .onExchange
+    }
+
+    var usesMarketTradeColumns: Bool {
+        assetType == .stock || isOnExchangeFund
     }
 
     var marketValue: Double? {
