@@ -893,7 +893,13 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
 
     var detectedFundMarket: FundMarket? {
         guard assetType == .fund else { return nil }
-        return fundMarket ?? UserPortfolioHolding.detectFundMarket(from: normalizedFundCode)
+        let inferredMarket = UserPortfolioHolding.detectFundMarket(from: normalizedFundCode)
+        if fundMarket == .onExchange,
+           inferredMarket == .offExchange,
+           UserPortfolioHolding.isKnownOffExchangeFundCode(normalizedFundCode) {
+            return .offExchange
+        }
+        return fundMarket ?? inferredMarket
     }
 
     var marketLabel: String? {
@@ -928,15 +934,38 @@ struct UserPortfolioHolding: Codable, Hashable, Identifiable {
     }
 
     static func detectFundMarket(from code: String) -> FundMarket {
+        let rawCode = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if rawCode.hasPrefix("ETF:") || rawCode.hasPrefix("LOF:") || rawCode.hasPrefix("EX:") {
+            return .onExchange
+        }
+        if rawCode.hasPrefix("FUND:") || rawCode.hasPrefix("OTC:") {
+            return .offExchange
+        }
         let normalized = normalizedFundCode(from: code).uppercased()
         guard normalized.count == 6, normalized.allSatisfy(\.isNumber) else {
             return .offExchange
         }
-        let exchangePrefixes = ["15", "50", "51", "52", "56", "58"]
-        if exchangePrefixes.contains(where: { normalized.hasPrefix($0) }) {
+        if isKnownOffExchangeFundCode(normalized) {
+            return .offExchange
+        }
+        if isLikelyExchangeTradedFundCode(normalized) {
             return .onExchange
         }
         return .offExchange
+    }
+
+    static func isKnownOffExchangeFundCode(_ code: String) -> Bool {
+        let normalized = normalizedFundCode(from: code).uppercased()
+        return normalized.hasPrefix("519")
+    }
+
+    private static func isLikelyExchangeTradedFundCode(_ code: String) -> Bool {
+        let normalized = normalizedFundCode(from: code).uppercased()
+        let exchangePrefixes = ["15", "50", "52", "56", "58"]
+        if exchangePrefixes.contains(where: { normalized.hasPrefix($0) }) {
+            return true
+        }
+        return normalized.hasPrefix("51") && !normalized.hasPrefix("519")
     }
 
     static func normalizedFundCode(from code: String) -> String {

@@ -298,7 +298,7 @@ struct PersonalAssetTable: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("实时估值 / 收益")
                     .frame(width: 260, alignment: .leading)
-                Text("份额")
+                Text("持有份额")
                     .frame(width: 100, alignment: .leading)
                 Text("现价 / 成本")
                     .frame(width: 120, alignment: .leading)
@@ -596,10 +596,10 @@ struct PersonalAssetTableRow: View {
 
     private var unitsColumnValue: String {
         if let holdingUnits = row.holdingUnits {
-            return "\(unitsText(holdingUnits)) 份"
+            return unitsText(holdingUnits)
         }
         if let archivedUnits = row.archivedHolding?.units {
-            return "\(unitsText(archivedUnits)) 份"
+            return unitsText(archivedUnits)
         }
         return "—"
     }

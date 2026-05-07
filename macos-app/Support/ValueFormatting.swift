@@ -8,6 +8,22 @@ private let currencyFormatter: NumberFormatter = {
     return f
 }()
 
+private let integerUnitsFormatter: NumberFormatter = {
+    let f = NumberFormatter()
+    f.numberStyle = .decimal
+    f.minimumFractionDigits = 0
+    f.maximumFractionDigits = 0
+    return f
+}()
+
+private let fractionalUnitsFormatter: NumberFormatter = {
+    let f = NumberFormatter()
+    f.numberStyle = .decimal
+    f.minimumFractionDigits = 2
+    f.maximumFractionDigits = 2
+    return f
+}()
+
 private func formattedNumber(_ value: Double) -> String {
     currencyFormatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
 }
@@ -58,7 +74,7 @@ func decimalText(_ value: Double) -> String {
 func unitsText(_ value: Double) -> String {
     let rounded = value.rounded()
     if abs(value - rounded) < 0.0000001 {
-        return String(format: "%.0f", value)
+        return integerUnitsFormatter.string(from: NSNumber(value: value)) ?? String(format: "%.0f", value)
     }
-    return String(format: "%.2f", value)
+    return fractionalUnitsFormatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
 }
