@@ -474,16 +474,17 @@ extension AppModel {
     private func menuBarTickerCandidateEntries(settings: MenuBarTickerSettings) -> [MenuBarTickerEntry] {
         var entries: [MenuBarTickerEntry] = []
         let rows = userPortfolioSnapshot?.rows ?? []
-        let allAggregate = MenuBarTickerAggregate(rows: rows)
+        let aggregates = MenuBarTickerAggregateSet(rows: rows)
+        let rowsByHoldingID = Dictionary(rows.map { ($0.holding.id, $0) }, uniquingKeysWith: { first, _ in first })
 
         for kind in settings.enabledKinds {
-            if let entry = menuBarTickerEntry(for: kind, rows: rows, allAggregate: allAggregate) {
+            if let entry = menuBarTickerEntry(for: kind, rows: rows, aggregates: aggregates) {
                 entries.append(entry)
             }
         }
 
         for selection in settings.holdingSelections {
-            guard let row = rows.first(where: { $0.holding.id == selection.holdingID }),
+            guard let row = rowsByHoldingID[selection.holdingID],
                   let entry = menuBarTickerEntry(row: row, metric: selection.metric) else {
                 continue
             }
@@ -496,7 +497,7 @@ extension AppModel {
     private func menuBarTickerEntry(
         for kind: MenuBarTickerKind,
         rows: [UserPortfolioValuationRow],
-        allAggregate: MenuBarTickerAggregate
+        aggregates: MenuBarTickerAggregateSet
     ) -> MenuBarTickerEntry? {
         switch kind {
         case .totalValue:
@@ -512,53 +513,73 @@ extension AppModel {
                 tone: .neutral
             )
         case .overallDailyAmount:
-            return allAggregate.amountEntry(id: kind.rawValue, title: "整体涨跌", compactTitle: "今", value: allAggregate.dailyAmount)
+            return aggregates.all.amountEntry(id: kind.rawValue, title: "整体涨跌", compactTitle: "今", value: aggregates.all.dailyAmount)
         case .overallDailyPct:
-            return allAggregate.percentEntry(id: kind.rawValue, title: "整体涨跌率", compactTitle: "今", value: allAggregate.dailyPct)
+            return aggregates.all.percentEntry(id: kind.rawValue, title: "整体涨跌率", compactTitle: "今", value: aggregates.all.dailyPct)
         case .overallProfitAmount:
-            return allAggregate.amountEntry(id: kind.rawValue, title: "整体收益", compactTitle: "益", value: allAggregate.profitAmount)
+            return aggregates.all.amountEntry(id: kind.rawValue, title: "整体收益", compactTitle: "益", value: aggregates.all.profitAmount)
         case .overallProfitPct:
-            return allAggregate.percentEntry(id: kind.rawValue, title: "整体收益率", compactTitle: "益", value: allAggregate.profitPct)
+            return aggregates.all.percentEntry(id: kind.rawValue, title: "整体收益率", compactTitle: "益", value: aggregates.all.profitPct)
         case .aShareDailyAmount:
-            return marketAggregate(rows, stockMarket: .aShare).amountEntry(id: kind.rawValue, title: "A股涨跌", compactTitle: "A", value: marketAggregate(rows, stockMarket: .aShare).dailyAmount, market: .aShare)
+            let aggregate = aggregates.market(.aShare)
+            return aggregate.amountEntry(id: kind.rawValue, title: "A股涨跌", compactTitle: "A", value: aggregate.dailyAmount, market: .aShare)
         case .aShareDailyPct:
-            return marketAggregate(rows, stockMarket: .aShare).percentEntry(id: kind.rawValue, title: "A股涨跌率", compactTitle: "A", value: marketAggregate(rows, stockMarket: .aShare).dailyPct)
+            let aggregate = aggregates.market(.aShare)
+            return aggregate.percentEntry(id: kind.rawValue, title: "A股涨跌率", compactTitle: "A", value: aggregate.dailyPct)
         case .aShareProfitAmount:
-            return marketAggregate(rows, stockMarket: .aShare).amountEntry(id: kind.rawValue, title: "A股收益", compactTitle: "A益", value: marketAggregate(rows, stockMarket: .aShare).profitAmount, market: .aShare)
+            let aggregate = aggregates.market(.aShare)
+            return aggregate.amountEntry(id: kind.rawValue, title: "A股收益", compactTitle: "A益", value: aggregate.profitAmount, market: .aShare)
         case .aShareProfitPct:
-            return marketAggregate(rows, stockMarket: .aShare).percentEntry(id: kind.rawValue, title: "A股收益率", compactTitle: "A益", value: marketAggregate(rows, stockMarket: .aShare).profitPct)
+            let aggregate = aggregates.market(.aShare)
+            return aggregate.percentEntry(id: kind.rawValue, title: "A股收益率", compactTitle: "A益", value: aggregate.profitPct)
         case .hkDailyAmount:
-            return marketAggregate(rows, stockMarket: .hk).amountEntry(id: kind.rawValue, title: "港股涨跌", compactTitle: "港", value: marketAggregate(rows, stockMarket: .hk).dailyAmount, market: .hk)
+            let aggregate = aggregates.market(.hk)
+            return aggregate.amountEntry(id: kind.rawValue, title: "港股涨跌", compactTitle: "港", value: aggregate.dailyAmount, market: .hk)
         case .hkDailyPct:
-            return marketAggregate(rows, stockMarket: .hk).percentEntry(id: kind.rawValue, title: "港股涨跌率", compactTitle: "港", value: marketAggregate(rows, stockMarket: .hk).dailyPct)
+            let aggregate = aggregates.market(.hk)
+            return aggregate.percentEntry(id: kind.rawValue, title: "港股涨跌率", compactTitle: "港", value: aggregate.dailyPct)
         case .hkProfitAmount:
-            return marketAggregate(rows, stockMarket: .hk).amountEntry(id: kind.rawValue, title: "港股收益", compactTitle: "港益", value: marketAggregate(rows, stockMarket: .hk).profitAmount, market: .hk)
+            let aggregate = aggregates.market(.hk)
+            return aggregate.amountEntry(id: kind.rawValue, title: "港股收益", compactTitle: "港益", value: aggregate.profitAmount, market: .hk)
         case .hkProfitPct:
-            return marketAggregate(rows, stockMarket: .hk).percentEntry(id: kind.rawValue, title: "港股收益率", compactTitle: "港益", value: marketAggregate(rows, stockMarket: .hk).profitPct)
+            let aggregate = aggregates.market(.hk)
+            return aggregate.percentEntry(id: kind.rawValue, title: "港股收益率", compactTitle: "港益", value: aggregate.profitPct)
         case .usDailyAmount:
-            return marketAggregate(rows, stockMarket: .us).amountEntry(id: kind.rawValue, title: "美股涨跌", compactTitle: "美", value: marketAggregate(rows, stockMarket: .us).dailyAmount, market: .us)
+            let aggregate = aggregates.market(.us)
+            return aggregate.amountEntry(id: kind.rawValue, title: "美股涨跌", compactTitle: "美", value: aggregate.dailyAmount, market: .us)
         case .usDailyPct:
-            return marketAggregate(rows, stockMarket: .us).percentEntry(id: kind.rawValue, title: "美股涨跌率", compactTitle: "美", value: marketAggregate(rows, stockMarket: .us).dailyPct)
+            let aggregate = aggregates.market(.us)
+            return aggregate.percentEntry(id: kind.rawValue, title: "美股涨跌率", compactTitle: "美", value: aggregate.dailyPct)
         case .usProfitAmount:
-            return marketAggregate(rows, stockMarket: .us).amountEntry(id: kind.rawValue, title: "美股收益", compactTitle: "美益", value: marketAggregate(rows, stockMarket: .us).profitAmount, market: .us)
+            let aggregate = aggregates.market(.us)
+            return aggregate.amountEntry(id: kind.rawValue, title: "美股收益", compactTitle: "美益", value: aggregate.profitAmount, market: .us)
         case .usProfitPct:
-            return marketAggregate(rows, stockMarket: .us).percentEntry(id: kind.rawValue, title: "美股收益率", compactTitle: "美益", value: marketAggregate(rows, stockMarket: .us).profitPct)
+            let aggregate = aggregates.market(.us)
+            return aggregate.percentEntry(id: kind.rawValue, title: "美股收益率", compactTitle: "美益", value: aggregate.profitPct)
         case .offExchangeDailyAmount:
-            return fundAggregate(rows, fundMarket: .offExchange).amountEntry(id: kind.rawValue, title: "场外涨跌", compactTitle: "场外", value: fundAggregate(rows, fundMarket: .offExchange).dailyAmount)
+            let aggregate = aggregates.fund(.offExchange)
+            return aggregate.amountEntry(id: kind.rawValue, title: "场外涨跌", compactTitle: "场外", value: aggregate.dailyAmount)
         case .offExchangeDailyPct:
-            return fundAggregate(rows, fundMarket: .offExchange).percentEntry(id: kind.rawValue, title: "场外涨跌率", compactTitle: "场外", value: fundAggregate(rows, fundMarket: .offExchange).dailyPct)
+            let aggregate = aggregates.fund(.offExchange)
+            return aggregate.percentEntry(id: kind.rawValue, title: "场外涨跌率", compactTitle: "场外", value: aggregate.dailyPct)
         case .offExchangeProfitAmount:
-            return fundAggregate(rows, fundMarket: .offExchange).amountEntry(id: kind.rawValue, title: "场外收益", compactTitle: "场外益", value: fundAggregate(rows, fundMarket: .offExchange).profitAmount)
+            let aggregate = aggregates.fund(.offExchange)
+            return aggregate.amountEntry(id: kind.rawValue, title: "场外收益", compactTitle: "场外益", value: aggregate.profitAmount)
         case .offExchangeProfitPct:
-            return fundAggregate(rows, fundMarket: .offExchange).percentEntry(id: kind.rawValue, title: "场外收益率", compactTitle: "场外益", value: fundAggregate(rows, fundMarket: .offExchange).profitPct)
+            let aggregate = aggregates.fund(.offExchange)
+            return aggregate.percentEntry(id: kind.rawValue, title: "场外收益率", compactTitle: "场外益", value: aggregate.profitPct)
         case .onExchangeDailyAmount:
-            return fundAggregate(rows, fundMarket: .onExchange).amountEntry(id: kind.rawValue, title: "场内涨跌", compactTitle: "场内", value: fundAggregate(rows, fundMarket: .onExchange).dailyAmount)
+            let aggregate = aggregates.fund(.onExchange)
+            return aggregate.amountEntry(id: kind.rawValue, title: "场内涨跌", compactTitle: "场内", value: aggregate.dailyAmount)
         case .onExchangeDailyPct:
-            return fundAggregate(rows, fundMarket: .onExchange).percentEntry(id: kind.rawValue, title: "场内涨跌率", compactTitle: "场内", value: fundAggregate(rows, fundMarket: .onExchange).dailyPct)
+            let aggregate = aggregates.fund(.onExchange)
+            return aggregate.percentEntry(id: kind.rawValue, title: "场内涨跌率", compactTitle: "场内", value: aggregate.dailyPct)
         case .onExchangeProfitAmount:
-            return fundAggregate(rows, fundMarket: .onExchange).amountEntry(id: kind.rawValue, title: "场内收益", compactTitle: "场内益", value: fundAggregate(rows, fundMarket: .onExchange).profitAmount)
+            let aggregate = aggregates.fund(.onExchange)
+            return aggregate.amountEntry(id: kind.rawValue, title: "场内收益", compactTitle: "场内益", value: aggregate.profitAmount)
         case .onExchangeProfitPct:
-            return fundAggregate(rows, fundMarket: .onExchange).percentEntry(id: kind.rawValue, title: "场内收益率", compactTitle: "场内益", value: fundAggregate(rows, fundMarket: .onExchange).profitPct)
+            let aggregate = aggregates.fund(.onExchange)
+            return aggregate.percentEntry(id: kind.rawValue, title: "场内收益率", compactTitle: "场内益", value: aggregate.profitPct)
         case .sseIndexLevel, .sseIndexChangeAmount, .sseIndexChangePct,
              .csi300IndexLevel, .csi300IndexChangeAmount, .csi300IndexChangePct,
              .chinextIndexLevel, .chinextIndexChangeAmount, .chinextIndexChangePct,
@@ -702,44 +723,65 @@ extension AppModel {
         }
     }
 
-    private func marketAggregate(_ rows: [UserPortfolioValuationRow], stockMarket: StockMarket) -> MenuBarTickerAggregate {
-        MenuBarTickerAggregate(rows: rows.filter {
-            $0.holding.assetType == .stock && $0.holding.detectedMarket == stockMarket
+}
+
+private struct MenuBarTickerAggregateSet {
+    let all: MenuBarTickerAggregate
+    private let markets: [StockMarket: MenuBarTickerAggregate]
+    private let funds: [FundMarket: MenuBarTickerAggregate]
+
+    init(rows: [UserPortfolioValuationRow]) {
+        var stockRowsByMarket: [StockMarket: [UserPortfolioValuationRow]] = [:]
+        var fundRowsByMarket: [FundMarket: [UserPortfolioValuationRow]] = [:]
+
+        for row in rows {
+            if row.holding.assetType == .stock, let market = row.holding.detectedMarket {
+                stockRowsByMarket[market, default: []].append(row)
+            } else if row.holding.assetType == .fund, let market = row.holding.detectedFundMarket {
+                fundRowsByMarket[market, default: []].append(row)
+            }
+        }
+
+        all = MenuBarTickerAggregate(rows: rows)
+        markets = Dictionary(uniqueKeysWithValues: StockMarket.allCases.map { market in
+            (market, MenuBarTickerAggregate(rows: stockRowsByMarket[market] ?? []))
+        })
+        funds = Dictionary(uniqueKeysWithValues: FundMarket.allCases.map { market in
+            (market, MenuBarTickerAggregate(rows: fundRowsByMarket[market] ?? []))
         })
     }
 
-    private func fundAggregate(_ rows: [UserPortfolioValuationRow], fundMarket: FundMarket) -> MenuBarTickerAggregate {
-        MenuBarTickerAggregate(rows: rows.filter {
-            $0.holding.assetType == .fund && $0.holding.detectedFundMarket == fundMarket
-        })
+    func market(_ market: StockMarket) -> MenuBarTickerAggregate {
+        markets[market] ?? .empty
+    }
+
+    func fund(_ market: FundMarket) -> MenuBarTickerAggregate {
+        funds[market] ?? .empty
     }
 }
 
 private struct MenuBarTickerAggregate {
-    let rows: [UserPortfolioValuationRow]
+    static let empty = MenuBarTickerAggregate(rows: [])
 
-    var dailyAmount: Double? {
-        compactNilIfEmpty(rows.compactMap(\.estimatedDailyChangeAmount).reduce(0, +), sourceCount: rows.compactMap(\.estimatedDailyChangeAmount).count)
-    }
+    let dailyAmount: Double?
+    let previousValue: Double?
+    let dailyPct: Double?
+    let profitAmount: Double?
+    let costValue: Double?
+    let profitPct: Double?
 
-    var previousValue: Double? {
-        compactNilIfEmpty(rows.compactMap(\.previousMarketValue).reduce(0, +), sourceCount: rows.compactMap(\.previousMarketValue).count)
-    }
+    init(rows: [UserPortfolioValuationRow]) {
+        let dailyAmounts = rows.compactMap(\.estimatedDailyChangeAmount)
+        let previousValues = rows.compactMap(\.previousMarketValue)
+        let profitAmounts = rows.compactMap(\.profitAmount)
+        let costValues = rows.compactMap(\.costValue)
 
-    var dailyPct: Double? {
-        pctFromAmount(dailyAmount, previous: previousValue)
-    }
-
-    var profitAmount: Double? {
-        compactNilIfEmpty(rows.compactMap(\.profitAmount).reduce(0, +), sourceCount: rows.compactMap(\.profitAmount).count)
-    }
-
-    var costValue: Double? {
-        compactNilIfEmpty(rows.compactMap(\.costValue).reduce(0, +), sourceCount: rows.compactMap(\.costValue).count)
-    }
-
-    var profitPct: Double? {
-        pctFromAmount(profitAmount, previous: costValue)
+        dailyAmount = compactNilIfEmpty(dailyAmounts.reduce(0, +), sourceCount: dailyAmounts.count)
+        previousValue = compactNilIfEmpty(previousValues.reduce(0, +), sourceCount: previousValues.count)
+        dailyPct = pctFromAmount(dailyAmount, previous: previousValue)
+        profitAmount = compactNilIfEmpty(profitAmounts.reduce(0, +), sourceCount: profitAmounts.count)
+        costValue = compactNilIfEmpty(costValues.reduce(0, +), sourceCount: costValues.count)
+        profitPct = pctFromAmount(profitAmount, previous: costValue)
     }
 
     func amountEntry(id: String, title: String, compactTitle: String, value: Double?, market: StockMarket? = nil) -> MenuBarTickerEntry? {

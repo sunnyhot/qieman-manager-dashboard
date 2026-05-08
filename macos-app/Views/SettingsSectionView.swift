@@ -15,6 +15,7 @@ private enum SettingsFocus: CaseIterable, Identifiable {
 struct SettingsSectionView: View {
     @EnvironmentObject private var model: AppModel
     @State private var selectedSettingsFocus: SettingsFocus = .menuBar
+    @State private var isMenuBarHoldingOptionsExpanded = false
 
     private var enabledBinding: Binding<Bool> {
         Binding(
@@ -133,13 +134,15 @@ struct SettingsSectionView: View {
     }
 
     private var overviewMetrics: some View {
-        ViewThatFits {
+        let tickerEntries = model.menuBarTickerVisibleEntries
+
+        return ViewThatFits {
             LazyVGrid(columns: settingsMetricWideColumns, spacing: 12) {
-                overviewMetricButtons
+                overviewMetricButtons(tickerEntries: tickerEntries)
             }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 176), spacing: 12)], spacing: 12) {
-                overviewMetricButtons
+                overviewMetricButtons(tickerEntries: tickerEntries)
             }
         }
     }
@@ -149,7 +152,7 @@ struct SettingsSectionView: View {
     }
 
     @ViewBuilder
-    private var overviewMetricButtons: some View {
+    private func overviewMetricButtons(tickerEntries: [MenuBarTickerEntry]) -> some View {
         Button {
             withAnimation(.easeInOut(duration: 0.16)) {
                 selectedSettingsFocus = .account
@@ -205,7 +208,7 @@ struct SettingsSectionView: View {
         } label: {
             SettingsMetric(
                 title: "菜单栏",
-                value: model.menuBarTickerSettings.isEnabled ? "\(model.menuBarTickerVisibleEntries.count) 项显示" : "已关闭",
+                value: model.menuBarTickerSettings.isEnabled ? "\(tickerEntries.count) 项显示" : "已关闭",
                 detail: "最多 \(model.menuBarTickerSettings.maxVisibleItems) 项 · 已选 \(model.menuBarTickerConfiguredItemCount)",
                 icon: "menubar.rectangle",
                 tint: model.menuBarTickerSettings.isEnabled ? AppPalette.info : AppPalette.muted,
@@ -415,7 +418,9 @@ struct SettingsSectionView: View {
     }
 
     private var menuBarPanel: some View {
-        SettingsPanel(title: "菜单栏摘要", subtitle: "不用点开菜单栏，也能直接看到你选中的关键数据", icon: "menubar.rectangle") {
+        let tickerEntries = model.menuBarTickerVisibleEntries
+
+        return SettingsPanel(title: "菜单栏摘要", subtitle: "不用点开菜单栏，也能直接看到你选中的关键数据", icon: "menubar.rectangle") {
             VStack(alignment: .leading, spacing: 0) {
                 SettingsToggleRow(
                     title: "启用菜单栏数据",
@@ -443,7 +448,7 @@ struct SettingsSectionView: View {
                             .labelsHidden()
                     }
 
-                    menuBarPreview
+                    menuBarPreview(entries: tickerEntries)
                 }
                 .padding(.vertical, 14)
 
@@ -519,18 +524,18 @@ struct SettingsSectionView: View {
         }
     }
 
-    private var menuBarPreview: some View {
+    private func menuBarPreview(entries: [MenuBarTickerEntry]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text("当前菜单栏")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(AppPalette.muted)
                 ToolbarBadge(title: "已选 \(model.menuBarTickerConfiguredItemCount)", tint: AppPalette.info)
-                ToolbarBadge(title: "显示 \(model.menuBarTickerVisibleEntries.count)", tint: model.menuBarTickerVisibleEntries.isEmpty ? AppPalette.muted : AppPalette.positive)
+                ToolbarBadge(title: "显示 \(entries.count)", tint: entries.isEmpty ? AppPalette.muted : AppPalette.positive)
                 Spacer()
             }
 
-            if model.menuBarTickerVisibleEntries.isEmpty {
+            if entries.isEmpty {
                 Text(model.menuBarTickerSettings.isEnabled ? "当前选择项暂时没有可用数据。刷新持仓估值后会自动显示。" : "菜单栏数据展示已关闭。")
                     .font(.system(size: 11))
                     .foregroundStyle(AppPalette.muted)
@@ -540,11 +545,11 @@ struct SettingsSectionView: View {
             } else {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 8) {
-                        menuBarPreviewEntries
+                        menuBarPreviewEntries(entries)
                     }
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 128), spacing: 8)], alignment: .leading, spacing: 8) {
-                        menuBarPreviewEntries
+                        menuBarPreviewEntries(entries)
                     }
                 }
             }
@@ -558,8 +563,8 @@ struct SettingsSectionView: View {
     }
 
     @ViewBuilder
-    private var menuBarPreviewEntries: some View {
-        ForEach(model.menuBarTickerVisibleEntries) { entry in
+    private func menuBarPreviewEntries(_ entries: [MenuBarTickerEntry]) -> some View {
+        ForEach(entries) { entry in
             HStack(spacing: 6) {
                 Circle()
                     .fill(menuBarToneColor(entry.tone))
@@ -628,20 +633,40 @@ struct SettingsSectionView: View {
     }
 
     private var menuBarHoldingOptions: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("单个基金 / 股票")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppPalette.ink)
-                Text("可为任意持仓选择涨跌、收益、现价或市值；菜单栏最终仍受最多显示项限制。")
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted)
+        DisclosureGroup(isExpanded: $isMenuBarHoldingOptionsExpanded) {
+            menuBarHoldingOptionsContent
+                .padding(.top, 10)
+        } label: {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("单个基金 / 股票")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text("需要精确到单个标的时再展开，避免一次渲染过多配置项。")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                Spacer()
+                ToolbarBadge(title: "\(model.userPortfolioSnapshot?.rows.count ?? 0) 个标的", tint: AppPalette.info)
+                if !model.menuBarTickerSettings.holdingSelections.isEmpty {
+                    ToolbarBadge(title: "已选 \(model.menuBarTickerSettings.holdingSelections.count)", tint: AppPalette.positive)
+                }
             }
+        }
+        .padding(.vertical, 14)
+    }
 
+    private var menuBarHoldingOptionsContent: some View {
+        Group {
             if let snapshot = model.userPortfolioSnapshot, !snapshot.rows.isEmpty {
-                VStack(spacing: 8) {
-                    ForEach(snapshot.rows) { row in
-                        menuBarHoldingRow(row)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("可为任意持仓选择涨跌、收益、现价或市值；菜单栏最终仍受最多显示项限制。")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                    LazyVStack(spacing: 8) {
+                        ForEach(snapshot.rows) { row in
+                            menuBarHoldingRow(row)
+                        }
                     }
                 }
             } else {
@@ -663,21 +688,12 @@ struct SettingsSectionView: View {
                 .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
             }
         }
-        .padding(.vertical, 14)
     }
 
     private func menuBarHoldingRow(_ row: UserPortfolioValuationRow) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: 12) {
-                menuBarHoldingIdentity(row)
-                    .frame(minWidth: 160, maxWidth: .infinity, alignment: .leading)
-                menuBarHoldingMetricToggles(row)
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                menuBarHoldingIdentity(row)
-                menuBarHoldingMetricToggles(row)
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            menuBarHoldingIdentity(row)
+            menuBarHoldingMetricToggles(row)
         }
         .padding(10)
         .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
@@ -705,24 +721,13 @@ struct SettingsSectionView: View {
     }
 
     private func menuBarHoldingMetricToggles(_ row: UserPortfolioValuationRow) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 10) {
-                menuBarHoldingMetricToggle(row, .dailyAmount)
-                menuBarHoldingMetricToggle(row, .dailyPct)
-                menuBarHoldingMetricToggle(row, .profitAmount)
-                menuBarHoldingMetricToggle(row, .profitPct)
-                menuBarHoldingMetricToggle(row, .price)
-                menuBarHoldingMetricToggle(row, .marketValue)
-            }
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 74), spacing: 8)], alignment: .leading, spacing: 8) {
-                menuBarHoldingMetricToggle(row, .dailyAmount)
-                menuBarHoldingMetricToggle(row, .dailyPct)
-                menuBarHoldingMetricToggle(row, .profitAmount)
-                menuBarHoldingMetricToggle(row, .profitPct)
-                menuBarHoldingMetricToggle(row, .price)
-                menuBarHoldingMetricToggle(row, .marketValue)
-            }
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 74), spacing: 8)], alignment: .leading, spacing: 8) {
+            menuBarHoldingMetricToggle(row, .dailyAmount)
+            menuBarHoldingMetricToggle(row, .dailyPct)
+            menuBarHoldingMetricToggle(row, .profitAmount)
+            menuBarHoldingMetricToggle(row, .profitPct)
+            menuBarHoldingMetricToggle(row, .price)
+            menuBarHoldingMetricToggle(row, .marketValue)
         }
     }
 
