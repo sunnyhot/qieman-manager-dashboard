@@ -32,9 +32,9 @@ struct PersonalAssetBrowser: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
                 .frame(maxWidth: 320)
@@ -61,9 +61,9 @@ struct PersonalAssetBrowser: View {
                         .font(.system(size: 12, weight: .semibold))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
+                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
+                            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                                 .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                         )
                 }
@@ -97,7 +97,7 @@ struct PersonalAssetBrowser: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
             } else {
                 PersonalAssetGroupedTable(rows: presentation.visibleRows)
             }
@@ -118,14 +118,18 @@ struct PersonalAssetBrowser: View {
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundStyle(isSelected ? AppPalette.onBrand.opacity(0.88) : AppPalette.muted)
             }
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(isSelected ? AppPalette.brand : AppPalette.cardStrong, in: Capsule())
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(isSelected ? AppPalette.brand : AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                        .stroke(isSelected ? AppPalette.brand.opacity(0.40) : AppPalette.line.opacity(0.42), lineWidth: 1)
+                )
         }
         .buttonStyle(PressResponsiveButtonStyle())
-        .contentShape(Capsule())
+        .contentShape(RoundedRectangle(cornerRadius: AppPalette.controlRadius))
     }
 
     private func makePresentation() -> PersonalAssetBrowserPresentation {
@@ -327,7 +331,12 @@ struct PersonalAssetTable: View {
             .foregroundStyle(AppPalette.muted)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+            .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(AppPalette.line.opacity(0.42))
+                    .frame(height: 1)
+            }
 
             VStack(spacing: 8) {
                 ForEach(rows) { row in
@@ -513,7 +522,11 @@ struct PersonalAssetTableRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.line.opacity(0.28), lineWidth: 1)
+        )
         .alert(deleteConfirmationTitle, isPresented: deleteConfirmationBinding) {
             Button("删除", role: .destructive) {
                 if let pendingDeleteScope {
@@ -849,9 +862,9 @@ struct PersonalPendingTradeEditSheet: View {
                     .lineLimit(2...4)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 9)
-                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                             .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                     )
             }
@@ -912,9 +925,9 @@ struct PersonalPendingTradeEditSheet: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
         }
@@ -999,7 +1012,7 @@ struct PersonalInvestmentPlanManagementSheet: View {
                     .foregroundStyle(AppPalette.muted)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
-                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
+                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
             } else {
                 ScrollView {
                     LazyVStack(spacing: 10) {
@@ -1164,9 +1177,9 @@ private struct PersonalInvestmentPlanManageRow: View {
             .font(.system(size: 12, weight: .semibold))
         }
         .padding(12)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
                 .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
         )
     }
@@ -1240,9 +1253,9 @@ struct PersonalInvestmentPlanAddSheet: View {
                     .lineLimit(2...4)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 9)
-                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                             .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                     )
             }
@@ -1288,9 +1301,9 @@ struct PersonalInvestmentPlanAddSheet: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
         }
@@ -1382,9 +1395,9 @@ struct PersonalInvestmentPlanEditSheet: View {
                     .lineLimit(2...4)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 9)
-                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                             .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                     )
             }
@@ -1431,9 +1444,9 @@ struct PersonalInvestmentPlanEditSheet: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
         }

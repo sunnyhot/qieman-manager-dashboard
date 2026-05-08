@@ -102,7 +102,7 @@ struct ContentView: View {
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
                     .frame(width: 36, height: 36)
-                    .background(AppPalette.brandSoft, in: RoundedRectangle(cornerRadius: 10))
+                    .background(AppPalette.brandSoft, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
                 if !isCompact {
                     VStack(alignment: .leading, spacing: 2) {
@@ -186,8 +186,11 @@ struct ContentView: View {
                 }
             }
             .padding(isCompact ? 10 : 14)
+            .background(AppPalette.card.opacity(0.42), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+            .padding(.horizontal, isCompact ? 8 : 10)
+            .padding(.bottom, 12)
         }
-        .background(AppPalette.paper.opacity(0.96))
+        .background(AppPalette.paper.opacity(0.98))
         .overlay(alignment: .trailing) {
             Rectangle()
                 .fill(AppPalette.line.opacity(0.7))
@@ -217,7 +220,7 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, minHeight: 46, alignment: isCompact ? .center : .leading)
             .padding(.horizontal, isCompact ? 8 : 12)
             .background(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
                     .fill(isSelected ? AppPalette.brand.opacity(0.10) : Color.clear)
             )
             .overlay(alignment: .leading) {
@@ -228,7 +231,7 @@ struct ContentView: View {
                         .offset(x: 0)
                 }
             }
-            .contentShape(RoundedRectangle(cornerRadius: 8))
+            .contentShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         }
         .buttonStyle(PressResponsiveButtonStyle())
         .help(section.rawValue)
@@ -263,46 +266,90 @@ struct ContentView: View {
                 }
 
                 if shouldShowQueryToolbar {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(QueryMode.allCases) { mode in
-                                queryModeChip(mode: mode)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 2)
-
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 12)], spacing: 12) {
-                        toolbarField("产品", text: $model.form.prodCode, minWidth: 180)
-                        toolbarField("主理人", text: $model.form.userName, minWidth: 200)
-                        toolbarField("关键词", text: $model.form.keyword, minWidth: 240)
-                        toolbarField("页数", text: $model.form.pages, minWidth: 100)
-                        toolbarField("每页", text: $model.form.pageSize, minWidth: 100)
-                    }
-
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 12)], spacing: 12) {
-                        toolbarField("起始", text: $model.form.since, minWidth: 180)
-                        toolbarField("结束", text: $model.form.until, minWidth: 180)
-                    }
-
-                    if model.showAdvancedParams {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 12)], spacing: 12) {
-                            toolbarField("groupId", text: $model.form.groupID, minWidth: 180)
-                            toolbarField("groupUrl", text: $model.form.groupURL, minWidth: 260)
-                            toolbarField("brokerUserId", text: $model.form.brokerUserID, minWidth: 180)
-                            toolbarField("spaceUserId", text: $model.form.spaceUserID, minWidth: 180)
-                            toolbarField("自动刷新", text: $model.form.autoRefresh, minWidth: 140)
-                        }
-                    }
+                    queryToolbarPanel
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(AppPalette.paper.opacity(0.92))
+            .background(AppPalette.paper.opacity(0.96))
 
             Divider()
         }
         .background(AppPalette.paper.opacity(0.85))
+    }
+
+    private var queryToolbarPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(QueryMode.allCases) { mode in
+                        queryModeChip(mode: mode)
+                    }
+                }
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 126), spacing: 8)], alignment: .leading, spacing: 8) {
+                    ForEach(QueryMode.allCases) { mode in
+                        queryModeChip(mode: mode)
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .bottom, spacing: 10) {
+                        toolbarField("产品", text: $model.form.prodCode, minWidth: 170)
+                            .frame(width: 210)
+                        toolbarField("主理人", text: $model.form.userName, minWidth: 190)
+                            .frame(width: 250)
+                        toolbarField("关键词", text: $model.form.keyword, minWidth: 220)
+                            .frame(maxWidth: .infinity)
+                        toolbarField("页数", text: $model.form.pages, minWidth: 88)
+                            .frame(width: 104)
+                        toolbarField("每页", text: $model.form.pageSize, minWidth: 88)
+                            .frame(width: 104)
+                    }
+
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], alignment: .leading, spacing: 10) {
+                        toolbarField("产品", text: $model.form.prodCode, minWidth: 170)
+                        toolbarField("主理人", text: $model.form.userName, minWidth: 190)
+                        toolbarField("关键词", text: $model.form.keyword, minWidth: 220)
+                        toolbarField("页数", text: $model.form.pages, minWidth: 88)
+                        toolbarField("每页", text: $model.form.pageSize, minWidth: 88)
+                    }
+                }
+
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .bottom, spacing: 10) {
+                        toolbarField("起始", text: $model.form.since, minWidth: 180)
+                            .frame(width: 220)
+                        toolbarField("结束", text: $model.form.until, minWidth: 180)
+                            .frame(width: 220)
+                        Spacer(minLength: 0)
+                    }
+
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
+                        toolbarField("起始", text: $model.form.since, minWidth: 180)
+                        toolbarField("结束", text: $model.form.until, minWidth: 180)
+                    }
+                }
+
+                if model.showAdvancedParams {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
+                        toolbarField("groupId", text: $model.form.groupID, minWidth: 180)
+                        toolbarField("groupUrl", text: $model.form.groupURL, minWidth: 260)
+                        toolbarField("brokerUserId", text: $model.form.brokerUserID, minWidth: 180)
+                        toolbarField("spaceUserId", text: $model.form.spaceUserID, minWidth: 180)
+                        toolbarField("自动刷新", text: $model.form.autoRefresh, minWidth: 140)
+                    }
+                }
+            }
+            .padding(12)
+            .background(AppPalette.card.opacity(0.52), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.panelRadius)
+                    .stroke(AppPalette.line.opacity(0.42), lineWidth: 1)
+            )
+        }
     }
 
     private var toolbarTitleBlock: some View {
@@ -346,9 +393,9 @@ struct ContentView: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
                 .controlSize(.regular)
@@ -368,10 +415,14 @@ struct ContentView: View {
                 .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(isSelected ? AppPalette.brand : AppPalette.cardStrong, in: Capsule())
+                .background(isSelected ? AppPalette.brand : AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                        .stroke(isSelected ? AppPalette.brand.opacity(0.40) : AppPalette.line.opacity(0.42), lineWidth: 1)
+                )
         }
         .buttonStyle(PressResponsiveButtonStyle())
-        .contentShape(Capsule())
+        .contentShape(RoundedRectangle(cornerRadius: AppPalette.controlRadius))
     }
 
     @ViewBuilder
@@ -473,7 +524,7 @@ private struct AppUpdateSheet: View {
                     .font(.system(size: 34, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
                     .frame(width: 48, height: 48)
-                    .background(AppPalette.brandSoft, in: RoundedRectangle(cornerRadius: 12))
+                    .background(AppPalette.brandSoft, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("发现新版本")
@@ -511,7 +562,7 @@ private struct AppUpdateSheet: View {
                     .lineLimit(8)
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
 
                 if isInstalling {
                     HStack(spacing: 10) {

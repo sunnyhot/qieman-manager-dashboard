@@ -108,7 +108,7 @@ struct QiemanLoginView: View {
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(AppPalette.cardStrong)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .clipShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
                 }
 
                 Spacer()
@@ -130,10 +130,10 @@ struct QiemanLoginView: View {
                 .padding(14)
                 .background(AppPalette.card.opacity(0.95))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                         .stroke(AppPalette.line.opacity(0.75), lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .clipShape(RoundedRectangle(cornerRadius: AppPalette.panelRadius))
             }
 
             Text("验证码登录完成后如果页面跳回首页，App 会继续自动检查 Cookie、本地存储和回跳参数。微信登录会在独立弹窗里显示二维码，扫码成功后也会自动检测并保存登录态。")
@@ -154,10 +154,10 @@ struct QiemanLoginView: View {
                 .frame(minWidth: 120)
                 .background(AppPalette.cardStrong)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: AppPalette.controlRadius))
         }
         .buttonStyle(PressResponsiveButtonStyle())
     }

@@ -53,7 +53,11 @@ struct CommentBlock: View {
             }
         }
         .padding(12)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 10))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.line.opacity(0.28), lineWidth: 1)
+        )
     }
 }
 
@@ -150,7 +154,11 @@ struct InvestmentPlanCard: View {
             }
         }
         .padding(12)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.line.opacity(0.28), lineWidth: 1)
+        )
     }
 }
 
@@ -238,6 +246,10 @@ struct PendingTradeCard: View {
             }
         }
         .padding(12)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.line.opacity(0.28), lineWidth: 1)
+        )
     }
 }

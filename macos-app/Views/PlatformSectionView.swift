@@ -183,9 +183,9 @@ struct PlatformSectionView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 14))
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                 .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
         )
     }
@@ -217,14 +217,14 @@ struct PlatformSectionView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
+                .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
             }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 14))
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                 .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
         )
     }

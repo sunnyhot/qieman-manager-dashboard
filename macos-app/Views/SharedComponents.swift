@@ -38,36 +38,49 @@ struct MetricCard: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundStyle(accent)
-                .frame(width: 38, height: 38)
-                .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .frame(width: 30, height: 30)
+                    .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
-            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 11))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text(value)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .font(.system(size: 23, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .lineLimit(1)
+                    .minimumScaleFactor(0.68)
                     .foregroundStyle(valueTint)
                 Text(subtitle)
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 96, alignment: .leading)
+        .frame(minHeight: 104, alignment: .leading)
         .padding(14)
-        .background(AppPalette.cardStrong.opacity(0.92), in: RoundedRectangle(cornerRadius: 14))
+        .background(AppPalette.cardStrong.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.line.opacity(0.58), lineWidth: 1)
         )
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(accent.opacity(0.48))
+                .frame(height: 2)
+        }
     }
 }
 
@@ -96,12 +109,14 @@ struct SectionCard<Trailing: View, Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 9) {
                 Image(systemName: icon)
-                    .font(.system(size: 12))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
-                VStack(alignment: .leading, spacing: 2) {
+                    .frame(width: 24, height: 24)
+                    .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+                VStack(alignment: .leading, spacing: 3) {
                     Text(title)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
@@ -114,12 +129,18 @@ struct SectionCard<Trailing: View, Content: View>: View {
             content
         }
         .padding(16)
-        .background(AppPalette.paper.opacity(0.96), in: RoundedRectangle(cornerRadius: 16))
+        .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(AppPalette.line.opacity(0.6), lineWidth: 1)
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
+                .stroke(AppPalette.line.opacity(0.58), lineWidth: 1)
         )
-        .shadow(color: AppPalette.brand.opacity(0.06), radius: 10, y: 4)
+        .overlay(alignment: .topLeading) {
+            Rectangle()
+                .fill(AppPalette.brand.opacity(0.28))
+                .frame(width: 80, height: 2)
+                .padding(.leading, 16)
+        }
+        .shadow(color: Color.black.opacity(0.10), radius: 14, y: 6)
     }
 }
 
@@ -145,7 +166,7 @@ struct EmptySectionState: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
 }
 
@@ -165,7 +186,11 @@ struct StatChip: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 8))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.line.opacity(0.35), lineWidth: 1)
+        )
     }
 }
 
@@ -179,7 +204,11 @@ struct ToolbarBadge: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(tint.opacity(0.12), in: Capsule())
+            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(tint.opacity(0.18), lineWidth: 1)
+            )
     }
 }
 
@@ -199,7 +228,11 @@ struct ToastBar: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(tint.opacity(0.24), lineWidth: 1)
+        )
     }
 }
 
@@ -228,4 +261,3 @@ struct LabeledValue: View {
         }
     }
 }
-

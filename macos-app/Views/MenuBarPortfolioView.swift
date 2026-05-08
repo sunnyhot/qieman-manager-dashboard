@@ -177,7 +177,7 @@ private struct MenuBarEmptyState: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 18)
         .background(AppPalette.cardStrong)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
 }
 
@@ -246,9 +246,9 @@ private struct MenuBarSummaryCard: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppPalette.cardStrong)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                 .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
         )
     }
@@ -274,7 +274,7 @@ private struct SummaryPill: View {
         .frame(maxWidth: .infinity, minHeight: 56, maxHeight: 56, alignment: .leading)
         .padding(.horizontal, 10)
         .background(tint.opacity(0.10))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
 }
 
@@ -362,9 +362,9 @@ private struct MenuBarHoldingRow: View {
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppPalette.card)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
                 .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
         )
     }
@@ -397,7 +397,7 @@ private struct HoldingMetricPill: View {
         .frame(maxWidth: .infinity, minHeight: 60, maxHeight: 60, alignment: .leading)
         .padding(.horizontal, 8)
         .background(tint.opacity(0.09))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
 }
 

@@ -44,7 +44,7 @@ struct OverviewSectionView: View {
                             .foregroundStyle(AppPalette.muted)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
-                            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 10))
+                            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
                     } else {
                         let groups = assetTypeSummaryGroups
                         ViewThatFits(in: .horizontal) {
@@ -306,7 +306,11 @@ struct OverviewSectionView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
+            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                    .stroke(AppPalette.line.opacity(0.32), lineWidth: 1)
+            )
         }
         .buttonStyle(PressResponsiveButtonStyle())
     }
@@ -361,12 +365,12 @@ struct OverviewHeroCard: View {
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: 18) {
+            HStack(alignment: .center, spacing: 24) {
                 heroCopy
-                    .frame(minWidth: 520, maxWidth: 760, alignment: .leading)
-                heroSummaryCard(fixedWidth: 420)
+                    .frame(minWidth: 480, maxWidth: .infinity, alignment: .leading)
+                heroSummaryCard(fixedWidth: 540)
             }
-            .frame(maxWidth: 1_220, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 16) {
                 heroCopy
@@ -375,11 +379,16 @@ struct OverviewHeroCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .background(AppPalette.heroGradient, in: RoundedRectangle(cornerRadius: 22))
+        .background(AppPalette.heroGradient, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 22)
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                 .stroke(AppPalette.line.opacity(0.65), lineWidth: 1)
         )
+        .overlay(alignment: .leading) {
+            Rectangle()
+                .fill(AppPalette.brand.opacity(0.52))
+                .frame(width: 3)
+        }
     }
 
     private var heroCopy: some View {
@@ -460,7 +469,11 @@ struct OverviewHeroCard: View {
         .frame(minHeight: 136, alignment: .topLeading)
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(width: fixedWidth, alignment: .leading)
-        .background(AppPalette.cardStrong.opacity(0.92), in: RoundedRectangle(cornerRadius: 18))
+        .background(AppPalette.cardStrong.opacity(0.90), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.line.opacity(0.42), lineWidth: 1)
+        )
     }
 
     private func heroSummaryMetric(title: String, value: String, tint: Color) -> some View {
@@ -478,7 +491,11 @@ struct OverviewHeroCard: View {
         .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(tint.opacity(0.16), lineWidth: 1)
+        )
     }
 }
 
@@ -603,9 +620,9 @@ struct ManagerWatchControlCard: View {
             }
         }
         .padding(14)
-        .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: 14))
+        .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                 .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
         )
     }
@@ -617,7 +634,7 @@ struct ManagerWatchControlCard: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
                     .frame(width: 34, height: 34)
-                    .background(AppPalette.brandSoft, in: RoundedRectangle(cornerRadius: 10))
+                    .background(AppPalette.brandSoft, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("巡检状态")
@@ -666,13 +683,13 @@ struct ManagerWatchControlCard: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(AppPalette.warning.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                .background(AppPalette.warning.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
             }
         }
         .padding(14)
-        .background(AppPalette.card.opacity(0.82), in: RoundedRectangle(cornerRadius: 14))
+        .background(AppPalette.card.opacity(0.82), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                 .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
         )
     }
@@ -697,9 +714,9 @@ struct ManagerWatchControlCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
         }
@@ -715,9 +732,9 @@ struct ManagerWatchControlCard: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
         }
@@ -744,6 +761,6 @@ struct ManagerWatchStatusTile: View {
         .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
 }

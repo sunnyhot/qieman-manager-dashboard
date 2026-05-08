@@ -62,11 +62,10 @@ struct SettingsSectionView: View {
             VStack(alignment: .leading, spacing: 18) {
                 overviewBand
                 selectedSettingsPanel
-                    .frame(maxWidth: selectedSettingsFocus == .watch ? 760 : 620, alignment: .topLeading)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
             }
-            .frame(maxWidth: 1480, alignment: .topLeading)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .padding(16)
         }
         .scrollIndicators(.visible)
     }
@@ -78,9 +77,9 @@ struct SettingsSectionView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppPalette.paper.opacity(0.92), in: RoundedRectangle(cornerRadius: 10))
+        .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                 .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
         )
     }
@@ -92,7 +91,7 @@ struct SettingsSectionView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
                     .frame(width: 30, height: 30)
-                    .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+                    .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 Text("设置中心")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(AppPalette.ink)
@@ -118,55 +117,70 @@ struct SettingsSectionView: View {
     }
 
     private var overviewMetrics: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 176), spacing: 12)], spacing: 12) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.16)) {
-                    selectedSettingsFocus = .account
-                }
-            } label: {
-                SettingsMetric(
-                    title: "账号",
-                    value: model.cookieAvailable ? "登录态可用" : "等待登录",
-                    detail: model.isCheckingAuth ? "验证中" : model.cookieFileURL?.lastPathComponent ?? "未找到 Cookie",
-                    icon: "person.crop.circle.badge.checkmark",
-                    tint: model.cookieAvailable ? AppPalette.positive : AppPalette.warning,
-                    isSelected: selectedSettingsFocus == .account
-                )
+        ViewThatFits {
+            LazyVGrid(columns: settingsMetricWideColumns, spacing: 12) {
+                overviewMetricButtons
             }
-            .buttonStyle(PressResponsiveButtonStyle())
 
-            Button {
-                withAnimation(.easeInOut(duration: 0.16)) {
-                    selectedSettingsFocus = .watch
-                }
-            } label: {
-                SettingsMetric(
-                    title: "巡检",
-                    value: model.managerWatchStatusText,
-                    detail: model.managerWatchScopeText,
-                    icon: "bell.and.waves.left.and.right",
-                    tint: model.managerWatchSettings.isEnabled ? AppPalette.positive : AppPalette.muted,
-                    isSelected: selectedSettingsFocus == .watch
-                )
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 176), spacing: 12)], spacing: 12) {
+                overviewMetricButtons
             }
-            .buttonStyle(PressResponsiveButtonStyle())
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.16)) {
-                    selectedSettingsFocus = .version
-                }
-            } label: {
-                SettingsMetric(
-                    title: "版本",
-                    value: AppUpdateChecker.bundleVersion,
-                    detail: model.isCheckingForUpdates ? "正在检查更新" : model.availableUpdate.map { "可更新到 \($0.version)" } ?? "当前构建",
-                    icon: "arrow.down.circle",
-                    tint: model.availableUpdate == nil ? AppPalette.info : AppPalette.positive,
-                    isSelected: selectedSettingsFocus == .version
-                )
-            }
-            .buttonStyle(PressResponsiveButtonStyle())
         }
+    }
+
+    private var settingsMetricWideColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 176), spacing: 12), count: 3)
+    }
+
+    @ViewBuilder
+    private var overviewMetricButtons: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.16)) {
+                selectedSettingsFocus = .account
+            }
+        } label: {
+            SettingsMetric(
+                title: "账号",
+                value: model.cookieAvailable ? "登录态可用" : "等待登录",
+                detail: model.isCheckingAuth ? "验证中" : model.cookieFileURL?.lastPathComponent ?? "未找到 Cookie",
+                icon: "person.crop.circle.badge.checkmark",
+                tint: model.cookieAvailable ? AppPalette.positive : AppPalette.warning,
+                isSelected: selectedSettingsFocus == .account
+            )
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
+
+        Button {
+            withAnimation(.easeInOut(duration: 0.16)) {
+                selectedSettingsFocus = .watch
+            }
+        } label: {
+            SettingsMetric(
+                title: "巡检",
+                value: model.managerWatchStatusText,
+                detail: model.managerWatchScopeText,
+                icon: "bell.and.waves.left.and.right",
+                tint: model.managerWatchSettings.isEnabled ? AppPalette.positive : AppPalette.muted,
+                isSelected: selectedSettingsFocus == .watch
+            )
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
+
+        Button {
+            withAnimation(.easeInOut(duration: 0.16)) {
+                selectedSettingsFocus = .version
+            }
+        } label: {
+            SettingsMetric(
+                title: "版本",
+                value: AppUpdateChecker.bundleVersion,
+                detail: model.isCheckingForUpdates ? "正在检查更新" : model.availableUpdate.map { "可更新到 \($0.version)" } ?? "当前构建",
+                icon: "arrow.down.circle",
+                tint: model.availableUpdate == nil ? AppPalette.info : AppPalette.positive,
+                isSelected: selectedSettingsFocus == .version
+            )
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
     }
 
     @ViewBuilder
@@ -390,9 +404,9 @@ struct SettingsSectionView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(settingsControlBackground, in: RoundedRectangle(cornerRadius: 10))
+                .background(settingsControlBackground, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
         }
@@ -408,9 +422,9 @@ struct SettingsSectionView: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(settingsControlBackground, in: RoundedRectangle(cornerRadius: 10))
+                .background(settingsControlBackground, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
         }
@@ -438,7 +452,7 @@ private struct SettingsPanel<Content: View>: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
                     .frame(width: 30, height: 30)
-                    .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+                    .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.system(size: 14, weight: .bold))
@@ -455,9 +469,9 @@ private struct SettingsPanel<Content: View>: View {
         }
         .padding(15)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: 10))
+        .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                 .stroke(AppPalette.line.opacity(0.58), lineWidth: 1)
         )
         .overlay(alignment: .topLeading) {
@@ -484,7 +498,7 @@ private struct SettingsMetric: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 30, height: 30)
-                .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+                .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -512,9 +526,9 @@ private struct SettingsMetric: View {
         }
         .padding(11)
         .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
-        .background(AppPalette.cardStrong.opacity(isSelected ? 0.94 : 0.76), in: RoundedRectangle(cornerRadius: 8))
+        .background(AppPalette.cardStrong.opacity(isSelected ? 0.94 : 0.76), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
                 .stroke(isSelected ? tint.opacity(0.72) : AppPalette.line.opacity(0.42), lineWidth: isSelected ? 1.2 : 1)
         )
     }
@@ -533,7 +547,7 @@ private struct SettingsRow: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 28, height: 28)
-                .background(tint.opacity(0.09), in: RoundedRectangle(cornerRadius: 7))
+                .background(tint.opacity(0.09), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -572,7 +586,7 @@ private struct SettingsToggleRow: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 28, height: 28)
-                .background(tint.opacity(0.09), in: RoundedRectangle(cornerRadius: 7))
+                .background(tint.opacity(0.09), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)

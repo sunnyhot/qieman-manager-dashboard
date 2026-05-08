@@ -1768,22 +1768,48 @@ final class AppModel: ObservableObject {
             buckets[month] = bucket
         }
 
-        let latestMonths = buckets
-            .map { month, bucket in
-                PlatformMonthSummary(
-                    month: month,
-                    totalCount: bucket.buy + bucket.sell,
-                    buyCount: bucket.buy,
-                    sellCount: bucket.sell,
-                    activeDays: bucket.days.count
-                )
-            }
-            .sorted(by: { $0.month > $1.month })
-            .prefix(12)
-            .map { $0 }
-        let result = latestMonths.sorted(by: { $0.month < $1.month })
+        guard let latestMonth = buckets.keys.max() else {
+            _cachedMonthlyPlatformSummary = []
+            return []
+        }
+
+        let result = recentMonthKeys(endingAt: latestMonth, count: 12).map { month in
+            let bucket = buckets[month] ?? (0, 0, [])
+            return PlatformMonthSummary(
+                month: month,
+                totalCount: bucket.buy + bucket.sell,
+                buyCount: bucket.buy,
+                sellCount: bucket.sell,
+                activeDays: bucket.days.count
+            )
+        }
         _cachedMonthlyPlatformSummary = result
         return result
+    }
+
+    private func recentMonthKeys(endingAt latestMonth: String, count: Int) -> [String] {
+        guard let latestIndex = monthIndex(latestMonth) else { return [] }
+        return (0..<count).compactMap { offset in
+            monthKey(from: latestIndex - (count - 1 - offset))
+        }
+    }
+
+    private func monthIndex(_ month: String) -> Int? {
+        let parts = month.split(separator: "-")
+        guard parts.count == 2,
+              let year = Int(parts[0]),
+              let monthNumber = Int(parts[1]),
+              (1...12).contains(monthNumber) else {
+            return nil
+        }
+        return year * 12 + (monthNumber - 1)
+    }
+
+    private func monthKey(from index: Int) -> String? {
+        guard index >= 0 else { return nil }
+        let year = index / 12
+        let month = index % 12 + 1
+        return String(format: "%04d-%02d", year, month)
     }
 
     private enum PlatformActionDirection {

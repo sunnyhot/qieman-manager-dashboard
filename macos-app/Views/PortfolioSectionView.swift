@@ -142,9 +142,9 @@ struct PortfolioSectionView: View {
                                 .foregroundStyle(AppPalette.muted)
                             PersonalAssetAddButtons()
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
-                            .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
+                            .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
                     } else {
                         PersonalAssetBrowser(rows: model.personalAssetRows)
                     }
@@ -196,7 +196,7 @@ struct PortfolioSectionView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
+                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
                     }
                 }
 
@@ -241,7 +241,7 @@ struct PortfolioSectionView: View {
                                 }
                                 .padding(12)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
+                                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
                             }
                         }
                     } else {
@@ -260,7 +260,7 @@ struct PortfolioSectionView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 12))
+                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
                     }
                 }
             }

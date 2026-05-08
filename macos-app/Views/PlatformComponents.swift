@@ -31,7 +31,11 @@ struct ForumRecordRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 10))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.line.opacity(0.30), lineWidth: 1)
+        )
     }
 }
 
@@ -68,9 +72,9 @@ struct ForumSelectableRow: View {
         }
         .padding(isCompact ? 9 : 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(isSelected ? AppPalette.brand.opacity(0.12) : AppPalette.cardStrong.opacity(0.22), in: RoundedRectangle(cornerRadius: 12))
+        .background(isSelected ? AppPalette.brand.opacity(0.12) : AppPalette.cardStrong.opacity(0.36), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
                 .stroke(isSelected ? AppPalette.brand.opacity(0.55) : AppPalette.line.opacity(0.45), lineWidth: 1)
         )
     }
@@ -115,7 +119,7 @@ struct PlatformActionRow: View {
                             .foregroundStyle(sideColor)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(sideColor.opacity(0.10), in: Capsule())
+                            .background(sideColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
                     }
 
                     HStack(spacing: 10) {
@@ -159,9 +163,9 @@ struct PlatformActionRow: View {
             }
         }
         .padding(isCompact ? 10 : 12)
-        .background(isSelected ? AppPalette.brand.opacity(0.14) : AppPalette.card, in: RoundedRectangle(cornerRadius: 10))
+        .background(isSelected ? AppPalette.brand.opacity(0.14) : AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
                 .stroke(isSelected ? AppPalette.brand.opacity(0.6) : AppPalette.line.opacity(0.35), lineWidth: 1)
         )
     }
@@ -280,9 +284,9 @@ struct PlatformActionDetailCard: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
                 .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
         )
     }
@@ -301,7 +305,11 @@ struct PlatformActionDetailCard: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 9)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(tint.opacity(0.07), in: RoundedRectangle(cornerRadius: 10))
+        .background(tint.opacity(0.07), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(tint.opacity(0.15), lineWidth: 1)
+        )
     }
 
     private func sourceText(_ title: String, source: String?, date: String?) -> String? {
@@ -339,7 +347,11 @@ struct WrapLine: View {
                 .foregroundStyle(AppPalette.muted)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
-                .background(AppPalette.cardStrong, in: Capsule())
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(AppPalette.line.opacity(0.22), lineWidth: 1)
+                )
         }
     }
 }
@@ -361,9 +373,9 @@ struct HoldingCard: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: 10))
+        .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
                 .stroke(AppPalette.line.opacity(0.5), lineWidth: 1)
         )
     }
@@ -587,9 +599,9 @@ struct PlatformHoldingsPieChart: View {
                 }
             }
             .padding(14)
-            .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 12))
+            .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                     .stroke(AppPalette.line.opacity(0.32), lineWidth: 1)
             )
         }
@@ -749,7 +761,7 @@ struct PlatformMonthlyOverview: View {
                     .font(.system(size: 18))
                     .foregroundStyle(AppPalette.brand)
                     .frame(width: 38, height: 38)
-                    .background(AppPalette.brand.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                    .background(AppPalette.brand.opacity(0.12), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("近 12 个月")
@@ -787,9 +799,9 @@ struct PlatformMonthlyOverview: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(AppPalette.card.opacity(0.82), in: RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.card.opacity(0.82), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                 .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
         )
     }
@@ -806,9 +818,9 @@ struct PlatformMonthlyOverview: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: 12))
+        .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                 .stroke(AppPalette.line.opacity(0.32), lineWidth: 1)
         )
     }
@@ -901,10 +913,7 @@ struct PlatformMonthlyOverview: View {
         guard month.count >= 7 else { return month }
         let year = String(month.prefix(4).suffix(2))
         let monthNumber = String(month.suffix(2))
-        let hasRepeatedMonth = months.contains { other in
-            other.month != month && other.month.hasSuffix("-\(monthNumber)")
-        }
-        return hasRepeatedMonth ? "\(year)-\(monthNumber)" : monthNumber
+        return "\(year)-\(monthNumber)"
     }
 
     private var chartTooltip: some View {

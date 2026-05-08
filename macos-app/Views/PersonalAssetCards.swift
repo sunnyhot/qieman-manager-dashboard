@@ -102,7 +102,11 @@ struct PersonalAssetOverviewCard: View {
             .lineLimit(1)
         }
         .padding(14)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 14))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.line.opacity(0.30), lineWidth: 1)
+        )
         .frame(minHeight: 246, alignment: .top)
     }
 }
@@ -234,7 +238,7 @@ struct PersonalAssetAddHoldingSheet: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(nameStatusTint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        .background(nameStatusTint.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
 
     private var nameStatusIcon: String {
@@ -304,9 +308,9 @@ struct PersonalAssetAddHoldingSheet: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
         }
@@ -431,9 +435,9 @@ struct PersonalAssetEditHoldingSheet: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
         }
@@ -533,9 +537,9 @@ struct PersonalAssetUnitAdjustmentSheet: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 10))
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
         }
@@ -626,6 +630,6 @@ struct AssetMiniStat: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
 }
