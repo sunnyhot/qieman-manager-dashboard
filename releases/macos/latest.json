@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.17",
-  "name": "QiemanDashboard 2.2.17",
-  "body": "使用 UI/UX Pro Max 方向重设金融数据仪表盘视觉体系；统一总览、设置、持仓、平台调仓、论坛、登录页和菜单栏组件的色板、卡片、表格与控件层级；优化平台调仓查询区和近 12 个月图表显示。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.17",
-  "published_at": "2026-05-08T02:22:39Z",
+  "tag_name": "v2.2.18",
+  "name": "QiemanDashboard 2.2.18",
+  "body": "新增可配置菜单栏行情摘要，支持整体涨跌/收益、A股/港股/美股与基金分组、单个基金股票指标和常用大盘指数；菜单栏最多显示项可控；金融涨跌统一为红涨绿跌；优化持仓与设置页相关展示。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.18",
+  "published_at": "2026-05-08T08:48:15Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.17.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.17/QiemanDashboard-2.2.17.zip",
-      "size": 3252295,
+      "name": "QiemanDashboard-2.2.18.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.18/QiemanDashboard-2.2.18.zip",
+      "size": 3387090,
       "content_type": "application/zip"
     }
   ]

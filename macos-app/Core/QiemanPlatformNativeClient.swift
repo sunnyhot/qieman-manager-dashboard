@@ -23,6 +23,7 @@ fileprivate actor QiemanPlatformCache {
     private var histories: [String: (Date, NativeFundHistory)] = [:]
     private var quotes: [String: (Date, NativeFundQuote)] = [:]
     private var stockQuotes: [String: (Date, NativeStockQuote)] = [:]
+    private var marketIndexQuotes: [MarketIndexKind: (Date, MarketIndexQuote)] = [:]
 
     func payload(for prodCode: String, ttl: TimeInterval) -> PlatformPayload? {
         guard let (loadedAt, payload) = payloads[prodCode], Date().timeIntervalSince(loadedAt) < ttl else {
@@ -66,6 +67,17 @@ fileprivate actor QiemanPlatformCache {
 
     func store(stockQuote: NativeStockQuote, for stockCode: String) {
         stockQuotes[stockCode] = (Date(), stockQuote)
+    }
+
+    func marketIndexQuote(for kind: MarketIndexKind, ttl: TimeInterval) -> MarketIndexQuote? {
+        guard let (loadedAt, quote) = marketIndexQuotes[kind], Date().timeIntervalSince(loadedAt) < ttl else {
+            return nil
+        }
+        return quote
+    }
+
+    func store(marketIndexQuote: MarketIndexQuote, for kind: MarketIndexKind) {
+        marketIndexQuotes[kind] = (Date(), marketIndexQuote)
     }
 }
 
@@ -179,6 +191,45 @@ final class QiemanPlatformNativeClient {
             totalProfitAmount: totalProfitAmount,
             totalProfitPct: totalProfitPct
         )
+    }
+
+    func fetchMarketIndexQuotes(kinds: [MarketIndexKind]) async -> [MarketIndexKind: MarketIndexQuote] {
+        let uniqueKinds = Array(Set(kinds)).sorted { $0.rawValue < $1.rawValue }
+        guard !uniqueKinds.isEmpty else { return [:] }
+
+        var results: [MarketIndexKind: MarketIndexQuote] = [:]
+        await withTaskGroup(of: (MarketIndexKind, MarketIndexQuote?).self) { group in
+            var nextIndex = 0
+
+            func enqueue(_ kind: MarketIndexKind) {
+                group.addTask {
+                    if let cached = await self.cache.marketIndexQuote(for: kind, ttl: self.quoteTTL) {
+                        return (kind, cached)
+                    }
+                    guard let quote = try? await self.fetchMarketIndexQuote(kind) else {
+                        return (kind, nil)
+                    }
+                    await self.cache.store(marketIndexQuote: quote, for: kind)
+                    return (kind, quote)
+                }
+            }
+
+            while nextIndex < Swift.min(uniqueKinds.count, Self.preloadConcurrencyLimit) {
+                enqueue(uniqueKinds[nextIndex])
+                nextIndex += 1
+            }
+
+            while let (kind, quote) = await group.next() {
+                if let quote {
+                    results[kind] = quote
+                }
+                if nextIndex < uniqueKinds.count {
+                    enqueue(uniqueKinds[nextIndex])
+                    nextIndex += 1
+                }
+            }
+        }
+        return results
     }
 
     func resolveAssetNames(holdings: [UserPortfolioHolding]) async -> [UUID: String] {
@@ -817,6 +868,23 @@ final class QiemanPlatformNativeClient {
             return quote
         }
         return .empty(stockCode)
+    }
+
+    private func fetchMarketIndexQuote(_ kind: MarketIndexKind) async throws -> MarketIndexQuote? {
+        let quote = try await fetchSingleTencentQuote(symbol: kind.tencentSymbol, stockCode: kind.rawValue)
+        guard quote.hasUsableData, quote.price > 0 else { return nil }
+        let changeAmount = quote.previousClose.map { quote.price - $0 }
+
+        return MarketIndexQuote(
+            kind: kind,
+            name: kind.label,
+            price: round(quote.price, digits: 2),
+            previousClose: quote.previousClose.map { round($0, digits: 2) },
+            changeAmount: changeAmount.map { round($0, digits: 2) },
+            changePct: quote.changePct.map { round($0, digits: 2) },
+            quotedAt: quote.priceTime,
+            sourceLabel: quote.priceSourceLabel.nilIfEmpty ?? "大盘行情"
+        )
     }
 
     private func fetchEastmoneyStockQuote(_ stockCode: String) async throws -> NativeStockQuote {

@@ -256,8 +256,8 @@ struct OverviewSectionView: View {
                         .minimumScaleFactor(0.72)
                 }
 
-                let profitTint: Color = totalProfit >= 0 ? AppPalette.positive : AppPalette.danger
-                let changeTint: Color = totalChange >= 0 ? AppPalette.positive : AppPalette.danger
+                let profitTint = AppPalette.marketTint(for: totalProfit)
+                let changeTint = AppPalette.marketTint(for: totalChange)
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("总收益")

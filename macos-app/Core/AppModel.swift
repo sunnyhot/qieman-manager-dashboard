@@ -31,7 +31,9 @@ final class AppModel: ObservableObject {
     @Published var userPortfolioSnapshot: UserPortfolioSnapshot?
     @Published var pendingTrades: [PersonalPendingTrade] = []
     @Published var investmentPlans: [PersonalInvestmentPlan] = []
+    @Published var marketIndexQuotes: [MarketIndexKind: MarketIndexQuote] = [:]
     @Published var managerWatchSettings = ManagerWatchSettings.default
+    @Published var menuBarTickerSettings = MenuBarTickerSettings.load()
 
     @Published var selectedPostID: String?
     @Published var selectedPlatformActionID: String?
@@ -46,6 +48,7 @@ final class AppModel: ObservableObject {
     @Published var isPresentingLoginSheet = false
     @Published var showAdvancedParams = false
     @Published var isRefreshingPortfolio = false
+    @Published var isRefreshingMarketIndices = false
     @Published var isProcessingImport = false
     @Published var isResolvingPortfolioNames = false
     @Published var isCheckingForUpdates = false
@@ -156,6 +159,7 @@ final class AppModel: ObservableObject {
         if !activeUserPortfolioHoldings.isEmpty {
             try? await refreshUserPortfolio(updateNotice: false)
         }
+        await refreshMarketIndicesIfNeeded()
 
         await applyPersonalAssetAutomation(updateNotice: false)
         restartManagerWatchLoop(immediate: false)
@@ -219,6 +223,8 @@ final class AppModel: ObservableObject {
                 noticeMessage = "已刷新可用数据，但有部分内容拉取失败。"
             }
         }
+
+        await refreshMarketIndicesIfNeeded()
     }
 
     func validateAuth() async {
@@ -1415,6 +1421,7 @@ final class AppModel: ObservableObject {
         guard !holdings.isEmpty else {
             userPortfolioSnapshot = nil
             clearCachedComputedProperties()
+            await refreshMarketIndicesIfNeeded()
             return
         }
         guard !isRefreshingPortfolio else { return }
@@ -1426,6 +1433,42 @@ final class AppModel: ObservableObject {
         clearCachedComputedProperties()
         if updateNotice {
             noticeMessage = "个人持仓估值已刷新。"
+        }
+        await refreshMarketIndicesIfNeeded()
+    }
+
+    func refreshMarketIndices(kinds requestedKinds: [MarketIndexKind]? = nil, updateNotice: Bool = true) async {
+        let kinds = requestedKinds ?? selectedMenuBarMarketIndexKinds
+        guard !kinds.isEmpty, !isRefreshingMarketIndices else { return }
+
+        isRefreshingMarketIndices = true
+        defer { isRefreshingMarketIndices = false }
+
+        let quotes = await platformClient.fetchMarketIndexQuotes(kinds: kinds)
+        if !quotes.isEmpty {
+            marketIndexQuotes.merge(quotes) { _, new in new }
+            if updateNotice {
+                noticeMessage = "大盘行情已刷新。"
+            }
+        } else if updateNotice {
+            errorMessage = "大盘行情暂时没有拉到可用数据。"
+        }
+    }
+
+    func refreshMarketIndicesIfNeeded() async {
+        guard menuBarTickerSettings.isEnabled, !selectedMenuBarMarketIndexKinds.isEmpty else { return }
+        await refreshMarketIndices(updateNotice: false)
+    }
+
+    private var selectedMenuBarMarketIndexKinds: [MarketIndexKind] {
+        var seen = Set<MarketIndexKind>()
+        let selected = menuBarTickerSettings.enabledKinds.compactMap { kind -> MarketIndexKind? in
+            guard let indexKind = kind.marketIndexRequest?.kind else { return nil }
+            return seen.insert(indexKind).inserted ? indexKind : nil
+        }
+        return selected.sorted { left, right in
+            let all = MarketIndexKind.allCases
+            return (all.firstIndex(of: left) ?? 0) < (all.firstIndex(of: right) ?? 0)
         }
     }
 
@@ -1669,6 +1712,9 @@ final class AppModel: ObservableObject {
     }
 
     var portfolioMenuBarTitle: String {
+        if let menuBarTickerTitle {
+            return menuBarTickerTitle
+        }
         if let summary = personalAssetSummary, summary.totalEffectiveHoldingAmount > 0 {
             let total = summary.totalEffectiveHoldingAmount
             if total >= 10_000 {
@@ -2132,8 +2178,14 @@ final class AppModel: ObservableObject {
     }
 
     private func refreshPortfolioIfAutoRefreshVisible() async {
-        guard hasPersonalPortfolio, !isRefreshingPortfolio else { return }
-        guard selectedSection == .portfolio || selectedSection == .overview else { return }
+        guard hasPersonalPortfolio, !isRefreshingPortfolio else {
+            await refreshMarketIndicesIfNeeded()
+            return
+        }
+        guard selectedSection == .portfolio || selectedSection == .overview || menuBarTickerSettings.isEnabled else {
+            await refreshMarketIndicesIfNeeded()
+            return
+        }
 
         do {
             try await refreshUserPortfolio(updateNotice: false)

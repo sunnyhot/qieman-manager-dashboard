@@ -359,14 +359,11 @@ struct PersonalAssetTableRow: View {
     @State private var isPresentingPlanManager = false
 
     private var profitTint: Color {
-        (row.profitAmount ?? 0) >= 0 ? AppPalette.positive : AppPalette.danger
+        AppPalette.marketTint(for: row.profitAmount)
     }
 
     private var changeTint: Color {
-        let value = row.estimateChangeAmount ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
+        AppPalette.marketTint(for: row.estimateChangeAmount)
     }
 
     var body: some View {
@@ -449,7 +446,7 @@ struct PersonalAssetTableRow: View {
                     if let changePct = row.estimateChangePct {
                         Text(String(format: "%+.2f%%", changePct))
                             .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundStyle(changePct >= 0 ? AppPalette.positive : AppPalette.danger)
+                            .foregroundStyle(AppPalette.marketTint(for: changePct))
                     } else {
                         Text("—")
                             .font(.system(size: 12, weight: .semibold))
@@ -483,7 +480,7 @@ struct PersonalAssetTableRow: View {
                     if let changeAmt = row.estimateChangeAmount {
                         Text(signedCurrencyText(changeAmt, market: row.detectedMarket))
                             .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundStyle(changeAmt >= 0 ? AppPalette.positive : AppPalette.danger)
+                            .foregroundStyle(AppPalette.marketTint(for: changeAmt))
                     } else {
                         Text("—")
                             .font(.system(size: 12, weight: .semibold))

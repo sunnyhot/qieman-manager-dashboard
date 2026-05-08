@@ -22,6 +22,16 @@ enum AppPalette {
     static let danger = adaptive(light: rgb(0.73, 0.24, 0.22), dark: rgb(0.98, 0.42, 0.39))
     static let info = adaptive(light: rgb(0.18, 0.44, 0.68), dark: rgb(0.45, 0.68, 0.90))
     static let accentWarm = adaptive(light: rgb(0.66, 0.46, 0.20), dark: rgb(0.86, 0.62, 0.34))
+    // Chinese market convention: gains are red, losses are green.
+    static let marketGain = adaptive(light: rgb(0.73, 0.24, 0.22), dark: rgb(0.98, 0.42, 0.39))
+    static let marketLoss = adaptive(light: rgb(0.18, 0.56, 0.32), dark: rgb(0.38, 0.82, 0.55))
+
+    static func marketTint(for value: Double?) -> Color {
+        guard let value else { return muted }
+        if value > 0 { return marketGain }
+        if value < 0 { return marketLoss }
+        return muted
+    }
 
     static var canvasGradient: LinearGradient {
         LinearGradient(

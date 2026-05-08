@@ -88,10 +88,7 @@ struct PlatformActionRow: View {
     private var isBuy: Bool { action.side == "buy" }
     private var sideColor: Color { isBuy ? AppPalette.positive : AppPalette.warning }
     private var changeTint: Color {
-        let value = action.valuationChangePct ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
+        AppPalette.marketTint(for: action.valuationChangePct)
     }
 
     var body: some View {
@@ -211,10 +208,7 @@ struct PlatformActionDetailCard: View {
     private var sideColor: Color { isBuy ? AppPalette.positive : AppPalette.warning }
 
     private var changeTint: Color {
-        let value = action.valuationChangePct ?? action.valuationChangeAmount ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
+        AppPalette.marketTint(for: action.valuationChangePct ?? action.valuationChangeAmount)
     }
 
     var body: some View {
@@ -360,10 +354,7 @@ struct HoldingCard: View {
     let holding: HoldingItemPayload
 
     private var profitTint: Color {
-        let value = holding.displayProfitPct ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
+        AppPalette.marketTint(for: holding.displayProfitPct)
     }
 
     var body: some View {

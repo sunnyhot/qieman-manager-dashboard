@@ -7,14 +7,11 @@ struct PersonalAssetOverviewCard: View {
     let row: PersonalAssetAggregateRow
 
     private var profitTint: Color {
-        (row.profitAmount ?? 0) >= 0 ? AppPalette.positive : AppPalette.danger
+        AppPalette.marketTint(for: row.profitAmount)
     }
 
     private var changeTint: Color {
-        let value = row.estimateChangePct ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
+        AppPalette.marketTint(for: row.estimateChangePct)
     }
 
     var body: some View {

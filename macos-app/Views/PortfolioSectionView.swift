@@ -46,17 +46,11 @@ struct PortfolioSectionView: View {
     }
 
     private var totalProfitTint: Color {
-        let value = totalProfitAmount ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
+        AppPalette.marketTint(for: totalProfitAmount)
     }
 
     private var totalDailyChangeTint: Color {
-        let value = totalDailyChangeAmount ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
+        AppPalette.marketTint(for: totalDailyChangeAmount)
     }
 
     var body: some View {

@@ -18,12 +18,20 @@ struct MenuBarPortfolioView: View {
         MenuBarHoldingSortOption(rawValue: holdingSortRawValue) ?? .marketValue
     }
 
+    private var hasMarketIndexTickerSelection: Bool {
+        model.menuBarTickerSettings.enabledKinds.contains { $0.marketIndexRequest != nil }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
+                    if !model.menuBarTickerVisibleEntries.isEmpty {
+                        MenuBarTickerPreviewCard(entries: model.menuBarTickerVisibleEntries)
+                    }
+
                     if let snapshot = model.userPortfolioSnapshot, !snapshot.rows.isEmpty {
                         MenuBarSummaryCard(
                             snapshot: snapshot,
@@ -58,6 +66,13 @@ struct MenuBarPortfolioView: View {
                 }
                 .buttonStyle(.link)
 
+                Button("配置菜单栏") {
+                    model.selectedSection = .settings
+                    openWindow(id: "main-window")
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+                }
+                .buttonStyle(.link)
+
                 Spacer()
 
                 Button("数据目录") {
@@ -73,6 +88,7 @@ struct MenuBarPortfolioView: View {
             if model.userPortfolioSnapshot == nil, model.hasPersonalPortfolio {
                 try? await model.refreshUserPortfolio(updateNotice: false)
             }
+            await model.refreshMarketIndicesIfNeeded()
         }
     }
 
@@ -86,12 +102,18 @@ struct MenuBarPortfolioView: View {
                     .foregroundStyle(AppPalette.muted)
             }
             Spacer()
-            Button(model.isRefreshingPortfolio ? "刷新中…" : "刷新") {
-                Task { try? await model.refreshUserPortfolio() }
+            Button((model.isRefreshingPortfolio || model.isRefreshingMarketIndices) ? "刷新中…" : "刷新") {
+                Task {
+                    if model.hasPersonalPortfolio {
+                        try? await model.refreshUserPortfolio()
+                    } else {
+                        await model.refreshMarketIndices(kinds: MarketIndexKind.allCases, updateNotice: true)
+                    }
+                }
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
-            .disabled(model.isRefreshingPortfolio || !model.hasPersonalPortfolio)
+            .disabled(model.isRefreshingPortfolio || model.isRefreshingMarketIndices || (!model.hasPersonalPortfolio && !hasMarketIndexTickerSelection))
         }
     }
 
@@ -156,6 +178,65 @@ struct MenuBarPortfolioView: View {
     }
 }
 
+private struct MenuBarTickerPreviewCard: View {
+    let entries: [MenuBarTickerEntry]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 8) {
+                Image(systemName: "menubar.rectangle")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppPalette.info)
+                Text("菜单栏正在显示")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                Spacer()
+                Text("\(entries.count) 项")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(AppPalette.muted)
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: 8)], alignment: .leading, spacing: 8) {
+                ForEach(entries) { entry in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(entry.title)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(AppPalette.muted)
+                            .lineLimit(1)
+                        Text(entry.value)
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(toneColor(entry.tone))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .monospacedDigit()
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 7)
+                    .background(toneColor(entry.tone).opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                }
+            }
+        }
+        .padding(12)
+        .background(AppPalette.cardStrong.opacity(0.82), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.line.opacity(0.42), lineWidth: 1)
+        )
+    }
+
+    private func toneColor(_ tone: MenuBarTickerTone) -> Color {
+        switch tone {
+        case .positive:
+            return AppPalette.marketGain
+        case .negative:
+            return AppPalette.marketLoss
+        case .neutral:
+            return AppPalette.ink
+        }
+    }
+}
+
 private struct MenuBarEmptyState: View {
     let icon: String
     let title: String
@@ -207,17 +288,11 @@ private struct MenuBarSummaryCard: View {
     }
 
     private var dailyTint: Color {
-        let value = totalDailyChangeAmount ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
+        AppPalette.marketTint(for: totalDailyChangeAmount)
     }
 
     private var profitTint: Color {
-        let value = snapshot.totalProfitAmount ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
+        AppPalette.marketTint(for: snapshot.totalProfitAmount)
     }
 
     var body: some View {
@@ -282,17 +357,11 @@ private struct MenuBarHoldingRow: View {
     let row: UserPortfolioValuationRow
 
     private var dailyTint: Color {
-        let value = row.estimatedDailyChangeAmount ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
+        AppPalette.marketTint(for: row.estimatedDailyChangeAmount)
     }
 
     private var profitTint: Color {
-        let value = row.profitAmount ?? 0
-        if value > 0 { return AppPalette.positive }
-        if value < 0 { return AppPalette.danger }
-        return AppPalette.muted
+        AppPalette.marketTint(for: row.profitAmount)
     }
 
     var body: some View {
