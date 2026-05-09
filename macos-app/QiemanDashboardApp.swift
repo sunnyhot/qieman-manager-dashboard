@@ -106,7 +106,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
 
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: NSColor.labelColor
+            .foregroundColor: NSColor.black
         ]
         let top = max(0, floor((barHeight - totalHeight) / 2))
         let textWidth = width - horizontalPadding * 2
@@ -121,6 +121,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         }
 
         image.unlockFocus()
+        image.isTemplate = true
         return image
     }
 

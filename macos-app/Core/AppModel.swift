@@ -2791,13 +2791,20 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func showMainWindow(section: AppSection) {
+        selectedSection = section
+        revealMainWindowIfNeeded()
+    }
+
     private func revealMainWindowIfNeeded() {
         NSApplication.shared.activate(ignoringOtherApps: true)
-        if NSApplication.shared.windows.isEmpty {
-            _ = NSApplication.shared.sendAction(#selector(NSApplication.newWindowForTab(_:)), to: nil, from: nil)
-        } else {
-            NSApplication.shared.windows.first?.makeKeyAndOrderFront(nil)
+        if let window = NSApplication.shared.windows.first(where: { window in
+            window.canBecomeMain && !(window is NSPanel)
+        }) {
+            window.makeKeyAndOrderFront(nil)
+            return
         }
+        _ = NSApplication.shared.sendAction(#selector(NSApplication.newWindowForTab(_:)), to: nil, from: nil)
     }
 
     private func openPlatformAction(_ payload: NotificationDeepLinkPayload) {

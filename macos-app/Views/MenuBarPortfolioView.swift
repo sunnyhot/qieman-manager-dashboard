@@ -11,7 +11,6 @@ private enum MenuBarHoldingSortOption: String, CaseIterable, Identifiable {
 
 struct MenuBarPortfolioView: View {
     @EnvironmentObject private var model: AppModel
-    @Environment(\.openWindow) private var openWindow
     @AppStorage("menu.bar.holdings.sort") private var holdingSortRawValue = MenuBarHoldingSortOption.marketValue.rawValue
 
     private var holdingSort: MenuBarHoldingSortOption {
@@ -62,16 +61,12 @@ struct MenuBarPortfolioView: View {
 
             HStack {
                 Button("打开主界面") {
-                    model.selectedSection = .portfolio
-                    openWindow(id: "main-window")
-                    NSApplication.shared.activate(ignoringOtherApps: true)
+                    model.showMainWindow(section: .portfolio)
                 }
                 .buttonStyle(.link)
 
                 Button("配置菜单栏") {
-                    model.selectedSection = .settings
-                    openWindow(id: "main-window")
-                    NSApplication.shared.activate(ignoringOtherApps: true)
+                    model.showMainWindow(section: .settings)
                 }
                 .buttonStyle(.link)
 
