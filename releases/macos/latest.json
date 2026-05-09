@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.23",
-  "name": "QiemanDashboard v2.2.23",
-  "body": "菜单栏数据样式自定义：字体颜色、字号、加粗、间距和宽度设置，版本入口后置",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.23",
-  "published_at": "2026-05-09T08:00:45Z",
+  "tag_name": "v2.2.24",
+  "name": "QiemanDashboard v2.2.24",
+  "body": "外观设置：浅色/深色/跟随系统切换；区块边框重构，去掉彩色装饰条改用清晰边框+阴影",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.24",
+  "published_at": "2026-05-09T10:00:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.23.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.23/QiemanDashboard-2.2.23.zip",
-      "size": 3456519,
+      "name": "QiemanDashboard-2.2.24.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.24/QiemanDashboard-2.2.24.zip",
+      "size": 3538865,
       "content_type": "application/zip"
     }
   ]

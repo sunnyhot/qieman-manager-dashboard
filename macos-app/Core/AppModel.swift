@@ -3,9 +3,38 @@ import Combine
 import Darwin
 import Foundation
 import ServiceManagement
+import SwiftUI
 
 extension Notification.Name {
     static let qiemanNotificationDeepLink = Notification.Name("qieman.notificationDeepLink")
+}
+
+enum AppAppearance: String, CaseIterable, Identifiable {
+    case system = "跟随系统"
+    case light = "浅色"
+    case dark = "深色"
+
+    var id: String { rawValue }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+
+    private static let storageKey = "qieman.dashboard.appearance"
+
+    static func load() -> AppAppearance {
+        guard let raw = UserDefaults.standard.string(forKey: storageKey),
+              let value = AppAppearance(rawValue: raw) else { return .system }
+        return value
+    }
+
+    func save() {
+        UserDefaults.standard.set(rawValue, forKey: Self.storageKey)
+    }
 }
 
 private struct LiveRefreshError: LocalizedError {
@@ -40,6 +69,7 @@ final class AppModel: ObservableObject {
     @Published var commentSortType = "hot"
     @Published var onlyManagerReplies = false
     @Published var launchAtLoginEnabled = false
+    @Published var appearance: AppAppearance = AppAppearance.load() { didSet { appearance.save() } }
 
     @Published var isBootstrapping = false
     @Published var isRefreshing = false

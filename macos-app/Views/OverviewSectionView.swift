@@ -384,11 +384,7 @@ struct OverviewHeroCard: View {
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                 .stroke(AppPalette.line.opacity(0.65), lineWidth: 1)
         )
-        .overlay(alignment: .leading) {
-            Rectangle()
-                .fill(AppPalette.brand.opacity(0.52))
-                .frame(width: 3)
-        }
+        .shadow(color: .black.opacity(0.06), radius: 10, y: 3)
     }
 
     private var heroCopy: some View {

@@ -74,13 +74,8 @@ struct MetricCard: View {
         .background(AppPalette.cardStrong.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.58), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(0.70), lineWidth: 1)
         )
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(accent.opacity(0.48))
-                .frame(height: 2)
-        }
     }
 }
 
@@ -132,15 +127,9 @@ struct SectionCard<Trailing: View, Content: View>: View {
         .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.58), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(0.70), lineWidth: 1)
         )
-        .overlay(alignment: .topLeading) {
-            Rectangle()
-                .fill(AppPalette.brand.opacity(0.28))
-                .frame(width: 80, height: 2)
-                .padding(.leading, 16)
-        }
-        .shadow(color: Color.black.opacity(0.10), radius: 14, y: 6)
+        .shadow(color: Color.black.opacity(0.06), radius: 10, y: 3)
     }
 }
 

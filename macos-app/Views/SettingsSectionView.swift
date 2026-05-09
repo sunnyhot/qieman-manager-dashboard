@@ -19,6 +19,13 @@ struct SettingsSectionView: View {
     @State private var isMenuBarMarketIndexExpanded = false
     @State private var isMenuBarFundMarketExpanded = false
 
+    private var appearanceBinding: Binding<AppAppearance> {
+        Binding(
+            get: { model.appearance },
+            set: { model.appearance = $0 }
+        )
+    }
+
     private var enabledBinding: Binding<Bool> {
         Binding(
             get: { model.managerWatchSettings.isEnabled },
@@ -189,8 +196,9 @@ struct SettingsSectionView: View {
         .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(0.65), lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
     }
 
     private var overviewIntro: some View {
@@ -328,6 +336,46 @@ struct SettingsSectionView: View {
     private var accountPanel: some View {
         SettingsPanel(title: "账号与登录", subtitle: "登录状态、Cookie 与身份验证", icon: "person.circle") {
             VStack(alignment: .leading, spacing: 0) {
+                SettingsRow(
+                    title: "外观",
+                    value: model.appearance.rawValue,
+                    detail: "浅色 / 深色 / 跟随系统",
+                    icon: "circle.lefthalf.filled",
+                    tint: AppPalette.info
+                )
+                HStack(spacing: 8) {
+                    ForEach(AppAppearance.allCases) { mode in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                model.appearance = mode
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: mode == .light ? "sun.max.fill" : mode == .dark ? "moon.fill" : "circle.lefthalf.filled")
+                                    .font(.system(size: 11))
+                                Text(mode.rawValue)
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundStyle(model.appearance == mode ? AppPalette.onBrand : AppPalette.muted)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(
+                                Capsule()
+                                    .fill(model.appearance == mode ? AppPalette.brand : AppPalette.card)
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(model.appearance == mode ? AppPalette.brand : AppPalette.line, lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(PressResponsiveButtonStyle())
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 6)
+
+                SettingsDivider()
+
                 SettingsRow(
                     title: "Cookie",
                     value: model.cookieAvailable ? "可用" : "缺失",
@@ -1169,15 +1217,9 @@ private struct SettingsPanel<Content: View>: View {
         .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.58), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(0.70), lineWidth: 1)
         )
-        .overlay(alignment: .topLeading) {
-            Rectangle()
-                .fill(AppPalette.brand.opacity(0.22))
-                .frame(width: 72, height: 2)
-                .clipShape(Capsule())
-                .padding(.leading, 15)
-        }
+        .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
     }
 }
 

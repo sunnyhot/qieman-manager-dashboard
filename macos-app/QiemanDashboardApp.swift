@@ -204,6 +204,7 @@ struct QiemanDashboardApp: App {
             ContentView()
                 .environmentObject(model)
                 .tint(AppPalette.brand)
+                .preferredColorScheme(model.appearance.colorScheme)
                 .onAppear {
                     appDelegate.configure(model: model)
                 }
