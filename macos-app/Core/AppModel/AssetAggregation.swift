@@ -1,0 +1,336 @@
+import Foundation
+
+// MARK: - Asset Aggregation & Platform Summary
+
+extension AppModel {
+    var nativeClient: QiemanNativeClient {
+        if !_nativeClientInitialized {
+            _nativeClient = QiemanNativeClient(cookieFileURL: serverController.cookieFileURL)
+            _nativeClientInitialized = true
+        }
+        return _nativeClient!
+    }
+
+    var monthlyPlatformSummary: [PlatformMonthSummary] {
+        if let cached = _cachedMonthlyPlatformSummary { return cached }
+        let actions = platformPayload?.actions ?? []
+        var buckets: [String: (buy: Int, sell: Int, days: Set<String>)] = [:]
+
+        for action in actions {
+            let rawDate = action.txnDate ?? action.createdAt ?? ""
+            guard rawDate.count >= 10 else { continue }
+            guard let direction = platformActionDirection(action) else { continue }
+            let month = String(rawDate.prefix(7))
+            let day = String(rawDate.prefix(10))
+            var bucket = buckets[month] ?? (0, 0, [])
+            if direction == .buy {
+                bucket.buy += 1
+            } else {
+                bucket.sell += 1
+            }
+            bucket.days.insert(day)
+            buckets[month] = bucket
+        }
+
+        guard let latestMonth = buckets.keys.max() else {
+            _cachedMonthlyPlatformSummary = []
+            return []
+        }
+
+        let result = recentMonthKeys(endingAt: latestMonth, count: 12).map { month in
+            let bucket = buckets[month] ?? (0, 0, [])
+            return PlatformMonthSummary(
+                month: month,
+                totalCount: bucket.buy + bucket.sell,
+                buyCount: bucket.buy,
+                sellCount: bucket.sell,
+                activeDays: bucket.days.count
+            )
+        }
+        _cachedMonthlyPlatformSummary = result
+        return result
+    }
+
+    func recentMonthKeys(endingAt latestMonth: String, count: Int) -> [String] {
+        guard let latestIndex = monthIndex(latestMonth) else { return [] }
+        return (0..<count).compactMap { offset in
+            monthKey(from: latestIndex - (count - 1 - offset))
+        }
+    }
+
+    func monthIndex(_ month: String) -> Int? {
+        let parts = month.split(separator: "-")
+        guard parts.count == 2,
+              let year = Int(parts[0]),
+              let monthNumber = Int(parts[1]),
+              (1...12).contains(monthNumber) else {
+            return nil
+        }
+        return year * 12 + (monthNumber - 1)
+    }
+
+    func monthKey(from index: Int) -> String? {
+        guard index >= 0 else { return nil }
+        let year = index / 12
+        let month = index % 12 + 1
+        return String(format: "%04d-%02d", year, month)
+    }
+
+    enum PlatformActionDirection {
+        case buy
+        case sell
+    }
+
+    func platformActionDirection(_ action: PlatformActionPayload) -> PlatformActionDirection? {
+        let candidates = [
+            action.side,
+            action.action,
+            action.actionTitle,
+            action.title,
+        ]
+        for candidate in candidates {
+            let value = candidate?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased() ?? ""
+            guard !value.isEmpty else { continue }
+            if value == "buy" || value.contains("买") || value.contains("申购") {
+                return .buy
+            }
+            if value == "sell" || value.contains("卖") || value.contains("赎回") {
+                return .sell
+            }
+        }
+        return nil
+    }
+
+    var pendingTradeSummary: PersonalPendingTradeSummary? {
+        if let cached = _cachedPendingTradeSummary { return cached }
+        guard !pendingTrades.isEmpty else { _cachedPendingTradeSummary = nil; return nil }
+        let totalCashAmount = pendingTrades.compactMap(\.amountValue).reduce(0, +)
+        let cashTradeCount = pendingTrades.filter { $0.isCashTrade }.count
+        let unitTradeCount = pendingTrades.filter { !$0.isCashTrade }.count
+        let result = PersonalPendingTradeSummary(
+            totalCashAmount: totalCashAmount,
+            cashTradeCount: cashTradeCount,
+            unitTradeCount: unitTradeCount,
+            latestTime: pendingTrades.first?.occurredAt,
+            actionCount: pendingTrades.count
+        )
+        _cachedPendingTradeSummary = result
+        return result
+    }
+
+    var activeInvestmentPlans: [PersonalInvestmentPlan] {
+        if let cached = _cachedActiveInvestmentPlans { return cached }
+        let result = investmentPlans
+            .filter(\.isActivePlan)
+            .sorted(by: sortInvestmentPlans)
+        _cachedActiveInvestmentPlans = result
+        return result
+    }
+
+    var pausedInvestmentPlans: [PersonalInvestmentPlan] {
+        if let cached = _cachedPausedInvestmentPlans { return cached }
+        let result = investmentPlans
+            .filter(\.isPausedPlan)
+            .sorted(by: sortInvestmentPlans)
+        _cachedPausedInvestmentPlans = result
+        return result
+    }
+
+    var endedInvestmentPlans: [PersonalInvestmentPlan] {
+        if let cached = _cachedEndedInvestmentPlans { return cached }
+        let result = investmentPlans
+            .filter(\.isEndedPlan)
+            .sorted(by: sortInvestmentPlans)
+        _cachedEndedInvestmentPlans = result
+        return result
+    }
+
+    var investmentPlanSummary: PersonalInvestmentPlanSummary? {
+        if let cached = _cachedInvestmentPlanSummary { return cached }
+        guard !investmentPlans.isEmpty else { _cachedInvestmentPlanSummary = nil; return nil }
+        let activePlans = activeInvestmentPlans
+        let pausedPlans = pausedInvestmentPlans
+        let endedPlans = endedInvestmentPlans
+        let totalCumulativeInvestedAmount = investmentPlans.compactMap(\.cumulativeInvestedAmount).reduce(0, +)
+        let smartPlanCount = activePlans.filter(\.isSmartPlan).count
+        let dailyPlanCount = activePlans.filter(\.isDailyPlan).count
+        let weeklyPlanCount = activePlans.filter(\.isWeeklyPlan).count
+        let nextExecutionDate = activePlans
+            .map(\.nextExecutionDate)
+            .filter { !$0.isEmpty }
+            .sorted()
+            .first
+
+        let result = PersonalInvestmentPlanSummary(
+            planCount: investmentPlans.count,
+            activePlanCount: activePlans.count,
+            pausedPlanCount: pausedPlans.count,
+            endedPlanCount: endedPlans.count,
+            smartPlanCount: smartPlanCount,
+            dailyPlanCount: dailyPlanCount,
+            weeklyPlanCount: weeklyPlanCount,
+            totalCumulativeInvestedAmount: totalCumulativeInvestedAmount,
+            nextExecutionDate: nextExecutionDate
+        )
+        _cachedInvestmentPlanSummary = result
+        return result
+    }
+
+    var personalAssetRows: [PersonalAssetAggregateRow] {
+        if let cached = _cachedAssetRows { return cached }
+        var valuationRowsByKey: [String: UserPortfolioValuationRow] = [:]
+        for row in userPortfolioSnapshot?.rows ?? [] {
+            valuationRowsByKey[personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName, market: row.holding.detectedMarket, fundMarket: row.holding.detectedFundMarket)] = row
+        }
+
+        var rawHoldingsByKey: [String: UserPortfolioHolding] = [:]
+        for holding in activeUserPortfolioHoldings {
+            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName, market: holding.detectedMarket, fundMarket: holding.detectedFundMarket)
+            rawHoldingsByKey[key] = rawHoldingsByKey[key] ?? holding
+        }
+
+        var archivedHoldingsByKey: [String: UserPortfolioHolding] = [:]
+        for holding in archivedUserPortfolioHoldings {
+            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName, market: holding.detectedMarket, fundMarket: holding.detectedFundMarket)
+            archivedHoldingsByKey[key] = archivedHoldingsByKey[key] ?? holding
+        }
+
+        var pendingByKey: [String: [PersonalPendingTrade]] = [:]
+        for trade in pendingTrades {
+            let key = personalFundKey(code: trade.fundCode, name: trade.fundName)
+            pendingByKey[key, default: []].append(trade)
+        }
+
+        var plansByKey: [String: [PersonalInvestmentPlan]] = [:]
+        for plan in investmentPlans {
+            let key = personalFundKey(code: plan.fundCode, name: plan.fundName)
+            plansByKey[key, default: []].append(plan)
+        }
+
+        let keys = Set(valuationRowsByKey.keys)
+            .union(rawHoldingsByKey.keys)
+            .union(archivedHoldingsByKey.keys)
+            .union(pendingByKey.keys)
+            .union(plansByKey.keys)
+
+        let result = keys
+            .map { key in
+                let holdingRow = valuationRowsByKey[key]
+                let rawHolding = rawHoldingsByKey[key]
+                let archivedHolding = archivedHoldingsByKey[key]
+                let pending = (pendingByKey[key] ?? []).sorted { $0.occurredAt > $1.occurredAt }
+                let plans = (plansByKey[key] ?? []).sorted(by: sortInvestmentPlans)
+                let assetType = holdingRow?.holding.assetType
+                    ?? rawHolding?.assetType
+                    ?? archivedHolding?.assetType
+                    ?? .fund
+                let fundName = holdingRow?.fundName
+                    ?? rawHolding?.normalizedName
+                    ?? archivedHolding?.normalizedName
+                    ?? pending.first?.fundName
+                    ?? plans.first?.fundName
+                    ?? "未命名标的"
+                let fundCode = holdingRow?.holding.normalizedFundCode
+                    ?? rawHolding?.normalizedFundCode
+                    ?? archivedHolding?.normalizedFundCode
+                    ?? pending.first?.fundCode
+                    ?? plans.first?.fundCode
+
+                return PersonalAssetAggregateRow(
+                    key: key,
+                    assetType: assetType,
+                    fundName: fundName,
+                    fundCode: normalizedCode(fundCode),
+                    holdingRow: holdingRow,
+                    rawHolding: rawHolding,
+                    archivedHolding: archivedHolding,
+                    pendingTrades: pending,
+                    plans: plans
+                )
+            }
+            .sorted { left, right in
+                let leftExposure = left.effectiveHoldingAmount
+                let rightExposure = right.effectiveHoldingAmount
+                if abs(leftExposure - rightExposure) > 0.001 {
+                    return leftExposure > rightExposure
+                }
+                if left.pendingTradeCount != right.pendingTradeCount {
+                    return left.pendingTradeCount > right.pendingTradeCount
+                }
+                if left.totalPlanCount != right.totalPlanCount {
+                    return left.totalPlanCount > right.totalPlanCount
+                }
+                return left.fundName.localizedStandardCompare(right.fundName) == .orderedAscending
+            }
+        _cachedAssetRows = result
+        _cachedAssetSummary = nil
+        return result
+    }
+
+    var personalAssetSummary: PersonalAssetAggregateSummary? {
+        if let cached = _cachedAssetSummary { return cached }
+        let rows = personalAssetRows
+        guard !rows.isEmpty else { _cachedAssetSummary = nil; return nil }
+        var holdingFundCount = 0
+        var pendingFundCount = 0
+        var activePlanFundCount = 0
+        var totalMarketValue = 0.0
+        var totalPendingCashAmount = 0.0
+        var totalActivePlanCount = 0
+        var totalPausedPlanCount = 0
+        var totalEndedPlanCount = 0
+        var totalCumulativePlanAmount = 0.0
+        var totalEstimatedNextPlanAmount = 0.0
+        var totalEffectiveHoldingAmount = 0.0
+        for row in rows {
+            if row.hasHolding {
+                holdingFundCount += 1
+            }
+            if row.hasPending {
+                pendingFundCount += 1
+            }
+            if row.activePlanCount > 0 {
+                activePlanFundCount += 1
+            }
+            totalMarketValue += row.marketValue ?? 0
+            totalPendingCashAmount += row.pendingCashAmount
+            totalActivePlanCount += row.activePlanCount
+            totalPausedPlanCount += row.pausedPlanCount
+            totalEndedPlanCount += row.endedPlanCount
+            totalCumulativePlanAmount += row.totalCumulativePlanAmount
+            totalEstimatedNextPlanAmount += row.estimatedNextPlanAmount
+            totalEffectiveHoldingAmount += row.effectiveHoldingAmount
+        }
+
+        let result = PersonalAssetAggregateSummary(
+            fundCount: rows.count,
+            holdingFundCount: holdingFundCount,
+            pendingFundCount: pendingFundCount,
+            activePlanFundCount: activePlanFundCount,
+            totalMarketValue: totalMarketValue,
+            totalPendingCashAmount: totalPendingCashAmount,
+            totalActivePlanCount: totalActivePlanCount,
+            totalPausedPlanCount: totalPausedPlanCount,
+            totalEndedPlanCount: totalEndedPlanCount,
+            totalCumulativePlanAmount: totalCumulativePlanAmount,
+            totalEstimatedNextPlanAmount: totalEstimatedNextPlanAmount,
+            totalEffectiveHoldingAmount: totalEffectiveHoldingAmount
+        )
+        _cachedAssetSummary = result
+        return result
+    }
+
+    var outputDirectoryURL: URL? {
+        dataDirectoryURL?.appendingPathComponent("output", isDirectory: true)
+    }
+
+    var activeUserPortfolioHoldings: [UserPortfolioHolding] {
+        userPortfolioHoldings.filter { !$0.isArchived }
+    }
+
+    var archivedUserPortfolioHoldings: [UserPortfolioHolding] {
+        userPortfolioHoldings.filter(\.isArchived)
+    }
+}

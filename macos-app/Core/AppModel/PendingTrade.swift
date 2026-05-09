@@ -1,0 +1,176 @@
+import Foundation
+
+// MARK: - Pending Trade CRUD
+
+extension AppModel {
+
+    func savePendingTradesFromDraft(mode: PersonalDataSaveMode = .merge) {
+        guard let pendingTradeFileURL else {
+            errorMessage = "应用数据目录还没准备好，暂时无法保存买入中记录。"
+            return
+        }
+        do {
+            let importedTrades = try importedPendingTrades(from: pendingTradesDraft)
+            let nextTrades: [PersonalPendingTrade]
+            switch mode {
+            case .merge:
+                nextTrades = pendingTradesStore.merging(importedTrades, into: pendingTrades)
+            case .replace:
+                nextTrades = importedTrades.sorted { $0.occurredAt > $1.occurredAt }
+            }
+
+            pendingTrades = nextTrades
+            pendingTradesDraft = ""
+            clearCachedComputedProperties()
+            try pendingTradesStore.save(nextTrades, to: pendingTradeFileURL)
+            noticeMessage = "已\(mode.actionText)保存 \(importedTrades.count) 条买入中记录。"
+            Task { await applyPersonalAssetAutomation() }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    @discardableResult
+    func addPendingTrade(
+        occurredAt: String,
+        actionLabel: String,
+        fundName: String,
+        fundCode: String,
+        targetFundName: String,
+        targetFundCode: String,
+        amountText: String,
+        status: String,
+        note: String
+    ) -> Bool {
+        guard let pendingTradeFileURL else {
+            errorMessage = "应用数据目录还没准备好，暂时无法添加买入中记录。"
+            return false
+        }
+        guard let trade = validatedPendingTrade(
+            id: UUID(),
+            occurredAt: occurredAt,
+            actionLabel: actionLabel,
+            fundName: fundName,
+            fundCode: fundCode,
+            targetFundName: targetFundName,
+            targetFundCode: targetFundCode,
+            amountText: amountText,
+            status: status,
+            note: note
+        ) else {
+            return false
+        }
+
+        do {
+            pendingTrades.append(trade)
+            pendingTrades.sort { $0.occurredAt > $1.occurredAt }
+            clearCachedComputedProperties()
+            try pendingTradesStore.save(pendingTrades, to: pendingTradeFileURL)
+            noticeMessage = "已添加 \(trade.displayTitle) 的买入中记录。"
+            Task { await applyPersonalAssetAutomation() }
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
+    func updatePendingTrade(
+        _ tradeID: UUID,
+        occurredAt: String,
+        actionLabel: String,
+        fundName: String,
+        fundCode: String,
+        targetFundName: String,
+        targetFundCode: String,
+        amountText: String,
+        status: String,
+        note: String
+    ) -> Bool {
+        guard let existingIndex = pendingTrades.firstIndex(where: { $0.id == tradeID }) else {
+            errorMessage = "没有找到这条买入中记录。"
+            return false
+        }
+        guard let pendingTradeFileURL else {
+            errorMessage = "应用数据目录还没准备好，暂时无法保存买入中记录。"
+            return false
+        }
+        guard let trade = validatedPendingTrade(
+            id: tradeID,
+            occurredAt: occurredAt,
+            actionLabel: actionLabel,
+            fundName: fundName,
+            fundCode: fundCode,
+            targetFundName: targetFundName,
+            targetFundCode: targetFundCode,
+            amountText: amountText,
+            status: status,
+            note: note
+        ) else {
+            return false
+        }
+
+        do {
+            pendingTrades[existingIndex] = trade
+            pendingTrades.sort { $0.occurredAt > $1.occurredAt }
+            clearCachedComputedProperties()
+            try pendingTradesStore.save(pendingTrades, to: pendingTradeFileURL)
+            noticeMessage = "已更新 \(trade.displayTitle) 的买入中记录。"
+            Task { await applyPersonalAssetAutomation() }
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    func deletePendingTrade(_ tradeID: UUID) {
+        guard let pendingTradeFileURL else {
+            errorMessage = "应用数据目录还没准备好，暂时无法删除买入中记录。"
+            return
+        }
+        guard let existingTrade = pendingTrades.first(where: { $0.id == tradeID }) else {
+            errorMessage = "没有找到这条买入中记录。"
+            return
+        }
+
+        do {
+            pendingTrades = pendingTrades.filter { $0.id != tradeID }
+            clearCachedComputedProperties()
+            if pendingTrades.isEmpty {
+                try pendingTradesStore.delete(at: pendingTradeFileURL)
+            } else {
+                try pendingTradesStore.save(pendingTrades, to: pendingTradeFileURL)
+            }
+            noticeMessage = "已删除 \(existingTrade.displayTitle) 的买入中记录。"
+            Task { await applyPersonalAssetAutomation() }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func reloadPendingTradesFromDisk() {
+        loadPendingTrades()
+        if pendingTrades.isEmpty {
+            noticeMessage = "已从磁盘重载买入中记录，目前没有已保存内容。"
+            Task { await applyPersonalAssetAutomation() }
+            return
+        }
+        noticeMessage = "已从磁盘重载 \(pendingTrades.count) 条买入中记录。"
+        Task { await applyPersonalAssetAutomation() }
+    }
+
+    func loadPendingTrades() {
+        guard let pendingTradeFileURL else { return }
+        do {
+            pendingTrades = try pendingTradesStore.load(from: pendingTradeFileURL)
+                .sorted { $0.occurredAt > $1.occurredAt }
+            clearCachedComputedProperties()
+            pendingTradesDraft = ""
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+}
