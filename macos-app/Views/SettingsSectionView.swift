@@ -173,6 +173,17 @@ struct SettingsSectionView: View {
         )
     }
 
+    private var menuBarTickerLayoutModeBinding: Binding<MenuBarTickerLayoutMode> {
+        Binding(
+            get: { model.menuBarTickerSettings.appearance.layoutMode },
+            set: { mode in
+                model.updateMenuBarTickerAppearance { appearance in
+                    appearance.layoutMode = mode
+                }
+            }
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -690,6 +701,16 @@ struct SettingsSectionView: View {
                         .foregroundStyle(AppPalette.ink)
                 }
 
+                menuBarStyleControl(title: "排列", detail: appearance.layoutMode.label, icon: "square.grid.2x2") {
+                    Picker("", selection: menuBarTickerLayoutModeBinding) {
+                        ForEach(MenuBarTickerLayoutMode.allCases) { mode in
+                            Label(mode.label, systemImage: mode.icon).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+
                 menuBarStyleControl(title: "间距", detail: appearance.spacingMode.label, icon: "arrow.left.and.right") {
                     VStack(alignment: .leading, spacing: 8) {
                         menuBarDimensionModePicker(selection: menuBarTickerSpacingModeBinding)
@@ -931,29 +952,45 @@ struct SettingsSectionView: View {
 
     private func menuBarPreviewStrip(entries: [MenuBarTickerEntry], appearance: MenuBarTickerAppearance) -> some View {
         let width = appearance.widthMode == .manual ? CGFloat(appearance.manualWidth) : nil
-        let spacing = appearance.spacingMode == .manual ? CGFloat(appearance.manualSpacing) : max(8, CGFloat(appearance.fontSize) * 1.05)
+        let spacing = appearance.spacingMode == .manual ? CGFloat(appearance.manualSpacing) : (appearance.layoutMode == .horizontal ? max(8, CGFloat(appearance.fontSize) * 1.05) : 0)
 
-        return HStack(spacing: spacing) {
-            ForEach(entries) { entry in
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(menuBarToneColor(entry.tone))
-                        .frame(width: 6, height: 6)
-                    Text(entry.compactText)
-                        .font(.system(size: CGFloat(appearance.fontSize), weight: appearance.isBold ? .bold : .medium, design: .rounded))
-                        .foregroundStyle(appearance.swiftUIColor)
-                        .lineLimit(1)
-                        .monospacedDigit()
-                }
+        @ViewBuilder func entryItem(_ entry: MenuBarTickerEntry) -> some View {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(menuBarToneColor(entry.tone))
+                    .frame(width: 6, height: 6)
+                Text(entry.compactText)
+                    .font(.system(size: CGFloat(appearance.fontSize), weight: appearance.isBold ? .bold : .medium, design: .rounded))
+                    .foregroundStyle(appearance.swiftUIColor)
+                    .lineLimit(1)
+                    .monospacedDigit()
             }
         }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 7)
-        .frame(width: width, alignment: .leading)
-        .background(Color(nsColor: .windowBackgroundColor).opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                .stroke(AppPalette.line.opacity(0.44), lineWidth: 1)
+
+        let content: AnyView
+        switch appearance.layoutMode {
+        case .horizontal:
+            content = AnyView(
+                HStack(spacing: spacing) {
+                    ForEach(entries) { entryItem($0) }
+                }
+            )
+        case .vertical:
+            content = AnyView(
+                VStack(alignment: .leading, spacing: spacing) {
+                    ForEach(entries) { entryItem($0) }
+                }
+            )
+        }
+
+        return content
+            .padding(.horizontal, 9)
+            .padding(.vertical, 7)
+            .frame(width: width, alignment: .leading)
+            .background(Color(nsColor: .windowBackgroundColor).opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                    .stroke(AppPalette.line.opacity(0.44), lineWidth: 1)
         )
         .clipped()
     }

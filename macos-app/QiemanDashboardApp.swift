@@ -88,6 +88,13 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     }
 
     private func renderTickerImage(entries: [MenuBarTickerEntry], appearance: MenuBarTickerAppearance, barHeight: CGFloat) -> NSImage {
+        if appearance.layoutMode == .vertical {
+            return renderTickerImageVertical(entries: entries, appearance: appearance, barHeight: barHeight)
+        }
+        return renderTickerImageHorizontal(entries: entries, appearance: appearance, barHeight: barHeight)
+    }
+
+    private func renderTickerImageHorizontal(entries: [MenuBarTickerEntry], appearance: MenuBarTickerAppearance, barHeight: CGFloat) -> NSImage {
         let font = NSFont.monospacedSystemFont(ofSize: CGFloat(appearance.fontSize), weight: appearance.fontWeight)
         let lineHeight = ceil(font.ascender - font.descender + font.leading)
         let texts = entries.map(\.compactText)
@@ -118,6 +125,47 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
             NSAttributedString(string: text, attributes: attrs)
                 .draw(with: rect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine])
             x += drawWidth + itemSpacing
+        }
+
+        image.unlockFocus()
+        image.isTemplate = appearance.nsColor == nil
+        return image
+    }
+
+    private func renderTickerImageVertical(entries: [MenuBarTickerEntry], appearance: MenuBarTickerAppearance, barHeight: CGFloat) -> NSImage {
+        let font = NSFont.monospacedSystemFont(ofSize: CGFloat(appearance.fontSize), weight: appearance.fontWeight)
+        let lineHeight = ceil(font.ascender - font.descender + font.leading)
+        let texts = entries.map(\.compactText)
+        let measurements = texts.map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }
+        let maxWidth = measurements.max() ?? 0
+        let horizontalPadding: CGFloat = 8
+        let measurementSlack: CGFloat = 6
+        let measuredWidth = maxWidth + horizontalPadding * 2 + measurementSlack
+        let width = ceil(appearance.widthMode == .manual ? CGFloat(appearance.manualWidth) : measuredWidth)
+        let lineSpacing = appearance.spacingMode == .manual ? CGFloat(appearance.manualSpacing) : 0
+
+        let image = NSImage(size: NSSize(width: width, height: barHeight))
+        image.lockFocusFlipped(true)
+
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineBreakMode = .byTruncatingTail
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: appearance.nsColor ?? NSColor.black,
+            .paragraphStyle: paragraph
+        ]
+        let totalHeight = CGFloat(texts.count) * lineHeight + CGFloat(max(0, texts.count - 1)) * lineSpacing
+        let top = max(0, floor((barHeight - totalHeight) / 2))
+        let textWidth = width - horizontalPadding * 2
+        for (i, text) in texts.enumerated() {
+            let rect = NSRect(
+                x: horizontalPadding,
+                y: top + CGFloat(i) * (lineHeight + lineSpacing),
+                width: textWidth,
+                height: lineHeight
+            )
+            NSAttributedString(string: text, attributes: attrs)
+                .draw(with: rect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine])
         }
 
         image.unlockFocus()

@@ -362,11 +362,33 @@ enum MenuBarTickerDimensionMode: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+enum MenuBarTickerLayoutMode: String, Codable, CaseIterable, Identifiable {
+    case horizontal
+    case vertical
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .horizontal: return "左右"
+        case .vertical: return "上下"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .horizontal: return "arrow.left.and.right"
+        case .vertical: return "arrow.up.and.down"
+        }
+    }
+}
+
 struct MenuBarTickerAppearance: Codable, Hashable {
     var textColorMode: MenuBarTickerTextColorMode
     var customTextColorHex: String
     var fontSize: Double
     var isBold: Bool
+    var layoutMode: MenuBarTickerLayoutMode
     var spacingMode: MenuBarTickerDimensionMode
     var manualSpacing: Double
     var widthMode: MenuBarTickerDimensionMode
@@ -384,11 +406,52 @@ struct MenuBarTickerAppearance: Codable, Hashable {
         customTextColorHex: "#1F292E",
         fontSize: 9,
         isBold: false,
+        layoutMode: .horizontal,
         spacingMode: .automatic,
         manualSpacing: 10,
         widthMode: .automatic,
         manualWidth: 180
     )
+
+    private enum AppearanceCodingKeys: String, CodingKey {
+        case textColorMode, customTextColorHex, fontSize, isBold
+        case layoutMode, spacingMode, manualSpacing, widthMode, manualWidth
+    }
+
+    init(
+        textColorMode: MenuBarTickerTextColorMode = .system,
+        customTextColorHex: String = "#1F292E",
+        fontSize: Double = 9,
+        isBold: Bool = false,
+        layoutMode: MenuBarTickerLayoutMode = .horizontal,
+        spacingMode: MenuBarTickerDimensionMode = .automatic,
+        manualSpacing: Double = 10,
+        widthMode: MenuBarTickerDimensionMode = .automatic,
+        manualWidth: Double = 180
+    ) {
+        self.textColorMode = textColorMode
+        self.customTextColorHex = customTextColorHex
+        self.fontSize = fontSize
+        self.isBold = isBold
+        self.layoutMode = layoutMode
+        self.spacingMode = spacingMode
+        self.manualSpacing = manualSpacing
+        self.widthMode = widthMode
+        self.manualWidth = manualWidth
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: AppearanceCodingKeys.self)
+        textColorMode = try c.decodeIfPresent(MenuBarTickerTextColorMode.self, forKey: .textColorMode) ?? .system
+        customTextColorHex = try c.decodeIfPresent(String.self, forKey: .customTextColorHex) ?? "#1F292E"
+        fontSize = try c.decodeIfPresent(Double.self, forKey: .fontSize) ?? 9
+        isBold = try c.decodeIfPresent(Bool.self, forKey: .isBold) ?? false
+        layoutMode = try c.decodeIfPresent(MenuBarTickerLayoutMode.self, forKey: .layoutMode) ?? .horizontal
+        spacingMode = try c.decodeIfPresent(MenuBarTickerDimensionMode.self, forKey: .spacingMode) ?? .automatic
+        manualSpacing = try c.decodeIfPresent(Double.self, forKey: .manualSpacing) ?? 10
+        widthMode = try c.decodeIfPresent(MenuBarTickerDimensionMode.self, forKey: .widthMode) ?? .automatic
+        manualWidth = try c.decodeIfPresent(Double.self, forKey: .manualWidth) ?? 180
+    }
 
     func normalized() -> MenuBarTickerAppearance {
         var copy = self
