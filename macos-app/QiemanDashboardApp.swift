@@ -71,11 +71,12 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         let barHeight = NSStatusBar.system.thickness
 
         if displayEntries.isEmpty {
-            let image = renderTextImage(lines: [model.portfolioMenuBarTitle], fontSize: 12, barHeight: barHeight)
-            button.image = image
+            let icon = NSImage(systemSymbolName: "chart.bar.fill", accessibilityDescription: "QiemanDashboard") ?? NSImage()
+            icon.isTemplate = true
+            button.image = icon
             button.toolTip = model.portfolioMenuBarTitle
             button.needsDisplay = true
-            statusItem.length = image.size.width
+            statusItem.length = NSStatusItem.squareLength
             return
         }
 

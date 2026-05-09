@@ -653,94 +653,152 @@ struct SettingsSectionView: View {
     private var menuBarStyleOptions: some View {
         let appearance = model.menuBarTickerSettings.appearance.normalized()
 
-        return VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("数据样式")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppPalette.ink)
-                Text("自定义菜单栏数据文字的颜色、字号、字重、间距和宽度")
+        func styleRow(icon: String, title: String, @ViewBuilder content: () -> some View) -> some View {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
                     .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted)
+                    .foregroundStyle(AppPalette.info)
+                    .frame(width: 18, height: 18)
+                    .background(AppPalette.info.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                Spacer(minLength: 4)
+                content()
             }
+            .padding(.vertical, 6)
+        }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 186), spacing: 10)], alignment: .leading, spacing: 10) {
-                menuBarStyleControl(title: "字体颜色", detail: appearance.textColorMode == .system ? "跟随系统状态栏" : appearance.customTextColorHex, icon: "paintpalette") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Picker("", selection: menuBarTickerTextColorModeBinding) {
-                            ForEach(MenuBarTickerTextColorMode.allCases) { mode in
-                                Text(mode.label).tag(mode)
-                            }
+        func capsuleBtn(text: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+            Button(action: action) {
+                Text(text)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.muted)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(isSelected ? AppPalette.brand : AppPalette.card))
+                    .overlay(Capsule().stroke(isSelected ? AppPalette.brand : AppPalette.line, lineWidth: 1))
+            }
+            .buttonStyle(PressResponsiveButtonStyle())
+        }
+
+        func stepper(value: Int, decrement: @escaping () -> Void, increment: @escaping () -> Void) -> some View {
+            HStack(spacing: 1) {
+                Button(action: decrement) {
+                    Image(systemName: "minus")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                        .frame(width: 18, height: 18)
+                        .background(RoundedRectangle(cornerRadius: 4).fill(AppPalette.card))
+                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(AppPalette.line, lineWidth: 1))
+                }
+                .buttonStyle(PressResponsiveButtonStyle())
+                Text("\(value)")
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AppPalette.ink)
+                    .frame(width: 22)
+                Button(action: increment) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                        .frame(width: 18, height: 18)
+                        .background(RoundedRectangle(cornerRadius: 4).fill(AppPalette.card))
+                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(AppPalette.line, lineWidth: 1))
+                }
+                .buttonStyle(PressResponsiveButtonStyle())
+            }
+        }
+
+        return VStack(alignment: .leading, spacing: 0) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 0) {
+                // 颜色
+                styleRow(icon: "paintpalette", title: "颜色") {
+                    HStack(spacing: 4) {
+                        capsuleBtn(text: "系统", isSelected: appearance.textColorMode == .system) {
+                            model.updateMenuBarTickerAppearance { a in a.textColorMode = .system }
                         }
-                        .labelsHidden()
-                        .pickerStyle(.segmented)
-
-                        HStack(spacing: 8) {
+                        capsuleBtn(text: "自定", isSelected: appearance.textColorMode == .custom) {
+                            model.updateMenuBarTickerAppearance { a in a.textColorMode = .custom }
+                        }
+                        if appearance.textColorMode == .custom {
                             ColorPicker("", selection: menuBarTickerCustomColorBinding, supportsOpacity: false)
                                 .labelsHidden()
-                                .controlSize(.small)
-                            Text("自定义颜色")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(AppPalette.muted)
+                                .controlSize(.mini)
                         }
                     }
                 }
 
-                menuBarStyleControl(title: "字号", detail: "\(Int(appearance.fontSize)) px", icon: "textformat.size") {
-                    Stepper(value: menuBarTickerFontSizeBinding, in: MenuBarTickerAppearance.minFontSize...MenuBarTickerAppearance.maxFontSize, step: 1) {
-                        Text("\(Int(appearance.fontSize)) px")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(AppPalette.ink)
-                    }
-                    .controlSize(.small)
-                }
-
-                menuBarStyleControl(title: "字重", detail: appearance.isBold ? "加粗" : "常规", icon: "bold") {
-                    Toggle("加粗显示", isOn: menuBarTickerBoldBinding)
-                        .toggleStyle(.checkbox)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(AppPalette.ink)
-                }
-
-                menuBarStyleControl(title: "排列", detail: appearance.layoutMode.label, icon: "square.grid.2x2") {
-                    Picker("", selection: menuBarTickerLayoutModeBinding) {
+                // 排列
+                styleRow(icon: "square.grid.2x2", title: "排列") {
+                    HStack(spacing: 4) {
                         ForEach(MenuBarTickerLayoutMode.allCases) { mode in
-                            Label(mode.label, systemImage: mode.icon).tag(mode)
+                            Button {
+                                model.updateMenuBarTickerAppearance { a in a.layoutMode = mode }
+                            } label: {
+                                Image(systemName: mode.icon)
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(appearance.layoutMode == mode ? AppPalette.onBrand : AppPalette.muted)
+                                    .frame(width: 22, height: 18)
+                                    .background(RoundedRectangle(cornerRadius: 4).fill(appearance.layoutMode == mode ? AppPalette.brand : AppPalette.card))
+                                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(appearance.layoutMode == mode ? AppPalette.brand : AppPalette.line, lineWidth: 1))
+                            }
+                            .buttonStyle(PressResponsiveButtonStyle())
                         }
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
                 }
 
-                menuBarStyleControl(title: "间距", detail: appearance.spacingMode.label, icon: "arrow.left.and.right") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        menuBarDimensionModePicker(selection: menuBarTickerSpacingModeBinding)
+                // 字号
+                styleRow(icon: "textformat.size", title: "字号") {
+                    stepper(value: Int(appearance.fontSize),
+                        decrement: { model.updateMenuBarTickerAppearance { a in a.fontSize = max(MenuBarTickerAppearance.minFontSize, a.fontSize - 1) } },
+                        increment: { model.updateMenuBarTickerAppearance { a in a.fontSize = min(MenuBarTickerAppearance.maxFontSize, a.fontSize + 1) } }
+                    )
+                }
+
+                // 字重
+                styleRow(icon: "bold", title: "字重") {
+                    capsuleBtn(text: appearance.isBold ? "加粗" : "常规", isSelected: appearance.isBold) {
+                        model.updateMenuBarTickerAppearance { a in a.isBold.toggle() }
+                    }
+                }
+
+                // 间距
+                styleRow(icon: "arrow.left.and.right", title: "间距") {
+                    HStack(spacing: 4) {
+                        capsuleBtn(text: "自动", isSelected: appearance.spacingMode == .automatic) {
+                            model.updateMenuBarTickerAppearance { a in a.spacingMode = .automatic }
+                        }
+                        capsuleBtn(text: "手动", isSelected: appearance.spacingMode == .manual) {
+                            model.updateMenuBarTickerAppearance { a in a.spacingMode = .manual }
+                        }
                         if appearance.spacingMode == .manual {
-                            Stepper(value: menuBarTickerManualSpacingBinding, in: MenuBarTickerAppearance.minManualSpacing...MenuBarTickerAppearance.maxManualSpacing, step: 1) {
-                                Text("\(Int(appearance.manualSpacing)) px")
-                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(AppPalette.ink)
-                            }
-                            .controlSize(.small)
+                            stepper(value: Int(appearance.manualSpacing),
+                                decrement: { model.updateMenuBarTickerAppearance { a in a.manualSpacing = max(MenuBarTickerAppearance.minManualSpacing, a.manualSpacing - 1) } },
+                                increment: { model.updateMenuBarTickerAppearance { a in a.manualSpacing = min(MenuBarTickerAppearance.maxManualSpacing, a.manualSpacing + 1) } }
+                            )
                         }
                     }
                 }
 
-                menuBarStyleControl(title: "宽度", detail: appearance.widthMode.label, icon: "rectangle") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        menuBarDimensionModePicker(selection: menuBarTickerWidthModeBinding)
+                // 宽度
+                styleRow(icon: "rectangle", title: "宽度") {
+                    HStack(spacing: 4) {
+                        capsuleBtn(text: "自动", isSelected: appearance.widthMode == .automatic) {
+                            model.updateMenuBarTickerAppearance { a in a.widthMode = .automatic }
+                        }
+                        capsuleBtn(text: "手动", isSelected: appearance.widthMode == .manual) {
+                            model.updateMenuBarTickerAppearance { a in a.widthMode = .manual }
+                        }
                         if appearance.widthMode == .manual {
-                            Stepper(value: menuBarTickerManualWidthBinding, in: MenuBarTickerAppearance.minManualWidth...MenuBarTickerAppearance.maxManualWidth, step: 4) {
-                                Text("\(Int(appearance.manualWidth)) px")
-                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(AppPalette.ink)
-                            }
-                            .controlSize(.small)
+                            stepper(value: Int(appearance.manualWidth),
+                                decrement: { model.updateMenuBarTickerAppearance { a in a.manualWidth = max(MenuBarTickerAppearance.minManualWidth, a.manualWidth - 4) } },
+                                increment: { model.updateMenuBarTickerAppearance { a in a.manualWidth = min(MenuBarTickerAppearance.maxManualWidth, a.manualWidth + 4) } }
+                            )
                         }
                     }
                 }
             }
         }
-        .padding(.vertical, 14)
     }
 
     private func menuBarDimensionModePicker(selection: Binding<MenuBarTickerDimensionMode>) -> some View {
