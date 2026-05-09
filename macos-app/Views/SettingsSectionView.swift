@@ -75,6 +75,97 @@ struct SettingsSectionView: View {
         )
     }
 
+    private var menuBarTickerTextColorModeBinding: Binding<MenuBarTickerTextColorMode> {
+        Binding(
+            get: { model.menuBarTickerSettings.appearance.textColorMode },
+            set: { mode in
+                model.updateMenuBarTickerAppearance { appearance in
+                    appearance.textColorMode = mode
+                }
+            }
+        )
+    }
+
+    private var menuBarTickerCustomColorBinding: Binding<Color> {
+        Binding(
+            get: {
+                Color(nsColor: MenuBarTickerAppearance.nsColor(hex: model.menuBarTickerSettings.appearance.customTextColorHex) ?? .labelColor)
+            },
+            set: { color in
+                model.updateMenuBarTickerAppearance { appearance in
+                    appearance.textColorMode = .custom
+                    appearance.customTextColorHex = MenuBarTickerAppearance.normalizedHex(from: NSColor(color))
+                }
+            }
+        )
+    }
+
+    private var menuBarTickerFontSizeBinding: Binding<Double> {
+        Binding(
+            get: { model.menuBarTickerSettings.appearance.fontSize },
+            set: { size in
+                model.updateMenuBarTickerAppearance { appearance in
+                    appearance.fontSize = size
+                }
+            }
+        )
+    }
+
+    private var menuBarTickerBoldBinding: Binding<Bool> {
+        Binding(
+            get: { model.menuBarTickerSettings.appearance.isBold },
+            set: { isBold in
+                model.updateMenuBarTickerAppearance { appearance in
+                    appearance.isBold = isBold
+                }
+            }
+        )
+    }
+
+    private var menuBarTickerSpacingModeBinding: Binding<MenuBarTickerDimensionMode> {
+        Binding(
+            get: { model.menuBarTickerSettings.appearance.spacingMode },
+            set: { mode in
+                model.updateMenuBarTickerAppearance { appearance in
+                    appearance.spacingMode = mode
+                }
+            }
+        )
+    }
+
+    private var menuBarTickerManualSpacingBinding: Binding<Double> {
+        Binding(
+            get: { model.menuBarTickerSettings.appearance.manualSpacing },
+            set: { spacing in
+                model.updateMenuBarTickerAppearance { appearance in
+                    appearance.manualSpacing = spacing
+                }
+            }
+        )
+    }
+
+    private var menuBarTickerWidthModeBinding: Binding<MenuBarTickerDimensionMode> {
+        Binding(
+            get: { model.menuBarTickerSettings.appearance.widthMode },
+            set: { mode in
+                model.updateMenuBarTickerAppearance { appearance in
+                    appearance.widthMode = mode
+                }
+            }
+        )
+    }
+
+    private var menuBarTickerManualWidthBinding: Binding<Double> {
+        Binding(
+            get: { model.menuBarTickerSettings.appearance.manualWidth },
+            set: { width in
+                model.updateMenuBarTickerAppearance { appearance in
+                    appearance.manualWidth = width
+                }
+            }
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -189,22 +280,6 @@ struct SettingsSectionView: View {
 
         Button {
             withAnimation(.easeInOut(duration: 0.16)) {
-                selectedSettingsFocus = .version
-            }
-        } label: {
-            SettingsMetric(
-                title: "版本",
-                value: AppUpdateChecker.bundleVersion,
-                detail: model.isCheckingForUpdates ? "正在检查更新" : model.availableUpdate.map { "可更新到 \($0.version)" } ?? "当前构建",
-                icon: "arrow.down.circle",
-                tint: model.availableUpdate == nil ? AppPalette.info : AppPalette.positive,
-                isSelected: selectedSettingsFocus == .version
-            )
-        }
-        .buttonStyle(PressResponsiveButtonStyle())
-
-        Button {
-            withAnimation(.easeInOut(duration: 0.16)) {
                 selectedSettingsFocus = .menuBar
             }
         } label: {
@@ -215,6 +290,22 @@ struct SettingsSectionView: View {
                 icon: "menubar.rectangle",
                 tint: model.menuBarTickerSettings.isEnabled ? AppPalette.info : AppPalette.muted,
                 isSelected: selectedSettingsFocus == .menuBar
+            )
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
+
+        Button {
+            withAnimation(.easeInOut(duration: 0.16)) {
+                selectedSettingsFocus = .version
+            }
+        } label: {
+            SettingsMetric(
+                title: "版本",
+                value: AppUpdateChecker.bundleVersion,
+                detail: model.isCheckingForUpdates ? "正在检查更新" : model.availableUpdate.map { "可更新到 \($0.version)" } ?? "当前构建",
+                icon: "arrow.down.circle",
+                tint: model.availableUpdate == nil ? AppPalette.info : AppPalette.positive,
+                isSelected: selectedSettingsFocus == .version
             )
         }
         .buttonStyle(PressResponsiveButtonStyle())
@@ -456,6 +547,10 @@ struct SettingsSectionView: View {
 
                 SettingsDivider()
 
+                menuBarStyleOptions
+
+                SettingsDivider()
+
                 menuBarOptionGroup(title: "整体资产", subtitle: "总资产、整体今日涨跌和整体持有收益", kinds: MenuBarTickerKind.overallKinds)
 
                 SettingsDivider()
@@ -494,6 +589,137 @@ struct SettingsSectionView: View {
                 }
             }
         }
+    }
+
+    private var menuBarStyleOptions: some View {
+        let appearance = model.menuBarTickerSettings.appearance.normalized()
+
+        return VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("数据样式")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                Text("自定义菜单栏数据文字的颜色、字号、字重、间距和宽度")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 186), spacing: 10)], alignment: .leading, spacing: 10) {
+                menuBarStyleControl(title: "字体颜色", detail: appearance.textColorMode == .system ? "跟随系统状态栏" : appearance.customTextColorHex, icon: "paintpalette") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Picker("", selection: menuBarTickerTextColorModeBinding) {
+                            ForEach(MenuBarTickerTextColorMode.allCases) { mode in
+                                Text(mode.label).tag(mode)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+
+                        HStack(spacing: 8) {
+                            ColorPicker("", selection: menuBarTickerCustomColorBinding, supportsOpacity: false)
+                                .labelsHidden()
+                                .controlSize(.small)
+                            Text("自定义颜色")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(AppPalette.muted)
+                        }
+                    }
+                }
+
+                menuBarStyleControl(title: "字号", detail: "\(Int(appearance.fontSize)) px", icon: "textformat.size") {
+                    Stepper(value: menuBarTickerFontSizeBinding, in: MenuBarTickerAppearance.minFontSize...MenuBarTickerAppearance.maxFontSize, step: 1) {
+                        Text("\(Int(appearance.fontSize)) px")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(AppPalette.ink)
+                    }
+                    .controlSize(.small)
+                }
+
+                menuBarStyleControl(title: "字重", detail: appearance.isBold ? "加粗" : "常规", icon: "bold") {
+                    Toggle("加粗显示", isOn: menuBarTickerBoldBinding)
+                        .toggleStyle(.checkbox)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(AppPalette.ink)
+                }
+
+                menuBarStyleControl(title: "间距", detail: appearance.spacingMode.label, icon: "arrow.left.and.right") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        menuBarDimensionModePicker(selection: menuBarTickerSpacingModeBinding)
+                        if appearance.spacingMode == .manual {
+                            Stepper(value: menuBarTickerManualSpacingBinding, in: MenuBarTickerAppearance.minManualSpacing...MenuBarTickerAppearance.maxManualSpacing, step: 1) {
+                                Text("\(Int(appearance.manualSpacing)) px")
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(AppPalette.ink)
+                            }
+                            .controlSize(.small)
+                        }
+                    }
+                }
+
+                menuBarStyleControl(title: "宽度", detail: appearance.widthMode.label, icon: "rectangle") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        menuBarDimensionModePicker(selection: menuBarTickerWidthModeBinding)
+                        if appearance.widthMode == .manual {
+                            Stepper(value: menuBarTickerManualWidthBinding, in: MenuBarTickerAppearance.minManualWidth...MenuBarTickerAppearance.maxManualWidth, step: 4) {
+                                Text("\(Int(appearance.manualWidth)) px")
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(AppPalette.ink)
+                            }
+                            .controlSize(.small)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 14)
+    }
+
+    private func menuBarDimensionModePicker(selection: Binding<MenuBarTickerDimensionMode>) -> some View {
+        Picker("", selection: selection) {
+            ForEach(MenuBarTickerDimensionMode.allCases) { mode in
+                Text(mode.label).tag(mode)
+            }
+        }
+        .labelsHidden()
+        .pickerStyle(.segmented)
+    }
+
+    private func menuBarStyleControl<Content: View>(
+        title: String,
+        detail: String,
+        icon: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.info)
+                    .frame(width: 24, height: 24)
+                    .background(AppPalette.info.opacity(0.09), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text(detail)
+                        .font(.system(size: 9))
+                        .foregroundStyle(AppPalette.muted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                }
+                Spacer(minLength: 0)
+            }
+
+            content()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, minHeight: 104, alignment: .topLeading)
+        .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.line.opacity(0.34), lineWidth: 1)
+        )
     }
 
     private var menuBarFundMarketOptions: some View {
@@ -624,7 +850,9 @@ struct SettingsSectionView: View {
     }
 
     private func menuBarPreview(entries: [MenuBarTickerEntry]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let appearance = model.menuBarTickerSettings.appearance.normalized()
+
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text("当前菜单栏")
                     .font(.system(size: 10, weight: .medium))
@@ -642,15 +870,7 @@ struct SettingsSectionView: View {
                     .padding(12)
                     .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
             } else {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 8) {
-                        menuBarPreviewEntries(entries)
-                    }
-
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 128), spacing: 8)], alignment: .leading, spacing: 8) {
-                        menuBarPreviewEntries(entries)
-                    }
-                }
+                menuBarPreviewStrip(entries: entries, appearance: appearance)
             }
         }
         .padding(12)
@@ -661,27 +881,33 @@ struct SettingsSectionView: View {
         )
     }
 
-    @ViewBuilder
-    private func menuBarPreviewEntries(_ entries: [MenuBarTickerEntry]) -> some View {
-        ForEach(entries) { entry in
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(menuBarToneColor(entry.tone))
-                    .frame(width: 6, height: 6)
-                Text(entry.compactText)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundStyle(AppPalette.ink)
-                    .lineLimit(1)
-                    .monospacedDigit()
+    private func menuBarPreviewStrip(entries: [MenuBarTickerEntry], appearance: MenuBarTickerAppearance) -> some View {
+        let width = appearance.widthMode == .manual ? CGFloat(appearance.manualWidth) : nil
+        let spacing = appearance.spacingMode == .manual ? CGFloat(appearance.manualSpacing) : max(8, CGFloat(appearance.fontSize) * 1.05)
+
+        return HStack(spacing: spacing) {
+            ForEach(entries) { entry in
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(menuBarToneColor(entry.tone))
+                        .frame(width: 6, height: 6)
+                    Text(entry.compactText)
+                        .font(.system(size: CGFloat(appearance.fontSize), weight: appearance.isBold ? .bold : .medium, design: .rounded))
+                        .foregroundStyle(appearance.swiftUIColor)
+                        .lineLimit(1)
+                        .monospacedDigit()
+                }
             }
-            .padding(.horizontal, 9)
-            .padding(.vertical, 7)
-            .background(menuBarToneColor(entry.tone).opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                    .stroke(menuBarToneColor(entry.tone).opacity(0.18), lineWidth: 1)
-            )
         }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 7)
+        .frame(width: width, alignment: .leading)
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                .stroke(AppPalette.line.opacity(0.44), lineWidth: 1)
+        )
+        .clipped()
     }
 
     private func menuBarOptionGroup(title: String, subtitle: String, kinds: [MenuBarTickerKind]) -> some View {

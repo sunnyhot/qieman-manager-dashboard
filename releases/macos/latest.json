@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.22",
-  "name": "QiemanDashboard v2.2.22",
-  "body": "菜单栏行情设置重构：精简分类、紧凑布局、最多显示2项自动替换",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.22",
-  "published_at": "2026-05-09T06:00:00Z",
+  "tag_name": "v2.2.23",
+  "name": "QiemanDashboard v2.2.23",
+  "body": "菜单栏数据样式自定义：字体颜色、字号、加粗、间距和宽度设置，版本入口后置",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.23",
+  "published_at": "2026-05-09T08:00:45Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.22.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.22/QiemanDashboard-2.2.22.zip",
-      "size": 3469595,
+      "name": "QiemanDashboard-2.2.23.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.23/QiemanDashboard-2.2.23.zip",
+      "size": 3456519,
       "content_type": "application/zip"
     }
   ]

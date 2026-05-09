@@ -66,6 +66,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         guard let model, let button = statusItem.button else { return }
         let entries = model.menuBarTickerVisibleEntries
         let displayEntries = Array(entries.prefix(2))
+        let appearance = model.menuBarTickerSettings.appearance.normalized()
 
         let barHeight = NSStatusBar.system.thickness
 
@@ -79,11 +80,49 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         }
 
         let lines = displayEntries.map { $0.compactText }
-        let image = renderTextImage(lines: lines, fontSize: 9, barHeight: barHeight)
+        let image = renderTickerImage(entries: displayEntries, appearance: appearance, barHeight: barHeight)
         button.image = image
         button.toolTip = lines.joined(separator: "  ")
         button.needsDisplay = true
         statusItem.length = image.size.width
+    }
+
+    private func renderTickerImage(entries: [MenuBarTickerEntry], appearance: MenuBarTickerAppearance, barHeight: CGFloat) -> NSImage {
+        let font = NSFont.monospacedSystemFont(ofSize: CGFloat(appearance.fontSize), weight: appearance.fontWeight)
+        let lineHeight = ceil(font.ascender - font.descender + font.leading)
+        let texts = entries.map(\.compactText)
+        let measurements = texts.map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }
+        let itemSpacing = appearance.spacingMode == .manual ? CGFloat(appearance.manualSpacing) : max(8, CGFloat(appearance.fontSize) * 1.05)
+        let horizontalPadding: CGFloat = 8
+        let measurementSlack: CGFloat = 6
+        let measuredWidth = measurements.reduce(0, +) + CGFloat(max(0, texts.count - 1)) * itemSpacing + horizontalPadding * 2 + measurementSlack
+        let width = ceil(appearance.widthMode == .manual ? CGFloat(appearance.manualWidth) : measuredWidth)
+
+        let image = NSImage(size: NSSize(width: width, height: barHeight))
+        image.lockFocusFlipped(true)
+
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineBreakMode = .byTruncatingTail
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: appearance.nsColor ?? NSColor.black,
+            .paragraphStyle: paragraph
+        ]
+        let top = max(0, floor((barHeight - lineHeight) / 2))
+        var x = horizontalPadding
+        for (index, text) in texts.enumerated() {
+            let remainingWidth = width - x - horizontalPadding
+            guard remainingWidth > 4 else { break }
+            let drawWidth = min(measurements[index], remainingWidth)
+            let rect = NSRect(x: x, y: top, width: drawWidth, height: lineHeight)
+            NSAttributedString(string: text, attributes: attrs)
+                .draw(with: rect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine])
+            x += drawWidth + itemSpacing
+        }
+
+        image.unlockFocus()
+        image.isTemplate = appearance.nsColor == nil
+        return image
     }
 
     private func renderTextImage(lines: [String], fontSize: CGFloat, barHeight: CGFloat) -> NSImage {
