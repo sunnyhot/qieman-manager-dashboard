@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.21",
-  "name": "QiemanDashboard v2.2.21",
-  "body": "菜单栏摘要文字改为跟随系统外观自适应颜色，并修复下拉菜单里的配置入口重复打开新窗口的问题。",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.21",
-  "published_at": "2026-05-09T03:24:04Z",
+  "tag_name": "v2.2.22",
+  "name": "QiemanDashboard v2.2.22",
+  "body": "菜单栏行情设置重构：精简分类、紧凑布局、最多显示2项自动替换",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.22",
+  "published_at": "2026-05-09T06:00:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.21.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.21/QiemanDashboard-2.2.21.zip",
-      "size": 3367312,
+      "name": "QiemanDashboard-2.2.22.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.22/QiemanDashboard-2.2.22.zip",
+      "size": 3469595,
       "content_type": "application/zip"
     }
   ]
