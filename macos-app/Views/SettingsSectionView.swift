@@ -16,6 +16,8 @@ struct SettingsSectionView: View {
     @EnvironmentObject private var model: AppModel
     @State private var selectedSettingsFocus: SettingsFocus = .menuBar
     @State private var isMenuBarHoldingOptionsExpanded = false
+    @State private var isMenuBarMarketIndexExpanded = false
+    @State private var isMenuBarFundMarketExpanded = false
 
     private var enabledBinding: Binding<Bool> {
         Binding(
@@ -458,7 +460,7 @@ struct SettingsSectionView: View {
 
                 SettingsDivider()
 
-                menuBarOptionGroup(title: "A股 / 港股 / 美股", subtitle: "按股票市场分组聚合涨跌与收益", kinds: MenuBarTickerKind.stockMarketKinds)
+                menuBarOptionGroup(title: "自动 Top 标的", subtitle: "自动把今日波动最大、收益率最高的单个标的放到菜单栏", kinds: MenuBarTickerKind.automaticKinds)
 
                 SettingsDivider()
 
@@ -466,11 +468,7 @@ struct SettingsSectionView: View {
 
                 SettingsDivider()
 
-                menuBarOptionGroup(title: "基金分组", subtitle: "按场外基金、场内基金聚合涨跌与收益", kinds: MenuBarTickerKind.fundMarketKinds)
-
-                SettingsDivider()
-
-                menuBarOptionGroup(title: "自动 Top 标的", subtitle: "自动把今日波动最大、收益率最高的单个标的放到菜单栏", kinds: MenuBarTickerKind.automaticKinds)
+                menuBarFundMarketOptions
 
                 SettingsDivider()
 
@@ -498,29 +496,130 @@ struct SettingsSectionView: View {
         }
     }
 
-    private var menuBarMarketIndexOptions: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            menuBarOptionGroup(
-                title: "大盘指数",
-                subtitle: "上证、沪深300、创业板、恒生、纳指、标普、道指的点位与涨跌",
-                kinds: MenuBarTickerKind.marketIndexKinds
-            )
-
-            HStack(spacing: 10) {
-                Text(model.isRefreshingMarketIndices ? "大盘行情刷新中…" : "行情来自腾讯指数报价，开启任一项后自动刷新。")
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Button {
-                    Task { await model.refreshMarketIndices(kinds: MarketIndexKind.allCases, updateNotice: true) }
-                } label: {
-                    Label(model.isRefreshingMarketIndices ? "刷新中" : "刷新大盘", systemImage: "arrow.clockwise")
+    private var menuBarFundMarketOptions: some View {
+        DisclosureGroup(isExpanded: $isMenuBarFundMarketExpanded) {
+            VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("场外")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(AppPalette.muted)
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 8)], alignment: .leading, spacing: 8) {
+                        fundMarketToggle(.offExchangeDailyAmount, "场外涨跌额")
+                        fundMarketToggle(.offExchangeDailyPct, "场外涨跌率")
+                        fundMarketToggle(.offExchangeProfitAmount, "场外收益额")
+                        fundMarketToggle(.offExchangeProfitPct, "场外收益率")
+                    }
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(model.isRefreshingMarketIndices)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("场内")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(AppPalette.muted)
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 8)], alignment: .leading, spacing: 8) {
+                        fundMarketToggle(.onExchangeDailyAmount, "场内涨跌额")
+                        fundMarketToggle(.onExchangeDailyPct, "场内涨跌率")
+                        fundMarketToggle(.onExchangeProfitAmount, "场内收益额")
+                        fundMarketToggle(.onExchangeProfitPct, "场内收益率")
+                    }
+                }
             }
-            .padding(.top, -6)
+            .padding(.top, 10)
+        } label: {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("基金分组")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text("按场外基金、场内基金聚合涨跌与收益")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                Spacer()
+            }
+        }
+        .padding(.vertical, 14)
+    }
+
+    private func menuBarTickerSelectionToggle(isOn: Binding<Bool>, label: String) -> some View {
+        Toggle(label, isOn: isOn)
+            .toggleStyle(.checkbox)
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(AppPalette.muted)
+            .fixedSize()
+    }
+
+    private func fundMarketToggle(_ kind: MenuBarTickerKind, _ label: String) -> some View {
+        menuBarTickerSelectionToggle(
+            isOn: Binding(
+                get: { model.isMenuBarTickerKindEnabled(kind) },
+                set: { model.setMenuBarTickerKind(kind, isEnabled: $0) }
+            ),
+            label: label
+        )
+    }
+
+    private var menuBarMarketIndexOptions: some View {
+        DisclosureGroup(isExpanded: $isMenuBarMarketIndexExpanded) {
+            VStack(alignment: .leading, spacing: 10) {
+                menuBarIndexGroupToggles(title: "A股", kinds: [.sseComposite, .csi300, .chinext])
+                menuBarIndexGroupToggles(title: "港股", kinds: [.hsi])
+                menuBarIndexGroupToggles(title: "美股", kinds: [.nasdaq, .sp500, .dowJones])
+
+                HStack(spacing: 10) {
+                    Text(model.isRefreshingMarketIndices ? "大盘行情刷新中…" : "行情来自腾讯指数报价，开启任一项后自动刷新。")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button {
+                        Task { await model.refreshMarketIndices(kinds: MarketIndexKind.allCases, updateNotice: true) }
+                    } label: {
+                        Label(model.isRefreshingMarketIndices ? "刷新中" : "刷新大盘", systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(model.isRefreshingMarketIndices)
+                }
+            }
+            .padding(.top, 10)
+        } label: {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("大盘指数")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text("按指数开启点位、涨跌点或涨跌率")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                Spacer()
+            }
+        }
+        .padding(.vertical, 14)
+    }
+
+    private func menuBarIndexGroupToggles(title: String, kinds: [MarketIndexKind]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppPalette.muted)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 8)], alignment: .leading, spacing: 8) {
+                ForEach(kinds) { indexKind in
+                    ForEach([
+                        (MarketIndexMetric.changePct, "涨跌率"),
+                        (MarketIndexMetric.changeAmount, "涨跌点"),
+                        (MarketIndexMetric.level, "点位"),
+                    ], id: \.0) { metric, label in
+                        if let kind = MenuBarTickerKind.tickerKind(indexKind: indexKind, metric: metric) {
+                            menuBarTickerSelectionToggle(
+                                isOn: Binding(
+                                    get: { model.isMenuBarTickerKindEnabled(kind) },
+                                    set: { model.setMenuBarTickerKind(kind, isEnabled: $0) }
+                                ),
+                                label: "\(indexKind.compactLabel)\(label)"
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -732,14 +831,13 @@ struct SettingsSectionView: View {
     }
 
     private func menuBarHoldingMetricToggle(_ row: UserPortfolioValuationRow, _ metric: MenuBarHoldingMetric) -> some View {
-        Toggle(metric.label, isOn: Binding(
-            get: { model.isMenuBarHoldingMetricEnabled(holdingID: row.holding.id, metric: metric) },
-            set: { model.setMenuBarHoldingMetric(holdingID: row.holding.id, metric: metric, isEnabled: $0) }
-        ))
-        .toggleStyle(.checkbox)
-        .font(.system(size: 10, weight: .medium))
-        .foregroundStyle(AppPalette.muted)
-        .fixedSize()
+        menuBarTickerSelectionToggle(
+            isOn: Binding(
+                get: { model.isMenuBarHoldingMetricEnabled(holdingID: row.holding.id, metric: metric) },
+                set: { model.setMenuBarHoldingMetric(holdingID: row.holding.id, metric: metric, isEnabled: $0) }
+            ),
+            label: metric.label
+        )
     }
 
     private func menuBarToneColor(_ tone: MenuBarTickerTone) -> Color {

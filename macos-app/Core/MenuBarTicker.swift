@@ -97,18 +97,6 @@ enum MenuBarTickerKind: String, Codable, CaseIterable, Identifiable {
     case overallDailyPct
     case overallProfitAmount
     case overallProfitPct
-    case aShareDailyAmount
-    case aShareDailyPct
-    case aShareProfitAmount
-    case aShareProfitPct
-    case hkDailyAmount
-    case hkDailyPct
-    case hkProfitAmount
-    case hkProfitPct
-    case usDailyAmount
-    case usDailyPct
-    case usProfitAmount
-    case usProfitPct
     case offExchangeDailyAmount
     case offExchangeDailyPct
     case offExchangeProfitAmount
@@ -154,18 +142,6 @@ enum MenuBarTickerKind: String, Codable, CaseIterable, Identifiable {
         case .overallDailyPct: return "整体涨跌率"
         case .overallProfitAmount: return "整体收益额"
         case .overallProfitPct: return "整体收益率"
-        case .aShareDailyAmount: return "A股涨跌额"
-        case .aShareDailyPct: return "A股涨跌率"
-        case .aShareProfitAmount: return "A股收益额"
-        case .aShareProfitPct: return "A股收益率"
-        case .hkDailyAmount: return "港股涨跌额"
-        case .hkDailyPct: return "港股涨跌率"
-        case .hkProfitAmount: return "港股收益额"
-        case .hkProfitPct: return "港股收益率"
-        case .usDailyAmount: return "美股涨跌额"
-        case .usDailyPct: return "美股涨跌率"
-        case .usProfitAmount: return "美股收益额"
-        case .usProfitPct: return "美股收益率"
         case .offExchangeDailyAmount: return "场外涨跌额"
         case .offExchangeDailyPct: return "场外涨跌率"
         case .offExchangeProfitAmount: return "场外收益额"
@@ -197,12 +173,6 @@ enum MenuBarTickerKind: String, Codable, CaseIterable, Identifiable {
             return "全部已持有资产今日涨跌"
         case .overallProfitAmount, .overallProfitPct:
             return "全部已持有资产相对成本收益"
-        case .aShareDailyAmount, .aShareDailyPct, .aShareProfitAmount, .aShareProfitPct:
-            return "按 A 股持仓聚合"
-        case .hkDailyAmount, .hkDailyPct, .hkProfitAmount, .hkProfitPct:
-            return "按港股持仓聚合"
-        case .usDailyAmount, .usDailyPct, .usProfitAmount, .usProfitPct:
-            return "按美股持仓聚合"
         case .offExchangeDailyAmount, .offExchangeDailyPct, .offExchangeProfitAmount, .offExchangeProfitPct:
             return "按场外基金聚合"
         case .onExchangeDailyAmount, .onExchangeDailyPct, .onExchangeProfitAmount, .onExchangeProfitPct:
@@ -251,21 +221,6 @@ enum MenuBarTickerKind: String, Codable, CaseIterable, Identifiable {
         .overallProfitPct,
     ]
 
-    static let stockMarketKinds: [MenuBarTickerKind] = [
-        .aShareDailyAmount,
-        .aShareDailyPct,
-        .aShareProfitAmount,
-        .aShareProfitPct,
-        .hkDailyAmount,
-        .hkDailyPct,
-        .hkProfitAmount,
-        .hkProfitPct,
-        .usDailyAmount,
-        .usDailyPct,
-        .usProfitAmount,
-        .usProfitPct,
-    ]
-
     static let fundMarketKinds: [MenuBarTickerKind] = [
         .offExchangeDailyAmount,
         .offExchangeDailyPct,
@@ -300,6 +255,48 @@ enum MenuBarTickerKind: String, Codable, CaseIterable, Identifiable {
         .dowJonesIndexChangeAmount,
         .dowJonesIndexLevel,
     ]
+
+    static let aShareIndexKinds: [MenuBarTickerKind] = [
+        .sseIndexChangePct, .sseIndexChangeAmount, .sseIndexLevel,
+        .csi300IndexChangePct, .csi300IndexChangeAmount, .csi300IndexLevel,
+        .chinextIndexChangePct, .chinextIndexChangeAmount, .chinextIndexLevel,
+    ]
+
+    static let hkIndexKinds: [MenuBarTickerKind] = [
+        .hsiIndexChangePct, .hsiIndexChangeAmount, .hsiIndexLevel,
+    ]
+
+    static let usIndexKinds: [MenuBarTickerKind] = [
+        .nasdaqIndexChangePct, .nasdaqIndexChangeAmount, .nasdaqIndexLevel,
+        .sp500IndexChangePct, .sp500IndexChangeAmount, .sp500IndexLevel,
+        .dowJonesIndexChangePct, .dowJonesIndexChangeAmount, .dowJonesIndexLevel,
+    ]
+
+    static func tickerKind(indexKind: MarketIndexKind, metric: MarketIndexMetric) -> MenuBarTickerKind? {
+        switch (indexKind, metric) {
+        case (.sseComposite, .level): return .sseIndexLevel
+        case (.sseComposite, .changeAmount): return .sseIndexChangeAmount
+        case (.sseComposite, .changePct): return .sseIndexChangePct
+        case (.csi300, .level): return .csi300IndexLevel
+        case (.csi300, .changeAmount): return .csi300IndexChangeAmount
+        case (.csi300, .changePct): return .csi300IndexChangePct
+        case (.chinext, .level): return .chinextIndexLevel
+        case (.chinext, .changeAmount): return .chinextIndexChangeAmount
+        case (.chinext, .changePct): return .chinextIndexChangePct
+        case (.hsi, .level): return .hsiIndexLevel
+        case (.hsi, .changeAmount): return .hsiIndexChangeAmount
+        case (.hsi, .changePct): return .hsiIndexChangePct
+        case (.nasdaq, .level): return .nasdaqIndexLevel
+        case (.nasdaq, .changeAmount): return .nasdaqIndexChangeAmount
+        case (.nasdaq, .changePct): return .nasdaqIndexChangePct
+        case (.sp500, .level): return .sp500IndexLevel
+        case (.sp500, .changeAmount): return .sp500IndexChangeAmount
+        case (.sp500, .changePct): return .sp500IndexChangePct
+        case (.dowJones, .level): return .dowJonesIndexLevel
+        case (.dowJones, .changeAmount): return .dowJonesIndexChangeAmount
+        case (.dowJones, .changePct): return .dowJonesIndexChangePct
+        }
+    }
 
     static let automaticKinds: [MenuBarTickerKind] = [
         .topDailyPct,
@@ -343,11 +340,11 @@ struct MenuBarTickerSettings: Codable, Hashable {
     var holdingSelections: [MenuBarHoldingMetricSelection]
 
     static let storageKey = "qieman.dashboard.menuBarTickerSettings.v1"
-    static let maxVisibleItemsLimit = 5
+    static let maxVisibleItemsLimit = 2
 
     static let `default` = MenuBarTickerSettings(
         isEnabled: true,
-        maxVisibleItems: 3,
+        maxVisibleItems: 2,
         enabledKinds: [.overallDailyPct, .overallProfitPct, .totalValue],
         holdingSelections: []
     )
@@ -368,6 +365,10 @@ struct MenuBarTickerSettings: Codable, Hashable {
     func normalized() -> MenuBarTickerSettings {
         var copy = self
         copy.maxVisibleItems = min(max(copy.maxVisibleItems, 1), Self.maxVisibleItemsLimit)
+
+        // Remove kinds that no longer exist in the enum
+        let validKinds = Set(MenuBarTickerKind.allCases)
+        copy.enabledKinds = copy.enabledKinds.filter { validKinds.contains($0) }
 
         var seenKinds = Set<MenuBarTickerKind>()
         copy.enabledKinds = copy.enabledKinds.filter { seenKinds.insert($0).inserted }
@@ -408,6 +409,11 @@ extension AppModel {
         var settings = menuBarTickerSettings
         if isEnabled {
             if !settings.enabledKinds.contains(kind) {
+                let totalSelected = settings.enabledKinds.count + settings.holdingSelections.count
+                if totalSelected >= settings.maxVisibleItems {
+                    // Remove the oldest enabled kind to make room
+                    settings.enabledKinds.removeFirst()
+                }
                 settings.enabledKinds.append(kind)
             }
         } else {
@@ -417,6 +423,11 @@ extension AppModel {
         if isEnabled, kind.marketIndexRequest != nil {
             Task { await refreshMarketIndices(kinds: MarketIndexKind.allCases, updateNotice: false) }
         }
+    }
+
+    var isMenuBarTickerSelectionFull: Bool {
+        let total = menuBarTickerSettings.enabledKinds.count + menuBarTickerSettings.holdingSelections.count
+        return total >= menuBarTickerSettings.maxVisibleItems
     }
 
     func isMenuBarHoldingMetricEnabled(holdingID: UUID, metric: MenuBarHoldingMetric) -> Bool {
@@ -430,6 +441,15 @@ extension AppModel {
         if isEnabled {
             let selection = MenuBarHoldingMetricSelection(holdingID: holdingID, metric: metric)
             if !settings.holdingSelections.contains(selection) {
+                let totalSelected = settings.enabledKinds.count + settings.holdingSelections.count
+                if totalSelected >= settings.maxVisibleItems {
+                    // Remove the oldest holding selection to make room
+                    if settings.holdingSelections.isEmpty {
+                        settings.enabledKinds.removeFirst()
+                    } else {
+                        settings.holdingSelections.removeFirst()
+                    }
+                }
                 settings.holdingSelections.append(selection)
             }
         } else {
@@ -520,42 +540,6 @@ extension AppModel {
             return aggregates.all.amountEntry(id: kind.rawValue, title: "整体收益", compactTitle: "益", value: aggregates.all.profitAmount)
         case .overallProfitPct:
             return aggregates.all.percentEntry(id: kind.rawValue, title: "整体收益率", compactTitle: "益", value: aggregates.all.profitPct)
-        case .aShareDailyAmount:
-            let aggregate = aggregates.market(.aShare)
-            return aggregate.amountEntry(id: kind.rawValue, title: "A股涨跌", compactTitle: "A", value: aggregate.dailyAmount, market: .aShare)
-        case .aShareDailyPct:
-            let aggregate = aggregates.market(.aShare)
-            return aggregate.percentEntry(id: kind.rawValue, title: "A股涨跌率", compactTitle: "A", value: aggregate.dailyPct)
-        case .aShareProfitAmount:
-            let aggregate = aggregates.market(.aShare)
-            return aggregate.amountEntry(id: kind.rawValue, title: "A股收益", compactTitle: "A益", value: aggregate.profitAmount, market: .aShare)
-        case .aShareProfitPct:
-            let aggregate = aggregates.market(.aShare)
-            return aggregate.percentEntry(id: kind.rawValue, title: "A股收益率", compactTitle: "A益", value: aggregate.profitPct)
-        case .hkDailyAmount:
-            let aggregate = aggregates.market(.hk)
-            return aggregate.amountEntry(id: kind.rawValue, title: "港股涨跌", compactTitle: "港", value: aggregate.dailyAmount, market: .hk)
-        case .hkDailyPct:
-            let aggregate = aggregates.market(.hk)
-            return aggregate.percentEntry(id: kind.rawValue, title: "港股涨跌率", compactTitle: "港", value: aggregate.dailyPct)
-        case .hkProfitAmount:
-            let aggregate = aggregates.market(.hk)
-            return aggregate.amountEntry(id: kind.rawValue, title: "港股收益", compactTitle: "港益", value: aggregate.profitAmount, market: .hk)
-        case .hkProfitPct:
-            let aggregate = aggregates.market(.hk)
-            return aggregate.percentEntry(id: kind.rawValue, title: "港股收益率", compactTitle: "港益", value: aggregate.profitPct)
-        case .usDailyAmount:
-            let aggregate = aggregates.market(.us)
-            return aggregate.amountEntry(id: kind.rawValue, title: "美股涨跌", compactTitle: "美", value: aggregate.dailyAmount, market: .us)
-        case .usDailyPct:
-            let aggregate = aggregates.market(.us)
-            return aggregate.percentEntry(id: kind.rawValue, title: "美股涨跌率", compactTitle: "美", value: aggregate.dailyPct)
-        case .usProfitAmount:
-            let aggregate = aggregates.market(.us)
-            return aggregate.amountEntry(id: kind.rawValue, title: "美股收益", compactTitle: "美益", value: aggregate.profitAmount, market: .us)
-        case .usProfitPct:
-            let aggregate = aggregates.market(.us)
-            return aggregate.percentEntry(id: kind.rawValue, title: "美股收益率", compactTitle: "美益", value: aggregate.profitPct)
         case .offExchangeDailyAmount:
             let aggregate = aggregates.fund(.offExchange)
             return aggregate.amountEntry(id: kind.rawValue, title: "场外涨跌", compactTitle: "场外", value: aggregate.dailyAmount)
