@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.19",
-  "name": "QiemanDashboard v2.2.19",
-  "body": "菜单栏行情摘要优化与设置页改进",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.19",
-  "published_at": "2026-05-08T10:53:23Z",
+  "tag_name": "v2.2.20",
+  "name": "QiemanDashboard v2.2.20",
+  "body": "修复菜单栏摘要文字被截断和垂直未居中的问题，改进状态栏文字渲染宽度和悬停完整提示。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.20",
+  "published_at": "2026-05-09T03:05:07Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.19.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.19/QiemanDashboard-2.2.19.zip",
-      "size": 3455672,
+      "name": "QiemanDashboard-2.2.20.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.20/QiemanDashboard-2.2.20.zip",
+      "size": 3369002,
       "content_type": "application/zip"
     }
   ]
