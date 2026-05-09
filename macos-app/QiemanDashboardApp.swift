@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 import UserNotifications
 
@@ -7,8 +8,129 @@ private enum AppSceneIdentifier {
 }
 
 final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    private var statusItem: NSStatusItem!
+    private var popover: NSPopover!
+    private var model: AppModel?
+    private var cancellables = Set<AnyCancellable>()
+    private var eventMonitor: Any?
+    private var didConfigure = false
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
+
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        guard let button = statusItem.button else { return }
+        button.imagePosition = .imageOnly
+        button.imageScaling = .scaleNone
+        button.image = nil
+        button.action = #selector(togglePopover)
+        button.target = self
+
+        popover = NSPopover()
+        popover.contentSize = NSSize(width: 392, height: 720)
+        popover.behavior = .transient
+
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            if let self, self.popover.isShown {
+                if event.window != self.popover.contentViewController?.view.window {
+                    self.popover.performClose(nil)
+                }
+            }
+        }
+    }
+
+    func configure(model: AppModel) {
+        guard !didConfigure else { return }
+        didConfigure = true
+        self.model = model
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let view = MenuBarPortfolioView()
+                .environmentObject(model)
+            self.popover.contentViewController = NSHostingController(rootView: view)
+            self.updateTitle()
+
+            model.objectWillChange
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in
+                    Task { @MainActor [weak self] in
+                        self?.updateTitle()
+                    }
+                }
+                .store(in: &self.cancellables)
+        }
+    }
+
+    @MainActor private func updateTitle() {
+        guard let model, let button = statusItem.button else { return }
+        let entries = model.menuBarTickerVisibleEntries
+        let displayEntries = Array(entries.prefix(2))
+
+        let barHeight = NSStatusBar.system.thickness
+
+        if displayEntries.isEmpty {
+            let image = renderTextImage(lines: [model.portfolioMenuBarTitle], fontSize: 12, barHeight: barHeight)
+            button.image = image
+            button.toolTip = model.portfolioMenuBarTitle
+            button.needsDisplay = true
+            statusItem.length = image.size.width
+            return
+        }
+
+        let lines = displayEntries.map { $0.compactText }
+        let image = renderTextImage(lines: lines, fontSize: 9, barHeight: barHeight)
+        button.image = image
+        button.toolTip = lines.joined(separator: "  ")
+        button.needsDisplay = true
+        statusItem.length = image.size.width
+    }
+
+    private func renderTextImage(lines: [String], fontSize: CGFloat, barHeight: CGFloat) -> NSImage {
+        let font = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .medium)
+        let lineHeight = ceil(font.ascender - font.descender + font.leading)
+        let totalHeight = CGFloat(lines.count) * lineHeight
+
+        var maxWidth: CGFloat = 0
+        for line in lines {
+            let size = (line as NSString).size(withAttributes: [.font: font])
+            maxWidth = max(maxWidth, ceil(size.width))
+        }
+
+        let horizontalPadding: CGFloat = 9
+        let measurementSlack: CGFloat = 6
+        let width = ceil(maxWidth + horizontalPadding * 2 + measurementSlack)
+
+        let image = NSImage(size: NSSize(width: width, height: barHeight))
+        image.lockFocusFlipped(true)
+
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: NSColor.labelColor
+        ]
+        let top = max(0, floor((barHeight - totalHeight) / 2))
+        let textWidth = width - horizontalPadding * 2
+        for (i, line) in lines.enumerated() {
+            let rect = NSRect(
+                x: horizontalPadding,
+                y: top + CGFloat(i) * lineHeight,
+                width: textWidth,
+                height: lineHeight
+            )
+            (line as NSString).draw(with: rect, options: [.usesLineFragmentOrigin], attributes: attrs)
+        }
+
+        image.unlockFocus()
+        return image
+    }
+
+    @objc private func togglePopover() {
+        if popover.isShown {
+            popover.performClose(nil)
+        } else {
+            guard let button = statusItem.button else { return }
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -24,6 +146,12 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         guard let deepLink = NotificationDeepLinkPayload(userInfo: userInfo) else { return }
         NotificationCenter.default.post(name: .qiemanNotificationDeepLink, object: deepLink)
     }
+
+    deinit {
+        if let eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
+        }
+    }
 }
 
 @main
@@ -36,8 +164,10 @@ struct QiemanDashboardApp: App {
             ContentView()
                 .environmentObject(model)
                 .tint(AppPalette.brand)
+                .onAppear {
+                    appDelegate.configure(model: model)
+                }
         }
-        menuBarScene
         .commands {
             CommandGroup(after: .appInfo) {
                 Button("打开数据目录") {
@@ -57,23 +187,6 @@ struct QiemanDashboardApp: App {
                 }
                 .keyboardShortcut("r")
             }
-        }
-    }
-
-    @SceneBuilder
-    private var menuBarScene: some Scene {
-        if #available(macOS 13.0, *) {
-            MenuBarExtra {
-                MenuBarPortfolioView()
-                    .environmentObject(model)
-            } label: {
-                Label {
-                    Text(model.portfolioMenuBarTitle)
-                } icon: {
-                    Image(systemName: "briefcase.fill")
-                }
-            }
-            .menuBarExtraStyle(.window)
         }
     }
 }
