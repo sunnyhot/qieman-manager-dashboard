@@ -165,9 +165,8 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         let texts = entries.map(\.compactText)
         let measurements = texts.map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }
         let itemSpacing = appearance.spacingMode == .manual ? CGFloat(appearance.manualSpacing) : max(8, CGFloat(appearance.fontSize) * 1.05)
-        let horizontalPadding: CGFloat = 8
-        let measurementSlack: CGFloat = 6
-        let measuredWidth = measurements.reduce(0, +) + CGFloat(max(0, texts.count - 1)) * itemSpacing + horizontalPadding * 2 + measurementSlack
+        let horizontalPadding: CGFloat = 3
+        let measuredWidth = measurements.reduce(0, +) + CGFloat(max(0, texts.count - 1)) * itemSpacing + horizontalPadding * 2
         let width = ceil(appearance.widthMode == .manual ? CGFloat(appearance.manualWidth) : measuredWidth)
 
         let image = NSImage(size: NSSize(width: width, height: barHeight))
@@ -203,9 +202,8 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         let texts = entries.map(\.compactText)
         let measurements = texts.map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }
         let maxWidth = measurements.max() ?? 0
-        let horizontalPadding: CGFloat = 8
-        let measurementSlack: CGFloat = 6
-        let measuredWidth = maxWidth + horizontalPadding * 2 + measurementSlack
+        let horizontalPadding: CGFloat = 3
+        let measuredWidth = maxWidth + horizontalPadding * 2
         let width = ceil(appearance.widthMode == .manual ? CGFloat(appearance.manualWidth) : measuredWidth)
         let lineSpacing = appearance.spacingMode == .manual ? CGFloat(appearance.manualSpacing) : 0
 
