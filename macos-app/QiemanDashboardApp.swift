@@ -49,6 +49,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
 
         Task { @MainActor [weak self] in
             guard let self else { return }
+            NSApplication.shared.setActivationPolicy(model.showsInDock ? .regular : .accessory)
             let view = MenuBarPortfolioView()
                 .environmentObject(model)
             self.popover.contentViewController = NSHostingController(rootView: view)

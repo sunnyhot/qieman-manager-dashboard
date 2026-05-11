@@ -18,6 +18,16 @@ extension SettingsSectionView {
 
                 SettingsDivider()
 
+                SettingsToggleRow(
+                    title: "在 Dock 中显示",
+                    detail: "关闭后仅通过菜单栏图标访问应用",
+                    icon: "dock.rectangle",
+                    tint: model.showsInDock ? AppPalette.info : AppPalette.muted,
+                    isOn: $model.showsInDock
+                )
+
+                SettingsDivider()
+
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 3) {

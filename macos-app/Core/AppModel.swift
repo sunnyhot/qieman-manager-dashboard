@@ -74,6 +74,12 @@ final class AppModel: ObservableObject {
     @Published var onlyManagerReplies = false
     @Published var launchAtLoginEnabled = false
     @Published var appearance: AppAppearance = AppAppearance.load() { didSet { appearance.save() } }
+    @Published var showsInDock: Bool = (UserDefaults.standard.object(forKey: "qieman.dashboard.showsInDock") as? Bool) ?? true {
+        didSet {
+            UserDefaults.standard.set(showsInDock, forKey: "qieman.dashboard.showsInDock")
+            NSApplication.shared.setActivationPolicy(showsInDock ? .regular : .accessory)
+        }
+    }
 
     @Published var isBootstrapping = false
     @Published var isRefreshing = false
