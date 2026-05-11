@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.33",
-  "name": "QiemanDashboard v2.2.33",
-  "body": "菜单栏设置体验优化：预览上移、轮播顺序改为可拖拽胶囊按钮、拖拽插入指示器",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.33",
-  "published_at": "2026-05-11T08:30:00Z",
+  "tag_name": "v2.2.34",
+  "name": "QiemanDashboard v2.2.34",
+  "body": "菜单栏设置面板分组优化：样式配置与资产项选择缩进分组、整体资产cell边距收紧",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.34",
+  "published_at": "2026-05-11T09:00:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.33.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.33/QiemanDashboard-2.2.33.zip",
-      "size": 3578875,
+      "name": "QiemanDashboard-2.2.34.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.34/QiemanDashboard-2.2.34.zip",
+      "size": 3586472,
       "content_type": "application/zip"
     }
   ]
