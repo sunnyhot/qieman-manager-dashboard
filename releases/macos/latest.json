@@ -3,12 +3,12 @@
   "name": "QiemanDashboard v2.2.38",
   "body": "修复菜单栏「打开主界面」「配置菜单栏」按钮无响应的问题",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.38",
-  "published_at": "",
+  "published_at": "2026-05-11T09:48:59Z",
   "assets": [
     {
       "name": "QiemanDashboard-2.2.38.zip",
       "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.38/QiemanDashboard-2.2.38.zip",
-      "size": 0,
+      "size": 3542625,
       "content_type": "application/zip"
     }
   ]
