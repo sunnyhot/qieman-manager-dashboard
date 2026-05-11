@@ -47,6 +47,13 @@ struct SettingsSectionView: View {
         )
     }
 
+    var menuBarTickerCarouselIntervalBinding: Binding<Double> {
+        Binding(
+            get: { model.menuBarTickerSettings.carouselIntervalSeconds },
+            set: { model.setMenuBarTickerCarouselInterval($0) }
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {

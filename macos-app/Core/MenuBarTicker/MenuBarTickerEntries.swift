@@ -30,11 +30,6 @@ extension AppModel {
         var settings = menuBarTickerSettings
         if isEnabled {
             if !settings.enabledKinds.contains(kind) {
-                let totalSelected = settings.enabledKinds.count + settings.holdingSelections.count
-                if totalSelected >= settings.maxVisibleItems {
-                    // Remove the oldest enabled kind to make room
-                    settings.enabledKinds.removeFirst()
-                }
                 settings.enabledKinds.append(kind)
             }
         } else {
@@ -44,11 +39,6 @@ extension AppModel {
         if isEnabled, kind.marketIndexRequest != nil {
             Task { await refreshMarketIndices(kinds: MarketIndexKind.allCases, updateNotice: false) }
         }
-    }
-
-    var isMenuBarTickerSelectionFull: Bool {
-        let total = menuBarTickerSettings.enabledKinds.count + menuBarTickerSettings.holdingSelections.count
-        return total >= menuBarTickerSettings.maxVisibleItems
     }
 
     func isMenuBarHoldingMetricEnabled(holdingID: UUID, metric: MenuBarHoldingMetric) -> Bool {
@@ -62,15 +52,6 @@ extension AppModel {
         if isEnabled {
             let selection = MenuBarHoldingMetricSelection(holdingID: holdingID, metric: metric)
             if !settings.holdingSelections.contains(selection) {
-                let totalSelected = settings.enabledKinds.count + settings.holdingSelections.count
-                if totalSelected >= settings.maxVisibleItems {
-                    // Remove the oldest holding selection to make room
-                    if settings.holdingSelections.isEmpty {
-                        settings.enabledKinds.removeFirst()
-                    } else {
-                        settings.holdingSelections.removeFirst()
-                    }
-                }
                 settings.holdingSelections.append(selection)
             }
         } else {
@@ -100,6 +81,17 @@ extension AppModel {
         var settings = menuBarTickerSettings
         update(&settings.appearance)
         persistMenuBarTickerSettings(settings)
+    }
+
+    func setMenuBarTickerCarouselInterval(_ seconds: Double) {
+        var settings = menuBarTickerSettings
+        settings.carouselIntervalSeconds = seconds
+        persistMenuBarTickerSettings(settings)
+    }
+
+    var menuBarTickerAllCandidates: [MenuBarTickerEntry] {
+        guard menuBarTickerSettings.isEnabled else { return [] }
+        return menuBarTickerCandidateEntries(settings: menuBarTickerSettings.normalized())
     }
 
     func resetMenuBarTickerSettings() {

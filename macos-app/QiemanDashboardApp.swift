@@ -14,6 +14,9 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     private var cancellables = Set<AnyCancellable>()
     private var eventMonitor: Any?
     private var didConfigure = false
+    private var carouselPageIndex = 0
+    private var carouselTimer: Timer?
+    private var lastEntryIDs: [String] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
@@ -64,13 +67,22 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
 
     @MainActor private func updateTitle() {
         guard let model, let button = statusItem.button else { return }
-        let entries = model.menuBarTickerVisibleEntries
-        let displayEntries = Array(entries.prefix(2))
-        let appearance = model.menuBarTickerSettings.appearance.normalized()
+        let allEntries = model.menuBarTickerAllCandidates
+        let settings = model.menuBarTickerSettings.normalized()
+        let appearance = settings.appearance.normalized()
+        let pageSize = settings.maxVisibleItems
+
+        // Reset page if entries changed
+        let currentIDs = allEntries.map(\.id)
+        if currentIDs != lastEntryIDs {
+            lastEntryIDs = currentIDs
+            carouselPageIndex = 0
+        }
 
         let barHeight = NSStatusBar.system.thickness
 
-        if displayEntries.isEmpty {
+        if allEntries.isEmpty {
+            stopCarousel()
             let icon = NSImage(systemSymbolName: "chart.bar.fill", accessibilityDescription: "QiemanDashboard") ?? NSImage()
             icon.isTemplate = true
             button.image = icon
@@ -80,12 +92,64 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
             return
         }
 
+        // Paginate entries
+        let totalPages = Int(ceil(Double(allEntries.count) / Double(pageSize)))
+        if totalPages <= 1 {
+            stopCarousel()
+            carouselPageIndex = 0
+        }
+        let safePage = min(carouselPageIndex, max(0, totalPages - 1))
+        let start = safePage * pageSize
+        let end = min(start + pageSize, allEntries.count)
+        let displayEntries = Array(allEntries[start..<end])
+
         let lines = displayEntries.map { $0.compactText }
         let image = renderTickerImage(entries: displayEntries, appearance: appearance, barHeight: barHeight)
         button.image = image
-        button.toolTip = lines.joined(separator: "  ")
+        let pageIndicator = totalPages > 1 ? " [\((safePage + 1))/\(totalPages)]" : ""
+        button.toolTip = lines.joined(separator: "  ") + pageIndicator
         button.needsDisplay = true
         statusItem.length = image.size.width
+
+        // Start carousel if needed
+        if totalPages > 1 {
+            startCarousel(interval: settings.carouselIntervalSeconds)
+        }
+    }
+
+    private func startCarousel(interval: Double) {
+        let clamped = max(MenuBarTickerSettings.minCarouselInterval, min(interval, MenuBarTickerSettings.maxCarouselInterval))
+        if let existing = carouselTimer {
+            if abs(existing.timeInterval - clamped) < 0.01 {
+                return
+            }
+            existing.invalidate()
+            carouselTimer = nil
+        }
+        carouselTimer = Timer.scheduledTimer(withTimeInterval: clamped, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.advanceCarousel()
+            }
+        }
+    }
+
+    private func stopCarousel() {
+        carouselTimer?.invalidate()
+        carouselTimer = nil
+    }
+
+    @MainActor private func advanceCarousel() {
+        guard let model else { return }
+        let allEntries = model.menuBarTickerAllCandidates
+        let pageSize = model.menuBarTickerSettings.maxVisibleItems
+        let totalPages = Int(ceil(Double(allEntries.count) / Double(pageSize)))
+        guard totalPages > 1 else {
+            stopCarousel()
+            return
+        }
+        carouselPageIndex = (carouselPageIndex + 1) % totalPages
+        updateTitle()
     }
 
     private func renderTickerImage(entries: [MenuBarTickerEntry], appearance: MenuBarTickerAppearance, barHeight: CGFloat) -> NSImage {
@@ -237,6 +301,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     }
 
     deinit {
+        carouselTimer?.invalidate()
         if let eventMonitor {
             NSEvent.removeMonitor(eventMonitor)
         }

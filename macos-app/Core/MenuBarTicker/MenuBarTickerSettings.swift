@@ -179,16 +179,20 @@ struct MenuBarTickerSettings: Codable, Hashable {
     var enabledKinds: [MenuBarTickerKind]
     var holdingSelections: [MenuBarHoldingMetricSelection]
     var appearance: MenuBarTickerAppearance
+    var carouselIntervalSeconds: Double
 
     static let storageKey = "qieman.dashboard.menuBarTickerSettings.v1"
     static let maxVisibleItemsLimit = 2
+    static let minCarouselInterval: Double = 2
+    static let maxCarouselInterval: Double = 30
 
     static let `default` = MenuBarTickerSettings(
         isEnabled: true,
         maxVisibleItems: 2,
         enabledKinds: [.overallDailyPct, .overallProfitPct, .totalValue],
         holdingSelections: [],
-        appearance: .default
+        appearance: .default,
+        carouselIntervalSeconds: 5
     )
 
     init(
@@ -196,13 +200,15 @@ struct MenuBarTickerSettings: Codable, Hashable {
         maxVisibleItems: Int,
         enabledKinds: [MenuBarTickerKind],
         holdingSelections: [MenuBarHoldingMetricSelection],
-        appearance: MenuBarTickerAppearance = .default
+        appearance: MenuBarTickerAppearance = .default,
+        carouselIntervalSeconds: Double = 5
     ) {
         self.isEnabled = isEnabled
         self.maxVisibleItems = maxVisibleItems
         self.enabledKinds = enabledKinds
         self.holdingSelections = holdingSelections
         self.appearance = appearance
+        self.carouselIntervalSeconds = carouselIntervalSeconds
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -211,6 +217,7 @@ struct MenuBarTickerSettings: Codable, Hashable {
         case enabledKinds
         case holdingSelections
         case appearance
+        case carouselIntervalSeconds
     }
 
     init(from decoder: Decoder) throws {
@@ -220,6 +227,7 @@ struct MenuBarTickerSettings: Codable, Hashable {
         enabledKinds = try container.decodeIfPresent([MenuBarTickerKind].self, forKey: .enabledKinds) ?? Self.default.enabledKinds
         holdingSelections = try container.decodeIfPresent([MenuBarHoldingMetricSelection].self, forKey: .holdingSelections) ?? Self.default.holdingSelections
         appearance = try container.decodeIfPresent(MenuBarTickerAppearance.self, forKey: .appearance) ?? Self.default.appearance
+        carouselIntervalSeconds = try container.decodeIfPresent(Double.self, forKey: .carouselIntervalSeconds) ?? Self.default.carouselIntervalSeconds
     }
 
     func encode(to encoder: Encoder) throws {
@@ -229,6 +237,7 @@ struct MenuBarTickerSettings: Codable, Hashable {
         try container.encode(enabledKinds, forKey: .enabledKinds)
         try container.encode(holdingSelections, forKey: .holdingSelections)
         try container.encode(appearance, forKey: .appearance)
+        try container.encode(carouselIntervalSeconds, forKey: .carouselIntervalSeconds)
     }
 
     static func load() -> MenuBarTickerSettings {
@@ -247,6 +256,7 @@ struct MenuBarTickerSettings: Codable, Hashable {
     func normalized() -> MenuBarTickerSettings {
         var copy = self
         copy.maxVisibleItems = min(max(copy.maxVisibleItems, 1), Self.maxVisibleItemsLimit)
+        copy.carouselIntervalSeconds = min(max(copy.carouselIntervalSeconds, Self.minCarouselInterval), Self.maxCarouselInterval)
         copy.appearance = copy.appearance.normalized()
 
         // Remove kinds that no longer exist in the enum

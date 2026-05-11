@@ -21,10 +21,10 @@ extension SettingsSectionView {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("最多显示 \(model.menuBarTickerSettings.maxVisibleItems) 项")
+                            Text("同时显示 \(model.menuBarTickerSettings.maxVisibleItems) 项")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(AppPalette.ink)
-                            Text("超过上限时，按下面选择顺序只取前 \(model.menuBarTickerSettings.maxVisibleItems) 项，避免菜单栏过长。")
+                            Text("超过显示数量时，菜单栏将自动轮播展示所有已选项。")
                                 .font(.system(size: 10))
                                 .foregroundStyle(AppPalette.muted)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -32,6 +32,22 @@ extension SettingsSectionView {
                         Spacer()
                         Stepper("", value: menuBarTickerMaxItemsBinding, in: 1...MenuBarTickerSettings.maxVisibleItemsLimit)
                             .labelsHidden()
+                    }
+
+                    if model.menuBarTickerConfiguredItemCount > model.menuBarTickerSettings.maxVisibleItems {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("轮播间隔 \(Int(model.menuBarTickerSettings.carouselIntervalSeconds)) 秒")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(AppPalette.ink)
+                                Text("菜单栏切换到下一组数据的间隔时间。")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(AppPalette.muted)
+                            }
+                            Spacer()
+                            Stepper("", value: menuBarTickerCarouselIntervalBinding, in: MenuBarTickerSettings.minCarouselInterval...MenuBarTickerSettings.maxCarouselInterval, step: 1)
+                                .labelsHidden()
+                        }
                     }
 
                     menuBarPreview(entries: tickerEntries)
@@ -374,6 +390,9 @@ extension SettingsSectionView {
                     .foregroundStyle(AppPalette.muted)
                 ToolbarBadge(title: "已选 \(model.menuBarTickerConfiguredItemCount)", tint: AppPalette.info)
                 ToolbarBadge(title: "显示 \(entries.count)", tint: entries.isEmpty ? AppPalette.muted : AppPalette.positive)
+                if model.menuBarTickerConfiguredItemCount > model.menuBarTickerSettings.maxVisibleItems {
+                    ToolbarBadge(title: "轮播中", tint: AppPalette.brand)
+                }
                 Spacer()
             }
 
