@@ -13,7 +13,7 @@ struct PersonalAssetBrowser: View {
 
     @State private var searchText = ""
     @State private var filterScope: PersonalAssetFilterScope = .all
-    @State private var sortOption: PersonalAssetSortOption = .exposure
+    @State private var sortOption: PersonalAssetSortOption = .defaultOption
 
     private var normalizedSearchText: String {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -162,8 +162,10 @@ struct PersonalAssetBrowser: View {
             }
         }
 
-        visibleRows.sort(by: compareRows)
-        return PersonalAssetBrowserPresentation(visibleRows: visibleRows, filterCounts: counts)
+        return PersonalAssetBrowserPresentation(
+            visibleRows: PersonalAssetRowSorter.sorted(visibleRows, by: sortOption),
+            filterCounts: counts
+        )
     }
 
     private func matchesSearch(_ row: PersonalAssetAggregateRow, keyword: String) -> Bool {
@@ -191,59 +193,6 @@ struct PersonalAssetBrowser: View {
         }
     }
 
-    private func compareRows(_ left: PersonalAssetAggregateRow, _ right: PersonalAssetAggregateRow) -> Bool {
-        switch sortOption {
-        case .exposure:
-            let leftValue = totalExposure(of: left)
-            let rightValue = totalExposure(of: right)
-            if abs(leftValue - rightValue) > 0.001 {
-                return leftValue > rightValue
-            }
-        case .marketValue:
-            if abs((left.marketValue ?? 0) - (right.marketValue ?? 0)) > 0.001 {
-                return (left.marketValue ?? 0) > (right.marketValue ?? 0)
-            }
-        case .pendingAmount:
-            if abs(left.pendingCashAmount - right.pendingCashAmount) > 0.001 {
-                return left.pendingCashAmount > right.pendingCashAmount
-            }
-        case .nextExecution:
-            let leftDate = sortableExecutionDate(left.nextExecutionDate)
-            let rightDate = sortableExecutionDate(right.nextExecutionDate)
-            switch (leftDate, rightDate) {
-            case let (lhs?, rhs?) where lhs != rhs:
-                return lhs < rhs
-            case (.some, nil):
-                return true
-            case (nil, .some):
-                return false
-            default:
-                break
-            }
-        case .planCumulative:
-            if abs(left.totalCumulativePlanAmount - right.totalCumulativePlanAmount) > 0.001 {
-                return left.totalCumulativePlanAmount > right.totalCumulativePlanAmount
-            }
-        case .name:
-            let result = left.fundName.localizedStandardCompare(right.fundName)
-            if result != .orderedSame {
-                return result == .orderedAscending
-            }
-        }
-
-        return left.fundName.localizedStandardCompare(right.fundName) == .orderedAscending
-    }
-
-    private func totalExposure(of row: PersonalAssetAggregateRow) -> Double {
-        row.effectiveHoldingAmount
-    }
-
-    private func sortableExecutionDate(_ value: String?) -> String? {
-        guard let value else { return nil }
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        return String(trimmed.prefix(10))
-    }
 }
 
 struct PersonalAssetGroupedTable: View {

@@ -16,12 +16,16 @@ enum PersonalAssetFilterScope: String, CaseIterable, Identifiable {
 }
 
 enum PersonalAssetSortOption: String, CaseIterable, Identifiable {
+    case dailyChange = "今日涨跌"
+    case dailyChangePct = "今日涨跌幅"
     case exposure = "综合敞口"
     case marketValue = "市值"
     case pendingAmount = "待确认金额"
     case nextExecution = "下次定投时间"
     case planCumulative = "累计计划金额"
     case name = "标的名"
+
+    static let defaultOption: PersonalAssetSortOption = .dailyChange
 
     var id: String { rawValue }
 }
