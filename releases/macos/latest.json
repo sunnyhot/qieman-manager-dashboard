@@ -3,12 +3,12 @@
   "name": "QiemanDashboard v2.2.30",
   "body": "菜单栏轮播顺序支持拖拽排序，设置面板可调整轮播先后",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.30",
-  "published_at": "2026-05-11T04:00:00Z",
+  "published_at": "2026-05-11T05:38:46Z",
   "assets": [
     {
       "name": "QiemanDashboard-2.2.30.zip",
       "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.30/QiemanDashboard-2.2.30.zip",
-      "size": 3490318,
+      "size": 3519171,
       "content_type": "application/zip"
     }
   ]
