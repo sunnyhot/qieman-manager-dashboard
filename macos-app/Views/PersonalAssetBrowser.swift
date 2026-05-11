@@ -960,7 +960,7 @@ struct PersonalInvestmentPlanManagementSheet: View {
                     .padding(14)
                     .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
             } else {
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 10) {
                         ForEach(plans) { plan in
                             PersonalInvestmentPlanManageRow(

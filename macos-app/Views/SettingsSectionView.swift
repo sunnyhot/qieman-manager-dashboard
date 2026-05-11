@@ -66,7 +66,7 @@ struct SettingsSectionView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(16)
         }
-        .scrollIndicators(.visible)
+        .scrollIndicators(.hidden)
     }
 
     private var overviewBand: some View {

@@ -23,7 +23,7 @@ struct OverviewSectionView: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
                 OverviewHeroCard()
 

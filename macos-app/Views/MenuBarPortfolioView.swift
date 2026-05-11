@@ -29,7 +29,7 @@ struct MenuBarPortfolioView: View {
         VStack(alignment: .leading, spacing: 12) {
             header
 
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 12) {
                     if let snapshot = model.userPortfolioSnapshot, !snapshot.rows.isEmpty {
                         MenuBarSummaryCard(

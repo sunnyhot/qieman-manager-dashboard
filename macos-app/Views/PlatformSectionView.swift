@@ -17,7 +17,7 @@ struct PlatformSectionView: View {
             let isCompact = proxy.size.width < compactThreshold
 
             ScrollViewReader { scrollProxy in
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 16) {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
                             MetricCard(title: "调仓动作", value: "\(model.platformPayload?.count ?? 0)", subtitle: "覆盖调仓单 \(model.platformPayload?.adjustmentCount ?? 0)", icon: "arrow.left.arrow.right", accent: AppPalette.info)

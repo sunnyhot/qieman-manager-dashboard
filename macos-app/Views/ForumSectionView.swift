@@ -13,7 +13,7 @@ struct ForumSectionView: View {
     var body: some View {
         Group {
             if !model.hasForumPosts {
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     SectionCard(title: "论坛发言", subtitle: "原生抓取主理人帖子与评论入口", icon: "text.bubble") {
                         EmptySectionState(
                             title: model.currentSnapshot?.snapshotType == "posts" ? "当前还没拉到帖子" : "当前查询结果不是帖子流",
@@ -30,7 +30,7 @@ struct ForumSectionView: View {
                     let isCompact = proxy.size.width < compactThreshold
 
                     ScrollViewReader { scrollProxy in
-                        ScrollView {
+                        ScrollView(showsIndicators: false) {
                             if isCompact {
                                 VStack(alignment: .leading, spacing: 14) {
                                     forumListPanel(isCompact: true, scrollProxy: scrollProxy)
