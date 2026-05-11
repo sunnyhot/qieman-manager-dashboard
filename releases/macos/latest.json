@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.36",
-  "name": "QiemanDashboard v2.2.36",
-  "body": "菜单栏设置面板分组优化：样式配置与资产项选择缩进分组、整体资产cell边距收紧",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.36",
-  "published_at": "2026-05-11T09:30:00Z",
+  "tag_name": "v2.2.37",
+  "name": "QiemanDashboard v2.2.37",
+  "body": "菜单栏样式配置间距优化：统一配置行布局，收紧行距并优化轮播顺序展示",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.37",
+  "published_at": "2026-05-11T09:13:39Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.36.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.36/QiemanDashboard-2.2.36.zip",
-      "size": 3586998,
+      "name": "QiemanDashboard-2.2.37.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.37/QiemanDashboard-2.2.37.zip",
+      "size": 3496043,
       "content_type": "application/zip"
     }
   ]

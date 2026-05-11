@@ -38,53 +38,12 @@ extension SettingsSectionView {
                     tint: AppPalette.info
                 )
 
-                VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        menuBarPreview(entries: tickerEntries)
-
-                        HStack(spacing: 12) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("同时显示 \(model.menuBarTickerSettings.maxVisibleItems) 项")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(AppPalette.ink)
-                                Text("超过显示数量时，菜单栏将自动轮播展示所有已选项。")
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(AppPalette.muted)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            Spacer()
-                            Stepper("", value: menuBarTickerMaxItemsBinding, in: 1...MenuBarTickerSettings.maxVisibleItemsLimit)
-                                .labelsHidden()
-                        }
-
-                        if model.menuBarTickerConfiguredItemCount > model.menuBarTickerSettings.maxVisibleItems {
-                            HStack(spacing: 12) {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text("轮播间隔 \(Int(model.menuBarTickerSettings.carouselIntervalSeconds)) 秒")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(AppPalette.ink)
-                                    Text("菜单栏切换到下一组数据的间隔时间。")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(AppPalette.muted)
-                                }
-                                Spacer()
-                                Stepper("", value: menuBarTickerCarouselIntervalBinding, in: MenuBarTickerSettings.minCarouselInterval...MenuBarTickerSettings.maxCarouselInterval, step: 1)
-                                    .labelsHidden()
-                            }
-                        }
-                    }
-                    .padding(.vertical, 14)
-
-                    SettingsDivider()
-
+                VStack(alignment: .leading, spacing: menuBarStyleSectionSpacing) {
+                    menuBarPreview(entries: tickerEntries)
                     menuBarStyleOptions
-
-                    if model.menuBarTickerSettings.selections.count > model.menuBarTickerSettings.maxVisibleItems {
-                        SettingsDivider()
-                        menuBarCarouselOrder
-                    }
                 }
                 .padding(.leading, 39)
+                .padding(.bottom, 14)
 
                 SettingsDivider()
 
@@ -142,24 +101,21 @@ extension SettingsSectionView {
 
     // MARK: - Style Options
 
+    private var menuBarStyleSectionSpacing: CGFloat { 10 }
+
+    private var menuBarStyleRowSpacing: CGFloat { 4 }
+
+    private var menuBarStyleRowHeight: CGFloat { 28 }
+
+    private var menuBarStyleGridColumns: [GridItem] {
+        [
+            GridItem(.flexible(), spacing: 12),
+            GridItem(.flexible(), spacing: 12),
+        ]
+    }
+
     private var menuBarStyleOptions: some View {
         let appearance = model.menuBarTickerSettings.appearance.normalized()
-
-        func styleRow(icon: String, title: String, @ViewBuilder content: () -> some View) -> some View {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.info)
-                    .frame(width: 18, height: 18)
-                    .background(AppPalette.info.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
-                Text(title)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(AppPalette.ink)
-                Spacer(minLength: 4)
-                content()
-            }
-            .padding(.vertical, 6)
-        }
 
         func capsuleBtn(text: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
             Button(action: action) {
@@ -174,36 +130,28 @@ extension SettingsSectionView {
             .buttonStyle(PressResponsiveButtonStyle())
         }
 
-        func stepper(value: Int, decrement: @escaping () -> Void, increment: @escaping () -> Void) -> some View {
-            HStack(spacing: 1) {
-                Button(action: decrement) {
-                    Image(systemName: "minus")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(AppPalette.ink)
-                        .frame(width: 18, height: 18)
-                        .background(RoundedRectangle(cornerRadius: 4).fill(AppPalette.card))
-                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(AppPalette.line, lineWidth: 1))
-                }
-                .buttonStyle(PressResponsiveButtonStyle())
-                Text("\(value)")
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    .foregroundStyle(AppPalette.ink)
-                    .frame(width: 22)
-                Button(action: increment) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(AppPalette.ink)
-                        .frame(width: 18, height: 18)
-                        .background(RoundedRectangle(cornerRadius: 4).fill(AppPalette.card))
-                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(AppPalette.line, lineWidth: 1))
-                }
-                .buttonStyle(PressResponsiveButtonStyle())
-            }
-        }
-
         return VStack(alignment: .leading, spacing: 0) {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 0) {
-                styleRow(icon: "paintpalette", title: "颜色") {
+            LazyVGrid(columns: menuBarStyleGridColumns, spacing: menuBarStyleRowSpacing) {
+                menuBarStyleRow(icon: "square.on.square", title: "同时显示 \(model.menuBarTickerSettings.maxVisibleItems) 项") {
+                    menuBarStyleStepper(value: model.menuBarTickerSettings.maxVisibleItems,
+                        decrement: { model.setMenuBarTickerMaxVisibleItems(max(1, model.menuBarTickerSettings.maxVisibleItems - 1)) },
+                        increment: { model.setMenuBarTickerMaxVisibleItems(min(MenuBarTickerSettings.maxVisibleItemsLimit, model.menuBarTickerSettings.maxVisibleItems + 1)) }
+                    )
+                }
+
+                if model.menuBarTickerConfiguredItemCount > model.menuBarTickerSettings.maxVisibleItems {
+                    menuBarStyleRow(icon: "timer", title: "轮播间隔 \(Int(model.menuBarTickerSettings.carouselIntervalSeconds)) 秒") {
+                        menuBarStyleStepper(value: Int(model.menuBarTickerSettings.carouselIntervalSeconds),
+                            decrement: { model.setMenuBarTickerCarouselInterval(max(MenuBarTickerSettings.minCarouselInterval, model.menuBarTickerSettings.carouselIntervalSeconds - 1)) },
+                            increment: { model.setMenuBarTickerCarouselInterval(min(MenuBarTickerSettings.maxCarouselInterval, model.menuBarTickerSettings.carouselIntervalSeconds + 1)) }
+                        )
+                    }
+                } else {
+                    Color.clear
+                        .frame(height: menuBarStyleRowHeight)
+                }
+
+                menuBarStyleRow(icon: "paintpalette", title: "颜色") {
                     HStack(spacing: 4) {
                         capsuleBtn(text: "系统", isSelected: appearance.textColorMode == .system) {
                             model.updateMenuBarTickerAppearance { a in a.textColorMode = .system }
@@ -219,7 +167,7 @@ extension SettingsSectionView {
                     }
                 }
 
-                styleRow(icon: "square.grid.2x2", title: "排列") {
+                menuBarStyleRow(icon: "square.grid.2x2", title: "排列") {
                     HStack(spacing: 4) {
                         ForEach(MenuBarTickerLayoutMode.allCases) { mode in
                             Button {
@@ -237,20 +185,20 @@ extension SettingsSectionView {
                     }
                 }
 
-                styleRow(icon: "textformat.size", title: "字号") {
-                    stepper(value: Int(appearance.fontSize),
+                menuBarStyleRow(icon: "textformat.size", title: "字号") {
+                    menuBarStyleStepper(value: Int(appearance.fontSize),
                         decrement: { model.updateMenuBarTickerAppearance { a in a.fontSize = max(MenuBarTickerAppearance.minFontSize, a.fontSize - 1) } },
                         increment: { model.updateMenuBarTickerAppearance { a in a.fontSize = min(MenuBarTickerAppearance.maxFontSize, a.fontSize + 1) } }
                     )
                 }
 
-                styleRow(icon: "bold", title: "字重") {
+                menuBarStyleRow(icon: "bold", title: "字重") {
                     capsuleBtn(text: appearance.isBold ? "加粗" : "常规", isSelected: appearance.isBold) {
                         model.updateMenuBarTickerAppearance { a in a.isBold.toggle() }
                     }
                 }
 
-                styleRow(icon: "arrow.left.and.right", title: "间距") {
+                menuBarStyleRow(icon: "arrow.left.and.right", title: "间距") {
                     HStack(spacing: 4) {
                         capsuleBtn(text: "自动", isSelected: appearance.spacingMode == .automatic) {
                             model.updateMenuBarTickerAppearance { a in a.spacingMode = .automatic }
@@ -259,7 +207,7 @@ extension SettingsSectionView {
                             model.updateMenuBarTickerAppearance { a in a.spacingMode = .manual }
                         }
                         if appearance.spacingMode == .manual {
-                            stepper(value: Int(appearance.manualSpacing),
+                            menuBarStyleStepper(value: Int(appearance.manualSpacing),
                                 decrement: { model.updateMenuBarTickerAppearance { a in a.manualSpacing = max(MenuBarTickerAppearance.minManualSpacing, a.manualSpacing - 1) } },
                                 increment: { model.updateMenuBarTickerAppearance { a in a.manualSpacing = min(MenuBarTickerAppearance.maxManualSpacing, a.manualSpacing + 1) } }
                             )
@@ -267,7 +215,7 @@ extension SettingsSectionView {
                     }
                 }
 
-                styleRow(icon: "rectangle", title: "宽度") {
+                menuBarStyleRow(icon: "rectangle", title: "宽度") {
                     HStack(spacing: 4) {
                         capsuleBtn(text: "自动", isSelected: appearance.widthMode == .automatic) {
                             model.updateMenuBarTickerAppearance { a in a.widthMode = .automatic }
@@ -276,13 +224,17 @@ extension SettingsSectionView {
                             model.updateMenuBarTickerAppearance { a in a.widthMode = .manual }
                         }
                         if appearance.widthMode == .manual {
-                            stepper(value: Int(appearance.manualWidth),
+                            menuBarStyleStepper(value: Int(appearance.manualWidth),
                                 decrement: { model.updateMenuBarTickerAppearance { a in a.manualWidth = max(MenuBarTickerAppearance.minManualWidth, a.manualWidth - 4) } },
                                 increment: { model.updateMenuBarTickerAppearance { a in a.manualWidth = min(MenuBarTickerAppearance.maxManualWidth, a.manualWidth + 4) } }
                             )
                         }
                     }
                 }
+            }
+
+            if model.menuBarTickerSettings.selections.count > model.menuBarTickerSettings.maxVisibleItems {
+                menuBarCarouselOrder
             }
         }
     }
@@ -294,28 +246,21 @@ extension SettingsSectionView {
         let rows = model.userPortfolioSnapshot?.rows ?? []
         let rowsByID = Dictionary(rows.map { ($0.holding.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        return VStack(alignment: .leading, spacing: 8) {
+        return menuBarStyleRow(icon: "arrow.up.arrow.down", title: "轮播顺序") {
             HStack(spacing: 6) {
-                Image(systemName: "arrow.up.arrow.down")
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.info)
-                    .frame(width: 18, height: 18)
-                    .background(AppPalette.info.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
-                Text("轮播顺序")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppPalette.ink)
-                Text("拖拽调整先后顺序")
+                Text("拖拽排序")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
-            }
+                    .fixedSize()
 
-            FlowLayout(spacing: 6) {
-                ForEach(selections) { selection in
-                    carouselOrderPill(selection: selection, selections: selections, rowsByID: rowsByID)
+                FlowLayout(spacing: 6) {
+                    ForEach(selections) { selection in
+                        carouselOrderPill(selection: selection, selections: selections, rowsByID: rowsByID)
+                    }
                 }
             }
         }
-        .padding(.vertical, 14)
+        .padding(.top, menuBarStyleRowSpacing)
     }
 
     private func selectionLabel(_ selection: MenuBarTickerSelection, rowsByID: [UUID: UserPortfolioValuationRow]) -> String {
@@ -752,6 +697,52 @@ extension SettingsSectionView {
             ),
             label: metric.label
         )
+    }
+
+    // MARK: - Style Row Helpers
+
+    private func menuBarStyleRow<Content: View>(icon: String, title: String, @ViewBuilder content: () -> Content) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.info)
+                .frame(width: 18, height: 18)
+                .background(AppPalette.info.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(AppPalette.ink)
+                .frame(minWidth: 52, alignment: .leading)
+            content()
+            Spacer(minLength: 0)
+        }
+        .frame(height: menuBarStyleRowHeight, alignment: .center)
+    }
+
+    private func menuBarStyleStepper(value: Int, decrement: @escaping () -> Void, increment: @escaping () -> Void) -> some View {
+        HStack(spacing: 1) {
+            Button(action: decrement) {
+                Image(systemName: "minus")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+                    .frame(width: 18, height: 18)
+                    .background(RoundedRectangle(cornerRadius: 4).fill(AppPalette.card))
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(AppPalette.line, lineWidth: 1))
+            }
+            .buttonStyle(PressResponsiveButtonStyle())
+            Text("\(value)")
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(AppPalette.ink)
+                .frame(width: 22)
+            Button(action: increment) {
+                Image(systemName: "plus")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+                    .frame(width: 18, height: 18)
+                    .background(RoundedRectangle(cornerRadius: 4).fill(AppPalette.card))
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(AppPalette.line, lineWidth: 1))
+            }
+            .buttonStyle(PressResponsiveButtonStyle())
+        }
     }
 
     // MARK: - Helpers
