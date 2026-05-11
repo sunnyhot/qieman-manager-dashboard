@@ -3,12 +3,12 @@
   "name": "QiemanDashboard v2.2.32",
   "body": "设置页新增 Dock 显示/隐藏开关，关闭后仅通过菜单栏图标访问应用",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.32",
-  "published_at": "",
+  "published_at": "2026-05-11T07:03:11Z",
   "assets": [
     {
       "name": "QiemanDashboard-2.2.32.zip",
       "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.32/QiemanDashboard-2.2.32.zip",
-      "size": 0,
+      "size": 3520379,
       "content_type": "application/zip"
     }
   ]
