@@ -3,12 +3,12 @@
   "name": "QiemanDashboard v2.2.29",
   "body": "菜单栏轮播显示：取消选择上限，超过同时显示数量时自动轮播切换，间隔可配置",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.29",
-  "published_at": "2026-05-11T03:30:00Z",
+  "published_at": "2026-05-11T03:27:38Z",
   "assets": [
     {
       "name": "QiemanDashboard-2.2.29.zip",
       "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.29/QiemanDashboard-2.2.29.zip",
-      "size": 3467918,
+      "size": 3490318,
       "content_type": "application/zip"
     }
   ]
