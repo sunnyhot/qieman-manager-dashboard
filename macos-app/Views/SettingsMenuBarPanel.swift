@@ -8,6 +8,7 @@ extension SettingsSectionView {
 
         return SettingsPanel(title: "菜单栏摘要", subtitle: "不用点开菜单栏，也能直接看到你选中的关键数据", icon: "menubar.rectangle") {
             VStack(alignment: .leading, spacing: 0) {
+                // 开关
                 SettingsToggleRow(
                     title: "启用菜单栏数据",
                     detail: "关闭后菜单栏恢复为普通持仓状态标题",
@@ -28,89 +29,113 @@ extension SettingsSectionView {
 
                 SettingsDivider()
 
-                VStack(alignment: .leading, spacing: 12) {
-                    menuBarPreview(entries: tickerEntries)
+                // 样式配置
+                SettingsRow(
+                    title: "菜单栏样式配置",
+                    value: "",
+                    detail: "预览、显示数量、颜色、字号、间距",
+                    icon: "paintbrush",
+                    tint: AppPalette.info
+                )
 
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("同时显示 \(model.menuBarTickerSettings.maxVisibleItems) 项")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(AppPalette.ink)
-                            Text("超过显示数量时，菜单栏将自动轮播展示所有已选项。")
-                                .font(.system(size: 10))
-                                .foregroundStyle(AppPalette.muted)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer()
-                        Stepper("", value: menuBarTickerMaxItemsBinding, in: 1...MenuBarTickerSettings.maxVisibleItemsLimit)
-                            .labelsHidden()
-                    }
+                VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        menuBarPreview(entries: tickerEntries)
 
-                    if model.menuBarTickerConfiguredItemCount > model.menuBarTickerSettings.maxVisibleItems {
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 3) {
-                                Text("轮播间隔 \(Int(model.menuBarTickerSettings.carouselIntervalSeconds)) 秒")
+                                Text("同时显示 \(model.menuBarTickerSettings.maxVisibleItems) 项")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(AppPalette.ink)
-                                Text("菜单栏切换到下一组数据的间隔时间。")
+                                Text("超过显示数量时，菜单栏将自动轮播展示所有已选项。")
                                     .font(.system(size: 10))
                                     .foregroundStyle(AppPalette.muted)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                             Spacer()
-                            Stepper("", value: menuBarTickerCarouselIntervalBinding, in: MenuBarTickerSettings.minCarouselInterval...MenuBarTickerSettings.maxCarouselInterval, step: 1)
+                            Stepper("", value: menuBarTickerMaxItemsBinding, in: 1...MenuBarTickerSettings.maxVisibleItemsLimit)
                                 .labelsHidden()
                         }
+
+                        if model.menuBarTickerConfiguredItemCount > model.menuBarTickerSettings.maxVisibleItems {
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("轮播间隔 \(Int(model.menuBarTickerSettings.carouselIntervalSeconds)) 秒")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(AppPalette.ink)
+                                    Text("菜单栏切换到下一组数据的间隔时间。")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(AppPalette.muted)
+                                }
+                                Spacer()
+                                Stepper("", value: menuBarTickerCarouselIntervalBinding, in: MenuBarTickerSettings.minCarouselInterval...MenuBarTickerSettings.maxCarouselInterval, step: 1)
+                                    .labelsHidden()
+                            }
+                        }
                     }
-                }
-                .padding(.vertical, 14)
+                    .padding(.vertical, 14)
 
-                SettingsDivider()
-
-                menuBarStyleOptions
-
-                SettingsDivider()
-
-                if model.menuBarTickerSettings.selections.count > model.menuBarTickerSettings.maxVisibleItems {
-                    menuBarCarouselOrder
                     SettingsDivider()
-                }
 
-                menuBarOptionGroup(title: "整体资产", subtitle: "总资产、整体今日涨跌和整体持有收益", kinds: MenuBarTickerKind.overallKinds)
+                    menuBarStyleOptions
 
-                SettingsDivider()
-
-                menuBarOptionGroup(title: "自动 Top 标的", subtitle: "自动把今日波动最大、收益率最高的单个标的放到菜单栏", kinds: MenuBarTickerKind.automaticKinds)
-
-                SettingsDivider()
-
-                menuBarMarketIndexOptions
-
-                SettingsDivider()
-
-                menuBarFundMarketOptions
-
-                SettingsDivider()
-
-                menuBarHoldingOptions
-
-                SettingsDivider()
-
-                SettingsActionRow {
-                    Button {
-                        model.resetMenuBarTickerSettings()
-                    } label: {
-                        Label("恢复默认", systemImage: "arrow.counterclockwise")
+                    if model.menuBarTickerSettings.selections.count > model.menuBarTickerSettings.maxVisibleItems {
+                        SettingsDivider()
+                        menuBarCarouselOrder
                     }
-                    .buttonStyle(.bordered)
-
-                    Button {
-                        model.clearMenuBarHoldingSelections()
-                    } label: {
-                        Label("清空单标的", systemImage: "xmark.circle")
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(!model.menuBarTickerSettings.selections.contains(where: { $0.holdingValue != nil }))
                 }
+                .padding(.leading, 39)
+
+                SettingsDivider()
+
+                // 资产项选择
+                SettingsRow(
+                    title: "资产项选择",
+                    value: "",
+                    detail: "整体资产、大盘指数、基金分组、单个标的",
+                    icon: "chart.bar",
+                    tint: AppPalette.info
+                )
+
+                VStack(alignment: .leading, spacing: 0) {
+                    menuBarOptionGroup(title: "整体资产", subtitle: "总资产、整体今日涨跌和整体持有收益", kinds: MenuBarTickerKind.overallKinds)
+
+                    SettingsDivider()
+
+                    menuBarOptionGroup(title: "自动 Top 标的", subtitle: "自动把今日波动最大、收益率最高的单个标的放到菜单栏", kinds: MenuBarTickerKind.automaticKinds)
+
+                    SettingsDivider()
+
+                    menuBarMarketIndexOptions
+
+                    SettingsDivider()
+
+                    menuBarFundMarketOptions
+
+                    SettingsDivider()
+
+                    menuBarHoldingOptions
+
+                    SettingsDivider()
+
+                    SettingsActionRow {
+                        Button {
+                            model.resetMenuBarTickerSettings()
+                        } label: {
+                            Label("恢复默认", systemImage: "arrow.counterclockwise")
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
+                            model.clearMenuBarHoldingSelections()
+                        } label: {
+                            Label("清空单标的", systemImage: "xmark.circle")
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(!model.menuBarTickerSettings.selections.contains(where: { $0.holdingValue != nil }))
+                    }
+                }
+                .padding(.leading, 39)
             }
         }
     }
@@ -607,8 +632,9 @@ extension SettingsSectionView {
             }
         }
         .toggleStyle(.checkbox)
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
         .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
