@@ -1,14 +1,14 @@
 {
   "tag_name": "v2.2.39",
   "name": "QiemanDashboard v2.2.39",
-  "body": "菜单栏下拉面板精简：移除菜单栏预览卡片、持仓行紧凑布局+市场颜色区分、总资产估值压缩高度、排序改为下拉菜单",
+  "body": "双击工具栏区域可最大化/还原窗口",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.39",
-  "published_at": "2026-05-11T10:30:00Z",
+  "published_at": "2026-05-11T10:22:17Z",
   "assets": [
     {
       "name": "QiemanDashboard-2.2.39.zip",
       "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.39/QiemanDashboard-2.2.39.zip",
-      "size": 3575831,
+      "size": 3546253,
       "content_type": "application/zip"
     }
   ]
