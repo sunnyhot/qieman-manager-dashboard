@@ -219,6 +219,9 @@ extension AppModel {
     }
 
     func revealMainWindowIfNeeded() {
+        // Close popover first to avoid focus conflict with transient popover
+        (NSApplication.shared.delegate as? QiemanApplicationDelegate)?.closePopover()
+
         NSApplication.shared.activate(ignoringOtherApps: true)
         if let window = NSApplication.shared.windows.first(where: { window in
             window.canBecomeMain && !(window is NSPanel)
@@ -226,6 +229,14 @@ extension AppModel {
             window.makeKeyAndOrderFront(nil)
             return
         }
+        // No window exists — ask WindowGroup to create one
         _ = NSApplication.shared.sendAction(Selector(("newWindowForTab:")), to: nil, from: nil)
+        DispatchQueue.main.async {
+            if let window = NSApplication.shared.windows.first(where: { window in
+                window.canBecomeMain && !(window is NSPanel)
+            }) {
+                window.makeKeyAndOrderFront(nil)
+            }
+        }
     }
 }

@@ -285,6 +285,12 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         }
     }
 
+    func closePopover() {
+        if popover.isShown {
+            popover.performClose(nil)
+        }
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
