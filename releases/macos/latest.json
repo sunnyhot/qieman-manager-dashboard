@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.34",
-  "name": "QiemanDashboard v2.2.34",
-  "body": "菜单栏设置面板分组优化：样式配置与资产项选择缩进分组、整体资产cell边距收紧",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.34",
-  "published_at": "2026-05-11T09:00:00Z",
+  "tag_name": "v2.2.35",
+  "name": "QiemanDashboard v2.2.35",
+  "body": "修复隐藏 Dock 后菜单栏「打开主界面」和「配置菜单栏」按钮无响应的问题",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.35",
+  "published_at": "",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.34.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.34/QiemanDashboard-2.2.34.zip",
-      "size": 3586472,
+      "name": "QiemanDashboard-2.2.35.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.35/QiemanDashboard-2.2.35.zip",
+      "size": 0,
       "content_type": "application/zip"
     }
   ]
