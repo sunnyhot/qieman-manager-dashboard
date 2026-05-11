@@ -3,12 +3,12 @@
   "name": "QiemanDashboard v2.2.35",
   "body": "修复隐藏 Dock 后菜单栏「打开主界面」和「配置菜单栏」按钮无响应的问题",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.35",
-  "published_at": "",
+  "published_at": "2026-05-11T08:05:02Z",
   "assets": [
     {
       "name": "QiemanDashboard-2.2.35.zip",
       "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.35/QiemanDashboard-2.2.35.zip",
-      "size": 0,
+      "size": 3538474,
       "content_type": "application/zip"
     }
   ]
