@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.37",
-  "name": "QiemanDashboard v2.2.37",
-  "body": "菜单栏样式配置间距优化：统一配置行布局，收紧行距并优化轮播顺序展示",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.37",
-  "published_at": "2026-05-11T09:13:39Z",
+  "tag_name": "v2.2.38",
+  "name": "QiemanDashboard v2.2.38",
+  "body": "修复菜单栏「打开主界面」「配置菜单栏」按钮无响应的问题",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.38",
+  "published_at": "",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.37.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.37/QiemanDashboard-2.2.37.zip",
-      "size": 3496043,
+      "name": "QiemanDashboard-2.2.38.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.38/QiemanDashboard-2.2.38.zip",
+      "size": 0,
       "content_type": "application/zip"
     }
   ]
