@@ -46,6 +46,9 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         guard !didConfigure else { return }
         didConfigure = true
         self.model = model
+        Task { @MainActor in
+            model.appDelegate = self
+        }
 
         Task { @MainActor [weak self] in
             guard let self else { return }
@@ -289,6 +292,24 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         if popover.isShown {
             popover.performClose(nil)
         }
+    }
+
+    @MainActor func createMainWindow() {
+        guard let model else { return }
+        let contentView = ContentView()
+            .environmentObject(model)
+            .tint(AppPalette.brand)
+            .preferredColorScheme(model.appearance.colorScheme)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered, defer: false)
+        window.center()
+        window.title = "且慢主理人"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.contentView = NSHostingView(rootView: contentView)
+        window.makeKeyAndOrderFront(nil)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

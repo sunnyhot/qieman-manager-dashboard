@@ -104,6 +104,8 @@ final class AppModel: ObservableObject {
     @Published var logFileURL: URL?
     @Published var dataDirectoryURL: URL?
 
+    weak var appDelegate: QiemanApplicationDelegate?
+
     // Services
     let serverController = LocalServerController()
     let platformClient = QiemanPlatformNativeClient()
