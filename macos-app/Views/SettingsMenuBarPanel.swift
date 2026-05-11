@@ -60,6 +60,11 @@ extension SettingsSectionView {
 
                 SettingsDivider()
 
+                if model.menuBarTickerSettings.selections.count > model.menuBarTickerSettings.maxVisibleItems {
+                    menuBarCarouselOrder
+                    SettingsDivider()
+                }
+
                 menuBarOptionGroup(title: "整体资产", subtitle: "总资产、整体今日涨跌和整体持有收益", kinds: MenuBarTickerKind.overallKinds)
 
                 SettingsDivider()
@@ -94,7 +99,7 @@ extension SettingsSectionView {
                         Label("清空单标的", systemImage: "xmark.circle")
                     }
                     .buttonStyle(.bordered)
-                    .disabled(model.menuBarTickerSettings.holdingSelections.isEmpty)
+                    .disabled(!model.menuBarTickerSettings.selections.contains(where: { $0.holdingValue != nil }))
                 }
             }
         }
@@ -245,6 +250,64 @@ extension SettingsSectionView {
                 }
             }
         }
+    }
+
+    // MARK: - Carousel Order
+
+    private var menuBarCarouselOrder: some View {
+        let selections = model.menuBarTickerSettings.selections
+        let rows = model.userPortfolioSnapshot?.rows ?? []
+        let rowsByID = Dictionary(rows.map { ($0.holding.id, $0) }, uniquingKeysWith: { first, _ in first })
+
+        func selectionLabel(_ selection: MenuBarTickerSelection) -> String {
+            switch selection {
+            case .kind(let kind):
+                return kind.label
+            case .holding(let sel):
+                let name = rowsByID[sel.holdingID].map { compactAssetName($0.fundName) } ?? "标的"
+                return "\(name) \(sel.metric.label)"
+            }
+        }
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.info)
+                    .frame(width: 18, height: 18)
+                    .background(AppPalette.info.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
+                Text("轮播顺序")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                Text("拖拽调整菜单栏轮播切换的先后顺序")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+            }
+
+            List {
+                ForEach(selections) { selection in
+                    HStack(spacing: 8) {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(AppPalette.muted)
+                        Text(selectionLabel(selection))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(AppPalette.ink)
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 8)
+                    .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                }
+                .onMove { source, destination in
+                    model.moveMenuBarTickerSelection(from: source, to: destination)
+                }
+            }
+            .listStyle(.plain)
+            .scrollIndicators(.hidden)
+            .frame(height: min(CGFloat(selections.count) * 34 + 8, 200))
+        }
+        .padding(.vertical, 14)
     }
 
     // MARK: - Fund Market Options
@@ -527,8 +590,9 @@ extension SettingsSectionView {
                 }
                 Spacer()
                 ToolbarBadge(title: "\(model.userPortfolioSnapshot?.rows.count ?? 0) 个标的", tint: AppPalette.info)
-                if !model.menuBarTickerSettings.holdingSelections.isEmpty {
-                    ToolbarBadge(title: "已选 \(model.menuBarTickerSettings.holdingSelections.count)", tint: AppPalette.positive)
+                if model.menuBarTickerSettings.selections.contains(where: { $0.holdingValue != nil }) {
+                    let holdingCount = model.menuBarTickerSettings.selections.filter { $0.holdingValue != nil }.count
+                    ToolbarBadge(title: "已选 \(holdingCount)", tint: AppPalette.positive)
                 }
             }
         }

@@ -4,7 +4,7 @@ import Foundation
 
 extension AppModel {
     var menuBarTickerConfiguredItemCount: Int {
-        menuBarTickerSettings.enabledKinds.count + menuBarTickerSettings.holdingSelections.count
+        menuBarTickerSettings.selections.count
     }
 
     var menuBarTickerVisibleEntries: [MenuBarTickerEntry] {
@@ -23,17 +23,17 @@ extension AppModel {
     }
 
     func isMenuBarTickerKindEnabled(_ kind: MenuBarTickerKind) -> Bool {
-        menuBarTickerSettings.enabledKinds.contains(kind)
+        menuBarTickerSettings.selections.contains { $0.kindValue == kind }
     }
 
     func setMenuBarTickerKind(_ kind: MenuBarTickerKind, isEnabled: Bool) {
         var settings = menuBarTickerSettings
         if isEnabled {
-            if !settings.enabledKinds.contains(kind) {
-                settings.enabledKinds.append(kind)
+            if !settings.selections.contains(where: { $0.kindValue == kind }) {
+                settings.selections.append(.kind(kind))
             }
         } else {
-            settings.enabledKinds.removeAll { $0 == kind }
+            settings.selections.removeAll { $0.kindValue == kind }
         }
         persistMenuBarTickerSettings(settings)
         if isEnabled, kind.marketIndexRequest != nil {
@@ -42,22 +42,21 @@ extension AppModel {
     }
 
     func isMenuBarHoldingMetricEnabled(holdingID: UUID, metric: MenuBarHoldingMetric) -> Bool {
-        menuBarTickerSettings.holdingSelections.contains {
-            $0.holdingID == holdingID && $0.metric == metric
+        let target = MenuBarHoldingMetricSelection(holdingID: holdingID, metric: metric)
+        return menuBarTickerSettings.selections.contains {
+            $0.holdingValue == target
         }
     }
 
     func setMenuBarHoldingMetric(holdingID: UUID, metric: MenuBarHoldingMetric, isEnabled: Bool) {
         var settings = menuBarTickerSettings
+        let selection = MenuBarHoldingMetricSelection(holdingID: holdingID, metric: metric)
         if isEnabled {
-            let selection = MenuBarHoldingMetricSelection(holdingID: holdingID, metric: metric)
-            if !settings.holdingSelections.contains(selection) {
-                settings.holdingSelections.append(selection)
+            if !settings.selections.contains(where: { $0.holdingValue == selection }) {
+                settings.selections.append(.holding(selection))
             }
         } else {
-            settings.holdingSelections.removeAll {
-                $0.holdingID == holdingID && $0.metric == metric
-            }
+            settings.selections.removeAll { $0.holdingValue == selection }
         }
         persistMenuBarTickerSettings(settings)
     }
@@ -89,6 +88,12 @@ extension AppModel {
         persistMenuBarTickerSettings(settings)
     }
 
+    func moveMenuBarTickerSelection(from source: IndexSet, to destination: Int) {
+        var settings = menuBarTickerSettings
+        settings.selections.move(fromOffsets: source, toOffset: destination)
+        persistMenuBarTickerSettings(settings)
+    }
+
     var menuBarTickerAllCandidates: [MenuBarTickerEntry] {
         guard menuBarTickerSettings.isEnabled else { return [] }
         return menuBarTickerCandidateEntries(settings: menuBarTickerSettings.normalized())
@@ -100,7 +105,7 @@ extension AppModel {
 
     func clearMenuBarHoldingSelections() {
         var settings = menuBarTickerSettings
-        settings.holdingSelections.removeAll()
+        settings.selections.removeAll { $0.holdingValue != nil }
         persistMenuBarTickerSettings(settings)
     }
 
@@ -116,18 +121,19 @@ extension AppModel {
         let aggregates = MenuBarTickerAggregateSet(rows: rows)
         let rowsByHoldingID = Dictionary(rows.map { ($0.holding.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        for kind in settings.enabledKinds {
-            if let entry = menuBarTickerEntry(for: kind, rows: rows, aggregates: aggregates) {
+        for selection in settings.selections {
+            switch selection {
+            case .kind(let kind):
+                if let entry = menuBarTickerEntry(for: kind, rows: rows, aggregates: aggregates) {
+                    entries.append(entry)
+                }
+            case .holding(let sel):
+                guard let row = rowsByHoldingID[sel.holdingID],
+                      let entry = menuBarTickerEntry(row: row, metric: sel.metric) else {
+                    continue
+                }
                 entries.append(entry)
             }
-        }
-
-        for selection in settings.holdingSelections {
-            guard let row = rowsByHoldingID[selection.holdingID],
-                  let entry = menuBarTickerEntry(row: row, metric: selection.metric) else {
-                continue
-            }
-            entries.append(entry)
         }
 
         return entries

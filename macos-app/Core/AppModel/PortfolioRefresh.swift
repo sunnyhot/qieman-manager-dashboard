@@ -49,8 +49,9 @@ extension AppModel {
 
     var selectedMenuBarMarketIndexKinds: [MarketIndexKind] {
         var seen = Set<MarketIndexKind>()
-        let selected = menuBarTickerSettings.enabledKinds.compactMap { kind -> MarketIndexKind? in
-            guard let indexKind = kind.marketIndexRequest?.kind else { return nil }
+        let selected = menuBarTickerSettings.selections.compactMap { selection -> MarketIndexKind? in
+            guard let kind = selection.kindValue,
+                  let indexKind = kind.marketIndexRequest?.kind else { return nil }
             return seen.insert(indexKind).inserted ? indexKind : nil
         }
         return selected.sorted { left, right in

@@ -18,7 +18,9 @@ struct MenuBarPortfolioView: View {
     }
 
     private var hasMarketIndexTickerSelection: Bool {
-        model.menuBarTickerSettings.enabledKinds.contains { $0.marketIndexRequest != nil }
+        model.menuBarTickerSettings.selections.contains {
+            $0.kindValue?.marketIndexRequest != nil
+        }
     }
 
     var body: some View {

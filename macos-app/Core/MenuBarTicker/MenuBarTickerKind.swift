@@ -241,3 +241,25 @@ struct MenuBarHoldingMetricSelection: Codable, Hashable, Identifiable {
 
     var id: String { "\(holdingID.uuidString):\(metric.rawValue)" }
 }
+
+enum MenuBarTickerSelection: Codable, Hashable, Identifiable {
+    case kind(MenuBarTickerKind)
+    case holding(MenuBarHoldingMetricSelection)
+
+    var id: String {
+        switch self {
+        case .kind(let kind): return kind.rawValue
+        case .holding(let sel): return sel.id
+        }
+    }
+
+    var kindValue: MenuBarTickerKind? {
+        if case .kind(let kind) = self { return kind }
+        return nil
+    }
+
+    var holdingValue: MenuBarHoldingMetricSelection? {
+        if case .holding(let sel) = self { return sel }
+        return nil
+    }
+}
