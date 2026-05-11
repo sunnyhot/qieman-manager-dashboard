@@ -31,10 +31,6 @@ struct MenuBarPortfolioView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    if !tickerEntries.isEmpty {
-                        MenuBarTickerPreviewCard(entries: tickerEntries)
-                    }
-
                     if let snapshot = model.userPortfolioSnapshot, !snapshot.rows.isEmpty {
                         MenuBarSummaryCard(
                             snapshot: snapshot,
@@ -130,21 +126,17 @@ struct MenuBarPortfolioView: View {
                     .background(AppPalette.cardStrong)
                     .clipShape(Capsule())
                 Spacer()
-                Text("按\(holdingSort.rawValue)")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(AppPalette.muted)
-            }
-
-            Picker("持仓排序", selection: holdingSortBinding) {
-                ForEach(MenuBarHoldingSortOption.allCases) { option in
-                    Text(option.rawValue).tag(option)
+                Picker("排序", selection: holdingSortBinding) {
+                    ForEach(MenuBarHoldingSortOption.allCases) { option in
+                        Text(option.rawValue).tag(option)
+                    }
                 }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .controlSize(.small)
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .controlSize(.small)
 
-            LazyVStack(spacing: 8) {
+            LazyVStack(spacing: 6) {
                 ForEach(sortedHoldingRows(snapshot.rows)) { row in
                     MenuBarHoldingRow(row: row)
                 }
@@ -174,65 +166,6 @@ struct MenuBarPortfolioView: View {
             get: { holdingSort },
             set: { holdingSortRawValue = $0.rawValue }
         )
-    }
-}
-
-private struct MenuBarTickerPreviewCard: View {
-    let entries: [MenuBarTickerEntry]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(spacing: 8) {
-                Image(systemName: "menubar.rectangle")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(AppPalette.info)
-                Text("菜单栏正在显示")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppPalette.ink)
-                Spacer()
-                Text("\(entries.count) 项")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(AppPalette.muted)
-            }
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: 8)], alignment: .leading, spacing: 8) {
-                ForEach(entries) { entry in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(entry.title)
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(AppPalette.muted)
-                            .lineLimit(1)
-                        Text(entry.value)
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundStyle(toneColor(entry.tone))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                            .monospacedDigit()
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 7)
-                    .background(toneColor(entry.tone).opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-                }
-            }
-        }
-        .padding(12)
-        .background(AppPalette.cardStrong.opacity(0.82), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.42), lineWidth: 1)
-        )
-    }
-
-    private func toneColor(_ tone: MenuBarTickerTone) -> Color {
-        switch tone {
-        case .positive:
-            return AppPalette.marketGain
-        case .negative:
-            return AppPalette.marketLoss
-        case .neutral:
-            return AppPalette.ink
-        }
     }
 }
 
@@ -295,29 +228,19 @@ private struct MenuBarSummaryCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("总资产估值")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(AppPalette.muted)
-                Spacer()
-                Text("共 \(snapshot.holdingCount) 只标的")
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted)
-            }
-
+        VStack(alignment: .leading, spacing: 6) {
             Text(currencyText(personalSummary?.totalEffectiveHoldingAmount ?? snapshot.totalMarketValue))
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(AppPalette.ink)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
                 SummaryPill(title: "今日涨跌", value: signedCurrencyOptional(totalDailyChangeAmount), tint: dailyTint)
                 SummaryPill(title: "今日涨跌率", value: percentOptional(totalDailyChangePct), tint: dailyTint)
                 SummaryPill(title: "总收益", value: signedCurrencyOptional(snapshot.totalProfitAmount), tint: profitTint)
                 SummaryPill(title: "总收益率", value: percentOptional(snapshot.totalProfitPct), tint: profitTint)
             }
         }
-        .padding(14)
+        .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppPalette.cardStrong)
         .clipShape(RoundedRectangle(cornerRadius: AppPalette.panelRadius))
@@ -345,8 +268,8 @@ private struct SummaryPill: View {
                 .minimumScaleFactor(0.75)
                 .monospacedDigit()
         }
-        .frame(maxWidth: .infinity, minHeight: 56, maxHeight: 56, alignment: .leading)
-        .padding(.horizontal, 10)
+        .frame(maxWidth: .infinity, minHeight: 44, maxHeight: 44, alignment: .leading)
+        .padding(.horizontal, 8)
         .background(tint.opacity(0.10))
         .clipShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
@@ -363,77 +286,71 @@ private struct MenuBarHoldingRow: View {
         AppPalette.marketTint(for: row.profitAmount)
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(row.fundName)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(AppPalette.ink)
-                        .lineLimit(1)
-                    Text(row.holding.normalizedFundCode)
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppPalette.muted)
-                        .monospacedDigit()
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text("实时估值")
-                        .font(.system(size: 9))
-                        .foregroundStyle(AppPalette.muted)
-                    Text(currencyOptional(row.marketValue, market: row.holding.detectedMarket))
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppPalette.ink)
-                    HStack(spacing: 4) {
-                        if let marketLabel = row.holding.marketLabel {
-                            Text(marketLabel)
-                                .font(.system(size: 9, weight: .medium))
-                        }
-                        Text("\(unitsText(row.holding.units)) 份")
-                    }
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppPalette.muted)
-                        .monospacedDigit()
-                }
+    private var marketTint: Color {
+        if let market = row.holding.detectedMarket {
+            switch market {
+            case .aShare: return AppPalette.info
+            case .hk: return AppPalette.brand
+            case .us: return AppPalette.positive
             }
-
-            HStack(spacing: 8) {
-                HoldingMetricPill(
-                    title: "总收益",
-                    amount: signedCurrencyOptional(row.profitAmount, market: row.holding.detectedMarket),
-                    pct: percentOptional(row.profitPct),
-                    tint: profitTint
-                )
-                HoldingMetricPill(
-                    title: "今日涨跌",
-                    amount: signedCurrencyOptional(row.estimatedDailyChangeAmount, market: row.holding.detectedMarket),
-                    pct: percentOptional(row.estimateChangePct),
-                    tint: dailyTint
-                )
-            }
-
-            HStack(spacing: 10) {
-                Text("现价 \(decimalOptional(row.resolvedPrice))")
-                if let cost = row.holding.costPrice {
-                    Text("成本 \(decimalText(cost))")
-                }
-                if let source = row.resolvedPriceSource {
-                    Text(source)
-                }
-                Spacer()
-            }
-            .font(.system(size: 10))
-            .foregroundStyle(AppPalette.muted)
-            .lineLimit(1)
-            .monospacedDigit()
         }
-        .padding(10)
+        if let fundMarket = row.holding.detectedFundMarket {
+            switch fundMarket {
+            case .offExchange: return Color.purple
+            case .onExchange: return AppPalette.warning
+            }
+        }
+        return AppPalette.muted
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(row.fundName)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                    .lineLimit(1)
+                Text(row.holding.normalizedFundCode)
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppPalette.muted)
+                    .monospacedDigit()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(currencyOptional(row.marketValue, market: row.holding.detectedMarket))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppPalette.ink)
+                    .monospacedDigit()
+                Text("\(unitsText(row.holding.units)) 份")
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppPalette.muted)
+                    .monospacedDigit()
+            }
+            .frame(width: 96, alignment: .trailing)
+
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(signedCurrencyOptional(row.estimatedDailyChangeAmount, market: row.holding.detectedMarket))
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(dailyTint)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                Text(percentOptional(row.estimateChangePct))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(dailyTint)
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+            .frame(width: 80, alignment: .trailing)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppPalette.card)
+        .background(marketTint.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.55), lineWidth: 1)
+                .stroke(marketTint.opacity(0.28), lineWidth: 1)
         )
     }
 }
@@ -445,25 +362,27 @@ private struct HoldingMetricPill: View {
     let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(AppPalette.muted)
-            Text(amount)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(tint)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .monospacedDigit()
-            Text(pct)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(tint)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .monospacedDigit()
+        HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(AppPalette.muted)
+                Text(amount)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(tint)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .monospacedDigit()
+                Text(pct)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .monospacedDigit()
+            }
         }
-        .frame(maxWidth: .infinity, minHeight: 60, maxHeight: 60, alignment: .leading)
-        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, minHeight: 48, maxHeight: 48, alignment: .leading)
+        .padding(.horizontal, 7)
         .background(tint.opacity(0.09))
         .clipShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
