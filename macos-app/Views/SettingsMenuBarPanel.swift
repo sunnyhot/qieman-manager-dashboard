@@ -29,6 +29,8 @@ extension SettingsSectionView {
                 SettingsDivider()
 
                 VStack(alignment: .leading, spacing: 12) {
+                    menuBarPreview(entries: tickerEntries)
+
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("同时显示 \(model.menuBarTickerSettings.maxVisibleItems) 项")
@@ -59,8 +61,6 @@ extension SettingsSectionView {
                                 .labelsHidden()
                         }
                     }
-
-                    menuBarPreview(entries: tickerEntries)
                 }
                 .padding(.vertical, 14)
 
@@ -269,16 +269,6 @@ extension SettingsSectionView {
         let rows = model.userPortfolioSnapshot?.rows ?? []
         let rowsByID = Dictionary(rows.map { ($0.holding.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        func selectionLabel(_ selection: MenuBarTickerSelection) -> String {
-            switch selection {
-            case .kind(let kind):
-                return kind.label
-            case .holding(let sel):
-                let name = rowsByID[sel.holdingID].map { compactAssetName($0.fundName) } ?? "标的"
-                return "\(name) \(sel.metric.label)"
-            }
-        }
-
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "arrow.up.arrow.down")
@@ -289,35 +279,79 @@ extension SettingsSectionView {
                 Text("轮播顺序")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
-                Text("拖拽调整菜单栏轮播切换的先后顺序")
+                Text("拖拽调整先后顺序")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
             }
 
-            List {
+            FlowLayout(spacing: 6) {
                 ForEach(selections) { selection in
-                    HStack(spacing: 8) {
-                        Image(systemName: "line.3.horizontal")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(AppPalette.muted)
-                        Text(selectionLabel(selection))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(AppPalette.ink)
-                        Spacer()
-                    }
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 8)
-                    .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-                }
-                .onMove { source, destination in
-                    model.moveMenuBarTickerSelection(from: source, to: destination)
+                    carouselOrderPill(selection: selection, selections: selections, rowsByID: rowsByID)
                 }
             }
-            .listStyle(.plain)
-            .scrollIndicators(.hidden)
-            .frame(height: min(CGFloat(selections.count) * 34 + 8, 200))
         }
         .padding(.vertical, 14)
+    }
+
+    private func selectionLabel(_ selection: MenuBarTickerSelection, rowsByID: [UUID: UserPortfolioValuationRow]) -> String {
+        switch selection {
+        case .kind(let kind):
+            return kind.label
+        case .holding(let sel):
+            let name = rowsByID[sel.holdingID].map { compactAssetName($0.fundName) } ?? "标的"
+            return "\(name) \(sel.metric.label)"
+        }
+    }
+
+    private func carouselOrderPill(selection: MenuBarTickerSelection, selections: [MenuBarTickerSelection], rowsByID: [UUID: UserPortfolioValuationRow]) -> some View {
+        let isSource = draggedTickerSelectionID == selection.id
+        let isTarget = tickerDropTargetID == selection.id
+        let label = selectionLabel(selection, rowsByID: rowsByID)
+
+        return Text(label)
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(isSource ? AppPalette.muted : AppPalette.ink)
+            .lineLimit(1)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(isTarget ? AppPalette.brand.opacity(0.12) : AppPalette.card))
+            .overlay(
+                Capsule()
+                    .stroke(isTarget ? AppPalette.brand.opacity(0.6) : AppPalette.line.opacity(0.5), lineWidth: isTarget ? 1.5 : 1)
+            )
+            .overlay(alignment: .leading) {
+                if isTarget {
+                    Capsule()
+                        .fill(AppPalette.brand)
+                        .frame(width: 3, height: 14)
+                        .offset(x: -6)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .draggable(selection.id) {
+                Text(label)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(AppPalette.onBrand)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(AppPalette.brand.opacity(0.25)))
+                    .overlay(Capsule().stroke(AppPalette.brand, lineWidth: 1))
+                    .onAppear { draggedTickerSelectionID = selection.id }
+            }
+            .dropDestination(for: String.self) { items, _ in
+                draggedTickerSelectionID = nil
+                tickerDropTargetID = nil
+                guard let droppedID = items.first else { return false }
+                guard let fromIndex = selections.firstIndex(where: { $0.id == droppedID }) else { return false }
+                guard let toIndex = selections.firstIndex(where: { $0.id == selection.id }) else { return false }
+                if fromIndex == toIndex { return false }
+                model.moveMenuBarTickerSelection(from: IndexSet(integer: fromIndex), to: toIndex > fromIndex ? toIndex + 1 : toIndex)
+                return true
+            } isTargeted: { isTarget in
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    tickerDropTargetID = isTarget ? selection.id : nil
+                }
+            }
     }
 
     // MARK: - Fund Market Options
