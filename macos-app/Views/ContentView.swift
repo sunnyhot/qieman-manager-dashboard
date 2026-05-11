@@ -260,12 +260,20 @@ struct ContentView: View {
                         Spacer(minLength: 12)
                         toolbarActionRow
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) {
+                        NSApp.keyWindow?.zoom(nil)
+                    }
 
                     VStack(alignment: .leading, spacing: 12) {
                         toolbarTitleBlock
                         ScrollView(.horizontal, showsIndicators: false) {
                             toolbarActionRow
                         }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) {
+                        NSApp.keyWindow?.zoom(nil)
                     }
                 }
 
