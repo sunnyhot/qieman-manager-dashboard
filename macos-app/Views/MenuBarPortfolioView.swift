@@ -24,8 +24,6 @@ struct MenuBarPortfolioView: View {
     }
 
     var body: some View {
-        let tickerEntries = model.menuBarTickerVisibleEntries
-
         VStack(alignment: .leading, spacing: 12) {
             header
 

@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.43",
-  "name": "QiemanDashboard v2.2.43",
-  "body": "侧边栏展开收起按钮 + 红绿灯位置优化",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.43",
-  "published_at": "2026-05-12T08:43:00Z",
+  "tag_name": "v2.2.44",
+  "name": "QiemanDashboard v2.2.44",
+  "body": "侧边栏改为固定文字导航，优化标题栏侧栏按钮，并修复红绿灯重复位移",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.44",
+  "published_at": "2026-05-12T09:22:29Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.43.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.43/QiemanDashboard-2.2.43.zip",
-      "size": 3736196,
+      "name": "QiemanDashboard-2.2.44.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.44/QiemanDashboard-2.2.44.zip",
+      "size": 3515998,
       "content_type": "application/zip"
     }
   ]

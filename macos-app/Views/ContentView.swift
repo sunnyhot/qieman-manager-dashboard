@@ -32,7 +32,7 @@ enum PersonalAssetSortOption: String, CaseIterable, Identifiable {
 
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
-    private let compactSidebarThreshold: CGFloat = 1360
+    private let sidebarWidth: CGFloat = 232
     @State private var isSidebarCollapsed = false
 
     private var shouldShowQueryToolbar: Bool {
@@ -45,29 +45,23 @@ struct ContentView: View {
     }
 
     var body: some View {
-        GeometryReader { proxy in
-            let isCompactSidebar = proxy.size.width < compactSidebarThreshold
+        ZStack {
+            AppPalette.canvasGradient
 
-            ZStack {
-                AppPalette.canvasGradient
-
-                HStack(spacing: 0) {
-                    if !isSidebarCollapsed {
-                        sidebar(isCompact: isCompactSidebar)
-                            .frame(
-                                width: isCompactSidebar ? 90 : 232
-                            )
-                            .transition(.move(edge: .leading).combined(with: .opacity))
-                    }
-
-                    mainContent
+            HStack(spacing: 0) {
+                if !isSidebarCollapsed {
+                    sidebar()
+                        .frame(width: sidebarWidth)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
                 }
+
+                mainContent
             }
         }
         .ignoresSafeArea()
         .frame(minWidth: 1080, minHeight: 780)
         .background(WindowChromeConfigurator())
-        .background(SidebarToggleBridge(isCollapsed: isSidebarCollapsed))
+        .background(SidebarToggleBridge(isCollapsed: isSidebarCollapsed, expandedSidebarWidth: sidebarWidth))
         .onReceive(NotificationCenter.default.publisher(for: .sidebarToggleRequested)) { _ in
             withAnimation(.easeInOut(duration: 0.25)) {
                 isSidebarCollapsed.toggle()
@@ -108,149 +102,81 @@ struct ContentView: View {
 
     // MARK: - Sidebar
 
-    private func sidebar(isCompact: Bool) -> some View {
+    private func sidebar() -> some View {
         VStack(spacing: 0) {
-            VStack(spacing: isCompact ? 10 : 12) {
-                // Brand area
-                HStack(spacing: isCompact ? 0 : 10) {
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(AppPalette.brand)
-                        .frame(width: 36, height: 36)
-                        .background(AppPalette.brandSoft, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-
-                    if !isCompact {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("且慢")
-                                .font(.system(size: 17, weight: .bold))
-                                .foregroundStyle(AppPalette.ink)
-                            Text("投资仪表盘")
-                                .font(.system(size: 11))
-                                .foregroundStyle(AppPalette.muted)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                }
-                .frame(maxWidth: .infinity, minHeight: isCompact ? 48 : 54, alignment: isCompact ? .center : .leading)
-                .padding(.horizontal, isCompact ? 0 : 10)
-                .background(
-                    RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                        .fill(AppPalette.card.opacity(isCompact ? 0.22 : 0.28))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                        .stroke(.white.opacity(0.06), lineWidth: 1)
-                )
-
-                // Navigation
-                VStack(spacing: 6) {
-                    ForEach(AppSection.allCases) { section in
-                        sidebarButton(section: section, isCompact: isCompact)
-                    }
+            VStack(spacing: 6) {
+                ForEach(AppSection.allCases) { section in
+                    sidebarButton(section: section)
                 }
             }
-            .padding(.horizontal, isCompact ? 8 : 10)
-            .padding(.top, isCompact ? 38 : 36)
+            .padding(.horizontal, 16)
+            .padding(.top, 72)
 
             Spacer()
 
-            // Footer status
-            VStack(alignment: .leading, spacing: 6) {
-                if isCompact {
-                    VStack(spacing: 10) {
-                        Circle()
-                            .fill(model.cookieAvailable ? AppPalette.positive : AppPalette.warning)
-                            .frame(width: 7, height: 7)
-
-                        Button {
-                            model.openDataDirectory()
-                        } label: {
-                            Image(systemName: "folder")
-                                .font(.system(size: 11))
-                        }
-                        .buttonStyle(.plain)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(model.cookieAvailable ? AppPalette.positive : AppPalette.warning)
+                        .frame(width: 7, height: 7)
+                    Text(model.cookieAvailable ? "Cookie 可用" : "Cookie 缺失")
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(AppPalette.muted)
-                        .help("打开数据目录")
+                    Spacer(minLength: 0)
+                    Button {
+                        model.openDataDirectory()
+                    } label: {
+                        Image(systemName: "folder")
+                            .font(.system(size: 12, weight: .medium))
                     }
-                    .frame(maxWidth: .infinity)
-                } else {
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(model.cookieAvailable ? AppPalette.positive : AppPalette.warning)
-                            .frame(width: 6, height: 6)
-                        Text(model.cookieAvailable ? "Cookie 可用" : "Cookie 缺失")
-                            .font(.system(size: 10))
-                            .foregroundStyle(AppPalette.muted)
-                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(AppPalette.muted)
+                    .help("打开数据目录")
+                }
 
-                    HStack(spacing: 8) {
-                        Button {
-                            model.openDataDirectory()
-                        } label: {
-                            Image(systemName: "folder")
-                                .font(.system(size: 11))
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(AppPalette.muted)
-
-                        Spacer()
-
-                        if let logURL = model.logFileURL {
-                            Text(logURL.lastPathComponent)
-                                .font(.system(size: 9))
-                                .foregroundStyle(AppPalette.muted.opacity(0.7))
-                                .lineLimit(1)
-                        }
-                    }
+                if let logURL = model.logFileURL {
+                    Text(logURL.lastPathComponent)
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted.opacity(0.72))
+                        .lineLimit(1)
                 }
             }
-            .padding(isCompact ? 10 : 14)
-            .background(AppPalette.card.opacity(0.34), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                    .stroke(.white.opacity(0.06), lineWidth: 1)
-            )
-            .padding(.horizontal, isCompact ? 8 : 10)
-            .padding(.bottom, 12)
+            .padding(.horizontal, 18)
+            .padding(.bottom, 18)
         }
         .background(SidebarEffectView())
         .overlay(alignment: .trailing) {
             Rectangle()
-                .fill(.white.opacity(0.08))
+                .fill(AppPalette.line.opacity(0.48))
                 .frame(width: 1)
         }
     }
 
-    private func sidebarButton(section: AppSection, isCompact: Bool) -> some View {
+    private func sidebarButton(section: AppSection) -> some View {
         let isSelected = model.selectedSection == section
         return Button {
             guard model.selectedSection != section else { return }
             model.selectedSection = section
         } label: {
-            HStack(spacing: isCompact ? 0 : 10) {
+            HStack(spacing: 12) {
                 Image(systemName: section.systemImage)
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(width: 22)
-                    .foregroundStyle(isSelected ? AppPalette.brand : AppPalette.muted)
+                    .font(.system(size: 15, weight: .medium))
+                    .frame(width: 20)
+                    .foregroundStyle(isSelected ? AppPalette.ink : AppPalette.muted)
 
-                if !isCompact {
-                    Text(section.rawValue)
-                        .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
-                        .foregroundStyle(isSelected ? AppPalette.ink : AppPalette.muted)
-                }
-                Spacer()
+                Text(section.rawValue)
+                    .font(.system(size: 15, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected ? AppPalette.ink : AppPalette.ink.opacity(0.86))
+
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, minHeight: 46, alignment: isCompact ? .center : .leading)
-            .padding(.horizontal, isCompact ? 8 : 12)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .padding(.horizontal, 14)
             .background(
-                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                    .fill(isSelected ? AppPalette.brand.opacity(0.14) : Color.clear)
+                RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                    .fill(isSelected ? AppPalette.line.opacity(0.44) : Color.clear)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                    .stroke(isSelected ? AppPalette.brand.opacity(0.22) : Color.clear, lineWidth: 1)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+            .contentShape(RoundedRectangle(cornerRadius: AppPalette.controlRadius))
         }
         .buttonStyle(PressResponsiveButtonStyle())
         .help(section.rawValue)
@@ -277,7 +203,7 @@ struct ContentView: View {
                     }
                     .contentShape(Rectangle())
                     .onTapGesture(count: 2) {
-                        NSApp.keyWindow?.zoom(nil)
+                        toggleMainWindowZoom()
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -288,7 +214,7 @@ struct ContentView: View {
                     }
                     .contentShape(Rectangle())
                     .onTapGesture(count: 2) {
-                        NSApp.keyWindow?.zoom(nil)
+                        toggleMainWindowZoom()
                     }
                 }
 
@@ -450,6 +376,13 @@ struct ContentView: View {
         }
         .buttonStyle(PressResponsiveButtonStyle())
         .contentShape(RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+    }
+
+    private func toggleMainWindowZoom() {
+        let targetWindow = NSApp.keyWindow ?? NSApplication.shared.windows.first {
+            $0.isVisible && $0.canBecomeMain && !($0 is NSPanel)
+        }
+        targetWindow?.performZoom(nil)
     }
 
     @ViewBuilder
@@ -648,11 +581,30 @@ extension Notification.Name {
     static let sidebarToggleRequested = Notification.Name("sidebarToggleRequested")
 }
 
+struct SidebarChromeMetrics {
+    static let titlebarToggleSize = CGSize(width: 70, height: 44)
+    private static let trafficLightGap: CGFloat = 20
+    private static let expandedTrailingInset: CGFloat = 16
+
+    static func toggleOriginX(
+        isSidebarCollapsed: Bool,
+        expandedSidebarWidth: CGFloat,
+        toggleWidth: CGFloat,
+        trafficLightRightX: CGFloat
+    ) -> CGFloat {
+        let afterTrafficLights = trafficLightRightX + trafficLightGap
+        guard !isSidebarCollapsed else { return afterTrafficLights }
+        return max(afterTrafficLights, expandedSidebarWidth - toggleWidth - expandedTrailingInset)
+    }
+}
+
 private struct SidebarToggleBridge: NSViewRepresentable {
     let isCollapsed: Bool
+    let expandedSidebarWidth: CGFloat
 
     func makeNSView(context: Context) -> ToggleHostView {
         let host = ToggleHostView()
+        host.expandedSidebarWidth = expandedSidebarWidth
         host.onToggle = {
             NotificationCenter.default.post(name: .sidebarToggleRequested, object: nil)
         }
@@ -661,13 +613,16 @@ private struct SidebarToggleBridge: NSViewRepresentable {
 
     func updateNSView(_ host: ToggleHostView, context: Context) {
         host.isCollapsed = isCollapsed
+        host.expandedSidebarWidth = expandedSidebarWidth
         host.refreshAppearance()
+        host.reposition()
     }
 
     final class ToggleHostView: NSView {
         var isCollapsed = false
+        var expandedSidebarWidth: CGFloat = 232
         var onToggle: (() -> Void)?
-        private var button: NSButton?
+        private var button: TitlebarSidebarButton?
         private var resizeObserver: NSObjectProtocol?
 
         override func viewDidMoveToWindow() {
@@ -684,14 +639,10 @@ private struct SidebarToggleBridge: NSViewRepresentable {
             guard let closeBtn = window.standardWindowButton(.closeButton),
                   let titleBarContainer = closeBtn.superview else { return }
 
-            let size: CGFloat = 26
-            let btn = NSButton(frame: NSRect(x: 0, y: 0, width: size, height: size))
-            btn.isBordered = false
-            btn.wantsLayer = true
-            btn.focusRingType = .none
+            let size = SidebarChromeMetrics.titlebarToggleSize
+            let btn = TitlebarSidebarButton(frame: NSRect(origin: .zero, size: size))
             btn.imagePosition = .imageOnly
             btn.imageScaling = .scaleProportionallyDown
-            btn.layer?.cornerRadius = size / 2
             btn.target = self
             btn.action = #selector(clicked)
 
@@ -711,11 +662,12 @@ private struct SidebarToggleBridge: NSViewRepresentable {
 
         func refreshAppearance() {
             guard let btn = button else { return }
-            let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+            let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
             btn.image = NSImage(systemSymbolName: "sidebar.left", accessibilityDescription: nil)?
                 .withSymbolConfiguration(config)
-            btn.contentTintColor = .tertiaryLabelColor
+            btn.contentTintColor = .secondaryLabelColor
             btn.toolTip = isCollapsed ? "展开侧边栏" : "收起侧边栏"
+            btn.updateAppearance()
         }
 
         func reposition() {
@@ -723,8 +675,14 @@ private struct SidebarToggleBridge: NSViewRepresentable {
                   let zoomBtn = window.standardWindowButton(.zoomButton),
                   let btn = button else { return }
             let size = btn.frame.size
+            let x = SidebarChromeMetrics.toggleOriginX(
+                isSidebarCollapsed: isCollapsed,
+                expandedSidebarWidth: expandedSidebarWidth,
+                toggleWidth: size.width,
+                trafficLightRightX: zoomBtn.frame.maxX
+            )
             btn.frame.origin = CGPoint(
-                x: zoomBtn.frame.maxX + 6,
+                x: x,
                 y: zoomBtn.frame.midY - size.height / 2
             )
         }
@@ -736,6 +694,76 @@ private struct SidebarToggleBridge: NSViewRepresentable {
             button?.removeFromSuperview()
             button = nil
             super.removeFromSuperview()
+        }
+    }
+
+    final class TitlebarSidebarButton: NSButton {
+        private var trackingArea: NSTrackingArea?
+        private var isHovered = false
+        private var isPressed = false
+
+        override init(frame frameRect: NSRect) {
+            super.init(frame: frameRect)
+            configure()
+        }
+
+        required init?(coder: NSCoder) {
+            super.init(coder: coder)
+            configure()
+        }
+
+        private func configure() {
+            isBordered = false
+            wantsLayer = true
+            focusRingType = .none
+            layer?.cornerRadius = 10
+            layer?.masksToBounds = true
+            updateAppearance()
+        }
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            if let trackingArea {
+                removeTrackingArea(trackingArea)
+            }
+            let area = NSTrackingArea(
+                rect: bounds,
+                options: [.activeInKeyWindow, .mouseEnteredAndExited, .inVisibleRect],
+                owner: self,
+                userInfo: nil
+            )
+            addTrackingArea(area)
+            trackingArea = area
+        }
+
+        override func mouseEntered(with event: NSEvent) {
+            isHovered = true
+            updateAppearance()
+        }
+
+        override func mouseExited(with event: NSEvent) {
+            isHovered = false
+            updateAppearance()
+        }
+
+        override func mouseDown(with event: NSEvent) {
+            isPressed = true
+            updateAppearance()
+            super.mouseDown(with: event)
+            isPressed = false
+            updateAppearance()
+        }
+
+        func updateAppearance() {
+            let color: NSColor
+            if isPressed {
+                color = NSColor.labelColor.withAlphaComponent(0.12)
+            } else if isHovered {
+                color = NSColor.labelColor.withAlphaComponent(0.07)
+            } else {
+                color = .clear
+            }
+            layer?.backgroundColor = color.cgColor
         }
     }
 }
@@ -750,6 +778,9 @@ private struct WindowChromeConfigurator: NSViewRepresentable {
     }
 
     final class WindowChromeView: NSView {
+        private weak var configuredWindow: NSWindow?
+        private var didShiftTrafficLights = false
+
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             configureWindowChrome()
@@ -757,27 +788,38 @@ private struct WindowChromeConfigurator: NSViewRepresentable {
 
         func configureWindowChrome() {
             guard let window else { return }
+            if configuredWindow !== window {
+                configuredWindow = window
+                didShiftTrafficLights = false
+            }
+
             window.title = "且慢主理人"
             window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
             window.styleMask.insert(.fullSizeContentView)
             window.isMovableByWindowBackground = true
 
-            // Collapsed empty toolbar removes the titlebar strip entirely
-            let tb = NSToolbar(identifier: "main")
-            tb.showsBaselineSeparator = false
-            window.toolbar = tb
+            if window.toolbar?.identifier != "main" {
+                let tb = NSToolbar(identifier: "main")
+                tb.showsBaselineSeparator = false
+                window.toolbar = tb
+            }
             window.toolbarStyle = .unified
 
-            // Shift traffic light buttons up by 4px
-            shiftTrafficLightsUp(by: 8, in: window)
+            if !didShiftTrafficLights {
+                didShiftTrafficLights = shiftTrafficLightsUp(by: 8, in: window)
+            }
         }
 
-        private func shiftTrafficLightsUp(by offset: CGFloat, in window: NSWindow) {
+        private func shiftTrafficLightsUp(by offset: CGFloat, in window: NSWindow) -> Bool {
             let buttons: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
+            guard buttons.allSatisfy({ window.standardWindowButton($0) != nil }) else {
+                return false
+            }
             for type in buttons {
                 window.standardWindowButton(type)?.frame.origin.y += offset
             }
+            return true
         }
     }
 }
