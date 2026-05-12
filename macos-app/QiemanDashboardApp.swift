@@ -349,6 +349,7 @@ struct QiemanDashboardApp: App {
                     appDelegate.configure(model: model)
                 }
         }
+        .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(after: .appInfo) {
                 Button("打开数据目录") {

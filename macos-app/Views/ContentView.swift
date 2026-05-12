@@ -49,20 +49,20 @@ struct ContentView: View {
 
             ZStack {
                 AppPalette.canvasGradient
-                    .ignoresSafeArea()
 
-                HSplitView {
+                HStack(spacing: 0) {
                     sidebar(isCompact: isCompactSidebar)
                         .frame(
-                            minWidth: isCompactSidebar ? 82 : 216,
-                            idealWidth: isCompactSidebar ? 90 : 232,
-                            maxWidth: isCompactSidebar ? 96 : 252
+                            width: isCompactSidebar ? 90 : 232
                         )
+
                     mainContent
                 }
             }
         }
+        .ignoresSafeArea()
         .frame(minWidth: 1080, minHeight: 780)
+        .background(WindowChromeConfigurator())
         .task {
             await model.start()
             model.refreshDataForSectionIfNeeded(model.selectedSection)
@@ -100,44 +100,49 @@ struct ContentView: View {
 
     private func sidebar(isCompact: Bool) -> some View {
         VStack(spacing: 0) {
-            // Brand area
-            HStack(spacing: isCompact ? 0 : 10) {
-                Image(systemName: "chart.line.uptrend.xyaxis")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(AppPalette.brand)
-                    .frame(width: 36, height: 36)
-                    .background(AppPalette.brandSoft, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+            VStack(spacing: isCompact ? 10 : 12) {
+                // Brand area
+                HStack(spacing: isCompact ? 0 : 10) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(AppPalette.brand)
+                        .frame(width: 36, height: 36)
+                        .background(AppPalette.brandSoft, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
-                if !isCompact {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("且慢")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundStyle(AppPalette.ink)
-                        Text("投资仪表盘")
-                            .font(.system(size: 11))
-                            .foregroundStyle(AppPalette.muted)
+                    if !isCompact {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("且慢")
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundStyle(AppPalette.ink)
+                            Text("投资仪表盘")
+                                .font(.system(size: 11))
+                                .foregroundStyle(AppPalette.muted)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: isCompact ? 48 : 54, alignment: isCompact ? .center : .leading)
+                .padding(.horizontal, isCompact ? 0 : 10)
+                .background(
+                    RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                        .fill(AppPalette.card.opacity(isCompact ? 0.22 : 0.28))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                        .stroke(.white.opacity(0.06), lineWidth: 1)
+                )
+
+                // Navigation
+                VStack(spacing: 6) {
+                    ForEach(AppSection.allCases) { section in
+                        sidebarButton(section: section, isCompact: isCompact)
                     }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: isCompact ? .center : .leading)
-            .padding(.horizontal, isCompact ? 10 : 16)
-            .padding(.top, 20)
-            .padding(.bottom, 16)
-
-            Divider().padding(.horizontal, isCompact ? 8 : 12)
-
-            // Navigation
-            VStack(spacing: 4) {
-                ForEach(AppSection.allCases) { section in
-                    sidebarButton(section: section, isCompact: isCompact)
-                }
-            }
             .padding(.horizontal, isCompact ? 8 : 10)
-            .padding(.top, 12)
+            .padding(.top, isCompact ? 46 : 44)
 
             Spacer()
-
-            Divider().padding(.horizontal, isCompact ? 8 : 12)
 
             // Footer status
             VStack(alignment: .leading, spacing: 6) {
@@ -190,14 +195,18 @@ struct ContentView: View {
                 }
             }
             .padding(isCompact ? 10 : 14)
-            .background(AppPalette.card.opacity(0.42), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+            .background(AppPalette.card.opacity(0.34), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                    .stroke(.white.opacity(0.06), lineWidth: 1)
+            )
             .padding(.horizontal, isCompact ? 8 : 10)
             .padding(.bottom, 12)
         }
-        .background(AppPalette.paper.opacity(0.98))
+        .background(SidebarEffectView())
         .overlay(alignment: .trailing) {
             Rectangle()
-                .fill(AppPalette.line.opacity(0.7))
+                .fill(.white.opacity(0.08))
                 .frame(width: 1)
         }
     }
@@ -225,16 +234,12 @@ struct ContentView: View {
             .padding(.horizontal, isCompact ? 8 : 12)
             .background(
                 RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                    .fill(isSelected ? AppPalette.brand.opacity(0.10) : Color.clear)
+                    .fill(isSelected ? AppPalette.brand.opacity(0.14) : Color.clear)
             )
-            .overlay(alignment: .leading) {
-                if isSelected && !isCompact {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(AppPalette.brand)
-                        .frame(width: 3, height: 18)
-                        .offset(x: 0)
-                }
-            }
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                    .stroke(isSelected ? AppPalette.brand.opacity(0.22) : Color.clear, lineWidth: 1)
+            )
             .contentShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         }
         .buttonStyle(PressResponsiveButtonStyle())
@@ -282,12 +287,12 @@ struct ContentView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.top, 38)
+            .padding(.bottom, 14)
             .background(AppPalette.paper.opacity(0.96))
 
             Divider()
         }
-        .background(AppPalette.paper.opacity(0.85))
     }
 
     private var queryToolbarPanel: some View {
@@ -615,5 +620,48 @@ private struct AppUpdateSheet: View {
         .padding(24)
         .frame(width: 520)
         .background(AppPalette.paper)
+    }
+}
+
+private struct SidebarEffectView: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = NSVisualEffectView()
+        v.material = .sidebar
+        v.blendingMode = .behindWindow
+        v.state = .active
+        return v
+    }
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+}
+
+private struct WindowChromeConfigurator: NSViewRepresentable {
+    func makeNSView(context: Context) -> WindowChromeView {
+        WindowChromeView()
+    }
+
+    func updateNSView(_ nsView: WindowChromeView, context: Context) {
+        nsView.configureWindowChrome()
+    }
+
+    final class WindowChromeView: NSView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            configureWindowChrome()
+        }
+
+        func configureWindowChrome() {
+            guard let window else { return }
+            window.title = "且慢主理人"
+            window.titleVisibility = .hidden
+            window.titlebarAppearsTransparent = true
+            window.styleMask.insert(.fullSizeContentView)
+            window.isMovableByWindowBackground = true
+
+            // Collapsed empty toolbar removes the titlebar strip entirely
+            let tb = NSToolbar(identifier: "main")
+            tb.showsBaselineSeparator = false
+            window.toolbar = tb
+            window.toolbarStyle = .unified
+        }
     }
 }

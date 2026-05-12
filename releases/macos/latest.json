@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.41",
-  "name": "QiemanDashboard v2.2.41",
-  "body": "修复设置页滚动条未完全隐藏的问题",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.41",
-  "published_at": "2026-05-11T10:42:29Z",
+  "tag_name": "v2.2.42",
+  "name": "QiemanDashboard v2.2.42",
+  "body": "侧边栏半透明毛玻璃效果 + 隐藏标题栏融合红绿灯按钮到侧边栏",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.42",
+  "published_at": "TBD",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.41.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.41/QiemanDashboard-2.2.41.zip",
-      "size": 3532394,
+      "name": "QiemanDashboard-2.2.42.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.42/QiemanDashboard-2.2.42.zip",
+      "size": 0,
       "content_type": "application/zip"
     }
   ]
