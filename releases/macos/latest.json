@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.44",
-  "name": "QiemanDashboard v2.2.44",
-  "body": "侧边栏改为固定文字导航，优化标题栏侧栏按钮，并修复红绿灯重复位移",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.44",
-  "published_at": "2026-05-12T09:24:15Z",
+  "tag_name": "v2.2.45",
+  "name": "QiemanDashboard v2.2.45",
+  "body": "侧边栏改用 NavigationSplitView 原生体验，移除约 300 行自定义侧边栏代码",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.45",
+  "published_at": "2026-05-12T12:44:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.44.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.44/QiemanDashboard-2.2.44.zip",
-      "size": 3515998,
+      "name": "QiemanDashboard-2.2.45.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.45/QiemanDashboard-2.2.45.zip",
+      "size": 3457541,
       "content_type": "application/zip"
     }
   ]
