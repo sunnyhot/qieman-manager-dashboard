@@ -33,6 +33,7 @@ enum PersonalAssetSortOption: String, CaseIterable, Identifiable {
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     private let compactSidebarThreshold: CGFloat = 1360
+    @State private var isSidebarCollapsed = false
 
     private var shouldShowQueryToolbar: Bool {
         switch model.selectedSection {
@@ -51,10 +52,13 @@ struct ContentView: View {
                 AppPalette.canvasGradient
 
                 HStack(spacing: 0) {
-                    sidebar(isCompact: isCompactSidebar)
-                        .frame(
-                            width: isCompactSidebar ? 90 : 232
-                        )
+                    if !isSidebarCollapsed {
+                        sidebar(isCompact: isCompactSidebar)
+                            .frame(
+                                width: isCompactSidebar ? 90 : 232
+                            )
+                            .transition(.move(edge: .leading).combined(with: .opacity))
+                    }
 
                     mainContent
                 }
@@ -63,6 +67,12 @@ struct ContentView: View {
         .ignoresSafeArea()
         .frame(minWidth: 1080, minHeight: 780)
         .background(WindowChromeConfigurator())
+        .background(SidebarToggleBridge(isCollapsed: isSidebarCollapsed))
+        .onReceive(NotificationCenter.default.publisher(for: .sidebarToggleRequested)) { _ in
+            withAnimation(.easeInOut(duration: 0.25)) {
+                isSidebarCollapsed.toggle()
+            }
+        }
         .task {
             await model.start()
             model.refreshDataForSectionIfNeeded(model.selectedSection)
@@ -140,7 +150,7 @@ struct ContentView: View {
                 }
             }
             .padding(.horizontal, isCompact ? 8 : 10)
-            .padding(.top, isCompact ? 46 : 44)
+            .padding(.top, isCompact ? 38 : 36)
 
             Spacer()
 
@@ -634,6 +644,102 @@ private struct SidebarEffectView: NSViewRepresentable {
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
 
+extension Notification.Name {
+    static let sidebarToggleRequested = Notification.Name("sidebarToggleRequested")
+}
+
+private struct SidebarToggleBridge: NSViewRepresentable {
+    let isCollapsed: Bool
+
+    func makeNSView(context: Context) -> ToggleHostView {
+        let host = ToggleHostView()
+        host.onToggle = {
+            NotificationCenter.default.post(name: .sidebarToggleRequested, object: nil)
+        }
+        return host
+    }
+
+    func updateNSView(_ host: ToggleHostView, context: Context) {
+        host.isCollapsed = isCollapsed
+        host.refreshAppearance()
+    }
+
+    final class ToggleHostView: NSView {
+        var isCollapsed = false
+        var onToggle: (() -> Void)?
+        private var button: NSButton?
+        private var resizeObserver: NSObjectProtocol?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            // Delay to let the window chrome fully initialize
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                self?.installButton()
+            }
+        }
+
+        private func installButton() {
+            guard let window, button == nil else { return }
+            // Find the titlebar container — same superview as the traffic light buttons
+            guard let closeBtn = window.standardWindowButton(.closeButton),
+                  let titleBarContainer = closeBtn.superview else { return }
+
+            let size: CGFloat = 26
+            let btn = NSButton(frame: NSRect(x: 0, y: 0, width: size, height: size))
+            btn.isBordered = false
+            btn.wantsLayer = true
+            btn.focusRingType = .none
+            btn.imagePosition = .imageOnly
+            btn.imageScaling = .scaleProportionallyDown
+            btn.layer?.cornerRadius = size / 2
+            btn.target = self
+            btn.action = #selector(clicked)
+
+            titleBarContainer.addSubview(btn)
+            button = btn
+
+            refreshAppearance()
+            reposition()
+
+            // Keep aligned on resize
+            resizeObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didResizeNotification, object: window, queue: .main
+            ) { [weak self] _ in self?.reposition() }
+        }
+
+        @objc func clicked() { onToggle?() }
+
+        func refreshAppearance() {
+            guard let btn = button else { return }
+            let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+            btn.image = NSImage(systemSymbolName: "sidebar.left", accessibilityDescription: nil)?
+                .withSymbolConfiguration(config)
+            btn.contentTintColor = .tertiaryLabelColor
+            btn.toolTip = isCollapsed ? "展开侧边栏" : "收起侧边栏"
+        }
+
+        func reposition() {
+            guard let window,
+                  let zoomBtn = window.standardWindowButton(.zoomButton),
+                  let btn = button else { return }
+            let size = btn.frame.size
+            btn.frame.origin = CGPoint(
+                x: zoomBtn.frame.maxX + 6,
+                y: zoomBtn.frame.midY - size.height / 2
+            )
+        }
+
+        override func removeFromSuperview() {
+            if let obs = resizeObserver {
+                NotificationCenter.default.removeObserver(obs)
+            }
+            button?.removeFromSuperview()
+            button = nil
+            super.removeFromSuperview()
+        }
+    }
+}
+
 private struct WindowChromeConfigurator: NSViewRepresentable {
     func makeNSView(context: Context) -> WindowChromeView {
         WindowChromeView()
@@ -662,6 +768,16 @@ private struct WindowChromeConfigurator: NSViewRepresentable {
             tb.showsBaselineSeparator = false
             window.toolbar = tb
             window.toolbarStyle = .unified
+
+            // Shift traffic light buttons up by 4px
+            shiftTrafficLightsUp(by: 8, in: window)
+        }
+
+        private func shiftTrafficLightsUp(by offset: CGFloat, in window: NSWindow) {
+            let buttons: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
+            for type in buttons {
+                window.standardWindowButton(type)?.frame.origin.y += offset
+            }
         }
     }
 }
