@@ -3,12 +3,12 @@
   "name": "QiemanDashboard v2.2.42",
   "body": "侧边栏半透明毛玻璃效果 + 隐藏标题栏融合红绿灯按钮到侧边栏",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.42",
-  "published_at": "TBD",
+  "published_at": "2026-05-12T05:51:00Z",
   "assets": [
     {
       "name": "QiemanDashboard-2.2.42.zip",
       "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.42/QiemanDashboard-2.2.42.zip",
-      "size": 0,
+      "size": 3493411,
       "content_type": "application/zip"
     }
   ]
