@@ -23,51 +23,21 @@ struct PersonalAssetBrowser: View {
         let presentation = makePresentation()
 
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(AppPalette.muted)
-                    TextField("搜索名称或代码", text: $searchText)
-                        .textFieldStyle(.plain)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    browserSearchField
+                    Spacer()
+                    PersonalAssetAddButtons()
+                    browserSortMenu
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
-                )
-                .frame(maxWidth: 320)
 
-                Spacer()
-
-                PersonalAssetAddButtons()
-
-                Menu {
-                    ForEach(PersonalAssetSortOption.allCases) { option in
-                        Button {
-                            sortOption = option
-                        } label: {
-                            HStack {
-                                Text(option.rawValue)
-                                if sortOption == option {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 12) {
+                        browserSearchField
+                        browserSortMenu
                     }
-                } label: {
-                    Label("排序：\(sortOption.rawValue)", systemImage: "arrow.up.arrow.down")
-                        .font(.system(size: 12, weight: .semibold))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                                .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
-                        )
+                    PersonalAssetAddButtons()
                 }
-                .menuStyle(.borderlessButton)
             }
 
             ViewThatFits(in: .horizontal) {
@@ -102,6 +72,51 @@ struct PersonalAssetBrowser: View {
                 PersonalAssetGroupedTable(rows: presentation.visibleRows)
             }
         }
+    }
+
+    private var browserSearchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(AppPalette.muted)
+            TextField("搜索名称或代码", text: $searchText)
+                .textFieldStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+        )
+        .frame(maxWidth: 320)
+    }
+
+    private var browserSortMenu: some View {
+        Menu {
+            ForEach(PersonalAssetSortOption.allCases) { option in
+                Button {
+                    sortOption = option
+                } label: {
+                    HStack {
+                        Text(option.rawValue)
+                        if sortOption == option {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Label("排序：\(sortOption.rawValue)", systemImage: "arrow.up.arrow.down")
+                .font(.system(size: 12, weight: .semibold))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                )
+        }
+        .menuStyle(.borderlessButton)
     }
 
     private func filterChip(scope: PersonalAssetFilterScope, counts: [PersonalAssetFilterScope: Int]) -> some View {
@@ -246,12 +261,37 @@ struct PersonalAssetTable: View {
     let rows: [PersonalAssetAggregateRow]
     let usesMarketTradeColumns: Bool
 
+    private var tableMinWidth: CGFloat {
+        // 标的(flex) + 实时估值260 + 份额100 + 现价120 + 两列340 + 操作52 + spacing
+        usesMarketTradeColumns ? 940 : 940
+    }
+
     init(rows: [PersonalAssetAggregateRow], usesMarketTradeColumns: Bool = false) {
         self.rows = rows
         self.usesMarketTradeColumns = usesMarketTradeColumns
     }
 
     var body: some View {
+        GeometryReader { geo in
+            let needsScroll = geo.size.width < tableMinWidth
+
+            if needsScroll {
+                ScrollView(.horizontal, showsIndicators: true) {
+                    tableContent(width: max(geo.size.width, tableMinWidth))
+                }
+            } else {
+                tableContent(width: geo.size.width)
+            }
+        }
+        .frame(minHeight: tableHeightEstimate)
+    }
+
+    private var tableHeightEstimate: CGFloat {
+        CGFloat(rows.count) * 80 + 44
+    }
+
+    @ViewBuilder
+    private func tableContent(width: CGFloat) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
                 Text("标的")
@@ -294,6 +334,7 @@ struct PersonalAssetTable: View {
             }
             .padding(.top, 10)
         }
+        .frame(width: width)
     }
 }
 

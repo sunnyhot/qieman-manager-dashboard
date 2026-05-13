@@ -132,7 +132,7 @@ struct SettingsSectionView: View {
     }
 
     private var settingsMetricWideColumns: [GridItem] {
-        Array(repeating: GridItem(.flexible(minimum: 176), spacing: 12), count: 4)
+        [GridItem(.adaptive(minimum: 176), spacing: 12)]
     }
 
     @ViewBuilder

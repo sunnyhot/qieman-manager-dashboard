@@ -57,7 +57,7 @@ struct ContentView: View {
             mainContent
                 .background(AppPalette.canvasGradient)
         }
-        .frame(minWidth: 1080, minHeight: 780)
+        .frame(minWidth: 860, minHeight: 600)
         .task {
             await model.start()
             model.refreshDataForSectionIfNeeded(model.selectedSection)

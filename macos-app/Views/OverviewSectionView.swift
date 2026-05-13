@@ -142,7 +142,7 @@ struct OverviewSectionView: View {
     }
 
     private var overviewMetricWideColumns: [GridItem] {
-        Array(repeating: GridItem(.flexible(minimum: 220), spacing: 12), count: 4)
+        [GridItem(.adaptive(minimum: 220), spacing: 12)]
     }
 
     @ViewBuilder

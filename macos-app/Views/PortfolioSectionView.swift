@@ -105,13 +105,12 @@ struct PortfolioSectionView: View {
                     )
                 }
 
-                HStack(spacing: 10) {
-                    Text(model.portfolioAutoRefreshStatusText)
-                    if let latestTime = model.pendingTradeSummary?.latestTime {
-                        Text("待确认最新：\(latestTime)")
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) {
+                        statusLineContent
                     }
-                    if let nextDate = model.investmentPlanSummary?.nextExecutionDate {
-                        Text("下次定投：\(nextDate)")
+                    VStack(alignment: .leading, spacing: 4) {
+                        statusLineContent
                     }
                 }
                 .font(.system(size: 11))
@@ -156,7 +155,7 @@ struct PortfolioSectionView: View {
                 }) {
                     if let summary = model.pendingTradeSummary, !model.pendingTrades.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            HStack(spacing: 10) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 10)], spacing: 10) {
                                 StatChip(title: "待确认金额", value: currencyText(summary.totalCashAmount))
                                 StatChip(title: "现金单", value: "\(summary.cashTradeCount)")
                                 if summary.unitTradeCount > 0 {
@@ -206,11 +205,11 @@ struct PortfolioSectionView: View {
                 }) {
                     if let summary = model.investmentPlanSummary, !model.investmentPlans.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            HStack(spacing: 10) {
-                                StatChip(title: "累计投入", value: currencyText(summary.totalCumulativeInvestedAmount))
-                                StatChip(title: "最近执行", value: summary.nextExecutionDate ?? "—")
-                                StatChip(title: "计划状态", value: "进行中 \(summary.activePlanCount) · 暂停 \(summary.pausedPlanCount) · 终止 \(summary.endedPlanCount) · 总数 \(summary.planCount)")
-                            }
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 10)], spacing: 10) {
+                                    StatChip(title: "累计投入", value: currencyText(summary.totalCumulativeInvestedAmount))
+                                    StatChip(title: "最近执行", value: summary.nextExecutionDate ?? "—")
+                                    StatChip(title: "计划状态", value: "进行中 \(summary.activePlanCount) · 暂停 \(summary.pausedPlanCount) · 终止 \(summary.endedPlanCount) · 总数 \(summary.planCount)")
+                                }
 
                             if !model.activeInvestmentPlans.isEmpty {
                                 PlanArchiveGroup(title: "进行中", tint: AppPalette.positive, plans: model.activeInvestmentPlans)
@@ -281,6 +280,17 @@ struct PortfolioSectionView: View {
             }
         } message: {
             Text(deletePendingConfirmationMessage)
+        }
+    }
+
+    @ViewBuilder
+    private var statusLineContent: some View {
+        Text(model.portfolioAutoRefreshStatusText)
+        if let latestTime = model.pendingTradeSummary?.latestTime {
+            Text("待确认最新：\(latestTime)")
+        }
+        if let nextDate = model.investmentPlanSummary?.nextExecutionDate {
+            Text("下次定投：\(nextDate)")
         }
     }
 
