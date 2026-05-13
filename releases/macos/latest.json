@@ -1,6 +1,7 @@
 {
   "tag_name": "v2.2.47",
   "name": "QiemanDashboard v2.2.47",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.47",
   "body": "左侧栏悬浮效果适配：macOS 26以下系统添加毛玻璃背景+圆角裁切+悬浮阴影，macOS 26+保持原生效果",
   "published_at": "2026-05-13T08:18:00Z",
   "assets": [
