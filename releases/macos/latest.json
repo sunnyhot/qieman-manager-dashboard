@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.48",
-  "name": "QiemanDashboard v2.2.48",
-  "body": "左侧栏悬浮效果适配：macOS 26以下系统添加毛玻璃背景+圆角裁切+悬浮阴影，macOS 26+保持原生效果",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.48",
-  "published_at": "2026-05-13T08:36:48Z",
+  "tag_name": "v2.2.49",
+  "name": "QiemanDashboard v2.2.49",
+  "body": "持仓列表适配小窗口：窗口宽度 <780pt 时自动切换 compact 模式，缩小列宽、隐藏份额列（合并到标的列下方）、紧凑文字排版",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.49",
+  "published_at": "2026-05-13T08:51:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.48.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.48/QiemanDashboard-2.2.48.zip",
-      "size": 3497267,
+      "name": "QiemanDashboard-2.2.49.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.49/QiemanDashboard-2.2.49.zip",
+      "size": 3500796,
       "content_type": "application/zip"
     }
   ]
