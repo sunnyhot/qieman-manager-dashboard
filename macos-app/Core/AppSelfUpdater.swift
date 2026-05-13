@@ -116,28 +116,13 @@ struct AppSelfUpdater {
         downloadProgress: DownloadProgressHandler?
     ) async throws -> URL {
         let delegate = DownloadDelegate(expectedSize: expectedSize, progressHandler: downloadProgress)
+        // Use a delegate-based session (no completion handler on the task) so that
+        // URLSessionDownloadDelegate progress callbacks are actually invoked.
         let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
 
         return try await withCheckedThrowingContinuation { continuation in
-            session.downloadTask(with: url) { tempURL, response, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                guard let tempURL else {
-                    continuation.resume(throwing: AppSelfUpdateError.extractionFailed)
-                    return
-                }
-                // Copy to a stable temp location so the file isn't auto-deleted
-                let stableURL = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("qieman-download-\(UUID().uuidString)")
-                do {
-                    try FileManager.default.moveItem(at: tempURL, to: stableURL)
-                    continuation.resume(returning: stableURL)
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }.resume()
+            delegate.continuation = continuation
+            session.downloadTask(with: url).resume()
         }
     }
 
@@ -146,6 +131,7 @@ struct AppSelfUpdater {
     private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
         let expectedSize: Int64
         let progressHandler: DownloadProgressHandler?
+        var continuation: CheckedContinuation<URL, Error>?
 
         init(expectedSize: Int64, progressHandler: DownloadProgressHandler?) {
             self.expectedSize = expectedSize
@@ -177,7 +163,27 @@ struct AppSelfUpdater {
             downloadTask: URLSessionDownloadTask,
             didFinishDownloadingTo location: URL
         ) {
-            // Handled by the downloadTask completion block in downloadFile
+            // Move the temp file to a stable location before the system deletes it.
+            let stableURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("qieman-download-\(UUID().uuidString)")
+            do {
+                try FileManager.default.moveItem(at: location, to: stableURL)
+                continuation?.resume(returning: stableURL)
+            } catch {
+                continuation?.resume(throwing: error)
+            }
+            continuation = nil
+        }
+
+        func urlSession(
+            _ session: URLSession,
+            task: URLSessionTask,
+            didCompleteWithError error: Error?
+        ) {
+            if let error {
+                continuation?.resume(throwing: error)
+                continuation = nil
+            }
         }
     }
 
