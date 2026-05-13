@@ -3,7 +3,7 @@
   "name": "QiemanDashboard v2.2.50",
   "body": "性能与代码精简：减少菜单栏无效重绘，优化持仓聚合、ticker 汇总、概览统计和紧凑表格宽度计算，清理冗余导入。",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.50",
-  "published_at": "2026-05-13T09:53:08Z",
+  "published_at": "2026-05-13T09:55:35Z",
   "assets": [
     {
       "name": "QiemanDashboard-2.2.50.zip",
