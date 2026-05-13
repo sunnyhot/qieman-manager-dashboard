@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.45",
-  "name": "QiemanDashboard v2.2.45",
-  "body": "侧边栏改用 NavigationSplitView 原生体验，移除约 300 行自定义侧边栏代码",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.45",
-  "published_at": "2026-05-12T12:44:00Z",
+  "tag_name": "v2.2.46",
+  "name": "QiemanDashboard v2.2.46",
+  "body": "修复非最大化窗口下的响应式布局：Web端添加overflow-x:hidden和中间断点；macOS端窗口最小尺寸降至860×600，表格/卡片自适应布局",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.46",
+  "published_at": "2026-05-13T07:40:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.45.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.45/QiemanDashboard-2.2.45.zip",
-      "size": 3457541,
+      "name": "QiemanDashboard-2.2.46.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.46/QiemanDashboard-2.2.46.zip",
+      "size": 3491546,
       "content_type": "application/zip"
     }
   ]
