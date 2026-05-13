@@ -1,13 +1,12 @@
 {
-  "tag_name": "v2.2.46",
-  "name": "QiemanDashboard v2.2.46",
-  "body": "修复非最大化窗口下的响应式布局：Web端添加overflow-x:hidden和中间断点；macOS端窗口最小尺寸降至860×600，表格/卡片自适应布局",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.46",
-  "published_at": "2026-05-13T07:40:00Z",
+  "tag_name": "v2.2.47",
+  "name": "QiemanDashboard v2.2.47",
+  "body": "左侧栏悬浮效果适配：macOS 26以下系统添加毛玻璃背景+圆角裁切+悬浮阴影，macOS 26+保持原生效果",
+  "published_at": "2026-05-13T08:18:00Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.46.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.46/QiemanDashboard-2.2.46.zip",
+      "name": "QiemanDashboard-2.2.47.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.47/QiemanDashboard-2.2.47.zip",
       "size": 3491546,
       "content_type": "application/zip"
     }
