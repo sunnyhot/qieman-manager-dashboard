@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.3.1",
-  "name": "QiemanDashboard v2.3.1",
-  "body": "应用升级下载过程添加下载进度指示器：实时百分比+已下载/总字节数",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.1",
-  "published_at": "2026-05-13T10:17:00Z",
+  "tag_name": "v2.3.2",
+  "name": "QiemanDashboard v2.3.2",
+  "body": "优化平台调仓筛选 UI：减小 MetricCard、SectionCard、列表行的间距和 padding，整体更紧凑",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.2",
+  "published_at": "2026-05-13T13:19:40Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.3.1.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.1/QiemanDashboard-2.3.1.zip",
-      "size": 3512581,
+      "name": "QiemanDashboard-2.3.2.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.2/QiemanDashboard-2.3.2.zip",
+      "size": 3022225,
       "content_type": "application/zip"
     }
   ]
