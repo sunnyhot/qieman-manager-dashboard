@@ -300,12 +300,15 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
             .environmentObject(model)
             .tint(AppPalette.brand)
             .preferredColorScheme(model.appearance.colorScheme)
+
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false)
         window.center()
         window.title = "且慢主理人"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
         window.contentView = NSHostingView(rootView: contentView)
         window.makeKeyAndOrderFront(nil)
     }
@@ -347,7 +350,7 @@ struct QiemanDashboardApp: App {
                     appDelegate.configure(model: model)
                 }
         }
-        .windowStyle(.titleBar)
+        .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(after: .appInfo) {
                 Button("打开数据目录") {

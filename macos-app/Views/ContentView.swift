@@ -53,6 +53,7 @@ struct ContentView: View {
             .safeAreaInset(edge: .bottom) {
                 sidebarFooter
             }
+            .modifier(SidebarFloatingCompatModifier())
         } detail: {
             mainContent
                 .background(AppPalette.canvasGradient)
@@ -506,6 +507,52 @@ private struct AppUpdateSheet: View {
         .padding(24)
         .frame(width: 520)
         .background(AppPalette.paper)
+    }
+}
+
+// MARK: - Sidebar Floating Compatibility Modifier
+
+/// On macOS 26+, NavigationSplitView natively renders a floating/glass sidebar.
+/// On older macOS (14–15), we simulate the effect with a translucent material
+/// background, a subtle shadow, and rounded corners.
+struct SidebarFloatingCompatModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            // macOS 26+ provides the native floating sidebar automatically
+            content
+        } else {
+            // macOS 14–15: apply a translucent material backdrop + floating shadow
+            content
+                .background(
+                    VisualEffectBlurView(material: .sidebar)
+                        .ignoresSafeArea()
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .shadow(color: Color.black.opacity(0.10), radius: 6, x: 2, y: 0)
+        }
+    }
+}
+
+// MARK: - NSVisualEffectView Wrapper
+
+/// Wraps `NSVisualEffectView` to provide a blurred material backdrop on macOS 14+.
+/// Uses `.sidebar` material which matches the system sidebar appearance.
+struct VisualEffectBlurView: NSViewRepresentable {
+    var material: NSVisualEffectView.Material
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = .behindWindow
+        view.state = .active
+        view.wantsLayer = true
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = .behindWindow
+        nsView.state = .active
     }
 }
 
