@@ -261,10 +261,8 @@ struct PersonalAssetTable: View {
     let rows: [PersonalAssetAggregateRow]
     let usesMarketTradeColumns: Bool
 
-    private var tableMinWidth: CGFloat {
-        // 标的(flex) + 实时估值260 + 份额100 + 现价120 + 两列340 + 操作52 + spacing
-        usesMarketTradeColumns ? 940 : 940
-    }
+    /// Compact threshold — below this width we switch to responsive column widths
+    static let compactThreshold: CGFloat = 780
 
     init(rows: [PersonalAssetAggregateRow], usesMarketTradeColumns: Bool = false) {
         self.rows = rows
@@ -273,14 +271,11 @@ struct PersonalAssetTable: View {
 
     var body: some View {
         GeometryReader { geo in
-            let needsScroll = geo.size.width < tableMinWidth
+            let availableWidth = geo.size.width
+            let isCompact = availableWidth < Self.compactThreshold
 
-            if needsScroll {
-                ScrollView(.horizontal, showsIndicators: true) {
-                    tableContent(width: max(geo.size.width, tableMinWidth))
-                }
-            } else {
-                tableContent(width: geo.size.width)
+            ScrollView(.horizontal, showsIndicators: isCompact) {
+                tableContent(availableWidth: availableWidth, isCompact: isCompact)
             }
         }
         .frame(minHeight: tableHeightEstimate)
@@ -290,31 +285,69 @@ struct PersonalAssetTable: View {
         CGFloat(rows.count) * 80 + 44
     }
 
+    // MARK: - Column widths adapt to available space
+
+    private func valuationColWidth(isCompact: Bool) -> CGFloat {
+        isCompact ? 180 : 260
+    }
+
+    private func unitsColWidth(isCompact: Bool) -> CGFloat {
+        isCompact ? 80 : 100
+    }
+
+    private func priceColWidth(isCompact: Bool) -> CGFloat {
+        isCompact ? 100 : 120
+    }
+
+    private func fifthColWidth(isCompact: Bool) -> CGFloat {
+        isCompact ? 110 : 150
+    }
+
+    private func sixthColWidth(isCompact: Bool) -> CGFloat {
+        isCompact ? 130 : 190
+    }
+
+    private func actionColWidth(isCompact: Bool) -> CGFloat {
+        isCompact ? 40 : 52
+    }
+
     @ViewBuilder
-    private func tableContent(width: CGFloat) -> some View {
+    private func tableContent(availableWidth: CGFloat, isCompact: Bool) -> some View {
+        let colSpacing: CGFloat = isCompact ? 8 : 12
+        let totalFixedWidth = valuationColWidth(isCompact: isCompact)
+            + unitsColWidth(isCompact: isCompact)
+            + priceColWidth(isCompact: isCompact)
+            + fifthColWidth(isCompact: isCompact)
+            + sixthColWidth(isCompact: isCompact)
+            + actionColWidth(isCompact: isCompact)
+            + colSpacing * 6  // spacing between 7 columns
+            + 24              // horizontal padding (12*2)
+
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
+            HStack(spacing: colSpacing) {
                 Text("标的")
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text("实时估值 / 收益")
-                    .frame(width: 260, alignment: .leading)
-                Text("持有份额")
-                    .frame(width: 100, alignment: .leading)
-                Text("现价 / 成本")
-                    .frame(width: 120, alignment: .leading)
+                Text(isCompact ? "估值/收益" : "实时估值 / 收益")
+                    .frame(width: valuationColWidth(isCompact: isCompact), alignment: .leading)
+                if !isCompact {
+                    Text("持有份额")
+                        .frame(width: unitsColWidth(isCompact: isCompact), alignment: .leading)
+                }
+                Text(isCompact ? "价格" : "现价 / 成本")
+                    .frame(width: priceColWidth(isCompact: isCompact), alignment: .leading)
                 if usesMarketTradeColumns {
                     Text("涨跌幅")
-                        .frame(width: 150, alignment: .leading)
+                        .frame(width: fifthColWidth(isCompact: isCompact), alignment: .leading)
                     Text("涨跌额")
-                        .frame(width: 190, alignment: .leading)
+                        .frame(width: sixthColWidth(isCompact: isCompact), alignment: .leading)
                 } else {
                     Text("待确认")
-                        .frame(width: 150, alignment: .leading)
+                        .frame(width: fifthColWidth(isCompact: isCompact), alignment: .leading)
                     Text("计划档案")
-                        .frame(width: 190, alignment: .leading)
+                        .frame(width: sixthColWidth(isCompact: isCompact), alignment: .leading)
                 }
                 Text("操作")
-                    .frame(width: 52, alignment: .trailing)
+                    .frame(width: actionColWidth(isCompact: isCompact), alignment: .trailing)
             }
             .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(AppPalette.muted)
@@ -329,12 +362,22 @@ struct PersonalAssetTable: View {
 
             VStack(spacing: 8) {
                 ForEach(rows) { row in
-                    PersonalAssetTableRow(row: row)
+                    PersonalAssetTableRow(
+                        row: row,
+                        isCompact: isCompact,
+                        colSpacing: colSpacing,
+                        valuationWidth: valuationColWidth(isCompact: isCompact),
+                        unitsWidth: unitsColWidth(isCompact: isCompact),
+                        priceWidth: priceColWidth(isCompact: isCompact),
+                        fifthWidth: fifthColWidth(isCompact: isCompact),
+                        sixthWidth: sixthColWidth(isCompact: isCompact),
+                        actionWidth: actionColWidth(isCompact: isCompact)
+                    )
                 }
             }
             .padding(.top, 10)
         }
-        .frame(width: width)
+        .frame(minWidth: max(availableWidth, totalFixedWidth + 100))
     }
 }
 
@@ -342,6 +385,14 @@ struct PersonalAssetTableRow: View {
     @EnvironmentObject private var model: AppModel
 
     let row: PersonalAssetAggregateRow
+    var isCompact: Bool = false
+    var colSpacing: CGFloat = 12
+    var valuationWidth: CGFloat = 260
+    var unitsWidth: CGFloat = 100
+    var priceWidth: CGFloat = 120
+    var fifthWidth: CGFloat = 150
+    var sixthWidth: CGFloat = 190
+    var actionWidth: CGFloat = 52
 
     @State private var pendingDeleteScope: PersonalAssetDeleteScope?
     @State private var pendingUnitAdjustmentMode: PersonalAssetUnitAdjustmentMode?
@@ -357,12 +408,13 @@ struct PersonalAssetTableRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: colSpacing) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
                     Text(row.fundName)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
                     if let marketLabel = row.rawHolding?.marketLabel ?? row.holdingRow?.holding.marketLabel ?? row.archivedHolding?.marketLabel {
                         ToolbarBadge(title: marketLabel, tint: AppPalette.info)
                     }
@@ -388,54 +440,78 @@ struct PersonalAssetTableRow: View {
                 }
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
+                // In compact mode, show shares inline under the name
+                if isCompact {
+                    Text("\(unitsColumnValue) 份")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(row.marketValue.map { currencyText($0, market: row.detectedMarket) } ?? "—")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: isCompact ? 11 : 12, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
-                Text("总收益 \(signedCurrencyText(row.profitAmount, market: row.detectedMarket)) · \(percentOptional(row.profitPct))")
-                    .font(.system(size: 10))
-                    .foregroundStyle(profitTint)
-                Text("今日涨跌 \(signedCurrencyText(row.estimateChangeAmount, market: row.detectedMarket)) · \(percentOptional(row.estimateChangePct))")
-                    .font(.system(size: 10))
-                    .foregroundStyle(changeTint)
-            }
-            .frame(width: 260, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(unitsColumnValue)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppPalette.ink)
-                if let unitsColumnCaption {
-                    Text(unitsColumnCaption)
+                if isCompact {
+                    // Compact: combine profit and today change on fewer lines
+                    Text("收益 \(signedCurrencyText(row.profitAmount, market: row.detectedMarket)) · \(percentOptional(row.profitPct))")
                         .font(.system(size: 10))
-                        .foregroundStyle(AppPalette.muted)
+                        .foregroundStyle(profitTint)
+                    Text("今日 \(signedCurrencyText(row.estimateChangeAmount, market: row.detectedMarket)) · \(percentOptional(row.estimateChangePct))")
+                        .font(.system(size: 10))
+                        .foregroundStyle(changeTint)
+                } else {
+                    Text("总收益 \(signedCurrencyText(row.profitAmount, market: row.detectedMarket)) · \(percentOptional(row.profitPct))")
+                        .font(.system(size: 10))
+                        .foregroundStyle(profitTint)
+                    Text("今日涨跌 \(signedCurrencyText(row.estimateChangeAmount, market: row.detectedMarket)) · \(percentOptional(row.estimateChangePct))")
+                        .font(.system(size: 10))
+                        .foregroundStyle(changeTint)
                 }
             }
-            .frame(width: 100, alignment: .leading)
+            .frame(width: valuationWidth, alignment: .leading)
+
+            if !isCompact {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(unitsColumnValue)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                    if let unitsColumnCaption {
+                        Text(unitsColumnCaption)
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppPalette.muted)
+                    }
+                }
+                .frame(width: unitsWidth, alignment: .leading)
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(row.usesMarketTradeColumns ? "现价" : "净值") \(row.currentPrice.map(decimalText) ?? "—")")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: isCompact ? 10 : 11, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
                 if let estimatePrice = row.currentEstimatePrice {
-                    Text("估值 \(decimalText(estimatePrice)) · \(percentOptional(row.estimateChangePct))")
-                        .font(.system(size: 10))
-                        .foregroundStyle(changeTint)
+                    if isCompact {
+                        Text("估\(decimalText(estimatePrice)) \(percentOptional(row.estimateChangePct))")
+                            .font(.system(size: 10))
+                            .foregroundStyle(changeTint)
+                    } else {
+                        Text("估值 \(decimalText(estimatePrice)) · \(percentOptional(row.estimateChangePct))")
+                            .font(.system(size: 10))
+                            .foregroundStyle(changeTint)
+                    }
                 }
                 Text("成本 \(row.costPrice.map(decimalText) ?? "—")")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
             }
-            .frame(width: 120, alignment: .leading)
+            .frame(width: priceWidth, alignment: .leading)
 
             if row.usesMarketTradeColumns {
                 Group {
                     if let changePct = row.estimateChangePct {
                         Text(String(format: "%+.2f%%", changePct))
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .font(.system(size: isCompact ? 12 : 14, weight: .bold, design: .rounded))
                             .foregroundStyle(AppPalette.marketTint(for: changePct))
                     } else {
                         Text("—")
@@ -443,12 +519,12 @@ struct PersonalAssetTableRow: View {
                             .foregroundStyle(AppPalette.ink)
                     }
                 }
-                .frame(width: 150, alignment: .leading)
+                .frame(width: fifthWidth, alignment: .leading)
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     if row.pendingTradeCount > 0 {
                         Text(row.pendingCashAmount > 0 ? currencyText(row.pendingCashAmount, market: row.detectedMarket) : "\(unitsText(row.pendingUnitAmount)) 份")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: isCompact ? 11 : 12, weight: .semibold))
                             .foregroundStyle(AppPalette.ink)
                         Text("\(row.pendingTradeCount) 笔 · \(row.pendingTrades.first?.actionLabel ?? "待确认")")
                             .font(.system(size: 10))
@@ -457,19 +533,21 @@ struct PersonalAssetTableRow: View {
                         Text("—")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(AppPalette.ink)
-                        Text("暂无")
-                            .font(.system(size: 10))
-                            .foregroundStyle(AppPalette.muted)
+                        if !isCompact {
+                            Text("暂无")
+                                .font(.system(size: 10))
+                                .foregroundStyle(AppPalette.muted)
+                        }
                     }
                 }
-                .frame(width: 150, alignment: .leading)
+                .frame(width: fifthWidth, alignment: .leading)
             }
 
             if row.usesMarketTradeColumns {
                 Group {
                     if let changeAmt = row.estimateChangeAmount {
                         Text(signedCurrencyText(changeAmt, market: row.detectedMarket))
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .font(.system(size: isCompact ? 12 : 14, weight: .bold, design: .rounded))
                             .foregroundStyle(AppPalette.marketTint(for: changeAmt))
                     } else {
                         Text("—")
@@ -477,26 +555,34 @@ struct PersonalAssetTableRow: View {
                             .foregroundStyle(AppPalette.ink)
                     }
                 }
-                .frame(width: 190, alignment: .leading)
+                .frame(width: sixthWidth, alignment: .leading)
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                 if row.totalPlanCount > 0 {
                     Text("进行中 \(row.activePlanCount) · 暂停 \(row.pausedPlanCount) · 终止 \(row.endedPlanCount)")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: isCompact ? 10 : 11, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
-                    Text("下次估算 \(currencyText(row.estimatedNextPlanAmount, market: row.detectedMarket)) · 累计 \(currencyText(row.totalCumulativePlanAmount, market: row.detectedMarket))\(row.hasDrawdownPlan ? " · 涨跌幅 \(row.drawdownPlanCount)" : "")")
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppPalette.muted)
+                    if isCompact {
+                        Text("累计 \(currencyText(row.totalCumulativePlanAmount, market: row.detectedMarket))")
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppPalette.muted)
+                    } else {
+                        Text("下次估算 \(currencyText(row.estimatedNextPlanAmount, market: row.detectedMarket)) · 累计 \(currencyText(row.totalCumulativePlanAmount, market: row.detectedMarket))\(row.hasDrawdownPlan ? " · 涨跌幅 \(row.drawdownPlanCount)" : "")")
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppPalette.muted)
+                    }
                 } else {
                     Text("—")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
-                    Text("暂无")
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppPalette.muted)
+                    if !isCompact {
+                        Text("暂无")
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppPalette.muted)
+                    }
                 }
             }
-            .frame(width: 190, alignment: .leading)
+            .frame(width: sixthWidth, alignment: .leading)
             }
 
             HStack {
@@ -505,7 +591,7 @@ struct PersonalAssetTableRow: View {
                     actionMenu
                 }
             }
-            .frame(width: 52, alignment: .trailing)
+            .frame(width: actionWidth, alignment: .trailing)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
