@@ -3146,9 +3146,10 @@ def render_dashboard_page(
         radial-gradient(circle at top right, rgba(13, 138, 118, 0.22), transparent 28%),
         linear-gradient(180deg, #faf6ef 0%, #f4ece1 100%);
       min-height: 100vh;
+      overflow-x: hidden;
     }}
     a {{ color: inherit; text-decoration: none; }}
-    .page {{ padding: 28px; }}
+    .page {{ padding: 28px; max-width: 1380px; margin: 0 auto; }}
     .hero {{
       display: flex;
       justify-content: space-between;
@@ -3742,6 +3743,9 @@ def render_dashboard_page(
       .query-head {{ display: grid; }}
       .query-summary {{ min-width: 0; }}
       .query-core .keyword-field {{ grid-column: auto; }}
+      .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+      .trade-overview-metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+      .holdings-list {{ grid-template-columns: 1fr; }}
     }}
     @media (max-width: 980px) {{
       .page {{ padding: 18px; }}
@@ -4023,6 +4027,7 @@ def render_platform_page(
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
+      overflow-x: hidden;
       color: var(--ink);
       font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
       background:
@@ -4253,6 +4258,12 @@ def render_platform_page(
     .empty {{
       padding: 28px 18px; text-align: center; color: var(--muted); border: 1px dashed rgba(23, 49, 59, 0.16); border-radius: 18px;
     }}
+    @media (max-width: 1100px) {{
+      .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+      .trade-overview-metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+      .holdings-list {{ grid-template-columns: 1fr; }}
+      .allocation-grid {{ grid-template-columns: 1fr; }}
+    }}
     @media (max-width: 980px) {{
       .page {{ padding: 18px; }}
       .hero {{ display: grid; }}
@@ -4355,6 +4366,7 @@ def render_forum_page(
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
+      overflow-x: hidden;
       color: var(--ink);
       font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
       background:
@@ -4440,6 +4452,9 @@ def render_forum_page(
     .comment-avatar img {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
     .comment-tag, .reply-tag {{ display: inline-flex; margin-left: 6px; padding: 4px 8px; border-radius: 999px; background: rgba(13, 138, 118, 0.14); color: var(--accent); font-size: 11px; font-weight: 700; }}
     .empty {{ padding: 28px 18px; text-align: center; color: var(--muted); border: 1px dashed rgba(23, 49, 59, 0.16); border-radius: 18px; }}
+    @media (max-width: 1100px) {{
+      .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+    }}
     @media (max-width: 980px) {{
       .page {{ padding: 18px; }}
       .hero {{ display: grid; }}
@@ -4525,6 +4540,7 @@ def render_timeline_page(
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
+      overflow-x: hidden;
       color: var(--ink);
       font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
       background:
@@ -4698,6 +4714,10 @@ def render_timeline_page(
       color: var(--muted);
       border: 1px dashed rgba(23, 49, 59, 0.16);
       border-radius: 18px;
+    }}
+    @media (max-width: 1100px) {{
+      .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+      .timeline-entry {{ grid-template-columns: 1fr; }}
     }}
     @media (max-width: 980px) {{
       .page {{ padding: 18px; }}
