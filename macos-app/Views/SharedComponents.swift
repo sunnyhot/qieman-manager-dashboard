@@ -167,7 +167,9 @@ struct SectionCard<Trailing: View, Content: View>: View {
                     Text(subtitle)
                         .font(.system(size: 11))
                         .foregroundStyle(AppPalette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 trailing
             }
             content
