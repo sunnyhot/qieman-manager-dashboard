@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 private enum MenuBarHoldingSortOption: String, CaseIterable, Identifiable {
@@ -143,19 +142,17 @@ struct MenuBarPortfolioView: View {
     }
 
     private func sortedHoldingRows(_ rows: [UserPortfolioValuationRow]) -> [UserPortfolioValuationRow] {
-        switch holdingSort {
+        let value: (UserPortfolioValuationRow) -> Double? = switch holdingSort {
         case .dailyChange:
-            return rows.map { ($0, $0.estimatedDailyChangeAmount ?? -.greatestFiniteMagnitude) }
-                .sorted { $0.1 > $1.1 }
-                .map(\.0)
+            { $0.estimatedDailyChangeAmount }
         case .totalProfit:
-            return rows.map { ($0, $0.profitAmount ?? -.greatestFiniteMagnitude) }
-                .sorted { $0.1 > $1.1 }
-                .map(\.0)
+            { $0.profitAmount }
         case .marketValue:
-            return rows.map { ($0, $0.marketValue ?? -.greatestFiniteMagnitude) }
-                .sorted { $0.1 > $1.1 }
-                .map(\.0)
+            { $0.marketValue }
+        }
+
+        return rows.sorted {
+            (value($0) ?? -.greatestFiniteMagnitude) > (value($1) ?? -.greatestFiniteMagnitude)
         }
     }
 
@@ -196,44 +193,22 @@ private struct MenuBarSummaryCard: View {
     let snapshot: UserPortfolioSnapshot
     let personalSummary: PersonalAssetAggregateSummary?
 
-    private var totalDailyChangeAmount: Double? {
-        let values = snapshot.rows.compactMap(\.estimatedDailyChangeAmount)
-        guard !values.isEmpty else { return nil }
-        return values.reduce(0, +)
-    }
-
-    private var totalDailyChangePct: Double? {
-        let pairs = snapshot.rows.compactMap { row -> (Double, Double)? in
-            guard let change = row.estimatedDailyChangeAmount,
-                  let previous = row.previousMarketValue,
-                  previous > 0
-            else { return nil }
-            return (change, previous)
-        }
-        guard !pairs.isEmpty else { return nil }
-        let totalChange = pairs.reduce(0) { $0 + $1.0 }
-        let totalPrevious = pairs.reduce(0) { $0 + $1.1 }
-        guard totalPrevious > 0 else { return nil }
-        return totalChange / totalPrevious * 100
-    }
-
-    private var dailyTint: Color {
-        AppPalette.marketTint(for: totalDailyChangeAmount)
-    }
-
     private var profitTint: Color {
         AppPalette.marketTint(for: snapshot.totalProfitAmount)
     }
 
     var body: some View {
+        let dailyChange = snapshot.dailyChangeSummary
+        let dailyTint = AppPalette.marketTint(for: dailyChange.amount)
+
         VStack(alignment: .leading, spacing: 6) {
             Text(currencyText(personalSummary?.totalEffectiveHoldingAmount ?? snapshot.totalMarketValue))
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(AppPalette.ink)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-                SummaryPill(title: "今日涨跌", value: signedCurrencyOptional(totalDailyChangeAmount), tint: dailyTint)
-                SummaryPill(title: "今日涨跌率", value: percentOptional(totalDailyChangePct), tint: dailyTint)
+                SummaryPill(title: "今日涨跌", value: signedCurrencyOptional(dailyChange.amount), tint: dailyTint)
+                SummaryPill(title: "今日涨跌率", value: percentOptional(dailyChange.pct), tint: dailyTint)
                 SummaryPill(title: "总收益", value: signedCurrencyOptional(snapshot.totalProfitAmount), tint: profitTint)
                 SummaryPill(title: "总收益率", value: percentOptional(snapshot.totalProfitPct), tint: profitTint)
             }

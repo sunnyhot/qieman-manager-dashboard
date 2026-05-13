@@ -119,7 +119,7 @@ extension AppModel {
         var entries: [MenuBarTickerEntry] = []
         let rows = userPortfolioSnapshot?.rows ?? []
         let aggregates = MenuBarTickerAggregateSet(rows: rows)
-        let rowsByHoldingID = Dictionary(rows.map { ($0.holding.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var rowsByHoldingID: [UUID: UserPortfolioValuationRow]?
 
         for selection in settings.selections {
             switch selection {
@@ -128,7 +128,16 @@ extension AppModel {
                     entries.append(entry)
                 }
             case .holding(let sel):
-                guard let row = rowsByHoldingID[sel.holdingID],
+                let holdingRows: [UUID: UserPortfolioValuationRow]
+                if let cached = rowsByHoldingID {
+                    holdingRows = cached
+                } else {
+                    let built = Dictionary(rows.map { ($0.holding.id, $0) }, uniquingKeysWith: { first, _ in first })
+                    rowsByHoldingID = built
+                    holdingRows = built
+                }
+
+                guard let row = holdingRows[sel.holdingID],
                       let entry = menuBarTickerEntry(row: row, metric: sel.metric) else {
                     continue
                 }
@@ -199,18 +208,32 @@ extension AppModel {
             guard let request = kind.marketIndexRequest else { return nil }
             return menuBarTickerEntry(indexKind: request.kind, metric: request.metric, id: kind.rawValue)
         case .topDailyPct:
-            guard let row = rows
-                .filter({ $0.estimateChangePct != nil || $0.estimatedDailyChangeAmount != nil })
-                .max(by: { abs($0.estimateChangePct ?? 0) < abs($1.estimateChangePct ?? 0) }) else {
-                return nil
+            var topRow: UserPortfolioValuationRow?
+            for row in rows {
+                guard let pct = row.estimateChangePct else { continue }
+                if let current = topRow {
+                    if abs(pct) > abs(current.estimateChangePct ?? 0) {
+                        topRow = row
+                    }
+                } else {
+                    topRow = row
+                }
             }
+            guard let row = topRow else { return nil }
             return menuBarTickerEntry(row: row, metric: .dailyPct, customTitle: "最大涨跌")
         case .topProfitPct:
-            guard let row = rows
-                .filter({ $0.profitPct != nil || $0.profitAmount != nil })
-                .max(by: { ($0.profitPct ?? -.greatestFiniteMagnitude) < ($1.profitPct ?? -.greatestFiniteMagnitude) }) else {
-                return nil
+            var topRow: UserPortfolioValuationRow?
+            for row in rows {
+                guard let pct = row.profitPct else { continue }
+                if let current = topRow {
+                    if pct > (current.profitPct ?? -.greatestFiniteMagnitude) {
+                        topRow = row
+                    }
+                } else {
+                    topRow = row
+                }
             }
+            guard let row = topRow else { return nil }
             return menuBarTickerEntry(row: row, metric: .profitPct, customTitle: "最大收益")
         }
     }
@@ -335,29 +358,70 @@ extension AppModel {
 
 // MARK: - Aggregate Helpers
 
+private struct MenuBarTickerAggregateAccumulator {
+    private var dailyAmountTotal = 0.0
+    private var dailyAmountCount = 0
+    private var previousValueTotal = 0.0
+    private var previousValueCount = 0
+    private var profitAmountTotal = 0.0
+    private var profitAmountCount = 0
+    private var costValueTotal = 0.0
+    private var costValueCount = 0
+
+    mutating func add(_ row: UserPortfolioValuationRow) {
+        if let value = row.estimatedDailyChangeAmount {
+            dailyAmountTotal += value
+            dailyAmountCount += 1
+        }
+        if let value = row.previousMarketValue {
+            previousValueTotal += value
+            previousValueCount += 1
+        }
+        if let value = row.profitAmount {
+            profitAmountTotal += value
+            profitAmountCount += 1
+        }
+        if let value = row.costValue {
+            costValueTotal += value
+            costValueCount += 1
+        }
+    }
+
+    func makeAggregate() -> MenuBarTickerAggregate {
+        MenuBarTickerAggregate(
+            dailyAmount: tickerCompactNilIfEmpty(dailyAmountTotal, sourceCount: dailyAmountCount),
+            previousValue: tickerCompactNilIfEmpty(previousValueTotal, sourceCount: previousValueCount),
+            profitAmount: tickerCompactNilIfEmpty(profitAmountTotal, sourceCount: profitAmountCount),
+            costValue: tickerCompactNilIfEmpty(costValueTotal, sourceCount: costValueCount)
+        )
+    }
+}
+
 struct MenuBarTickerAggregateSet {
     let all: MenuBarTickerAggregate
     private let markets: [StockMarket: MenuBarTickerAggregate]
     private let funds: [FundMarket: MenuBarTickerAggregate]
 
     init(rows: [UserPortfolioValuationRow]) {
-        var stockRowsByMarket: [StockMarket: [UserPortfolioValuationRow]] = [:]
-        var fundRowsByMarket: [FundMarket: [UserPortfolioValuationRow]] = [:]
+        var allAccumulator = MenuBarTickerAggregateAccumulator()
+        var stockAccumulators: [StockMarket: MenuBarTickerAggregateAccumulator] = [:]
+        var fundAccumulators: [FundMarket: MenuBarTickerAggregateAccumulator] = [:]
 
         for row in rows {
+            allAccumulator.add(row)
             if row.holding.assetType == .stock, let market = row.holding.detectedMarket {
-                stockRowsByMarket[market, default: []].append(row)
+                stockAccumulators[market, default: MenuBarTickerAggregateAccumulator()].add(row)
             } else if row.holding.assetType == .fund, let market = row.holding.detectedFundMarket {
-                fundRowsByMarket[market, default: []].append(row)
+                fundAccumulators[market, default: MenuBarTickerAggregateAccumulator()].add(row)
             }
         }
 
-        all = MenuBarTickerAggregate(rows: rows)
+        all = allAccumulator.makeAggregate()
         markets = Dictionary(uniqueKeysWithValues: StockMarket.allCases.map { market in
-            (market, MenuBarTickerAggregate(rows: stockRowsByMarket[market] ?? []))
+            (market, stockAccumulators[market]?.makeAggregate() ?? .empty)
         })
         funds = Dictionary(uniqueKeysWithValues: FundMarket.allCases.map { market in
-            (market, MenuBarTickerAggregate(rows: fundRowsByMarket[market] ?? []))
+            (market, fundAccumulators[market]?.makeAggregate() ?? .empty)
         })
     }
 
@@ -371,7 +435,7 @@ struct MenuBarTickerAggregateSet {
 }
 
 struct MenuBarTickerAggregate {
-    static let empty = MenuBarTickerAggregate(rows: [])
+    static let empty = MenuBarTickerAggregate(dailyAmount: nil, previousValue: nil, profitAmount: nil, costValue: nil)
 
     let dailyAmount: Double?
     let previousValue: Double?
@@ -381,16 +445,19 @@ struct MenuBarTickerAggregate {
     let profitPct: Double?
 
     init(rows: [UserPortfolioValuationRow]) {
-        let dailyAmounts = rows.compactMap(\.estimatedDailyChangeAmount)
-        let previousValues = rows.compactMap(\.previousMarketValue)
-        let profitAmounts = rows.compactMap(\.profitAmount)
-        let costValues = rows.compactMap(\.costValue)
+        var accumulator = MenuBarTickerAggregateAccumulator()
+        for row in rows {
+            accumulator.add(row)
+        }
+        self = accumulator.makeAggregate()
+    }
 
-        dailyAmount = tickerCompactNilIfEmpty(dailyAmounts.reduce(0, +), sourceCount: dailyAmounts.count)
-        previousValue = tickerCompactNilIfEmpty(previousValues.reduce(0, +), sourceCount: previousValues.count)
+    init(dailyAmount: Double?, previousValue: Double?, profitAmount: Double?, costValue: Double?) {
+        self.dailyAmount = dailyAmount
+        self.previousValue = previousValue
         dailyPct = tickerPctFromAmount(dailyAmount, previous: previousValue)
-        profitAmount = tickerCompactNilIfEmpty(profitAmounts.reduce(0, +), sourceCount: profitAmounts.count)
-        costValue = tickerCompactNilIfEmpty(costValues.reduce(0, +), sourceCount: costValues.count)
+        self.profitAmount = profitAmount
+        self.costValue = costValue
         profitPct = tickerPctFromAmount(profitAmount, previous: costValue)
     }
 

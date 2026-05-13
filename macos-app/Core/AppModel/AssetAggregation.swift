@@ -106,9 +106,19 @@ extension AppModel {
     var pendingTradeSummary: PersonalPendingTradeSummary? {
         if let cached = _cachedPendingTradeSummary { return cached }
         guard !pendingTrades.isEmpty else { _cachedPendingTradeSummary = nil; return nil }
-        let totalCashAmount = pendingTrades.compactMap(\.amountValue).reduce(0, +)
-        let cashTradeCount = pendingTrades.filter { $0.isCashTrade }.count
-        let unitTradeCount = pendingTrades.filter { !$0.isCashTrade }.count
+        var totalCashAmount = 0.0
+        var cashTradeCount = 0
+        var unitTradeCount = 0
+
+        for trade in pendingTrades {
+            totalCashAmount += trade.amountValue ?? 0
+            if trade.isCashTrade {
+                cashTradeCount += 1
+            } else {
+                unitTradeCount += 1
+            }
+        }
+
         let result = PersonalPendingTradeSummary(
             totalCashAmount: totalCashAmount,
             cashTradeCount: cashTradeCount,
@@ -153,15 +163,24 @@ extension AppModel {
         let activePlans = activeInvestmentPlans
         let pausedPlans = pausedInvestmentPlans
         let endedPlans = endedInvestmentPlans
-        let totalCumulativeInvestedAmount = investmentPlans.compactMap(\.cumulativeInvestedAmount).reduce(0, +)
-        let smartPlanCount = activePlans.filter(\.isSmartPlan).count
-        let dailyPlanCount = activePlans.filter(\.isDailyPlan).count
-        let weeklyPlanCount = activePlans.filter(\.isWeeklyPlan).count
-        let nextExecutionDate = activePlans
-            .map(\.nextExecutionDate)
-            .filter { !$0.isEmpty }
-            .sorted()
-            .first
+        var totalCumulativeInvestedAmount = 0.0
+        for plan in investmentPlans {
+            totalCumulativeInvestedAmount += plan.cumulativeInvestedAmount ?? 0
+        }
+
+        var smartPlanCount = 0
+        var dailyPlanCount = 0
+        var weeklyPlanCount = 0
+        var nextExecutionDate: String?
+        for plan in activePlans {
+            if plan.isSmartPlan { smartPlanCount += 1 }
+            if plan.isDailyPlan { dailyPlanCount += 1 }
+            if plan.isWeeklyPlan { weeklyPlanCount += 1 }
+            let candidate = plan.nextExecutionDate
+            if !candidate.isEmpty, nextExecutionDate.map({ candidate < $0 }) ?? true {
+                nextExecutionDate = candidate
+            }
+        }
 
         let result = PersonalInvestmentPlanSummary(
             planCount: investmentPlans.count,
@@ -180,40 +199,39 @@ extension AppModel {
 
     var personalAssetRows: [PersonalAssetAggregateRow] {
         if let cached = _cachedAssetRows { return cached }
+        var keys = Set<String>()
         var valuationRowsByKey: [String: UserPortfolioValuationRow] = [:]
         for row in userPortfolioSnapshot?.rows ?? [] {
-            valuationRowsByKey[personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName, market: row.holding.detectedMarket, fundMarket: row.holding.detectedFundMarket)] = row
+            let key = personalAssetKey(assetType: row.holding.assetType, code: row.holding.normalizedFundCode, name: row.fundName, market: row.holding.detectedMarket, fundMarket: row.holding.detectedFundMarket)
+            valuationRowsByKey[key] = row
+            keys.insert(key)
         }
 
         var rawHoldingsByKey: [String: UserPortfolioHolding] = [:]
-        for holding in activeUserPortfolioHoldings {
-            let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName, market: holding.detectedMarket, fundMarket: holding.detectedFundMarket)
-            rawHoldingsByKey[key] = rawHoldingsByKey[key] ?? holding
-        }
-
         var archivedHoldingsByKey: [String: UserPortfolioHolding] = [:]
-        for holding in archivedUserPortfolioHoldings {
+        for holding in userPortfolioHoldings {
             let key = personalAssetKey(assetType: holding.assetType, code: holding.normalizedFundCode, name: holding.normalizedName, market: holding.detectedMarket, fundMarket: holding.detectedFundMarket)
-            archivedHoldingsByKey[key] = archivedHoldingsByKey[key] ?? holding
+            if holding.isArchived {
+                archivedHoldingsByKey[key] = archivedHoldingsByKey[key] ?? holding
+            } else {
+                rawHoldingsByKey[key] = rawHoldingsByKey[key] ?? holding
+            }
+            keys.insert(key)
         }
 
         var pendingByKey: [String: [PersonalPendingTrade]] = [:]
         for trade in pendingTrades {
             let key = personalFundKey(code: trade.fundCode, name: trade.fundName)
             pendingByKey[key, default: []].append(trade)
+            keys.insert(key)
         }
 
         var plansByKey: [String: [PersonalInvestmentPlan]] = [:]
         for plan in investmentPlans {
             let key = personalFundKey(code: plan.fundCode, name: plan.fundName)
             plansByKey[key, default: []].append(plan)
+            keys.insert(key)
         }
-
-        let keys = Set(valuationRowsByKey.keys)
-            .union(rawHoldingsByKey.keys)
-            .union(archivedHoldingsByKey.keys)
-            .union(pendingByKey.keys)
-            .union(plansByKey.keys)
 
         let result = keys
             .map { key in

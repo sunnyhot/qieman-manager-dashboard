@@ -1,7 +1,5 @@
-import AppKit
 import SwiftUI
 import Charts
-import UniformTypeIdentifiers
 
 struct ForumRecordRow: View {
     let record: SnapshotRecordPayload

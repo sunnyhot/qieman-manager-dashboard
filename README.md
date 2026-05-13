@@ -13,7 +13,7 @@
 ## 构建
 
 ```bash
-APP_VERSION=2.2.43 bash scripts/build_macos_app.sh
+APP_VERSION=2.2.50 bash scripts/build_macos_app.sh
 ```
 
 产物：`dist/macos-app/QiemanDashboard.app`，分发包输出到 `/tmp/`。
@@ -28,9 +28,9 @@ open dist/macos-app/QiemanDashboard.app
 
 ```bash
 # 1. 构建
-APP_VERSION=2.2.43 bash scripts/build_macos_app.sh
+APP_VERSION=2.2.50 bash scripts/build_macos_app.sh
 
-# 2. 在 GitHub 创建 Release 并上传 /tmp/QiemanDashboard-2.2.43.zip
+# 2. 在 GitHub 创建 Release 并上传 /tmp/QiemanDashboard-2.2.50.zip
 
 # 3. 更新 releases/macos/latest.json 中的版本号和下载链接，提交推送
 ```

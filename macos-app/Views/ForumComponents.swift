@@ -1,7 +1,4 @@
-import AppKit
 import SwiftUI
-import Charts
-import UniformTypeIdentifiers
 
 struct CommentBlock: View {
     let comment: CommentPayload

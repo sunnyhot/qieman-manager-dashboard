@@ -1,7 +1,4 @@
-import AppKit
 import SwiftUI
-import Charts
-import UniformTypeIdentifiers
 
 // MARK: - Personal Portfolio
 
@@ -20,40 +17,14 @@ struct PortfolioSectionView: View {
         model.userPortfolioSnapshot?.totalProfitPct
     }
 
-    private var totalDailyChangeAmount: Double? {
-        let values = model.userPortfolioSnapshot?.rows.compactMap(\.estimatedDailyChangeAmount) ?? []
-        guard !values.isEmpty else { return nil }
-        return values.reduce(0, +)
-    }
-
-    private var totalDailyChangePct: Double? {
-        guard let snapshot = model.userPortfolioSnapshot else { return nil }
-        let pairs = snapshot.rows.compactMap { row -> (Double, Double)? in
-            guard
-                let change = row.estimatedDailyChangeAmount,
-                let previous = row.previousMarketValue,
-                previous > 0
-            else {
-                return nil
-            }
-            return (change, previous)
-        }
-        guard !pairs.isEmpty else { return nil }
-        let totalChange = pairs.reduce(0) { $0 + $1.0 }
-        let totalPrevious = pairs.reduce(0) { $0 + $1.1 }
-        guard totalPrevious > 0 else { return nil }
-        return totalChange / totalPrevious * 100
-    }
-
     private var totalProfitTint: Color {
         AppPalette.marketTint(for: totalProfitAmount)
     }
 
-    private var totalDailyChangeTint: Color {
-        AppPalette.marketTint(for: totalDailyChangeAmount)
-    }
-
     var body: some View {
+        let dailyChange = model.userPortfolioSnapshot?.dailyChangeSummary
+        let dailyChangeTint = AppPalette.marketTint(for: dailyChange?.amount)
+
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
@@ -76,11 +47,11 @@ struct PortfolioSectionView: View {
                     )
                     MetricCard(
                         title: "今日涨跌",
-                        value: signedCurrencyText(totalDailyChangeAmount),
-                        subtitle: "今日涨跌率 \(percentOptional(totalDailyChangePct))",
+                        value: signedCurrencyText(dailyChange?.amount),
+                        subtitle: "今日涨跌率 \(percentOptional(dailyChange?.pct))",
                         icon: "waveform.path.ecg",
-                        accent: totalDailyChangeTint,
-                        valueTint: totalDailyChangeTint
+                        accent: dailyChangeTint,
+                        valueTint: dailyChangeTint
                     )
                     MetricCard(
                         title: "待确认金额",

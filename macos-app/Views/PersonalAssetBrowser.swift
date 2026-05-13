@@ -1,11 +1,13 @@
-import AppKit
 import SwiftUI
-import Charts
-import UniformTypeIdentifiers
 
 private struct PersonalAssetBrowserPresentation {
     let visibleRows: [PersonalAssetAggregateRow]
     let filterCounts: [PersonalAssetFilterScope: Int]
+}
+
+private struct PersonalAssetGroupStats {
+    let latestTime: String?
+    let totalMarketValue: Double
 }
 
 struct PersonalAssetBrowser: View {
@@ -212,41 +214,60 @@ struct PersonalAssetBrowser: View {
 
 struct PersonalAssetGroupedTable: View {
     let offExchangeFundRows: [PersonalAssetAggregateRow]
+    private let offExchangeFundStats: PersonalAssetGroupStats
     let onExchangeFundRows: [PersonalAssetAggregateRow]
+    private let onExchangeFundStats: PersonalAssetGroupStats
     let stockRows: [PersonalAssetAggregateRow]
+    private let stockStats: PersonalAssetGroupStats
 
     init(rows: [PersonalAssetAggregateRow]) {
-        self.offExchangeFundRows = rows.filter { $0.assetType == .fund && !$0.isOnExchangeFund }
-        self.onExchangeFundRows = rows.filter(\.isOnExchangeFund)
-        self.stockRows = rows.filter { $0.assetType == .stock }
+        var offExchangeFundRows: [PersonalAssetAggregateRow] = []
+        var onExchangeFundRows: [PersonalAssetAggregateRow] = []
+        var stockRows: [PersonalAssetAggregateRow] = []
+
+        for row in rows {
+            if row.assetType == .stock {
+                stockRows.append(row)
+            } else if row.isOnExchangeFund {
+                onExchangeFundRows.append(row)
+            } else if row.assetType == .fund {
+                offExchangeFundRows.append(row)
+            }
+        }
+
+        self.offExchangeFundRows = offExchangeFundRows
+        self.offExchangeFundStats = Self.groupStats(rows: offExchangeFundRows)
+        self.onExchangeFundRows = onExchangeFundRows
+        self.onExchangeFundStats = Self.groupStats(rows: onExchangeFundRows)
+        self.stockRows = stockRows
+        self.stockStats = Self.groupStats(rows: stockRows)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             if !offExchangeFundRows.isEmpty {
-                group(title: "场外基金", rows: offExchangeFundRows, tint: AppPalette.brand, usesMarketTradeColumns: false)
+                group(title: "场外基金", rows: offExchangeFundRows, stats: offExchangeFundStats, tint: AppPalette.brand, usesMarketTradeColumns: false)
             }
             if !onExchangeFundRows.isEmpty {
-                group(title: "场内基金", rows: onExchangeFundRows, tint: AppPalette.accentWarm, usesMarketTradeColumns: true)
+                group(title: "场内基金", rows: onExchangeFundRows, stats: onExchangeFundStats, tint: AppPalette.accentWarm, usesMarketTradeColumns: true)
             }
             if !stockRows.isEmpty {
-                group(title: "股票", rows: stockRows, tint: AppPalette.info, usesMarketTradeColumns: true)
+                group(title: "股票", rows: stockRows, stats: stockStats, tint: AppPalette.info, usesMarketTradeColumns: true)
             }
         }
     }
 
-    private func group(title: String, rows: [PersonalAssetAggregateRow], tint: Color, usesMarketTradeColumns: Bool) -> some View {
-        let latestTime = rows.compactMap(\.holdingRow?.resolvedPriceTime).max()
-        return VStack(alignment: .leading, spacing: 8) {
+    private func group(title: String, rows: [PersonalAssetAggregateRow], stats: PersonalAssetGroupStats, tint: Color, usesMarketTradeColumns: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text(title)
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(AppPalette.ink)
                 ToolbarBadge(title: "\(rows.count) 只", tint: tint)
-                Text("市值 \(currencyText(rows.compactMap(\.marketValue).reduce(0, +)))")
+                Text("市值 \(currencyText(stats.totalMarketValue))")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
-                if let time = latestTime {
+                if let time = stats.latestTime {
                     Text("估值 \(time)")
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted.opacity(0.7))
@@ -254,6 +275,21 @@ struct PersonalAssetGroupedTable: View {
             }
             PersonalAssetTable(rows: rows, usesMarketTradeColumns: usesMarketTradeColumns)
         }
+    }
+
+    private static func groupStats(rows: [PersonalAssetAggregateRow]) -> PersonalAssetGroupStats {
+        var latestTime: String?
+        var totalMarketValue = 0.0
+
+        for row in rows {
+            totalMarketValue += row.marketValue ?? 0
+            if let time = row.holdingRow?.resolvedPriceTime,
+               latestTime.map({ time > $0 }) ?? true {
+                latestTime = time
+            }
+        }
+
+        return PersonalAssetGroupStats(latestTime: latestTime, totalMarketValue: totalMarketValue)
     }
 }
 
@@ -314,13 +350,14 @@ struct PersonalAssetTable: View {
     @ViewBuilder
     private func tableContent(availableWidth: CGFloat, isCompact: Bool) -> some View {
         let colSpacing: CGFloat = isCompact ? 8 : 12
+        let visibleColumnCount = isCompact ? 6 : 7
         let totalFixedWidth = valuationColWidth(isCompact: isCompact)
-            + unitsColWidth(isCompact: isCompact)
+            + (isCompact ? 0 : unitsColWidth(isCompact: isCompact))
             + priceColWidth(isCompact: isCompact)
             + fifthColWidth(isCompact: isCompact)
             + sixthColWidth(isCompact: isCompact)
             + actionColWidth(isCompact: isCompact)
-            + colSpacing * 6  // spacing between 7 columns
+            + colSpacing * CGFloat(visibleColumnCount - 1)
             + 24              // horizontal padding (12*2)
 
         VStack(spacing: 0) {

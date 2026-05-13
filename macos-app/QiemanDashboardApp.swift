@@ -8,6 +8,11 @@ private enum AppSceneIdentifier {
 }
 
 final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    private enum MenuBarRenderState: Equatable {
+        case fallback(title: String)
+        case ticker(entries: [MenuBarTickerEntry], appearance: MenuBarTickerAppearance, page: Int, totalPages: Int, barHeight: CGFloat)
+    }
+
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var model: AppModel?
@@ -17,6 +22,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     private var carouselPageIndex = 0
     private var carouselTimer: Timer?
     private var lastEntryIDs: [String] = []
+    private var lastMenuBarRenderState: MenuBarRenderState?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
@@ -60,6 +66,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
 
             model.objectWillChange
                 .receive(on: RunLoop.main)
+                .debounce(for: .milliseconds(80), scheduler: RunLoop.main)
                 .sink { [weak self] _ in
                     Task { @MainActor [weak self] in
                         self?.updateTitle()
@@ -81,12 +88,17 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         if currentIDs != lastEntryIDs {
             lastEntryIDs = currentIDs
             carouselPageIndex = 0
+            lastMenuBarRenderState = nil
         }
 
         let barHeight = NSStatusBar.system.thickness
 
         if allEntries.isEmpty {
             stopCarousel()
+            let state = MenuBarRenderState.fallback(title: model.portfolioMenuBarTitle)
+            guard state != lastMenuBarRenderState else { return }
+            lastMenuBarRenderState = state
+
             let icon = NSImage(systemSymbolName: "chart.bar.fill", accessibilityDescription: "QiemanDashboard") ?? NSImage()
             icon.isTemplate = true
             button.image = icon
@@ -107,6 +119,22 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         let end = min(start + pageSize, allEntries.count)
         let displayEntries = Array(allEntries[start..<end])
 
+        // Start or update the carousel timer before the render guard so interval-only
+        // settings changes still take effect without forcing a redraw.
+        if totalPages > 1 {
+            startCarousel(interval: settings.carouselIntervalSeconds)
+        }
+
+        let state = MenuBarRenderState.ticker(
+            entries: displayEntries,
+            appearance: appearance,
+            page: safePage,
+            totalPages: totalPages,
+            barHeight: barHeight
+        )
+        guard state != lastMenuBarRenderState else { return }
+        lastMenuBarRenderState = state
+
         let lines = displayEntries.map { $0.compactText }
         let image = renderTickerImage(entries: displayEntries, appearance: appearance, barHeight: barHeight)
         button.image = image
@@ -114,11 +142,6 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         button.toolTip = lines.joined(separator: "  ") + pageIndicator
         button.needsDisplay = true
         statusItem.length = image.size.width
-
-        // Start carousel if needed
-        if totalPages > 1 {
-            startCarousel(interval: settings.carouselIntervalSeconds)
-        }
     }
 
     private func startCarousel(interval: Double) {
@@ -237,45 +260,6 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
 
         image.unlockFocus()
         image.isTemplate = appearance.nsColor == nil
-        return image
-    }
-
-    private func renderTextImage(lines: [String], fontSize: CGFloat, barHeight: CGFloat) -> NSImage {
-        let font = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .medium)
-        let lineHeight = ceil(font.ascender - font.descender + font.leading)
-        let totalHeight = CGFloat(lines.count) * lineHeight
-
-        var maxWidth: CGFloat = 0
-        for line in lines {
-            let size = (line as NSString).size(withAttributes: [.font: font])
-            maxWidth = max(maxWidth, ceil(size.width))
-        }
-
-        let horizontalPadding: CGFloat = 9
-        let measurementSlack: CGFloat = 6
-        let width = ceil(maxWidth + horizontalPadding * 2 + measurementSlack)
-
-        let image = NSImage(size: NSSize(width: width, height: barHeight))
-        image.lockFocusFlipped(true)
-
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: NSColor.black
-        ]
-        let top = max(0, floor((barHeight - totalHeight) / 2))
-        let textWidth = width - horizontalPadding * 2
-        for (i, line) in lines.enumerated() {
-            let rect = NSRect(
-                x: horizontalPadding,
-                y: top + CGFloat(i) * lineHeight,
-                width: textWidth,
-                height: lineHeight
-            )
-            (line as NSString).draw(with: rect, options: [.usesLineFragmentOrigin], attributes: attrs)
-        }
-
-        image.unlockFocus()
-        image.isTemplate = true
         return image
     }
 

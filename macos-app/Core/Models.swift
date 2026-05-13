@@ -1078,6 +1078,32 @@ struct UserPortfolioValuationRow: Hashable, Identifiable {
     }
 }
 
+struct UserPortfolioDailyChangeSummary: Hashable {
+    let amount: Double?
+    let pct: Double?
+
+    init(rows: [UserPortfolioValuationRow]) {
+        var amountTotal = 0.0
+        var amountCount = 0
+        var pctChangeTotal = 0.0
+        var pctPreviousTotal = 0.0
+
+        for row in rows {
+            guard let change = row.estimatedDailyChangeAmount else { continue }
+            amountTotal += change
+            amountCount += 1
+
+            if let previous = row.previousMarketValue, previous > 0 {
+                pctChangeTotal += change
+                pctPreviousTotal += previous
+            }
+        }
+
+        amount = amountCount > 0 ? amountTotal : nil
+        pct = pctPreviousTotal > 0 ? pctChangeTotal / pctPreviousTotal * 100 : nil
+    }
+}
+
 struct UserPortfolioSnapshot: Hashable {
     let rows: [UserPortfolioValuationRow]
     let refreshedAt: String
@@ -1085,8 +1111,27 @@ struct UserPortfolioSnapshot: Hashable {
     let totalCostValue: Double?
     let totalProfitAmount: Double?
     let totalProfitPct: Double?
+    let dailyChangeSummary: UserPortfolioDailyChangeSummary
 
     var holdingCount: Int { rows.count }
+
+    init(
+        rows: [UserPortfolioValuationRow],
+        refreshedAt: String,
+        totalMarketValue: Double,
+        totalCostValue: Double?,
+        totalProfitAmount: Double?,
+        totalProfitPct: Double?,
+        dailyChangeSummary: UserPortfolioDailyChangeSummary? = nil
+    ) {
+        self.rows = rows
+        self.refreshedAt = refreshedAt
+        self.totalMarketValue = totalMarketValue
+        self.totalCostValue = totalCostValue
+        self.totalProfitAmount = totalProfitAmount
+        self.totalProfitPct = totalProfitPct
+        self.dailyChangeSummary = dailyChangeSummary ?? UserPortfolioDailyChangeSummary(rows: rows)
+    }
 }
 
 struct PersonalPendingTrade: Codable, Hashable, Identifiable {

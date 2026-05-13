@@ -1,7 +1,5 @@
 import AppKit
 import SwiftUI
-import Charts
-import UniformTypeIdentifiers
 
 enum PersonalAssetFilterScope: String, CaseIterable, Identifiable {
     case all = "全部"
@@ -555,4 +553,3 @@ struct VisualEffectBlurView: NSViewRepresentable {
         nsView.state = .active
     }
 }
-

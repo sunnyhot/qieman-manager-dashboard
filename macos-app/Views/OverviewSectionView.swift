@@ -1,21 +1,60 @@
-import AppKit
 import SwiftUI
-import Charts
-import UniformTypeIdentifiers
 
 // MARK: - Overview
+
+private struct OverviewAssetTypeSummaryStats {
+    let totalMarketValue: Double
+    let totalPending: Double
+    let totalProfit: Double
+    let totalChange: Double
+    let holdingCount: Int
+    let pendingCount: Int
+    let planCount: Int
+}
 
 private struct OverviewAssetTypeSummaryGroup: Identifiable {
     let id: String
     let title: String
     let rows: [PersonalAssetAggregateRow]
+    let stats: OverviewAssetTypeSummaryStats
     let tint: Color
 
     init(title: String, rows: [PersonalAssetAggregateRow], tint: Color) {
         self.id = title
         self.title = title
         self.rows = rows
+        self.stats = Self.makeStats(rows: rows)
         self.tint = tint
+    }
+
+    private static func makeStats(rows: [PersonalAssetAggregateRow]) -> OverviewAssetTypeSummaryStats {
+        var totalMarketValue = 0.0
+        var totalPending = 0.0
+        var totalProfit = 0.0
+        var totalChange = 0.0
+        var holdingCount = 0
+        var pendingCount = 0
+        var planCount = 0
+
+        for row in rows {
+            totalMarketValue += row.marketValue ?? 0
+            totalPending += row.pendingCashAmount
+            totalProfit += row.profitAmount ?? 0
+            totalChange += row.estimateChangeAmount ?? 0
+            if row.hasHolding { holdingCount += 1 }
+            if row.hasPending { pendingCount += 1 }
+            if row.activePlanCount > 0 { planCount += 1 }
+        }
+
+        return OverviewAssetTypeSummaryStats(
+            totalMarketValue: totalMarketValue,
+            totalPending: totalPending,
+            totalProfit: totalProfit,
+            totalChange: totalChange,
+            holdingCount: holdingCount,
+            pendingCount: pendingCount,
+            planCount: planCount
+        )
     }
 }
 
@@ -199,20 +238,34 @@ struct OverviewSectionView: View {
     }
 
     private var assetTypeSummaryGroups: [OverviewAssetTypeSummaryGroup] {
-        [
+        var offExchangeFundRows: [PersonalAssetAggregateRow] = []
+        var onExchangeFundRows: [PersonalAssetAggregateRow] = []
+        var stockRows: [PersonalAssetAggregateRow] = []
+
+        for row in model.personalAssetRows {
+            if row.assetType == .stock {
+                stockRows.append(row)
+            } else if row.isOnExchangeFund {
+                onExchangeFundRows.append(row)
+            } else if row.assetType == .fund {
+                offExchangeFundRows.append(row)
+            }
+        }
+
+        return [
             OverviewAssetTypeSummaryGroup(
                 title: "场外基金",
-                rows: model.personalAssetRows.filter { $0.assetType == .fund && !$0.isOnExchangeFund },
+                rows: offExchangeFundRows,
                 tint: AppPalette.brand
             ),
             OverviewAssetTypeSummaryGroup(
                 title: "场内基金",
-                rows: model.personalAssetRows.filter(\.isOnExchangeFund),
+                rows: onExchangeFundRows,
                 tint: AppPalette.accentWarm
             ),
             OverviewAssetTypeSummaryGroup(
                 title: "股票",
-                rows: model.personalAssetRows.filter { $0.assetType == .stock },
+                rows: stockRows,
                 tint: AppPalette.info
             )
         ].filter { !$0.rows.isEmpty }
@@ -221,34 +274,23 @@ struct OverviewSectionView: View {
     @ViewBuilder
     private func assetTypeSummaryCards(_ groups: [OverviewAssetTypeSummaryGroup]) -> some View {
         ForEach(groups) { group in
-            assetTypeSummaryCard(
-                title: group.title,
-                rows: group.rows,
-                tint: group.tint
-            )
+            assetTypeSummaryCard(group)
             .frame(minWidth: 260, maxWidth: .infinity)
         }
     }
 
     @ViewBuilder
-    private func assetTypeSummaryCard(title: String, rows: [PersonalAssetAggregateRow], tint: Color) -> some View {
-        let totalMarketValue = rows.compactMap(\.marketValue).reduce(0, +)
-        let totalPending = rows.map(\.pendingCashAmount).reduce(0, +)
-        let totalProfit = rows.compactMap(\.profitAmount).reduce(0, +)
-        let totalChange = rows.compactMap(\.estimateChangeAmount).reduce(0, +)
-        let holdingCount = rows.filter(\.hasHolding).count
-        let pendingCount = rows.filter(\.hasPending).count
-        let planCount = rows.filter { $0.activePlanCount > 0 }.count
-
+    private func assetTypeSummaryCard(_ group: OverviewAssetTypeSummaryGroup) -> some View {
+        let stats = group.stats
         Button { openPortfolio() } label: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text(title)
+                    Text(group.title)
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(AppPalette.ink)
-                    ToolbarBadge(title: "\(rows.count) 只", tint: tint)
+                    ToolbarBadge(title: "\(group.rows.count) 只", tint: group.tint)
                     Spacer()
-                    Text(currencyText(totalMarketValue))
+                    Text(currencyText(stats.totalMarketValue))
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundStyle(AppPalette.ink)
                         .monospacedDigit()
@@ -256,14 +298,14 @@ struct OverviewSectionView: View {
                         .minimumScaleFactor(0.72)
                 }
 
-                let profitTint = AppPalette.marketTint(for: totalProfit)
-                let changeTint = AppPalette.marketTint(for: totalChange)
+                let profitTint = AppPalette.marketTint(for: stats.totalProfit)
+                let changeTint = AppPalette.marketTint(for: stats.totalChange)
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("总收益")
                             .font(.system(size: 10))
                             .foregroundStyle(AppPalette.muted)
-                        Text(signedCurrencyText(totalProfit))
+                        Text(signedCurrencyText(stats.totalProfit))
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(profitTint)
                             .monospacedDigit()
@@ -274,19 +316,19 @@ struct OverviewSectionView: View {
                         Text("今日涨跌")
                             .font(.system(size: 10))
                             .foregroundStyle(AppPalette.muted)
-                        Text(signedCurrencyText(totalChange))
+                        Text(signedCurrencyText(stats.totalChange))
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(changeTint)
                             .monospacedDigit()
                             .lineLimit(1)
                             .minimumScaleFactor(0.72)
                     }
-                    if totalPending > 0 {
+                    if stats.totalPending > 0 {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("待确认")
                                 .font(.system(size: 10))
                                 .foregroundStyle(AppPalette.muted)
-                            Text(currencyText(totalPending))
+                            Text(currencyText(stats.totalPending))
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 .foregroundStyle(AppPalette.ink)
                                 .monospacedDigit()
@@ -297,9 +339,9 @@ struct OverviewSectionView: View {
                 }
 
                 HStack(spacing: 10) {
-                    Text("持有 \(holdingCount)")
-                    Text("待确认 \(pendingCount)")
-                    Text("有计划 \(planCount)")
+                    Text("持有 \(stats.holdingCount)")
+                    Text("待确认 \(stats.pendingCount)")
+                    Text("有计划 \(stats.planCount)")
                 }
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)

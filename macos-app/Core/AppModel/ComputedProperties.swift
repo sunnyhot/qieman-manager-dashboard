@@ -69,11 +69,11 @@ extension AppModel {
     }
 
     var activePortfolioHoldingCount: Int {
-        activeUserPortfolioHoldings.count
+        userPortfolioHoldings.reduce(0) { $0 + ($1.isArchived ? 0 : 1) }
     }
 
     var archivedPortfolioHoldingCount: Int {
-        archivedUserPortfolioHoldings.count
+        userPortfolioHoldings.reduce(0) { $0 + ($1.isArchived ? 1 : 0) }
     }
 
     var hasAnyPortfolioRecords: Bool {
@@ -81,11 +81,11 @@ extension AppModel {
     }
 
     var hasPersonalPortfolio: Bool {
-        !activeUserPortfolioHoldings.isEmpty
+        userPortfolioHoldings.contains { !$0.isArchived }
     }
 
     var hasArchivedPortfolio: Bool {
-        !archivedUserPortfolioHoldings.isEmpty
+        userPortfolioHoldings.contains { $0.isArchived }
     }
 
     var hasPendingTrades: Bool {

@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.2.49",
-  "name": "QiemanDashboard v2.2.49",
-  "body": "持仓列表适配小窗口：窗口宽度 <780pt 时自动切换 compact 模式，缩小列宽、隐藏份额列（合并到标的列下方）、紧凑文字排版",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.49",
-  "published_at": "2026-05-13T08:51:00Z",
+  "tag_name": "v2.2.50",
+  "name": "QiemanDashboard v2.2.50",
+  "body": "性能与代码精简：减少菜单栏无效重绘，优化持仓聚合、ticker 汇总、概览统计和紧凑表格宽度计算，清理冗余导入。",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.2.50",
+  "published_at": "2026-05-13T09:53:08Z",
   "assets": [
     {
-      "name": "QiemanDashboard-2.2.49.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.49/QiemanDashboard-2.2.49.zip",
-      "size": 3500796,
+      "name": "QiemanDashboard-2.2.50.zip",
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.2.50/QiemanDashboard-2.2.50.zip",
+      "size": 3478390,
       "content_type": "application/zip"
     }
   ]
