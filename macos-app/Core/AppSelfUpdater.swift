@@ -32,12 +32,37 @@ enum AppSelfUpdateError: LocalizedError {
     }
 }
 
+// MARK: - Download Progress Reporting
+
+struct AppSelfUpdateDownloadProgress: Sendable {
+    let bytesReceived: Int64
+    let totalBytes: Int64
+    let fraction: Double
+
+    var percentText: String {
+        String(format: "%.0f%%", fraction * 100)
+    }
+
+    var sizeText: String {
+        let received = ByteCountFormatter.string(fromByteCount: bytesReceived, countStyle: .file)
+        if totalBytes > 0 {
+            let total = ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file)
+            return "\(received) / \(total)"
+        }
+        return received
+    }
+}
+
+// MARK: - AppSelfUpdater
+
 struct AppSelfUpdater {
     typealias ProgressHandler = @MainActor (String) -> Void
+    typealias DownloadProgressHandler = @MainActor (AppSelfUpdateDownloadProgress) -> Void
 
     static func downloadAndPrepareInstall(
         release: AppUpdateRelease,
-        progress: ProgressHandler
+        progress: ProgressHandler,
+        downloadProgress: DownloadProgressHandler? = nil
     ) async throws {
         guard let asset = release.asset else {
             throw AppSelfUpdateError.missingPackageAsset
@@ -57,7 +82,11 @@ struct AppSelfUpdater {
         try FileManager.default.createDirectory(at: extractDirectory, withIntermediateDirectories: true)
 
         await progress("正在下载 \(asset.name)…")
-        let (downloadedURL, _) = try await URLSession.shared.download(from: asset.downloadURL)
+        let downloadedURL = try await downloadFile(
+            from: asset.downloadURL,
+            expectedSize: Int64(asset.size),
+            downloadProgress: downloadProgress
+        )
         if FileManager.default.fileExists(atPath: archiveURL.path) {
             try FileManager.default.removeItem(at: archiveURL)
         }
@@ -78,6 +107,81 @@ struct AppSelfUpdater {
             workDirectory: workDirectory
         )
     }
+
+    // MARK: - Download with Progress
+
+    private static func downloadFile(
+        from url: URL,
+        expectedSize: Int64,
+        downloadProgress: DownloadProgressHandler?
+    ) async throws -> URL {
+        let delegate = DownloadDelegate(expectedSize: expectedSize, progressHandler: downloadProgress)
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            session.downloadTask(with: url) { tempURL, response, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let tempURL else {
+                    continuation.resume(throwing: AppSelfUpdateError.extractionFailed)
+                    return
+                }
+                // Copy to a stable temp location so the file isn't auto-deleted
+                let stableURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("qieman-download-\(UUID().uuidString)")
+                do {
+                    try FileManager.default.moveItem(at: tempURL, to: stableURL)
+                    continuation.resume(returning: stableURL)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }.resume()
+        }
+    }
+
+    // MARK: - URLSession Download Delegate
+
+    private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
+        let expectedSize: Int64
+        let progressHandler: DownloadProgressHandler?
+
+        init(expectedSize: Int64, progressHandler: DownloadProgressHandler?) {
+            self.expectedSize = expectedSize
+            self.progressHandler = progressHandler
+        }
+
+        func urlSession(
+            _ session: URLSession,
+            downloadTask: URLSessionDownloadTask,
+            didWriteData bytesWritten: Int64,
+            totalBytesWritten: Int64,
+            totalBytesExpectedToWrite: Int64
+        ) {
+            let total = totalBytesExpectedToWrite > 0 ? totalBytesExpectedToWrite : expectedSize
+            let fraction = total > 0 ? Double(totalBytesWritten) / Double(total) : 0
+            let progress = AppSelfUpdateDownloadProgress(
+                bytesReceived: totalBytesWritten,
+                totalBytes: total,
+                fraction: min(fraction, 1.0)
+            )
+            guard let handler = progressHandler else { return }
+            Task { @MainActor in
+                handler(progress)
+            }
+        }
+
+        func urlSession(
+            _ session: URLSession,
+            downloadTask: URLSessionDownloadTask,
+            didFinishDownloadingTo location: URL
+        ) {
+            // Handled by the downloadTask completion block in downloadFile
+        }
+    }
+
+    // MARK: - Validation & Install
 
     private static func findAppBundle(in directory: URL) throws -> URL {
         let directURL = directory.appendingPathComponent("QiemanDashboard.app", isDirectory: true)

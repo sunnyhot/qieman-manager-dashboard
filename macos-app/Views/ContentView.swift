@@ -75,6 +75,7 @@ struct ContentView: View {
                     release: update,
                     isInstalling: model.isInstallingUpdate,
                     installProgress: model.updateInstallProgress,
+                    downloadFraction: model.updateDownloadFraction,
                     onInstall: {
                         Task { await model.downloadAndInstallAvailableUpdate() }
                     },
@@ -398,6 +399,7 @@ private struct AppUpdateSheet: View {
     let release: AppUpdateRelease
     let isInstalling: Bool
     let installProgress: String
+    let downloadFraction: Double
     let onInstall: () -> Void
     let onReleasePage: () -> Void
     let onDismiss: () -> Void
@@ -467,9 +469,17 @@ private struct AppUpdateSheet: View {
                     .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
 
                 if isInstalling {
-                    HStack(spacing: 10) {
-                        ProgressView()
-                            .controlSize(.small)
+                    VStack(alignment: .leading, spacing: 8) {
+                        if downloadFraction > 0 {
+                            // Determinate progress bar during download
+                            ProgressView(value: downloadFraction, total: 1.0)
+                                .progressViewStyle(.linear)
+                                .tint(AppPalette.brand)
+                        } else {
+                            // Indeterminate spinner for non-download phases (extract, verify, install)
+                            ProgressView()
+                                .controlSize(.small)
+                        }
                         Text(installProgress.isEmpty ? "正在准备更新…" : installProgress)
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(AppPalette.muted)

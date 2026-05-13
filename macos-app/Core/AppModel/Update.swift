@@ -40,14 +40,27 @@ extension AppModel {
         isInstallingUpdate = true
         errorMessage = ""
         updateInstallProgress = "正在准备更新…"
+        updateDownloadFraction = 0
         defer {
             isInstallingUpdate = false
         }
 
         do {
-            try await AppSelfUpdater.downloadAndPrepareInstall(release: update) { [weak self] message in
-                self?.updateInstallProgress = message
-            }
+            try await AppSelfUpdater.downloadAndPrepareInstall(
+                release: update,
+                progress: { [weak self] message in
+                    self?.updateInstallProgress = message
+                    // Reset fraction to 0 once download phase is done (extracting/validating/installing)
+                    if message != "正在准备更新…" {
+                        self?.updateDownloadFraction = 0
+                    }
+                },
+                downloadProgress: { [weak self] progress in
+                    self?.updateDownloadFraction = progress.fraction
+                    self?.updateInstallProgress = "正在下载… \(progress.percentText)  \(progress.sizeText)"
+                }
+            )
+            updateDownloadFraction = 0
             updateInstallProgress = "安装器已启动，应用即将重启…"
             noticeMessage = "更新包已准备好，正在重启应用完成覆盖安装。"
             try? await Task.sleep(nanoseconds: 600_000_000)
@@ -55,6 +68,7 @@ extension AppModel {
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             Darwin.exit(0)
         } catch {
+            updateDownloadFraction = 0
             updateInstallProgress = ""
             errorMessage = error.localizedDescription
         }

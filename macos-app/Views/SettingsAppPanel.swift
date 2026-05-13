@@ -55,8 +55,15 @@ extension SettingsSectionView {
                 }
 
                 if !model.updateInstallProgress.isEmpty {
-                    ToastBar(text: model.updateInstallProgress, tint: AppPalette.info)
-                        .padding(.top, 12)
+                    VStack(alignment: .leading, spacing: 6) {
+                        if model.updateDownloadFraction > 0 {
+                            ProgressView(value: model.updateDownloadFraction, total: 1.0)
+                                .progressViewStyle(.linear)
+                                .tint(AppPalette.brand)
+                        }
+                        ToastBar(text: model.updateInstallProgress, tint: AppPalette.info)
+                    }
+                    .padding(.top, 12)
                 }
             }
         }

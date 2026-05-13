@@ -96,6 +96,7 @@ final class AppModel: ObservableObject {
     @Published var isPresentingUpdateSheet = false
     @Published var isInstallingUpdate = false
     @Published var updateInstallProgress = ""
+    @Published var updateDownloadFraction: Double = 0
 
     @Published var noticeMessage = ""
     @Published var errorMessage = ""
