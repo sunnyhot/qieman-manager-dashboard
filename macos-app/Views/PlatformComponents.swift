@@ -157,7 +157,7 @@ struct PlatformActionRow: View {
                 }
             }
         }
-        .padding(isCompact ? 10 : 12)
+        .padding(isCompact ? 8 : 10)
         .background(isSelected ? AppPalette.brand.opacity(0.14) : AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)

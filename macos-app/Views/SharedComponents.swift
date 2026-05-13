@@ -84,39 +84,39 @@ struct MetricCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(accent)
-                    .frame(width: 30, height: 30)
+                    .frame(width: 24, height: 24)
                     .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
                 Text(title)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(AppPalette.muted)
                     .lineLimit(1)
 
                 Spacer(minLength: 0)
             }
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 23, weight: .bold, design: .rounded))
+                    .font(.system(size: 19, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.68)
                     .foregroundStyle(valueTint)
                 Text(subtitle)
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                     .foregroundStyle(AppPalette.muted)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 104, alignment: .leading)
-        .padding(14)
+        .frame(minHeight: 76, alignment: .leading)
+        .padding(10)
         .background(AppPalette.cardStrong.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
@@ -150,19 +150,19 @@ struct SectionCard<Trailing: View, Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 9) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 7) {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
-                    .frame(width: 24, height: 24)
-                    .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
-                VStack(alignment: .leading, spacing: 3) {
+                    .frame(width: 20, height: 20)
+                    .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: 5))
+                VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
                     Text(subtitle)
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -171,7 +171,7 @@ struct SectionCard<Trailing: View, Content: View>: View {
             }
             content
         }
-        .padding(16)
+        .padding(12)
         .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)

@@ -15,8 +15,8 @@ struct PlatformSectionView: View {
 
             ScrollViewReader { scrollProxy in
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 8)], spacing: 8) {
                             MetricCard(title: "调仓动作", value: "\(model.platformPayload?.count ?? 0)", subtitle: "覆盖调仓单 \(model.platformPayload?.adjustmentCount ?? 0)", icon: "arrow.left.arrow.right", accent: AppPalette.info)
                             MetricCard(title: "买入", value: "\(model.platformPayload?.buyCount ?? 0)", subtitle: "本地原生筛选", icon: "arrow.down.circle", accent: AppPalette.positive)
                             MetricCard(title: "卖出", value: "\(model.platformPayload?.sellCount ?? 0)", subtitle: "本地原生筛选", icon: "arrow.up.circle", accent: AppPalette.warning)
@@ -24,7 +24,7 @@ struct PlatformSectionView: View {
                         }
 
                         SectionCard(title: "交易时间总览", subtitle: "按月看买卖节奏", icon: "calendar") {
-                            VStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 8) {
                                 if model.monthlyPlatformSummary.isEmpty {
                                     EmptySectionState(
                                         title: "还没有平台调仓数据",
@@ -50,13 +50,13 @@ struct PlatformSectionView: View {
                         ) {
                             if model.hasPlatformActions {
                                 if isCompact {
-                                    VStack(alignment: .leading, spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 8) {
                                         platformListPanel(isCompact: true, scrollProxy: scrollProxy)
                                         platformDetailPanel
                                             .id(detailAnchor)
                                     }
                                 } else {
-                                    HStack(alignment: .top, spacing: 14) {
+                                    HStack(alignment: .top, spacing: 10) {
                                         platformListPanel(isCompact: false, scrollProxy: scrollProxy)
                                             .frame(width: min(max(proxy.size.width * 0.36, 340), 430), alignment: .top)
 
@@ -85,7 +85,7 @@ struct PlatformSectionView: View {
                                     Task { try? await model.refreshLatest(persist: false) }
                                 }
                             } else {
-                                LazyVStack(spacing: 8) {
+                                LazyVStack(spacing: 6) {
                                     ForEach(model.platformHoldings) { holding in
                                         HoldingCard(holding: holding)
                                     }
@@ -93,7 +93,7 @@ struct PlatformSectionView: View {
                             }
                         }
                     }
-                    .padding(16)
+                    .padding(12)
                 }
             }
         }
@@ -108,7 +108,7 @@ struct PlatformSectionView: View {
         let end = min(start + pageSize, totalCount)
         let pageActions = Array(allActions[start..<end])
 
-        return VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text("调仓动作列表")
                     .font(.system(size: 12, weight: .semibold))
@@ -127,7 +127,7 @@ struct PlatformSectionView: View {
                 }
             }
 
-            LazyVStack(spacing: 8) {
+            LazyVStack(spacing: 5) {
                 ForEach(pageActions) { action in
                     Button {
                         model.selectPlatformAction(action.id)
@@ -178,7 +178,7 @@ struct PlatformSectionView: View {
                 }
             }
         }
-        .padding(12)
+        .padding(10)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
@@ -188,7 +188,7 @@ struct PlatformSectionView: View {
     }
 
     private var platformDetailPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text("调仓详情")
                     .font(.system(size: 12, weight: .semibold))
@@ -213,11 +213,11 @@ struct PlatformSectionView: View {
                         .foregroundStyle(AppPalette.muted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(14)
+                .padding(10)
                 .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
             }
         }
-        .padding(12)
+        .padding(10)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
