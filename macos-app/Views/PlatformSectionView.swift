@@ -5,9 +5,44 @@ import SwiftUI
 struct PlatformSectionView: View {
     @EnvironmentObject private var model: AppModel
     @State private var platformListPage = 0
+    @State private var sideFilter: SideFilter = .all
+    @State private var searchText = ""
     private let compactThreshold: CGFloat = 1120
     private let detailAnchor = "platform-detail-panel"
     private let pageSize = 10
+
+    enum SideFilter: String, CaseIterable {
+        case all = "全部"
+        case buy = "买入"
+        case sell = "卖出"
+    }
+
+    // MARK: - Filtered data
+
+    private var filteredActions: [PlatformActionPayload] {
+        var actions = model.platformPayload?.actions ?? []
+
+        if sideFilter != .all {
+            actions = actions.filter { action in
+                let isBuy = (action.side ?? "").lowercased().contains("buy")
+                return sideFilter == .buy ? isBuy : !isBuy
+            }
+        }
+
+        if !searchText.isEmpty {
+            let q = searchText.lowercased()
+            actions = actions.filter { action in
+                (action.fundName ?? "").lowercased().contains(q) ||
+                (action.fundCode ?? "").lowercased().contains(q) ||
+                (action.displayTitle).lowercased().contains(q) ||
+                (action.adjustmentTitle ?? "").lowercased().contains(q)
+            }
+        }
+
+        return actions
+    }
+
+    // MARK: - Body
 
     var body: some View {
         GeometryReader { proxy in
@@ -16,36 +51,15 @@ struct PlatformSectionView: View {
             ScrollViewReader { scrollProxy in
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 10) {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 8)], spacing: 8) {
-                            MetricCard(title: "调仓动作", value: "\(model.platformPayload?.count ?? 0)", subtitle: "覆盖调仓单 \(model.platformPayload?.adjustmentCount ?? 0)", icon: "arrow.left.arrow.right", accent: AppPalette.info)
-                            MetricCard(title: "买入", value: "\(model.platformPayload?.buyCount ?? 0)", subtitle: "本地原生筛选", icon: "arrow.down.circle", accent: AppPalette.positive)
-                            MetricCard(title: "卖出", value: "\(model.platformPayload?.sellCount ?? 0)", subtitle: "本地原生筛选", icon: "arrow.up.circle", accent: AppPalette.warning)
-                            MetricCard(title: "持仓标的", value: "\(model.platformPayload?.holdings?.assetCount ?? 0)", subtitle: model.platformPayload?.prodCode ?? model.form.prodCode, icon: "bag", accent: AppPalette.accentWarm)
-                        }
+                        platformFilterBar
 
-                        SectionCard(title: "交易时间总览", subtitle: "按月看买卖节奏", icon: "calendar") {
-                            VStack(alignment: .leading, spacing: 8) {
-                                if model.monthlyPlatformSummary.isEmpty {
-                                    EmptySectionState(
-                                        title: "还没有平台调仓数据",
-                                        subtitle: "右上角点「刷新」后会重新直拉平台调仓；即使论坛抓取失败，调仓也会单独更新。",
-                                        actionTitle: "立即刷新"
-                                    ) {
-                                        Task { try? await model.refreshLatest(persist: false) }
-                                    }
-                                } else {
-                                    PlatformMonthlyOverview(months: model.monthlyPlatformSummary)
-                                }
-
-                                if !model.platformHoldings.isEmpty {
-                                    PlatformHoldingsPieChart(holdings: model.platformHoldings)
-                                }
-                            }
+                        if !model.monthlyPlatformSummary.isEmpty || !model.platformHoldings.isEmpty {
+                            collapsibleMonthlySection
                         }
 
                         SectionCard(
                             title: "调仓浏览",
-                            subtitle: isCompact ? "窄窗口自动切成上下结构，点列表会直接跳到详情" : "宽窗口保持双栏，左边选动作，右边看详情",
+                            subtitle: isCompact ? "点列表会直接跳到详情" : "左边选动作，右边看详情",
                             icon: "square.split.2x1"
                         ) {
                             if model.hasPlatformActions {
@@ -99,8 +113,185 @@ struct PlatformSectionView: View {
         }
     }
 
+    // MARK: - Filter Bar
+
+    private var platformFilterBar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 0) {
+                ForEach(SideFilter.allCases, id: \.self) { filter in
+                    let count = countForSide(filter)
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            sideFilter = filter
+                            platformListPage = 0
+                        }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text(filter.rawValue)
+                                .font(.system(size: 11, weight: sideFilter == filter ? .bold : .medium))
+                            if count > 0 {
+                                Text("\(count)")
+                                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        sideFilter == filter
+                                            ? AppPalette.brand.opacity(0.25)
+                                            : AppPalette.cardStrong,
+                                        in: Capsule()
+                                    )
+                            }
+                        }
+                        .foregroundStyle(sideFilter == filter ? AppPalette.brand : AppPalette.muted)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(
+                            sideFilter == filter
+                                ? AppPalette.brand.opacity(0.10)
+                                : Color.clear
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 7))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Spacer()
+
+                Text("\(model.platformPayload?.holdings?.assetCount ?? 0) 持仓")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(AppPalette.muted)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(AppPalette.card, in: Capsule())
+            }
+
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(AppPalette.muted)
+
+                TextField("搜索基金名称或代码…", text: $searchText)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12))
+                    .onChange(of: searchText) { _, _ in
+                        platformListPage = 0
+                    }
+
+                if !searchText.isEmpty {
+                    Button {
+                        searchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppPalette.muted)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 7))
+            .overlay(
+                RoundedRectangle(cornerRadius: 7)
+                    .stroke(AppPalette.line.opacity(0.5), lineWidth: 1)
+            )
+        }
+        .padding(10)
+        .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
+                .stroke(AppPalette.line.opacity(0.70), lineWidth: 1)
+        )
+    }
+
+    private func countForSide(_ filter: SideFilter) -> Int {
+        let all = model.platformPayload?.actions ?? []
+        switch filter {
+        case .all:
+            return all.count
+        case .buy:
+            return model.platformPayload?.buyCount ?? all.filter { ($0.side ?? "").lowercased().contains("buy") }.count
+        case .sell:
+            return model.platformPayload?.sellCount ?? all.filter { !($0.side ?? "").lowercased().contains("buy") }.count
+        }
+    }
+
+    // MARK: - Collapsible Monthly Section
+
+    @State private var isMonthlyExpanded = false
+
+    private var collapsibleMonthlySection: some View {
+        VStack(spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isMonthlyExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(AppPalette.brand)
+                        .frame(width: 18, height: 18)
+                        .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: 4))
+
+                    Text("交易时间总览")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+
+                    if !model.monthlyPlatformSummary.isEmpty {
+                        Text("\(model.monthlyPlatformSummary.count)月")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppPalette.muted)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(AppPalette.card, in: Capsule())
+                    }
+
+                    Spacer()
+
+                    Image(systemName: isMonthlyExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(AppPalette.paper.opacity(0.94))
+            }
+            .buttonStyle(.plain)
+
+            if isMonthlyExpanded {
+                VStack(alignment: .leading, spacing: 8) {
+                    if model.monthlyPlatformSummary.isEmpty {
+                        EmptySectionState(
+                            title: "还没有平台调仓数据",
+                            subtitle: "右上角点「刷新」后会重新直拉平台调仓。",
+                            actionTitle: "立即刷新"
+                        ) {
+                            Task { try? await model.refreshLatest(persist: false) }
+                        }
+                    } else {
+                        PlatformMonthlyOverview(months: model.monthlyPlatformSummary)
+                    }
+
+                    if !model.platformHoldings.isEmpty {
+                        PlatformHoldingsPieChart(holdings: model.platformHoldings)
+                    }
+                }
+                .padding(12)
+                .background(AppPalette.paper.opacity(0.94))
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
+                .stroke(AppPalette.line.opacity(0.70), lineWidth: 1)
+        )
+    }
+
+    // MARK: - List Panel
+
     private func platformListPanel(isCompact: Bool, scrollProxy: ScrollViewProxy) -> some View {
-        let allActions = model.platformPayload?.actions ?? []
+        let allActions = filteredActions
         let totalCount = allActions.count
         let totalPages = max(1, (totalCount + pageSize - 1) / pageSize)
         let safePage = min(platformListPage, totalPages - 1)
@@ -110,41 +301,72 @@ struct PlatformSectionView: View {
 
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Text("调仓动作列表")
-                    .font(.system(size: 12, weight: .semibold))
+                Text("调仓动作")
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
                 Text("\(totalCount)")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundStyle(AppPalette.muted)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
                     .background(AppPalette.card, in: Capsule())
+
+                if sideFilter != .all || !searchText.isEmpty {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            sideFilter = .all
+                            searchText = ""
+                        }
+                    } label: {
+                        Text("清除筛选")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(AppPalette.brand)
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 Spacer()
                 if isCompact {
                     Text("点一下自动跳到详情")
-                        .font(.system(size: 10))
+                        .font(.system(size: 9))
                         .foregroundStyle(AppPalette.muted)
                 }
             }
 
-            LazyVStack(spacing: 5) {
-                ForEach(pageActions) { action in
-                    Button {
-                        model.selectPlatformAction(action.id)
-                        if isCompact {
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                scrollProxy.scrollTo(detailAnchor, anchor: .top)
-                            }
-                        }
-                    } label: {
-                        PlatformActionRow(
-                            action: action,
-                            isSelected: model.selectedPlatformActionID == action.id,
-                            isCompact: true
-                        )
+            if pageActions.isEmpty && totalCount == 0 {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("没有匹配的调仓动作")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(AppPalette.muted)
+                    if !searchText.isEmpty {
+                        Text("试试换个关键词搜索")
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppPalette.muted)
                     }
-                    .buttonStyle(PressResponsiveButtonStyle())
-                    .id(action.id)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+            } else {
+                LazyVStack(spacing: 4) {
+                    ForEach(pageActions) { action in
+                        Button {
+                            model.selectPlatformAction(action.id)
+                            if isCompact {
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    scrollProxy.scrollTo(detailAnchor, anchor: .top)
+                                }
+                            }
+                        } label: {
+                            PlatformActionRow(
+                                action: action,
+                                isSelected: model.selectedPlatformActionID == action.id,
+                                isCompact: true
+                            )
+                        }
+                        .buttonStyle(PressResponsiveButtonStyle())
+                        .id(action.id)
+                    }
                 }
             }
 
@@ -186,6 +408,8 @@ struct PlatformSectionView: View {
                 .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
         )
     }
+
+    // MARK: - Detail Panel
 
     private var platformDetailPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
