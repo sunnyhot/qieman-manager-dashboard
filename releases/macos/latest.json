@@ -3,12 +3,12 @@
   "name": "QiemanDashboard v2.3.4",
   "body": "设置页支持自定义数据存储目录 + 菜单栏金额千分位显示",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.4",
-  "published_at": "PLACEHOLDER",
+  "published_at": "2026-05-14T12:00:00Z",
   "assets": [
     {
       "name": "QiemanDashboard-2.3.4.zip",
-      "browser_download_url": "PLACEHOLDER",
-      "size": 0,
+      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.4/QiemanDashboard-2.3.4.zip",
+      "size": 3526766,
       "content_type": "application/zip"
     }
   ]
