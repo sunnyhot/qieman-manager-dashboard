@@ -520,24 +520,21 @@ private struct AppUpdateSheet: View {
 
 // MARK: - Sidebar Floating Compatibility Modifier
 
-/// On macOS 26+, NavigationSplitView natively renders a floating/glass sidebar.
-/// On older macOS (14–15), we simulate the effect with a translucent material
-/// background, a subtle shadow, and rounded corners.
+/// Applies a floating visual effect to the sidebar on all macOS versions.
+/// Uses a translucent material background, rounded corners, padding, and
+/// a subtle shadow to create the "hovering" look.
 struct SidebarFloatingCompatModifier: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(macOS 26, *) {
-            // macOS 26+ provides the native floating sidebar automatically
-            content
-        } else {
-            // macOS 14–15: apply a translucent material backdrop + floating shadow
-            content
-                .background(
-                    VisualEffectBlurView(material: .sidebar)
-                        .ignoresSafeArea()
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .shadow(color: Color.black.opacity(0.10), radius: 6, x: 2, y: 0)
-        }
+        content
+            .padding(.vertical, 8)
+            .padding(.leading, 8)
+            .padding(.trailing, 4)
+            .background(
+                VisualEffectBlurView(material: .sidebar)
+                    .ignoresSafeArea()
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .shadow(color: Color.black.opacity(0.08), radius: 4, x: 1, y: 0)
     }
 }
 

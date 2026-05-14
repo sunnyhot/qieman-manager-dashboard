@@ -23,6 +23,8 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     private var carouselTimer: Timer?
     private var lastEntryIDs: [String] = []
     private var lastMenuBarRenderState: MenuBarRenderState?
+    /// Retains a reference to the main window so it can be re-shown after closing.
+    private var mainWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
@@ -294,11 +296,32 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.contentView = NSHostingView(rootView: contentView)
+        window.delegate = self
+        mainWindow = window
         window.makeKeyAndOrderFront(nil)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    /// Intercepts the window close action: hides the window instead of destroying it
+    /// so the app stays alive (accessible via menu bar). The user can reopen the
+    /// window from the status bar icon or the "打开主窗口" menu command.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            showMainWindow()
+        }
+        return true
+    }
+
+    @MainActor func showMainWindow() {
+        if let window = mainWindow, !window.isVisible {
+            window.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate(ignoringOtherApps: true)
+        } else if mainWindow == nil {
+            createMainWindow()
+        }
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
@@ -316,6 +339,18 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         if let eventMonitor {
             NSEvent.removeMonitor(eventMonitor)
         }
+    }
+}
+
+// MARK: - NSWindowDelegate
+
+extension QiemanApplicationDelegate: NSWindowDelegate {
+    /// When the user clicks the red close button, hide the window instead of
+    /// destroying it. This prevents the app from "exiting" — the user can
+    /// reopen it via the menu bar icon or by clicking the Dock icon.
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        sender.orderOut(nil)
+        return false
     }
 }
 
@@ -337,6 +372,12 @@ struct QiemanDashboardApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(after: .appInfo) {
+                Button("打开主窗口") {
+                    Task { @MainActor in
+                        appDelegate.showMainWindow()
+                    }
+                }
+                .keyboardShortcut("0")
                 Button("打开数据目录") {
                     model.openDataDirectory()
                 }
