@@ -80,6 +80,53 @@ extension SettingsSectionView {
                     .buttonStyle(.bordered)
                     .disabled(model.isCheckingAuth)
                 }
+
+                SettingsDivider()
+
+                SettingsRow(
+                    title: "数据存储",
+                    value: model.isUsingCustomDataDirectory ? "自定义" : "默认",
+                    detail: model.dataDirectoryDisplayName,
+                    icon: "externaldrive",
+                    tint: model.isUsingCustomDataDirectory ? AppPalette.info : AppPalette.muted
+                )
+
+                SettingsActionRow {
+                    Button {
+                        let panel = NSOpenPanel()
+                        panel.title = "选择数据存储目录"
+                        panel.message = "选择一个目录来存储 Qieman Dashboard 的数据文件"
+                        panel.canChooseFiles = false
+                        panel.canChooseDirectories = true
+                        panel.canCreateDirectories = true
+                        panel.allowsMultipleSelection = false
+                        panel.prompt = "选择"
+                        if let current = model.dataDirectoryURL {
+                            panel.directoryURL = current
+                        }
+                        guard panel.runModal() == .OK, let url = panel.url else { return }
+                        model.changeDataDirectory(to: url)
+                    } label: {
+                        Label("选择目录", systemImage: "folder.badge.plus")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        model.openDataDirectoryInFinder()
+                    } label: {
+                        Label("在 Finder 中打开", systemImage: "arrow.right.circle")
+                    }
+                    .buttonStyle(.bordered)
+
+                    if model.isUsingCustomDataDirectory {
+                        Button(role: .destructive) {
+                            model.resetDataDirectory()
+                        } label: {
+                            Label("恢复默认", systemImage: "arrow.uturn.backward")
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
             }
         }
     }

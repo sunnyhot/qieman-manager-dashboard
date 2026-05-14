@@ -175,4 +175,18 @@ extension AppModel {
     var hasPlatformActions: Bool {
         !(platformPayload?.actions?.isEmpty ?? true)
     }
+
+    var isUsingCustomDataDirectory: Bool {
+        UserDefaults.standard.string(forKey: "qieman.dashboard.customDataDirectory") != nil
+    }
+
+    var dataDirectoryDisplayName: String {
+        guard let url = dataDirectoryURL else { return "未配置" }
+        let path = url.path
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        if path.hasPrefix(home) {
+            return "~" + String(path.dropFirst(home.count))
+        }
+        return path
+    }
 }

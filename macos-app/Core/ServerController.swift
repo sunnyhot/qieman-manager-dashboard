@@ -139,15 +139,29 @@ final class LocalServerController {
 
     private func prepareSupportDirectory() throws -> URL {
         let fm = FileManager.default
+
+        if let customPath = UserDefaults.standard.string(forKey: "qieman.dashboard.customDataDirectory"),
+           !customPath.isEmpty {
+            let custom = URL(fileURLWithPath: customPath, isDirectory: true)
+            try fm.createDirectory(at: custom, withIntermediateDirectories: true)
+            try fm.createDirectory(at: custom.appendingPathComponent("output", isDirectory: true), withIntermediateDirectories: true)
+            writeReadmeIfNeeded(at: custom)
+            return custom
+        }
+
         guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             throw LocalServerError.startupFailed("无法定位 Application Support 目录")
         }
         let support = appSupport.appendingPathComponent("QiemanDashboard", isDirectory: true)
         try fm.createDirectory(at: support, withIntermediateDirectories: true)
         try fm.createDirectory(at: support.appendingPathComponent("output", isDirectory: true), withIntermediateDirectories: true)
+        writeReadmeIfNeeded(at: support)
+        return support
+    }
 
-        let readme = support.appendingPathComponent("README.txt", isDirectory: false)
-        if !fm.fileExists(atPath: readme.path) {
+    private func writeReadmeIfNeeded(at directory: URL) {
+        let readme = directory.appendingPathComponent("README.txt", isDirectory: false)
+        if !FileManager.default.fileExists(atPath: readme.path) {
             let text = """
             Qieman Dashboard App 数据目录
 
@@ -155,9 +169,12 @@ final class LocalServerController {
             - output/: 抓取输出与运行数据
             - dashboard.log: 应用运行日志
             """
-            try text.write(to: readme, atomically: true, encoding: .utf8)
+            try? text.write(to: readme, atomically: true, encoding: .utf8)
         }
-        return support
+    }
+
+    func updateSupportDirectory(_ url: URL) {
+        supportDirectory = url
     }
 
     private func setupLogFile() throws {

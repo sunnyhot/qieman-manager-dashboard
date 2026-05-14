@@ -207,9 +207,9 @@ private struct MenuBarSummaryCard: View {
                 .foregroundStyle(AppPalette.ink)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-                SummaryPill(title: "今日涨跌", value: signedCurrencyOptional(dailyChange.amount), tint: dailyTint)
+                SummaryPill(title: "今日涨跌", value: signedCurrencyText(dailyChange.amount), tint: dailyTint)
                 SummaryPill(title: "今日涨跌率", value: percentOptional(dailyChange.pct), tint: dailyTint)
-                SummaryPill(title: "总收益", value: signedCurrencyOptional(snapshot.totalProfitAmount), tint: profitTint)
+                SummaryPill(title: "总收益", value: signedCurrencyText(snapshot.totalProfitAmount), tint: profitTint)
                 SummaryPill(title: "总收益率", value: percentOptional(snapshot.totalProfitPct), tint: profitTint)
             }
         }
@@ -303,7 +303,7 @@ private struct MenuBarHoldingRow: View {
             .frame(width: 96, alignment: .trailing)
 
             VStack(alignment: .trailing, spacing: 1) {
-                Text(signedCurrencyOptional(row.estimatedDailyChangeAmount, market: row.holding.detectedMarket))
+                Text(signedCurrencyText(row.estimatedDailyChangeAmount, market: row.holding.detectedMarket))
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(dailyTint)
                     .monospacedDigit()
@@ -359,11 +359,4 @@ private struct HoldingMetricPill: View {
         .background(tint.opacity(0.09))
         .clipShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
-}
-
-private func signedCurrencyOptional(_ value: Double?, market: StockMarket? = nil) -> String {
-    guard let value else { return "—" }
-    let sign = value >= 0 ? "+" : "-"
-    let symbol = market?.currencySymbol ?? "¥"
-    return "\(symbol)\(sign)\(String(format: "%.2f", abs(value)))"
 }
