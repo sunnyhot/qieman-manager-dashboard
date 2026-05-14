@@ -3,12 +3,12 @@
   "name": "QiemanDashboard v2.3.6",
   "body": "左侧栏悬浮效果 + 红色关闭按钮仅隐藏窗口（不退出应用）+ 菜单栏⌘0恢复窗口",
   "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.6",
-  "published_at": "2026-05-14T15:30:00Z",
+  "published_at": "2026-05-14T07:38:19Z",
   "assets": [
     {
       "name": "QiemanDashboard-2.3.6.zip",
       "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.6/QiemanDashboard-2.3.6.zip",
-      "size": 0,
+      "size": 3552325,
       "content_type": "application/zip"
     }
   ]
