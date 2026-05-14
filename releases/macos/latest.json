@@ -1,14 +1,14 @@
 {
-  "tag_name": "v2.3.3",
-  "name": "QiemanDashboard v2.3.3",
-  "body": "重新设计平台调仓筛选区域：分段标签页筛选（全部/买入/卖出）+ 搜索框 + 交易时间总览可折叠",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.3",
-  "published_at": "2026-05-13T13:56:49Z",
+  "tag_name": "v2.3.4",
+  "name": "QiemanDashboard v2.3.4",
+  "body": "设置页支持自定义数据存储目录 + 菜单栏金额千分位显示",
+  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.4",
+  "published_at": "PLACEHOLDER",
   "assets": [
     {
-      "name": "QiemanDashboard-2.3.3.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.3/QiemanDashboard-2.3.3.zip",
-      "size": 3053043,
+      "name": "QiemanDashboard-2.3.4.zip",
+      "browser_download_url": "PLACEHOLDER",
+      "size": 0,
       "content_type": "application/zip"
     }
   ]
