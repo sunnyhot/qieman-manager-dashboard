@@ -101,6 +101,12 @@ final class AppModel: ObservableObject {
     @Published var noticeMessage = ""
     @Published var errorMessage = ""
 
+    @Published var autoCheckForUpdatesOnLaunch: Bool = (UserDefaults.standard.object(forKey: "qieman.dashboard.update.autoCheckOnLaunch") as? Bool) ?? true {
+        didSet {
+            UserDefaults.standard.set(autoCheckForUpdatesOnLaunch, forKey: "qieman.dashboard.update.autoCheckOnLaunch")
+        }
+    }
+
     @Published var baseURL: URL?
     @Published var logFileURL: URL?
     @Published var dataDirectoryURL: URL?
@@ -117,8 +123,6 @@ final class AppModel: ObservableObject {
     let importRecognizer = PersonalImportRecognizer()
     let notificationManager = LocalNotificationManager()
     let personalAssetAutomation = PersonalAssetAutomation()
-    let updateAutoCheckDefaultsKey = "qieman.dashboard.update.lastAutoCheckAt"
-    let updateAutoCheckInterval: TimeInterval = 12 * 60 * 60
     let portfolioAutoRefreshIntervalSeconds: UInt64 = 60
 
     // Runtime state

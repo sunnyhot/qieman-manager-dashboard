@@ -6,6 +6,14 @@ extension SettingsSectionView {
     var appPanel: some View {
         SettingsPanel(title: "版本更新", subtitle: "当前版本与在线更新", icon: "arrow.down.circle") {
             VStack(alignment: .leading, spacing: 0) {
+                SettingsToggleRow(
+                    title: "启动时检查更新",
+                    detail: "每次打开应用自动检测新版本",
+                    icon: "arrow.triangle.2.circlepath",
+                    tint: AppPalette.brand,
+                    isOn: $model.autoCheckForUpdatesOnLaunch
+                )
+                SettingsDivider()
                 SettingsRow(
                     title: "更新状态",
                     value: model.isCheckingForUpdates ? "检查中" : (model.availableUpdate == nil ? "暂无更新" : "发现更新"),

@@ -9,8 +9,6 @@ extension AppModel {
         guard !isCheckingForUpdates else { return }
         if userInitiated {
             errorMessage = ""
-        } else {
-            UserDefaults.standard.set(Date(), forKey: updateAutoCheckDefaultsKey)
         }
 
         isCheckingForUpdates = true
@@ -91,10 +89,7 @@ extension AppModel {
     }
 
     func scheduleAutomaticUpdateCheckIfNeeded() {
-        let lastCheckDate = UserDefaults.standard.object(forKey: updateAutoCheckDefaultsKey) as? Date
-        if let lastCheckDate, Date().timeIntervalSince(lastCheckDate) < updateAutoCheckInterval {
-            return
-        }
+        guard autoCheckForUpdatesOnLaunch else { return }
 
         Task { [weak self] in
             try? await Task.sleep(nanoseconds: 1_500_000_000)
