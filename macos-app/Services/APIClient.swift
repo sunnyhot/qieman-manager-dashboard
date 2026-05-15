@@ -22,7 +22,7 @@ class APIClient {
 
     // MARK: - Generic Request Methods
 
-    private func request<T: Decodable>(
+    func request<T: Decodable>(
         _ path: String,
         method: String = "GET",
         body: Encodable? = nil
@@ -31,7 +31,7 @@ class APIClient {
         return try decoder.decode(T.self, from: data)
     }
 
-    private func requestRaw(
+    func requestRaw(
         _ path: String,
         method: String = "GET",
         body: Encodable? = nil
@@ -84,27 +84,27 @@ class APIClient {
 
     // MARK: - HTTP Method Helpers
 
-    private func get<T: Decodable>(_ path: String) async throws -> T {
+    func get<T: Decodable>(_ path: String) async throws -> T {
         try await request(path, method: "GET")
     }
 
-    private func post<T: Decodable>(_ path: String, body: Encodable? = nil) async throws -> T {
+    func post<T: Decodable>(_ path: String, body: Encodable? = nil) async throws -> T {
         try await request(path, method: "POST", body: body)
     }
 
-    private func put<T: Decodable>(_ path: String, body: Encodable? = nil) async throws -> T {
+    func put<T: Decodable>(_ path: String, body: Encodable? = nil) async throws -> T {
         try await request(path, method: "PUT", body: body)
     }
 
-    private func patch<T: Decodable>(_ path: String, body: Encodable? = nil) async throws -> T {
+    func patch<T: Decodable>(_ path: String, body: Encodable? = nil) async throws -> T {
         try await request(path, method: "PATCH", body: body)
     }
 
-    private func delete<T: Decodable>(_ path: String) async throws -> T {
+    func delete<T: Decodable>(_ path: String) async throws -> T {
         try await request(path, method: "DELETE")
     }
 
-    private func deleteRaw(_ path: String) async throws {
+    func deleteRaw(_ path: String) async throws {
         _ = try await requestRaw(path, method: "DELETE")
     }
 }
