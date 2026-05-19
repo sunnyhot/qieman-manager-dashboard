@@ -1,15 +1,15 @@
 {
-  "tag_name": "v2.3.6",
-  "name": "QiemanDashboard v2.3.6",
-  "body": "左侧栏悬浮效果 + 红色关闭按钮仅隐藏窗口（不退出应用）+ 菜单栏⌘0恢复窗口",
-  "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.6",
-  "published_at": "2026-05-14T07:38:19Z",
-  "assets": [
-    {
-      "name": "QiemanDashboard-2.3.6.zip",
-      "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.6/QiemanDashboard-2.3.6.zip",
-      "size": 3552325,
-      "content_type": "application/zip"
-    }
-  ]
+    "tag_name": "v2.3.7",
+    "name": "QiemanDashboard v2.3.7",
+    "body": "调仓界面查询条件区域重构：新增 PlatformFilterState 状态管理（Combine 250ms 搜索防抖）、ViewThatFits 三级响应式布局、拆分 5 个子视图、修复筛选/分页/颜色问题、净减 134 行代码",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.7",
+    "published_at": "2026-05-14T07:38:19Z",
+    "assets": [
+        {
+            "name": "QiemanDashboard-2.3.7.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.7/QiemanDashboard-2.3.7.zip",
+            "size": 3075570,
+            "content_type": "application/zip"
+        }
+    ]
 }
