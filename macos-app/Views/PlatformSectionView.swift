@@ -4,43 +4,8 @@ import SwiftUI
 
 struct PlatformSectionView: View {
     @EnvironmentObject private var model: AppModel
-    @State private var platformListPage = 0
-    @State private var sideFilter: SideFilter = .all
-    @State private var searchText = ""
     private let compactThreshold: CGFloat = 1120
     private let detailAnchor = "platform-detail-panel"
-    private let pageSize = 10
-
-    enum SideFilter: String, CaseIterable {
-        case all = "全部"
-        case buy = "买入"
-        case sell = "卖出"
-    }
-
-    // MARK: - Filtered data
-
-    private var filteredActions: [PlatformActionPayload] {
-        var actions = model.platformPayload?.actions ?? []
-
-        if sideFilter != .all {
-            actions = actions.filter { action in
-                let isBuy = (action.side ?? "").lowercased().contains("buy")
-                return sideFilter == .buy ? isBuy : !isBuy
-            }
-        }
-
-        if !searchText.isEmpty {
-            let q = searchText.lowercased()
-            actions = actions.filter { action in
-                (action.fundName ?? "").lowercased().contains(q) ||
-                (action.fundCode ?? "").lowercased().contains(q) ||
-                (action.displayTitle).lowercased().contains(q) ||
-                (action.adjustmentTitle ?? "").lowercased().contains(q)
-            }
-        }
-
-        return actions
-    }
 
     // MARK: - Body
 
@@ -51,7 +16,7 @@ struct PlatformSectionView: View {
             ScrollViewReader { scrollProxy in
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 10) {
-                        platformFilterBar
+                        PlatformFilterBar(filterState: model.filterState)
 
                         if !model.monthlyPlatformSummary.isEmpty || !model.platformHoldings.isEmpty {
                             collapsibleMonthlySection
@@ -110,109 +75,6 @@ struct PlatformSectionView: View {
                     .padding(12)
                 }
             }
-        }
-    }
-
-    // MARK: - Filter Bar
-
-    private var platformFilterBar: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 0) {
-                ForEach(SideFilter.allCases, id: \.self) { filter in
-                    let count = countForSide(filter)
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            sideFilter = filter
-                            platformListPage = 0
-                        }
-                    } label: {
-                        HStack(spacing: 5) {
-                            Text(filter.rawValue)
-                                .font(.system(size: 11, weight: sideFilter == filter ? .bold : .medium))
-                            if count > 0 {
-                                Text("\(count)")
-                                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                                    .padding(.horizontal, 5)
-                                    .padding(.vertical, 2)
-                                    .background(
-                                        sideFilter == filter
-                                            ? AppPalette.brand.opacity(0.25)
-                                            : AppPalette.cardStrong,
-                                        in: Capsule()
-                                    )
-                            }
-                        }
-                        .foregroundStyle(sideFilter == filter ? AppPalette.brand : AppPalette.muted)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(
-                            sideFilter == filter
-                                ? AppPalette.brand.opacity(0.10)
-                                : Color.clear
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 7))
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                Spacer()
-
-                Text("\(model.platformPayload?.holdings?.assetCount ?? 0) 持仓")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(AppPalette.muted)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(AppPalette.card, in: Capsule())
-            }
-
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(AppPalette.muted)
-
-                TextField("搜索基金名称或代码…", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12))
-                    .onChange(of: searchText) { _, _ in
-                        platformListPage = 0
-                    }
-
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(AppPalette.muted)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 7))
-            .overlay(
-                RoundedRectangle(cornerRadius: 7)
-                    .stroke(AppPalette.line.opacity(0.5), lineWidth: 1)
-            )
-        }
-        .padding(10)
-        .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.70), lineWidth: 1)
-        )
-    }
-
-    private func countForSide(_ filter: SideFilter) -> Int {
-        let all = model.platformPayload?.actions ?? []
-        switch filter {
-        case .all:
-            return all.count
-        case .buy:
-            return model.platformPayload?.buyCount ?? all.filter { ($0.side ?? "").lowercased().contains("buy") }.count
-        case .sell:
-            return model.platformPayload?.sellCount ?? all.filter { !($0.side ?? "").lowercased().contains("buy") }.count
         }
     }
 
@@ -291,13 +153,11 @@ struct PlatformSectionView: View {
     // MARK: - List Panel
 
     private func platformListPanel(isCompact: Bool, scrollProxy: ScrollViewProxy) -> some View {
-        let allActions = filteredActions
+        let allActions = model.filteredPlatformActions
         let totalCount = allActions.count
-        let totalPages = max(1, (totalCount + pageSize - 1) / pageSize)
-        let safePage = min(platformListPage, totalPages - 1)
-        let start = safePage * pageSize
-        let end = min(start + pageSize, totalCount)
-        let pageActions = Array(allActions[start..<end])
+        let totalPages = model.totalPlatformPages
+        let currentPage = min(model.filterState.currentPage, totalPages - 1)
+        let pageActions = model.paginatedPlatformActions
 
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
@@ -311,11 +171,10 @@ struct PlatformSectionView: View {
                     .padding(.vertical, 2)
                     .background(AppPalette.card, in: Capsule())
 
-                if sideFilter != .all || !searchText.isEmpty {
+                if model.filterState.sideFilter != .all || !model.filterState.searchText.isEmpty {
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            sideFilter = .all
-                            searchText = ""
+                            model.filterState.reset()
                         }
                     } label: {
                         Text("清除筛选")
@@ -333,12 +192,12 @@ struct PlatformSectionView: View {
                 }
             }
 
-            if pageActions.isEmpty && totalCount == 0 {
+            if pageActions.isEmpty, totalCount == 0 {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("没有匹配的调仓动作")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(AppPalette.muted)
-                    if !searchText.isEmpty {
+                    if !model.filterState.searchText.isEmpty {
                         Text("试试换个关键词搜索")
                             .font(.system(size: 10))
                             .foregroundStyle(AppPalette.muted)
@@ -373,28 +232,32 @@ struct PlatformSectionView: View {
             if totalPages > 1 {
                 HStack(spacing: 8) {
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { platformListPage = max(0, safePage - 1) }
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            model.filterState.currentPage = max(0, currentPage - 1)
+                        }
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 10, weight: .bold))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .disabled(safePage == 0)
+                    .disabled(currentPage == 0)
 
-                    Text("\(safePage + 1) / \(totalPages)")
+                    Text("\(currentPage + 1) / \(totalPages)")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundStyle(AppPalette.muted)
 
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { platformListPage = min(totalPages - 1, safePage + 1) }
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            model.filterState.currentPage = min(totalPages - 1, currentPage + 1)
+                        }
                     } label: {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 10, weight: .bold))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .disabled(safePage >= totalPages - 1)
+                    .disabled(currentPage >= totalPages - 1)
 
                     Spacer()
                 }

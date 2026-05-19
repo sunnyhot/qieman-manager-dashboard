@@ -68,6 +68,9 @@ final class AppModel: ObservableObject {
     @Published var managerWatchSettings = ManagerWatchSettings.default
     @Published var menuBarTickerSettings = MenuBarTickerSettings.load()
 
+    /// 调仓筛选状态
+    let filterState = PlatformFilterState()
+
     @Published var selectedPostID: String?
     @Published var selectedPlatformActionID: String?
     @Published var commentSortType = "hot"
@@ -161,6 +164,12 @@ final class AppModel: ObservableObject {
     }
 
     init() {
+        // Forward filterState changes so PlatformSectionView (which observes
+        // AppModel via @EnvironmentObject) re-renders when filters change.
+        filterState.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+
         NotificationCenter.default.publisher(for: .qiemanNotificationDeepLink)
             .sink { [weak self] note in
                 guard let payload = note.object as? NotificationDeepLinkPayload else { return }
