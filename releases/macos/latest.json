@@ -1,14 +1,14 @@
 {
-    "tag_name": "v2.3.7",
-    "name": "QiemanDashboard v2.3.7",
-    "body": "调仓界面查询条件区域重构：新增 PlatformFilterState 状态管理（Combine 250ms 搜索防抖）、ViewThatFits 三级响应式布局、拆分 5 个子视图、修复筛选/分页/颜色问题、净减 134 行代码",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.7",
-    "published_at": "2026-05-14T07:38:19Z",
+    "tag_name": "v2.3.8",
+    "name": "QiemanDashboard v2.3.8",
+    "body": "社区动态筛选面板展开/收起功能：默认收起只显示标题栏，点击展开完整筛选条件，收起时显示活跃筛选条件摘要",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.8",
+    "published_at": "2026-05-20T00:00:00Z",
     "assets": [
         {
-            "name": "QiemanDashboard-2.3.7.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.7/QiemanDashboard-2.3.7.zip",
-            "size": 3075570,
+            "name": "QiemanDashboard-2.3.8.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.8/QiemanDashboard-2.3.8.zip",
+            "size": 0,
             "content_type": "application/zip"
         }
     ]
