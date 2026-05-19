@@ -31,6 +31,24 @@ enum PersonalAssetSortOption: String, CaseIterable, Identifiable {
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
 
+    // MARK: - Collapsible Filter State
+    @State private var isQueryExpanded = false
+
+    /// 收起时展示当前活跃（非默认值）筛选条件摘要
+    private var activeFilterSummary: String {
+        var parts: [String] = []
+        if !model.form.prodCode.isEmpty && model.form.prodCode != "LONG_WIN" {
+            parts.append("产品: \(model.form.prodCode)")
+        }
+        if !model.form.userName.isEmpty && model.form.userName != "ETF拯救世界" {
+            parts.append("主理人: \(model.form.userName)")
+        }
+        if !model.form.keyword.isEmpty {
+            parts.append("关键词: \(model.form.keyword)")
+        }
+        return parts.isEmpty ? "" : parts.joined(separator: "  ")
+    }
+
     private var shouldShowQueryToolbar: Bool {
         switch model.selectedSection {
         case .platform, .forum:
@@ -176,6 +194,7 @@ struct ContentView: View {
 
     private var queryToolbarPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // ① QueryMode 芯片行 — 始终显示
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) {
                     ForEach(QueryMode.allCases) { mode in
@@ -190,62 +209,117 @@ struct ContentView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .bottom, spacing: 10) {
-                        toolbarField("产品", text: $model.form.prodCode, minWidth: 170)
-                            .frame(width: 210)
-                        toolbarField("主理人", text: $model.form.userName, minWidth: 190)
-                            .frame(width: 250)
-                        toolbarField("关键词", text: $model.form.keyword, minWidth: 220)
-                            .frame(maxWidth: .infinity)
-                        toolbarField("页数", text: $model.form.pages, minWidth: 88)
-                            .frame(width: 104)
-                        toolbarField("每页", text: $model.form.pageSize, minWidth: 88)
-                            .frame(width: 104)
-                    }
-
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], alignment: .leading, spacing: 10) {
-                        toolbarField("产品", text: $model.form.prodCode, minWidth: 170)
-                        toolbarField("主理人", text: $model.form.userName, minWidth: 190)
-                        toolbarField("关键词", text: $model.form.keyword, minWidth: 220)
-                        toolbarField("页数", text: $model.form.pages, minWidth: 88)
-                        toolbarField("每页", text: $model.form.pageSize, minWidth: 88)
-                    }
-                }
-
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .bottom, spacing: 10) {
-                        toolbarField("起始", text: $model.form.since, minWidth: 180)
-                            .frame(width: 220)
-                        toolbarField("结束", text: $model.form.until, minWidth: 180)
-                            .frame(width: 220)
-                        Spacer(minLength: 0)
-                    }
-
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
-                        toolbarField("起始", text: $model.form.since, minWidth: 180)
-                        toolbarField("结束", text: $model.form.until, minWidth: 180)
-                    }
-                }
-
-                if model.showAdvancedParams {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
-                        toolbarField("groupId", text: $model.form.groupID, minWidth: 180)
-                        toolbarField("groupUrl", text: $model.form.groupURL, minWidth: 260)
-                        toolbarField("brokerUserId", text: $model.form.brokerUserID, minWidth: 180)
-                        toolbarField("spaceUserId", text: $model.form.spaceUserID, minWidth: 180)
-                        toolbarField("自动刷新", text: $model.form.autoRefresh, minWidth: 140)
-                    }
-                }
-            }
-            .padding(12)
-            .background(AppPalette.card.opacity(0.52), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                    .stroke(AppPalette.line.opacity(0.42), lineWidth: 1)
-            )
+            // ② 可折叠的参数卡片
+            collapsibleFilterPanel
         }
+    }
+
+    // MARK: - Collapsible Query Filter Panel
+
+    private var collapsibleFilterPanel: some View {
+        VStack(spacing: 0) {
+            // 标题栏（始终可见，点击切换展开/收起）
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isQueryExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(AppPalette.brand)
+                        .frame(width: 18, height: 18)
+                        .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: 4))
+
+                    Text("社区动态筛选")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+
+                    // 收起时展示活跃条件摘要
+                    if !isQueryExpanded && !activeFilterSummary.isEmpty {
+                        Text(activeFilterSummary)
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppPalette.muted)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: isQueryExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(AppPalette.paper.opacity(0.94))
+            }
+            .buttonStyle(.plain)
+
+            // 筛选内容区（展开时显示）
+            if isQueryExpanded {
+                VStack(alignment: .leading, spacing: 10) {
+                    // 基本参数行
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .bottom, spacing: 10) {
+                            toolbarField("产品", text: $model.form.prodCode, minWidth: 170)
+                                .frame(width: 210)
+                            toolbarField("主理人", text: $model.form.userName, minWidth: 190)
+                                .frame(width: 250)
+                            toolbarField("关键词", text: $model.form.keyword, minWidth: 220)
+                                .frame(maxWidth: .infinity)
+                            toolbarField("页数", text: $model.form.pages, minWidth: 88)
+                                .frame(width: 104)
+                            toolbarField("每页", text: $model.form.pageSize, minWidth: 88)
+                                .frame(width: 104)
+                        }
+
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], alignment: .leading, spacing: 10) {
+                            toolbarField("产品", text: $model.form.prodCode, minWidth: 170)
+                            toolbarField("主理人", text: $model.form.userName, minWidth: 190)
+                            toolbarField("关键词", text: $model.form.keyword, minWidth: 220)
+                            toolbarField("页数", text: $model.form.pages, minWidth: 88)
+                            toolbarField("每页", text: $model.form.pageSize, minWidth: 88)
+                        }
+                    }
+
+                    // 日期范围行
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .bottom, spacing: 10) {
+                            toolbarField("起始", text: $model.form.since, minWidth: 180)
+                                .frame(width: 220)
+                            toolbarField("结束", text: $model.form.until, minWidth: 180)
+                                .frame(width: 220)
+                            Spacer(minLength: 0)
+                        }
+
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
+                            toolbarField("起始", text: $model.form.since, minWidth: 180)
+                            toolbarField("结束", text: $model.form.until, minWidth: 180)
+                        }
+                    }
+
+                    // 高级参数（复用现有 showAdvancedParams 逻辑）
+                    if model.showAdvancedParams {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
+                            toolbarField("groupId", text: $model.form.groupID, minWidth: 180)
+                            toolbarField("groupUrl", text: $model.form.groupURL, minWidth: 260)
+                            toolbarField("brokerUserId", text: $model.form.brokerUserID, minWidth: 180)
+                            toolbarField("spaceUserId", text: $model.form.spaceUserID, minWidth: 180)
+                            toolbarField("自动刷新", text: $model.form.autoRefresh, minWidth: 140)
+                        }
+                    }
+                }
+                .padding(12)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .background(AppPalette.card.opacity(0.52), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
+                .stroke(AppPalette.line.opacity(0.42), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: AppPalette.panelRadius))
     }
 
     private var toolbarTitleBlock: some View {
