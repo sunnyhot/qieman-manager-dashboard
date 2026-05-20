@@ -40,6 +40,8 @@ struct PersonalAssetOverviewCard: View {
                     Text(currencyText(row.effectiveHoldingAmount))
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text("总持仓")
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
@@ -47,6 +49,7 @@ struct PersonalAssetOverviewCard: View {
                         Text(percentOptional(row.profitPct))
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(profitTint)
+                            .lineLimit(1)
                     }
                 }
             }
@@ -73,6 +76,7 @@ struct PersonalAssetOverviewCard: View {
                 }
                 LabeledValue(title: "成本", value: row.costPrice.map(decimalText) ?? "—")
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 12) {
                 if let archivedUnits = row.archivedUnits, !row.hasHolding {
@@ -617,9 +621,12 @@ struct AssetMiniStat: View {
             Text(title)
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
+                .lineLimit(1)
             Text(value)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)

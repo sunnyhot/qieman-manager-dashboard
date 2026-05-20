@@ -173,6 +173,8 @@ struct SectionCard<Trailing: View, Content: View>: View {
                     Text(title)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     Text(subtitle)
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
@@ -236,6 +238,7 @@ struct StatChip: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(AppPalette.ink)
                 .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)

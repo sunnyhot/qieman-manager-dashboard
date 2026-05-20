@@ -249,7 +249,7 @@ struct PersonalAssetGroupedTable: View {
     }
 
     var body: some View {
-        LazyVStack(alignment: .leading, spacing: 14) {
+        LazyVStack(alignment: .leading, spacing: 20) {
             if !offExchangeFundRows.isEmpty {
                 group(title: "场外基金", rows: offExchangeFundRows, stats: offExchangeFundStats, tint: AppPalette.brand, usesMarketTradeColumns: false)
             }
@@ -263,23 +263,51 @@ struct PersonalAssetGroupedTable: View {
     }
 
     private func group(title: String, rows: [PersonalAssetAggregateRow], stats: PersonalAssetGroupStats, tint: Color, usesMarketTradeColumns: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
+            // ── Group header bar with colored accent ──
+            HStack(spacing: 10) {
+                // Colored accent bar
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(tint)
+                    .frame(width: 3, height: 18)
+
                 Text(title)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(AppPalette.ink)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(tint)
+
                 ToolbarBadge(title: "\(rows.count) 只", tint: tint)
+
+                Spacer()
+
                 Text("市值 \(currencyText(stats.totalMarketValue))")
-                    .font(.system(size: 10))
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundStyle(AppPalette.muted)
+
                 if let time = stats.latestTime {
                     Text("估值 \(time)")
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted.opacity(0.7))
                 }
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                tint.opacity(0.06)
+            )
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(tint.opacity(0.18))
+                    .frame(height: 1)
+            }
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: AppPalette.cardRadius, topTrailingRadius: AppPalette.cardRadius))
+
             PersonalAssetTable(rows: rows, usesMarketTradeColumns: usesMarketTradeColumns)
         }
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(tint.opacity(0.12), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
 
     private static func groupStats(rows: [PersonalAssetAggregateRow]) -> PersonalAssetGroupStats {
@@ -329,7 +357,7 @@ struct PersonalAssetTable: View {
     // MARK: - Column widths adapt to available space
 
     private func valuationColWidth(isCompact: Bool) -> CGFloat {
-        isCompact ? 180 : 260
+        isCompact ? 200 : 260
     }
 
     private func unitsColWidth(isCompact: Bool) -> CGFloat {
