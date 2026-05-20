@@ -75,6 +75,47 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
                     }
                 }
                 .store(in: &self.cancellables)
+
+            // Sync NSAppearance on all windows when the user changes appearance setting.
+            // .preferredColorScheme() only affects SwiftUI's Environment; NSColor dynamic
+            // colors (used by AppPalette.adaptive) depend on the window's NSAppearance.
+            NotificationCenter.default.publisher(for: .qiemanAppearanceDidChange)
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in
+                    Task { @MainActor [weak self] in
+                        self?.syncWindowAppearances()
+                    }
+                }
+                .store(in: &self.cancellables)
+        }
+    }
+
+    /// Apply the current appearance setting to every open NSWindow, NSHostingView,
+    /// and the popover — so both NSColor dynamic colors and SwiftUI's
+    /// .preferredColorScheme() stay in sync.
+    @MainActor private func syncWindowAppearances() {
+        guard let model else { return }
+        let target = model.appearance.nsAppearance
+        for window in NSApplication.shared.windows {
+            window.appearance = target
+            // Walk the view hierarchy to find NSHostingView instances and
+            // explicitly set their appearance so SwiftUI picks up the change.
+            setAppearanceRecursively(in: window.contentView, to: target)
+        }
+        // Also update the popover's hosting controller
+        if let popoverVC = popover.contentViewController {
+            setAppearanceRecursively(in: popoverVC.view, to: target)
+        }
+    }
+
+    /// Walk an NSView hierarchy and set appearance on all NSHostingView instances.
+    @MainActor private func setAppearanceRecursively(in view: NSView?, to appearance: NSAppearance?) {
+        guard let view else { return }
+        if String(describing: type(of: view)).contains("NSHostingView") {
+            view.appearance = appearance
+        }
+        for subview in view.subviews {
+            setAppearanceRecursively(in: subview, to: appearance)
         }
     }
 
@@ -295,7 +336,10 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         window.title = "且慢主理人"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
-        window.contentView = NSHostingView(rootView: contentView)
+        window.appearance = model.appearance.nsAppearance
+        let hostingView = NSHostingView(rootView: contentView)
+        hostingView.appearance = model.appearance.nsAppearance
+        window.contentView = hostingView
         window.delegate = self
         mainWindow = window
         window.makeKeyAndOrderFront(nil)
@@ -367,6 +411,14 @@ struct QiemanDashboardApp: App {
                 .preferredColorScheme(model.appearance.colorScheme)
                 .onAppear {
                     appDelegate.configure(model: model)
+                    // Sync initial appearance to NSWindow + NSHostingView level so
+                    // NSColor dynamic colors (AppPalette.adaptive) resolve correctly
+                    // from launch.
+                    let target = model.appearance.nsAppearance
+                    for window in NSApplication.shared.windows {
+                        window.appearance = target
+                        setAppearanceRecursively(in: window.contentView, to: target)
+                    }
                 }
         }
         .windowStyle(.hiddenTitleBar)

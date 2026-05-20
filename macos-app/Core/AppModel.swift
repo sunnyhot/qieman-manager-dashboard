@@ -9,6 +9,7 @@ import SwiftUI
 
 extension Notification.Name {
     static let qiemanNotificationDeepLink = Notification.Name("qieman.notificationDeepLink")
+    static let qiemanAppearanceDidChange = Notification.Name("qieman.appearanceDidChange")
 }
 
 enum AppAppearance: String, CaseIterable, Identifiable {
@@ -23,6 +24,16 @@ enum AppAppearance: String, CaseIterable, Identifiable {
         case .system: return nil
         case .light: return .light
         case .dark: return .dark
+        }
+    }
+
+    /// Map to NSAppearance so NSColor dynamic colors (used by AppPalette.adaptive)
+    /// pick up the correct light/dark variant.
+    var nsAppearance: NSAppearance? {
+        switch self {
+        case .system: return nil
+        case .light: return NSAppearance(named: .aqua)
+        case .dark: return NSAppearance(named: .darkAqua)
         }
     }
 
