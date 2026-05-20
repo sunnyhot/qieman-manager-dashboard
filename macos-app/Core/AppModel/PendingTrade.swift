@@ -21,7 +21,8 @@ extension AppModel {
 
             pendingTrades = nextTrades
             pendingTradesDraft = ""
-            clearCachedComputedProperties()
+            clearPendingTradeCaches()
+            clearPortfolioCaches()
             try pendingTradesStore.save(nextTrades, to: pendingTradeFileURL)
             noticeMessage = "已\(mode.actionText)保存 \(importedTrades.count) 条买入中记录。"
             Task { await applyPersonalAssetAutomation() }
@@ -64,7 +65,8 @@ extension AppModel {
         do {
             pendingTrades.append(trade)
             pendingTrades.sort { $0.occurredAt > $1.occurredAt }
-            clearCachedComputedProperties()
+            clearPendingTradeCaches()
+            clearPortfolioCaches()
             try pendingTradesStore.save(pendingTrades, to: pendingTradeFileURL)
             noticeMessage = "已添加 \(trade.displayTitle) 的买入中记录。"
             Task { await applyPersonalAssetAutomation() }
@@ -114,7 +116,8 @@ extension AppModel {
         do {
             pendingTrades[existingIndex] = trade
             pendingTrades.sort { $0.occurredAt > $1.occurredAt }
-            clearCachedComputedProperties()
+            clearPendingTradeCaches()
+            clearPortfolioCaches()
             try pendingTradesStore.save(pendingTrades, to: pendingTradeFileURL)
             noticeMessage = "已更新 \(trade.displayTitle) 的买入中记录。"
             Task { await applyPersonalAssetAutomation() }
@@ -137,7 +140,8 @@ extension AppModel {
 
         do {
             pendingTrades = pendingTrades.filter { $0.id != tradeID }
-            clearCachedComputedProperties()
+            clearPendingTradeCaches()
+            clearPortfolioCaches()
             if pendingTrades.isEmpty {
                 try pendingTradesStore.delete(at: pendingTradeFileURL)
             } else {
@@ -166,7 +170,8 @@ extension AppModel {
         do {
             pendingTrades = try pendingTradesStore.load(from: pendingTradeFileURL)
                 .sorted { $0.occurredAt > $1.occurredAt }
-            clearCachedComputedProperties()
+            clearPendingTradeCaches()
+            clearPortfolioCaches()
             pendingTradesDraft = ""
         } catch {
             errorMessage = error.localizedDescription

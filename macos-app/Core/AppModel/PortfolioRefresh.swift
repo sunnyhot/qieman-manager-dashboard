@@ -7,7 +7,7 @@ extension AppModel {
         let holdings = activeUserPortfolioHoldings
         guard !holdings.isEmpty else {
             userPortfolioSnapshot = nil
-            clearCachedComputedProperties()
+            clearPortfolioCaches()
             await refreshMarketIndicesIfNeeded()
             return
         }
@@ -17,7 +17,7 @@ extension AppModel {
 
         let snapshot = try await platformClient.fetchUserPortfolioSnapshot(holdings: holdings)
         userPortfolioSnapshot = snapshot
-        clearCachedComputedProperties()
+        clearPortfolioCaches()
         if updateNotice {
             noticeMessage = "个人持仓估值已刷新。"
         }
@@ -102,7 +102,7 @@ extension AppModel {
 
         do {
             userPortfolioHoldings = enrichedHoldings
-            clearCachedComputedProperties()
+            clearPortfolioCaches()
             try portfolioStore.save(enrichedHoldings, to: portfolioFileURL)
             return resolvedCount
         } catch {

@@ -21,7 +21,7 @@ extension AppModel {
 
             userPortfolioHoldings = nextHoldings
             userPortfolioSnapshot = nil
-            clearCachedComputedProperties()
+            clearPortfolioCaches()
             try portfolioStore.save(nextHoldings, to: portfolioFileURL)
             portfolioDraft = ""
 
@@ -48,7 +48,7 @@ extension AppModel {
             try portfolioStore.delete(at: portfolioFileURL)
             userPortfolioHoldings = []
             userPortfolioSnapshot = nil
-            clearCachedComputedProperties()
+            clearPortfolioCaches()
             portfolioDraft = ""
             noticeMessage = "已清空个人持仓。"
         } catch {
@@ -129,7 +129,7 @@ extension AppModel {
                 return
             }
 
-            clearCachedComputedProperties()
+            clearPortfolioCaches()
             let itemText = row.fundCode.map { "\(row.fundName)（\($0)）" } ?? row.fundName
             noticeMessage = "已删除 \(itemText) 的\(deletedParts.joined(separator: "、"))记录。"
 
@@ -199,7 +199,7 @@ extension AppModel {
             )
             userPortfolioHoldings = nextHoldings
             userPortfolioSnapshot = nil
-            clearCachedComputedProperties()
+            clearPortfolioCaches()
             try portfolioStore.save(nextHoldings, to: portfolioFileURL)
 
             let itemText = row.fundCode.map { "\(row.fundName)（\($0)）" } ?? row.fundName
@@ -294,7 +294,7 @@ extension AppModel {
             )
             userPortfolioHoldings = nextHoldings
             userPortfolioSnapshot = nil
-            clearCachedComputedProperties()
+            clearPortfolioCaches()
             try portfolioStore.save(nextHoldings, to: portfolioFileURL)
 
             let itemText = normalizedOptionalName(displayNameText) ?? row.fundName
@@ -383,7 +383,7 @@ extension AppModel {
 
             userPortfolioHoldings = nextHoldings
             userPortfolioSnapshot = nil
-            clearCachedComputedProperties()
+            clearPortfolioCaches()
             try portfolioStore.save(nextHoldings, to: portfolioFileURL)
 
             let nameText = normalizedDisplayName.map { "\($0)（\(fundCode)）" } ?? fundCode
@@ -561,7 +561,7 @@ extension AppModel {
 
             userPortfolioHoldings = nextHoldings
             userPortfolioSnapshot = nil
-            clearCachedComputedProperties()
+            clearPortfolioCaches()
             if nextHoldings.isEmpty {
                 try portfolioStore.delete(at: portfolioFileURL)
             } else {
@@ -602,7 +602,7 @@ extension AppModel {
         do {
             let holdings = try portfolioStore.load(from: portfolioFileURL)
             userPortfolioHoldings = holdings
-            clearCachedComputedProperties()
+            clearPortfolioCaches()
             portfolioDraft = ""
         } catch {
             errorMessage = error.localizedDescription

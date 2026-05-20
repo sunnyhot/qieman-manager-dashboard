@@ -163,6 +163,26 @@ final class AppModel: ObservableObject {
         _cachedPendingTradeSummary = nil
     }
 
+    func clearPortfolioCaches() {
+        _cachedAssetRows = nil
+        _cachedAssetSummary = nil
+    }
+
+    func clearPlatformCaches() {
+        _cachedMonthlyPlatformSummary = nil
+    }
+
+    func clearInvestmentPlanCaches() {
+        _cachedActiveInvestmentPlans = nil
+        _cachedPausedInvestmentPlans = nil
+        _cachedEndedInvestmentPlans = nil
+        _cachedInvestmentPlanSummary = nil
+    }
+
+    func clearPendingTradeCaches() {
+        _cachedPendingTradeSummary = nil
+    }
+
     init() {
         // Forward filterState changes so PlatformSectionView (which observes
         // AppModel via @EnvironmentObject) re-renders when filters change.
@@ -209,20 +229,27 @@ final class AppModel: ObservableObject {
             errorMessage = error.localizedDescription
         }
 
-        do {
-            try await refreshLatest(persist: false, updateNotice: false)
-        } catch {
-            if currentSnapshot == nil {
-                errorMessage = error.localizedDescription
-            } else {
-                noticeMessage = "原生直连暂时不可用，已保留当前界面数据。"
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { @MainActor in
+                do {
+                    try await self.refreshLatest(persist: false, updateNotice: false)
+                } catch {
+                    if self.currentSnapshot == nil {
+                        self.errorMessage = error.localizedDescription
+                    } else {
+                        self.noticeMessage = "原生直连暂时不可用，已保留当前界面数据。"
+                    }
+                }
+            }
+            group.addTask { @MainActor in
+                if !self.activeUserPortfolioHoldings.isEmpty {
+                    try? await self.refreshUserPortfolio(updateNotice: false)
+                }
+            }
+            group.addTask { @MainActor in
+                await self.refreshMarketIndicesIfNeeded()
             }
         }
-
-        if !activeUserPortfolioHoldings.isEmpty {
-            try? await refreshUserPortfolio(updateNotice: false)
-        }
-        await refreshMarketIndicesIfNeeded()
 
         await applyPersonalAssetAutomation(updateNotice: false)
         restartManagerWatchLoop(immediate: false)

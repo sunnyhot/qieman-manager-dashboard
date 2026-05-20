@@ -14,6 +14,7 @@ struct PersonalAssetBrowser: View {
     let rows: [PersonalAssetAggregateRow]
 
     @State private var searchText = ""
+    @State private var debouncedSearchText = ""
     @State private var filterScope: PersonalAssetFilterScope = .all
     @State private var sortOption: PersonalAssetSortOption = .defaultOption
 
@@ -22,7 +23,7 @@ struct PersonalAssetBrowser: View {
     }
 
     var body: some View {
-        let presentation = makePresentation()
+        let presentation = makePresentation(keyword: debouncedSearchText)
 
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
@@ -73,6 +74,11 @@ struct PersonalAssetBrowser: View {
             } else {
                 PersonalAssetGroupedTable(rows: presentation.visibleRows)
             }
+        }
+        .task(id: searchText) {
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            debouncedSearchText = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         }
     }
 
@@ -149,8 +155,7 @@ struct PersonalAssetBrowser: View {
         .contentShape(RoundedRectangle(cornerRadius: AppPalette.controlRadius))
     }
 
-    private func makePresentation() -> PersonalAssetBrowserPresentation {
-        let keyword = normalizedSearchText
+    private func makePresentation(keyword: String) -> PersonalAssetBrowserPresentation {
         var counts: [PersonalAssetFilterScope: Int] = [:]
         var visibleRows: [PersonalAssetAggregateRow] = []
 
@@ -244,7 +249,7 @@ struct PersonalAssetGroupedTable: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        LazyVStack(alignment: .leading, spacing: 14) {
             if !offExchangeFundRows.isEmpty {
                 group(title: "场外基金", rows: offExchangeFundRows, stats: offExchangeFundStats, tint: AppPalette.brand, usesMarketTradeColumns: false)
             }
@@ -314,7 +319,7 @@ struct PersonalAssetTable: View {
                 tableContent(availableWidth: availableWidth, isCompact: isCompact)
             }
         }
-        .frame(minHeight: tableHeightEstimate)
+        .frame(minHeight: 44)
     }
 
     private var tableHeightEstimate: CGFloat {
@@ -397,7 +402,7 @@ struct PersonalAssetTable: View {
                     .frame(height: 1)
             }
 
-            VStack(spacing: 8) {
+            LazyVStack(spacing: 8) {
                 ForEach(rows) { row in
                     PersonalAssetTableRow(
                         row: row,

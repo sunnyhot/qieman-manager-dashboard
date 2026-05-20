@@ -71,7 +71,9 @@ extension AppModel {
                 try investmentPlansStore.save(nextInvestmentPlans, to: investmentPlanFileURL)
             }
             if holdingsChanged || pendingChanged || plansChanged {
-                clearCachedComputedProperties()
+                clearPortfolioCaches()
+                clearPendingTradeCaches()
+                clearInvestmentPlanCaches()
             }
         } catch {
             errorMessage = error.localizedDescription

@@ -1328,25 +1328,25 @@ def preload_fund_market_data(fund_codes: List[str]) -> tuple[Dict[str, Dict[str,
     unique_codes = [code for code in dict.fromkeys(normalize_text(code) for code in fund_codes) if code]
     histories: Dict[str, Dict[str, Any]] = {}
     quotes: Dict[str, Dict[str, Any]] = {}
-    max_workers = max(1, min(8, len(unique_codes)))
     if not unique_codes:
         return histories, quotes
+    max_workers = max(1, min(12, len(unique_codes) * 2))
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        history_futures = {executor.submit(fetch_fund_history_series, code): code for code in unique_codes}
-        for future in as_completed(history_futures):
-            code = history_futures[future]
+        history_futures = {executor.submit(fetch_fund_history_series, code): ("history", code) for code in unique_codes}
+        quote_futures = {executor.submit(fetch_fund_quote, code): ("quote", code) for code in unique_codes}
+        all_futures = {**history_futures, **quote_futures}
+        for future in as_completed(all_futures):
+            kind, code = all_futures[future]
             try:
-                histories[code] = future.result()
+                if kind == "history":
+                    histories[code] = future.result()
+                else:
+                    quotes[code] = future.result()
             except Exception:
-                histories[code] = {}
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        quote_futures = {executor.submit(fetch_fund_quote, code): code for code in unique_codes}
-        for future in as_completed(quote_futures):
-            code = quote_futures[future]
-            try:
-                quotes[code] = future.result()
-            except Exception:
-                quotes[code] = {}
+                if kind == "history":
+                    histories[code] = {}
+                else:
+                    quotes[code] = {}
     return histories, quotes
 
 
