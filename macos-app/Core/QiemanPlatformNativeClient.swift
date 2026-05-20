@@ -127,8 +127,7 @@ final class QiemanPlatformNativeClient {
             $0.assetType == .stock || ($0.assetType == .fund && $0.detectedFundMarket == .onExchange)
         }.map(\.normalizedFundCode)))
         async let stockQuotesTask = preloadStockQuotes(stockCodes)
-        let histories = await preloadHistories(fundCodes)
-        let quotes = await preloadQuotes(fundCodes, histories: histories)
+        let (histories, quotes) = await preloadHistoriesAndQuotes(fundCodes)
         let stockQuotes = await stockQuotesTask
 
         let rows = normalizedHoldings.map { holding -> UserPortfolioValuationRow in
@@ -280,8 +279,7 @@ final class QiemanPlatformNativeClient {
         let normalizedCodes = Array(Set(fundCodes.map(normalizedString).filter { !$0.isEmpty }))
         guard !normalizedCodes.isEmpty else { return [:] }
 
-        let histories = await preloadHistories(normalizedCodes)
-        let quotes = await preloadQuotes(normalizedCodes, histories: histories)
+        let (histories, quotes) = await preloadHistoriesAndQuotes(normalizedCodes)
 
         var names: [String: String] = [:]
         for code in normalizedCodes {
@@ -428,8 +426,7 @@ final class QiemanPlatformNativeClient {
         adjustments.sort { actionTimestamp($0.txnTs, createdTs: $0.createdTs) > actionTimestamp($1.txnTs, createdTs: $1.createdTs) }
 
         let fundCodes = Array(Set(actionSeeds.map(\.fundCode).filter { !$0.isEmpty }))
-        let histories = await preloadHistories(fundCodes)
-        let quotes = await preloadQuotes(fundCodes, histories: histories)
+        let (histories, quotes) = await preloadHistoriesAndQuotes(fundCodes)
         let actions = enrichPlatformActions(actionSeeds, histories: histories, quotes: quotes)
         let holdings = buildHoldings(actions: actions, histories: histories, quotes: quotes)
         let timeline = buildTimeline(actions: actions)
@@ -733,6 +730,67 @@ final class QiemanPlatformNativeClient {
             }
         }
         return results
+    }
+
+    /// Pipelined preload: quotes start as soon as their corresponding history completes,
+    /// overlapping the two phases instead of running them sequentially.
+    private func preloadHistoriesAndQuotes(_ fundCodes: [String]) async -> (histories: [String: NativeFundHistory], quotes: [String: NativeFundQuote]) {
+        var histories: [String: NativeFundHistory] = [:]
+        var quotes: [String: NativeFundQuote] = [:]
+        let uniqueCodes = uniqueNonEmptyCodes(fundCodes)
+        guard !uniqueCodes.isEmpty else { return (histories, quotes) }
+
+        await withTaskGroup(of: PreloadResult.self) { group in
+            var nextHistoryIndex = 0
+            let limit = Self.preloadConcurrencyLimit
+
+            func enqueueHistory(_ code: String) {
+                group.addTask {
+                    let history: NativeFundHistory
+                    if let cached = await self.cache.history(for: code, ttl: self.historyTTL) {
+                        history = cached
+                    } else {
+                        history = (try? await self.fetchFundHistorySeries(code)) ?? NativeFundHistory(fundCode: code, fundName: "", series: [])
+                        await self.cache.store(history: history, for: code)
+                    }
+                    return .history(code: code, data: history)
+                }
+            }
+
+            func enqueueQuote(_ code: String, history: NativeFundHistory?) {
+                group.addTask {
+                    let quote: NativeFundQuote
+                    if let cached = await self.cache.quote(for: code, ttl: self.quoteTTL) {
+                        quote = cached
+                    } else {
+                        quote = (try? await self.fetchFundQuote(code, history: history)) ?? NativeFundQuote.empty(code)
+                        await self.cache.store(quote: quote, for: code)
+                    }
+                    return .quote(code: code, data: quote)
+                }
+            }
+
+            while nextHistoryIndex < Swift.min(uniqueCodes.count, limit) {
+                enqueueHistory(uniqueCodes[nextHistoryIndex])
+                nextHistoryIndex += 1
+            }
+
+            while let result = await group.next() {
+                switch result {
+                case .history(let code, let data):
+                    histories[code] = data
+                    enqueueQuote(code, history: data)
+                    if nextHistoryIndex < uniqueCodes.count {
+                        enqueueHistory(uniqueCodes[nextHistoryIndex])
+                        nextHistoryIndex += 1
+                    }
+                case .quote(let code, let data):
+                    quotes[code] = data
+                }
+            }
+        }
+
+        return (histories, quotes)
     }
 
     private func preloadStockQuotes(_ stockCodes: [String]) async -> [String: NativeStockQuote] {
@@ -1306,6 +1364,11 @@ final class QiemanPlatformNativeClient {
         }
         return String(text[resultRange])
     }
+}
+
+private enum PreloadResult {
+    case history(code: String, data: NativeFundHistory)
+    case quote(code: String, data: NativeFundQuote)
 }
 
 private struct NativePlatformOrder {
