@@ -44,7 +44,9 @@ extension AppModel {
 
     func refreshMarketIndicesIfNeeded() async {
         guard menuBarTickerSettings.isEnabled, !selectedMenuBarMarketIndexKinds.isEmpty else { return }
-        await refreshMarketIndices(updateNotice: false)
+        await refreshThrottle.throttle(key: "marketIndices") { [weak self] in
+            await self?.refreshMarketIndices(updateNotice: false)
+        }
     }
 
     var selectedMenuBarMarketIndexKinds: [MarketIndexKind] {
@@ -118,7 +120,10 @@ extension AppModel {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: interval)
                 if Task.isCancelled { return }
-                await self?.refreshPortfolioIfAutoRefreshVisible()
+                guard let self else { return }
+                // Skip if a manual refresh is already in progress; reschedule instead.
+                guard !self.isRefreshingPortfolio else { continue }
+                await self.refreshPortfolioIfAutoRefreshVisible()
             }
         }
     }

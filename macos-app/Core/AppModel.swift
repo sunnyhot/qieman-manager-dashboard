@@ -89,6 +89,7 @@ final class AppModel: ObservableObject {
     let notificationManager = LocalNotificationManager()
     let personalAssetAutomation = PersonalAssetAutomation()
     let portfolioAutoRefreshIntervalSeconds: UInt64 = 60
+    let refreshThrottle = RefreshThrottle()
 
     // Runtime state
     var didApplyDefaultForm = false
