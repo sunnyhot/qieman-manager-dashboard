@@ -417,7 +417,9 @@ struct QiemanDashboardApp: App {
                     let target = model.appearance.nsAppearance
                     for window in NSApplication.shared.windows {
                         window.appearance = target
-                        setAppearanceRecursively(in: window.contentView, to: target)
+                        for view in window.contentView?.subviews ?? [] {
+                            (view as? NSHostingView<AnyView>)?.appearance = target
+                        }
                     }
                 }
         }
