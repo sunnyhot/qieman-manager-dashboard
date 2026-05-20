@@ -7,7 +7,7 @@ extension AppModel {
         let holdings = activeUserPortfolioHoldings
         guard !holdings.isEmpty else {
             userPortfolioSnapshot = nil
-            clearPortfolioCaches()
+            rebuildAssetRows()
             await refreshMarketIndicesIfNeeded()
             return
         }
@@ -17,7 +17,7 @@ extension AppModel {
 
         let snapshot = try await platformClient.fetchUserPortfolioSnapshot(holdings: holdings)
         userPortfolioSnapshot = snapshot
-        clearPortfolioCaches()
+        rebuildAssetRows()
         if updateNotice {
             noticeMessage = "个人持仓估值已刷新。"
         }
@@ -44,7 +44,9 @@ extension AppModel {
 
     func refreshMarketIndicesIfNeeded() async {
         guard menuBarTickerSettings.isEnabled, !selectedMenuBarMarketIndexKinds.isEmpty else { return }
-        await refreshMarketIndices(updateNotice: false)
+        await refreshThrottle.throttle(key: "marketIndices") { [weak self] in
+            await self?.refreshMarketIndices(updateNotice: false)
+        }
     }
 
     var selectedMenuBarMarketIndexKinds: [MarketIndexKind] {
@@ -102,7 +104,7 @@ extension AppModel {
 
         do {
             userPortfolioHoldings = enrichedHoldings
-            clearPortfolioCaches()
+            rebuildAssetRows()
             try portfolioStore.save(enrichedHoldings, to: portfolioFileURL)
             return resolvedCount
         } catch {
@@ -118,7 +120,10 @@ extension AppModel {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: interval)
                 if Task.isCancelled { return }
-                await self?.refreshPortfolioIfAutoRefreshVisible()
+                guard let self else { return }
+                // Skip if a manual refresh is already in progress; reschedule instead.
+                guard !self.isRefreshingPortfolio else { continue }
+                await self.refreshPortfolioIfAutoRefreshVisible()
             }
         }
     }

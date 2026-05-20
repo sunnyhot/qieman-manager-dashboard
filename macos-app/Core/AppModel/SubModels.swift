@@ -1,0 +1,125 @@
+import AppKit
+import Combine
+import Foundation
+import SwiftUI
+
+// MARK: - PortfolioState
+
+@MainActor
+final class PortfolioState: ObservableObject {
+    @Published var userPortfolioHoldings: [UserPortfolioHolding] = []
+    @Published var userPortfolioSnapshot: UserPortfolioSnapshot?
+    @Published var isRefreshingPortfolio = false
+    @Published var isResolvingPortfolioNames = false
+    @Published var pendingTrades: [PersonalPendingTrade] = []
+    @Published var pendingTradesDraft = ""
+    @Published var investmentPlans: [PersonalInvestmentPlan] = []
+    @Published var investmentPlansDraft = ""
+    @Published var marketIndexQuotes: [MarketIndexKind: MarketIndexQuote] = [:]
+    @Published var isRefreshingMarketIndices = false
+
+    // Cached computed property backing stores (moved from AppModel)
+    var _cachedAssetRows: [PersonalAssetAggregateRow]?
+    var _cachedAssetSummary: PersonalAssetAggregateSummary?
+    var _cachedMonthlyPlatformSummary: [PlatformMonthSummary]?
+    var _cachedActiveInvestmentPlans: [PersonalInvestmentPlan]?
+    var _cachedPausedInvestmentPlans: [PersonalInvestmentPlan]?
+    var _cachedEndedInvestmentPlans: [PersonalInvestmentPlan]?
+    var _cachedInvestmentPlanSummary: PersonalInvestmentPlanSummary?
+    var _cachedPendingTradeSummary: PersonalPendingTradeSummary?
+
+    func clearPortfolioCaches() {
+        _cachedAssetRows = nil
+        _cachedAssetSummary = nil
+    }
+
+    func clearInvestmentPlanCaches() {
+        _cachedActiveInvestmentPlans = nil
+        _cachedPausedInvestmentPlans = nil
+        _cachedEndedInvestmentPlans = nil
+        _cachedInvestmentPlanSummary = nil
+    }
+
+    func clearPendingTradeCaches() {
+        _cachedPendingTradeSummary = nil
+    }
+
+    func clearPlatformCaches() {
+        _cachedMonthlyPlatformSummary = nil
+    }
+
+    func clearAllCaches() {
+        _cachedAssetRows = nil
+        _cachedAssetSummary = nil
+        _cachedMonthlyPlatformSummary = nil
+        _cachedActiveInvestmentPlans = nil
+        _cachedPausedInvestmentPlans = nil
+        _cachedEndedInvestmentPlans = nil
+        _cachedInvestmentPlanSummary = nil
+        _cachedPendingTradeSummary = nil
+    }
+}
+
+// MARK: - ForumState
+
+@MainActor
+final class ForumState: ObservableObject {
+    @Published var currentSnapshot: SnapshotPayload?
+    @Published var commentsPayload: CommentsPayload?
+    @Published var selectedPostID: String?
+    @Published var commentSortType = "hot"
+    @Published var onlyManagerReplies = false
+    @Published var isLoadingComments = false
+}
+
+// MARK: - PlatformState
+
+@MainActor
+final class PlatformState: ObservableObject {
+    @Published var platformPayload: PlatformPayload?
+    @Published var selectedPlatformActionID: String?
+}
+
+// MARK: - AuthState
+
+@MainActor
+final class AuthState: ObservableObject {
+    @Published var authPayload: AuthCheckPayload?
+    @Published var isCheckingAuth = false
+    @Published var isPresentingLoginSheet = false
+}
+
+// MARK: - UIState
+
+@MainActor
+final class UIState: ObservableObject {
+    @Published var selectedSection: AppSection = .overview
+    @Published var showsInDock: Bool = (UserDefaults.standard.object(forKey: "qieman.dashboard.showsInDock") as? Bool) ?? true {
+        didSet {
+            UserDefaults.standard.set(showsInDock, forKey: "qieman.dashboard.showsInDock")
+            NSApplication.shared.setActivationPolicy(showsInDock ? .regular : .accessory)
+        }
+    }
+
+    @Published var appearance: AppAppearance = AppAppearance.load() { didSet { appearance.save() } }
+    @Published var showAdvancedParams = false
+    @Published var launchAtLoginEnabled = false
+    @Published var portfolioDraft = ""
+}
+
+// MARK: - UpdateState
+
+@MainActor
+final class UpdateState: ObservableObject {
+    @Published var isCheckingForUpdates = false
+    @Published var availableUpdate: AppUpdateRelease?
+    @Published var isPresentingUpdateSheet = false
+    @Published var isInstallingUpdate = false
+    @Published var updateInstallProgress = ""
+    @Published var updateDownloadFraction: Double = 0
+    @Published var autoCheckForUpdatesOnLaunch: Bool = (UserDefaults.standard.object(forKey: "qieman.dashboard.update.autoCheckOnLaunch") as? Bool) ?? true {
+        didSet {
+            UserDefaults.standard.set(autoCheckForUpdatesOnLaunch, forKey: "qieman.dashboard.update.autoCheckOnLaunch")
+        }
+    }
+}
