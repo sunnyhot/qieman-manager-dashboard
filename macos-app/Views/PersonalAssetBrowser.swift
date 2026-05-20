@@ -338,7 +338,7 @@ struct PersonalAssetTable: View {
                 tableContent(availableWidth: availableWidth, isCompact: isCompact)
             }
         }
-        .frame(minHeight: 44)
+        .frame(height: tableHeightEstimate)
     }
 
     private var tableHeightEstimate: CGFloat {
@@ -441,4 +441,3 @@ struct PersonalAssetTable: View {
         .frame(minWidth: max(availableWidth, totalFixedWidth + 100))
     }
 }
-
