@@ -197,8 +197,9 @@ extension AppModel {
         return result
     }
 
-    var personalAssetRows: [PersonalAssetAggregateRow] {
-        if let cached = _cachedAssetRows { return cached }
+    /// Explicitly rebuilds personalAssetRows and personalAssetSummary from current data.
+    /// Call this after any change to holdings, snapshot, pendingTrades, or investmentPlans.
+    func rebuildAssetRows() {
         var keys = Set<String>()
         var valuationRowsByKey: [String: UserPortfolioValuationRow] = [:]
         for row in userPortfolioSnapshot?.rows ?? [] {
@@ -233,7 +234,7 @@ extension AppModel {
             keys.insert(key)
         }
 
-        let result = keys
+        let rows = keys
             .map { key in
                 let holdingRow = valuationRowsByKey[key]
                 let rawHolding = rawHoldingsByKey[key]
@@ -282,15 +283,13 @@ extension AppModel {
                 }
                 return left.fundName.localizedStandardCompare(right.fundName) == .orderedAscending
             }
-        _cachedAssetRows = result
-        _cachedAssetSummary = nil
-        return result
-    }
+        personalAssetRows = rows
 
-    var personalAssetSummary: PersonalAssetAggregateSummary? {
-        if let cached = _cachedAssetSummary { return cached }
-        let rows = personalAssetRows
-        guard !rows.isEmpty else { _cachedAssetSummary = nil; return nil }
+        // Rebuild summary from the new rows
+        guard !rows.isEmpty else {
+            personalAssetSummary = nil
+            return
+        }
         var holdingFundCount = 0
         var pendingFundCount = 0
         var activePlanFundCount = 0
@@ -322,7 +321,7 @@ extension AppModel {
             totalEffectiveHoldingAmount += row.effectiveHoldingAmount
         }
 
-        let result = PersonalAssetAggregateSummary(
+        personalAssetSummary = PersonalAssetAggregateSummary(
             fundCount: rows.count,
             holdingFundCount: holdingFundCount,
             pendingFundCount: pendingFundCount,
@@ -336,8 +335,6 @@ extension AppModel {
             totalEstimatedNextPlanAmount: totalEstimatedNextPlanAmount,
             totalEffectiveHoldingAmount: totalEffectiveHoldingAmount
         )
-        _cachedAssetSummary = result
-        return result
     }
 
     var outputDirectoryURL: URL? {

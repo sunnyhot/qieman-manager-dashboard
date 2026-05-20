@@ -68,6 +68,8 @@ final class AppModel: ObservableObject {
     @Published var baseURL: URL?
     @Published var logFileURL: URL?
     @Published var dataDirectoryURL: URL?
+    @Published var personalAssetRows: [PersonalAssetAggregateRow] = []
+    @Published var personalAssetSummary: PersonalAssetAggregateSummary?
     @Published var managerWatchSettings = ManagerWatchSettings.default
     @Published var menuBarTickerSettings = MenuBarTickerSettings.load()
 
