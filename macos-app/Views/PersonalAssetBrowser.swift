@@ -329,7 +329,7 @@ struct PersonalAssetTable: View {
     // MARK: - Column widths adapt to available space
 
     private func valuationColWidth(isCompact: Bool) -> CGFloat {
-        isCompact ? 180 : 260
+        isCompact ? 200 : 260
     }
 
     private func unitsColWidth(isCompact: Bool) -> CGFloat {
@@ -457,6 +457,7 @@ struct PersonalAssetTableRow: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
                         .lineLimit(1)
+                        .layoutPriority(1)
                     if let marketLabel = row.rawHolding?.marketLabel ?? row.holdingRow?.holding.marketLabel ?? row.archivedHolding?.marketLabel {
                         ToolbarBadge(title: marketLabel, tint: AppPalette.info)
                     }
@@ -495,21 +496,31 @@ struct PersonalAssetTableRow: View {
                 Text(row.marketValue.map { currencyText($0, market: row.detectedMarket) } ?? "—")
                     .font(.system(size: isCompact ? 11 : 12, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 if isCompact {
                     // Compact: combine profit and today change on fewer lines
                     Text("收益 \(signedCurrencyText(row.profitAmount, market: row.detectedMarket)) · \(percentOptional(row.profitPct))")
                         .font(.system(size: 10))
                         .foregroundStyle(profitTint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text("今日 \(signedCurrencyText(row.estimateChangeAmount, market: row.detectedMarket)) · \(percentOptional(row.estimateChangePct))")
                         .font(.system(size: 10))
                         .foregroundStyle(changeTint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 } else {
                     Text("总收益 \(signedCurrencyText(row.profitAmount, market: row.detectedMarket)) · \(percentOptional(row.profitPct))")
                         .font(.system(size: 10))
                         .foregroundStyle(profitTint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text("今日涨跌 \(signedCurrencyText(row.estimateChangeAmount, market: row.detectedMarket)) · \(percentOptional(row.estimateChangePct))")
                         .font(.system(size: 10))
                         .foregroundStyle(changeTint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
             }
             .frame(width: valuationWidth, alignment: .leading)
@@ -532,20 +543,28 @@ struct PersonalAssetTableRow: View {
                 Text("\(row.usesMarketTradeColumns ? "现价" : "净值") \(row.currentPrice.map(decimalText) ?? "—")")
                     .font(.system(size: isCompact ? 10 : 11, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 if let estimatePrice = row.currentEstimatePrice {
                     if isCompact {
                         Text("估\(decimalText(estimatePrice)) \(percentOptional(row.estimateChangePct))")
                             .font(.system(size: 10))
                             .foregroundStyle(changeTint)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     } else {
                         Text("估值 \(decimalText(estimatePrice)) · \(percentOptional(row.estimateChangePct))")
                             .font(.system(size: 10))
                             .foregroundStyle(changeTint)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                 }
                 Text("成本 \(row.costPrice.map(decimalText) ?? "—")")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             .frame(width: priceWidth, alignment: .leading)
 
@@ -555,6 +574,8 @@ struct PersonalAssetTableRow: View {
                         Text(String(format: "%+.2f%%", changePct))
                             .font(.system(size: isCompact ? 12 : 14, weight: .bold, design: .rounded))
                             .foregroundStyle(AppPalette.marketTint(for: changePct))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     } else {
                         Text("—")
                             .font(.system(size: 12, weight: .semibold))
@@ -568,9 +589,13 @@ struct PersonalAssetTableRow: View {
                         Text(row.pendingCashAmount > 0 ? currencyText(row.pendingCashAmount, market: row.detectedMarket) : "\(unitsText(row.pendingUnitAmount)) 份")
                             .font(.system(size: isCompact ? 11 : 12, weight: .semibold))
                             .foregroundStyle(AppPalette.ink)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                         Text("\(row.pendingTradeCount) 笔 · \(row.pendingTrades.first?.actionLabel ?? "待确认")")
                             .font(.system(size: 10))
                             .foregroundStyle(AppPalette.muted)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     } else {
                         Text("—")
                             .font(.system(size: 12, weight: .semibold))
@@ -591,6 +616,8 @@ struct PersonalAssetTableRow: View {
                         Text(signedCurrencyText(changeAmt, market: row.detectedMarket))
                             .font(.system(size: isCompact ? 12 : 14, weight: .bold, design: .rounded))
                             .foregroundStyle(AppPalette.marketTint(for: changeAmt))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     } else {
                         Text("—")
                             .font(.system(size: 12, weight: .semibold))
@@ -604,14 +631,20 @@ struct PersonalAssetTableRow: View {
                     Text("进行中 \(row.activePlanCount) · 暂停 \(row.pausedPlanCount) · 终止 \(row.endedPlanCount)")
                         .font(.system(size: isCompact ? 10 : 11, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     if isCompact {
                         Text("累计 \(currencyText(row.totalCumulativePlanAmount, market: row.detectedMarket))")
                             .font(.system(size: 10))
                             .foregroundStyle(AppPalette.muted)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     } else {
                         Text("下次估算 \(currencyText(row.estimatedNextPlanAmount, market: row.detectedMarket)) · 累计 \(currencyText(row.totalCumulativePlanAmount, market: row.detectedMarket))\(row.hasDrawdownPlan ? " · 涨跌幅 \(row.drawdownPlanCount)" : "")")
                             .font(.system(size: 10))
                             .foregroundStyle(AppPalette.muted)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                 } else {
                     Text("—")

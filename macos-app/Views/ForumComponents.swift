@@ -85,6 +85,7 @@ struct InvestmentPlanCard: View {
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(AppPalette.ink)
                             .lineLimit(2)
+                            .layoutPriority(1)
                         if plan.isDrawdownMode {
                             ToolbarBadge(title: "涨跌幅模式", tint: AppPalette.info)
                         }
@@ -106,9 +107,12 @@ struct InvestmentPlanCard: View {
                     Text(plan.amountRangeText)
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text(plan.normalizedStatus)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(accent)
+                        .lineLimit(1)
                 }
             }
 
@@ -202,9 +206,12 @@ struct PendingTradeCard: View {
                     Text(trade.amountText)
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text(trade.status)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(AppPalette.brand)
+                        .lineLimit(1)
                 }
             }
 
