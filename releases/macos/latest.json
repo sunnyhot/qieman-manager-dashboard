@@ -1,14 +1,14 @@
 {
-    "tag_name": "v2.3.8",
-    "name": "QiemanDashboard v2.3.8",
-    "body": "社区动态筛选面板展开/收起功能：默认收起只显示标题栏，点击展开完整筛选条件，收起时显示活跃筛选条件摘要",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.8",
+    "tag_name": "v2.3.9",
+    "name": "QiemanDashboard v2.3.9",
+    "body": "性能优化：细粒度缓存失效、并行启动加载、搜索防抖、懒渲染、Python线程池优化",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.9",
     "published_at": "2026-05-20T00:00:00Z",
     "assets": [
         {
-            "name": "QiemanDashboard-2.3.8.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.8/QiemanDashboard-2.3.8.zip",
-            "size": 0,
+            "name": "QiemanDashboard-2.3.9.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.9/QiemanDashboard-2.3.9.zip",
+            "size": 3610635,
             "content_type": "application/zip"
         }
     ]
