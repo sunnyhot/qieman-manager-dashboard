@@ -93,7 +93,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     /// Apply the current appearance setting to every open NSWindow, NSHostingView,
     /// and the popover — so both NSColor dynamic colors and SwiftUI's
     /// .preferredColorScheme() stay in sync.
-    @MainActor private func syncWindowAppearances() {
+    @MainActor func syncWindowAppearances() {
         guard let model else { return }
         let target = model.appearance.nsAppearance
         for window in NSApplication.shared.windows {
@@ -109,7 +109,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     }
 
     /// Walk an NSView hierarchy and set appearance on all NSHostingView instances.
-    @MainActor private func setAppearanceRecursively(in view: NSView?, to appearance: NSAppearance?) {
+    @MainActor func setAppearanceRecursively(in view: NSView?, to appearance: NSAppearance?) {
         guard let view else { return }
         if String(describing: type(of: view)).contains("NSHostingView") {
             view.appearance = appearance
@@ -411,13 +411,19 @@ struct QiemanDashboardApp: App {
                 .preferredColorScheme(model.appearance.colorScheme)
                 .onAppear {
                     appDelegate.configure(model: model)
-                    // Sync initial appearance to NSWindow + NSHostingView level so
-                    // NSColor dynamic colors (AppPalette.adaptive) resolve correctly
-                    // from launch.
                     let target = model.appearance.nsAppearance
                     for window in NSApplication.shared.windows {
                         window.appearance = target
-                        setAppearanceRecursively(in: window.contentView, to: target)
+                        func setAppearance(in view: NSView?) {
+                            guard let view else { return }
+                            if String(describing: type(of: view)).contains("NSHostingView") {
+                                view.appearance = target
+                            }
+                            for subview in view.subviews {
+                                setAppearance(in: subview)
+                            }
+                        }
+                        setAppearance(in: window.contentView)
                     }
                 }
         }
