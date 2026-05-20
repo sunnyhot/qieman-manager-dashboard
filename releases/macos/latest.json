@@ -1,14 +1,14 @@
 {
-    "tag_name": "v2.5.1",
-    "name": "QiemanDashboard v2.5.1",
-    "body": "fix: 持仓分组视觉加强 + 编译修复",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.5.1",
-    "published_at": "2026-05-20T13:33:00Z",
+    "tag_name": "v2.5.2",
+    "name": "QiemanDashboard v2.5.2",
+    "body": "fix: 修复个人资产表格分组排版重叠",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.5.2",
+    "published_at": "2026-05-20T13:52:39Z",
     "assets": [
         {
-            "name": "QiemanDashboard-2.5.1.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.5.1/QiemanDashboard-2.5.1.zip",
-            "size": 3117489,
+            "name": "QiemanDashboard-2.5.2.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.5.2/QiemanDashboard-2.5.2.zip",
+            "size": 3118022,
             "content_type": "application/zip"
         }
     ]
