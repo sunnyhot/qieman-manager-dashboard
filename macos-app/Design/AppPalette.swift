@@ -2,29 +2,50 @@ import AppKit
 import SwiftUI
 
 enum AppPalette {
-    static let cardRadius: CGFloat = 8
-    static let panelRadius: CGFloat = 10
+    static let cardRadius: CGFloat = 10
+    static let panelRadius: CGFloat = 12
     static let controlRadius: CGFloat = 8
 
-    static let brand = adaptive(light: rgb(0.10, 0.43, 0.39), dark: rgb(0.40, 0.82, 0.76))
-    static let brandSoft = adaptive(light: rgb(0.84, 0.94, 0.91), dark: rgb(0.06, 0.20, 0.19))
-    static let sand = adaptive(light: rgb(0.96, 0.94, 0.88), dark: rgb(0.13, 0.11, 0.08))
-    static let paper = adaptive(light: rgb(0.99, 0.99, 0.96), dark: rgb(0.10, 0.11, 0.11))
-    static let card = adaptive(light: rgb(0.96, 0.96, 0.93), dark: rgb(0.14, 0.15, 0.14))
-    static let cardStrong = adaptive(light: rgb(1.00, 0.99, 0.96), dark: rgb(0.16, 0.17, 0.16))
-    static let ink = adaptive(light: rgb(0.12, 0.16, 0.18), dark: rgb(0.90, 0.94, 0.92))
-    static let muted = adaptive(light: rgb(0.38, 0.44, 0.44), dark: rgb(0.63, 0.69, 0.68))
-    static let line = adaptive(light: rgb(0.82, 0.84, 0.78), dark: rgb(0.24, 0.29, 0.27))
-    static let onBrand = adaptive(light: rgb(0.99, 1.00, 0.98), dark: rgb(0.03, 0.08, 0.07))
+    // MARK: - Brand & Surfaces
 
-    static let positive = adaptive(light: rgb(0.18, 0.56, 0.32), dark: rgb(0.38, 0.82, 0.55))
-    static let warning = adaptive(light: rgb(0.75, 0.45, 0.18), dark: rgb(0.96, 0.64, 0.33))
-    static let danger = adaptive(light: rgb(0.73, 0.24, 0.22), dark: rgb(0.98, 0.42, 0.39))
-    static let info = adaptive(light: rgb(0.18, 0.44, 0.68), dark: rgb(0.45, 0.68, 0.90))
-    static let accentWarm = adaptive(light: rgb(0.66, 0.46, 0.20), dark: rgb(0.86, 0.62, 0.34))
-    // Chinese market convention: gains are red, losses are green.
-    static let marketGain = adaptive(light: rgb(0.73, 0.24, 0.22), dark: rgb(0.98, 0.42, 0.39))
-    static let marketLoss = adaptive(light: rgb(0.18, 0.56, 0.32), dark: rgb(0.38, 0.82, 0.55))
+    /// Electric blue brand accent
+    static let brand = adaptive(light: rgb(0.31, 0.55, 1.00), dark: rgb(0.31, 0.55, 1.00))
+    static let brandSoft = adaptive(light: rgb(0.16, 0.24, 0.42), dark: rgb(0.10, 0.15, 0.28))
+    /// Deep navy background
+    static let surface = adaptive(light: rgb(0.96, 0.96, 0.98), dark: rgb(0.04, 0.05, 0.09))
+    static let surfaceVariant = adaptive(light: rgb(0.92, 0.93, 0.96), dark: rgb(0.05, 0.07, 0.12))
+    /// Card background — semi-transparent deep navy
+    static let card = adaptive(light: rgb(0.98, 0.98, 1.00), dark: rgb(0.10, 0.12, 0.18))
+    /// Card strong / elevated
+    static let cardStrong = adaptive(light: rgb(1.00, 1.00, 1.00), dark: rgb(0.13, 0.15, 0.22))
+    /// Card hover state
+    static let cardHover = adaptive(light: rgb(0.95, 0.96, 0.98), dark: rgb(0.16, 0.18, 0.26))
+    /// Primary text
+    static let ink = adaptive(light: rgb(0.08, 0.09, 0.12), dark: rgb(0.92, 0.94, 0.98))
+    /// Secondary / muted text
+    static let muted = adaptive(light: rgb(0.40, 0.43, 0.52), dark: rgb(0.55, 0.58, 0.68))
+    /// Border / line
+    static let line = adaptive(light: rgb(0.85, 0.86, 0.90), dark: rgb(0.18, 0.20, 0.28))
+    /// Text on brand-colored surfaces
+    static let onBrand = adaptive(light: rgb(0.99, 0.99, 1.00), dark: rgb(0.99, 0.99, 1.00))
+
+    // MARK: - Legacy Aliases (backward compat)
+
+    static let sand = surfaceVariant
+    static let paper = surface
+
+    // MARK: - Semantic Colors
+
+    static let positive = adaptive(light: rgb(0.14, 0.62, 0.36), dark: rgb(0.20, 0.78, 0.44))
+    static let warning = adaptive(light: rgb(0.80, 0.52, 0.14), dark: rgb(0.96, 0.66, 0.24))
+    static let danger = adaptive(light: rgb(0.78, 0.20, 0.18), dark: rgb(0.96, 0.36, 0.32))
+    static let info = adaptive(light: rgb(0.22, 0.48, 0.82), dark: rgb(0.38, 0.62, 0.96))
+    static let accentWarm = adaptive(light: rgb(0.72, 0.48, 0.18), dark: rgb(0.90, 0.62, 0.28))
+
+    // MARK: - Chinese Market Convention (red=up, green=down)
+
+    static let marketGain = adaptive(light: rgb(0.78, 0.20, 0.18), dark: rgb(0.96, 0.36, 0.32))
+    static let marketLoss = adaptive(light: rgb(0.14, 0.62, 0.36), dark: rgb(0.20, 0.78, 0.44))
 
     static func marketTint(for value: Double?) -> Color {
         guard let value else { return muted }
@@ -33,12 +54,27 @@ enum AppPalette {
         return muted
     }
 
+    // MARK: - Glass / Blur Helpers
+
+    static var glassMaterial: Material { .ultraThinMaterial }
+
+    static func glassBackground(radius: CGFloat = cardRadius) -> some View {
+        RoundedRectangle(cornerRadius: radius)
+            .fill(.ultraThinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: radius)
+                    .stroke(lineColor: Color.white.opacity(0.06), lineWidth: 1)
+            )
+    }
+
+    // MARK: - Gradients
+
     static var canvasGradient: LinearGradient {
         LinearGradient(
             colors: [
-                paper,
-                sand.opacity(0.82),
-                brandSoft.opacity(0.66),
+                surface,
+                Color(red: 0.03, green: 0.05, blue: 0.10).opacity(0.92),
+                brandSoft.opacity(0.18),
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -48,14 +84,25 @@ enum AppPalette {
     static var heroGradient: LinearGradient {
         LinearGradient(
             colors: [
-                brandSoft.opacity(0.94),
-                cardStrong.opacity(0.92),
-                accentWarm.opacity(0.16),
+                brandSoft.opacity(0.96),
+                cardStrong.opacity(0.94),
+                Color(red: 0.31, green: 0.55, blue: 1.00).opacity(0.08),
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
     }
+
+    /// Subtle glow gradient for card accent bars
+    static func accentGlow(_ color: Color) -> LinearGradient {
+        LinearGradient(
+            colors: [color, color.opacity(0.3)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    // MARK: - Helpers
 
     private static func adaptive(light: NSColor, dark: NSColor) -> Color {
         Color(nsColor: NSColor(name: nil) { appearance in
@@ -70,5 +117,17 @@ enum AppPalette {
 
     private static func rgb(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat, _ alpha: CGFloat = 1) -> NSColor {
         NSColor(srgbRed: red, green: green, blue: blue, alpha: alpha)
+    }
+}
+
+// MARK: - ShapeStyle helper for stroke with Color
+
+extension ShapeStyle where Self == Color {
+    static var lineColor: Color { AppPalette.line }
+}
+
+extension Shape {
+    func stroke(lineColor: Color, lineWidth: CGFloat = 1) -> some View {
+        self.stroke(lineColor, lineWidth: lineWidth)
     }
 }

@@ -10,12 +10,13 @@ struct PlatformSearchField: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppPalette.muted)
                 .font(.system(size: 12))
 
             TextField("搜索基金名称或代码…", text: $text)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
+                .foregroundStyle(AppPalette.ink)
                 .onSubmit { onSubmit() }
                 .focused($isFocused)
 
@@ -25,19 +26,18 @@ struct PlatformSearchField: View {
                     onClear()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppPalette.muted)
                         .font(.system(size: 12))
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(.background.secondary)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 8))
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .strokeBorder(.separator, lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isFocused ? AppPalette.brand.opacity(0.50) : AppPalette.line.opacity(0.45), lineWidth: 1)
         )
     }
 }

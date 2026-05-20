@@ -10,11 +10,11 @@ struct PlatformFilterBar: View {
             narrowLayout
             compactLayout
         }
-        .padding(10)
-        .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .padding(12)
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.70), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(0.50), lineWidth: 1)
         )
     }
 
@@ -26,13 +26,13 @@ struct PlatformFilterBar: View {
                 selection: $filterState.sideFilter,
                 counts: model.platformActionCounts
             )
-            .frame(width: 240)
 
             PlatformSearchField(
                 text: $filterState.searchText,
                 onSubmit: { filterState.debouncedSearchText = filterState.searchText },
                 onClear: { filterState.searchText = ""; filterState.debouncedSearchText = ""; filterState.currentPage = 0 }
             )
+            .frame(maxWidth: 240)
 
             Spacer(minLength: 8)
 
@@ -49,7 +49,6 @@ struct PlatformFilterBar: View {
                     selection: $filterState.sideFilter,
                     counts: model.platformActionCounts
                 )
-                .frame(width: 220)
 
                 Spacer()
 
@@ -83,11 +82,15 @@ struct PlatformFilterBar: View {
                     Image(systemName: "chevron.down")
                         .font(.system(size: 9))
                 }
-                .font(.system(size: 12))
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppPalette.ink)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(.background.secondary)
-                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
+                )
             }
 
             PlatformSearchField(

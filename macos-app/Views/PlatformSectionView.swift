@@ -89,12 +89,16 @@ struct PlatformSectionView: View {
                     isMonthlyExpanded.toggle()
                 }
             } label: {
-                HStack(spacing: 7) {
+                HStack(spacing: 8) {
                     Image(systemName: "calendar")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(AppPalette.brand)
-                        .frame(width: 18, height: 18)
-                        .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: 4))
+                        .frame(width: 20, height: 20)
+                        .background(AppPalette.brand.opacity(0.14), in: RoundedRectangle(cornerRadius: 5))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5)
+                                .stroke(AppPalette.brand.opacity(0.22), lineWidth: 1)
+                        )
 
                     Text("交易时间总览")
                         .font(.system(size: 12, weight: .semibold))
@@ -104,9 +108,13 @@ struct PlatformSectionView: View {
                         Text("\(model.monthlyPlatformSummary.count)月")
                             .font(.system(size: 9, weight: .bold, design: .rounded))
                             .foregroundStyle(AppPalette.muted)
-                            .padding(.horizontal, 5)
+                            .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(AppPalette.card, in: Capsule())
+                            .background(AppPalette.cardStrong, in: Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(AppPalette.line.opacity(0.35), lineWidth: 1)
+                            )
                     }
 
                     Spacer()
@@ -115,9 +123,9 @@ struct PlatformSectionView: View {
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(AppPalette.muted)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .background(AppPalette.paper.opacity(0.94))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(AppPalette.card)
             }
             .buttonStyle(.plain)
 
@@ -140,13 +148,13 @@ struct PlatformSectionView: View {
                     }
                 }
                 .padding(12)
-                .background(AppPalette.paper.opacity(0.94))
+                .background(AppPalette.card)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.70), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(0.50), lineWidth: 1)
         )
     }
 
@@ -169,7 +177,11 @@ struct PlatformSectionView: View {
                     .foregroundStyle(AppPalette.muted)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(AppPalette.card, in: Capsule())
+                    .background(AppPalette.cardStrong, in: Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(AppPalette.line.opacity(0.35), lineWidth: 1)
+                    )
 
                 if model.filterState.sideFilter != .all || !model.filterState.searchText.isEmpty {
                     Button {
@@ -206,6 +218,10 @@ struct PlatformSectionView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
                 .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                        .stroke(AppPalette.line.opacity(0.35), lineWidth: 1)
+                )
             } else {
                 LazyVStack(spacing: 4) {
                     ForEach(pageActions) { action in
@@ -239,9 +255,17 @@ struct PlatformSectionView: View {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 10, weight: .bold))
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(AppPalette.ink)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(AppPalette.line.opacity(0.40), lineWidth: 1)
+                    )
                     .disabled(currentPage == 0)
+                    .opacity(currentPage == 0 ? 0.4 : 1.0)
 
                     Text("\(currentPage + 1) / \(totalPages)")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -255,9 +279,17 @@ struct PlatformSectionView: View {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 10, weight: .bold))
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(AppPalette.ink)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(AppPalette.line.opacity(0.40), lineWidth: 1)
+                    )
                     .disabled(currentPage >= totalPages - 1)
+                    .opacity(currentPage >= totalPages - 1 ? 0.4 : 1.0)
 
                     Spacer()
                 }
@@ -268,7 +300,7 @@ struct PlatformSectionView: View {
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(0.50), lineWidth: 1)
         )
     }
 
@@ -301,7 +333,11 @@ struct PlatformSectionView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
-                .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                .background(AppPalette.cardHover, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                        .stroke(AppPalette.line.opacity(0.35), lineWidth: 1)
+                )
             }
         }
         .padding(10)
@@ -309,7 +345,7 @@ struct PlatformSectionView: View {
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(0.50), lineWidth: 1)
         )
     }
 }

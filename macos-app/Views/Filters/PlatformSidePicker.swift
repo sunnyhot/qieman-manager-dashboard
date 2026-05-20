@@ -5,14 +5,46 @@ struct PlatformSidePicker: View {
     let counts: (all: Int, buy: Int, sell: Int)
 
     var body: some View {
-        Picker("方向筛选", selection: $selection) {
+        HStack(spacing: 4) {
             ForEach(PlatformSideFilter.allCases) { filter in
-                Text(label(for: filter))
-                    .tag(filter)
+                let isSelected = selection == filter
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        selection = filter
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: filter.systemImage)
+                            .font(.system(size: 10, weight: .semibold))
+                        Text(label(for: filter))
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.muted)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Group {
+                            if isSelected {
+                                Capsule()
+                                    .fill(AppPalette.brand)
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(AppPalette.brand.opacity(0.6), lineWidth: 1)
+                                    )
+                            } else {
+                                Capsule()
+                                    .fill(AppPalette.card)
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
+                                    )
+                            }
+                        }
+                    )
+                }
+                .buttonStyle(.plain)
             }
         }
-        .pickerStyle(.segmented)
-        .labelsHidden()
     }
 
     private func label(for filter: PlatformSideFilter) -> String {

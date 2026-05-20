@@ -32,7 +32,7 @@ struct ForumRecordRow: View {
         .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.30), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(0.35), lineWidth: 1)
         )
     }
 }
@@ -70,13 +70,15 @@ struct ForumSelectableRow: View {
         }
         .padding(isCompact ? 9 : 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(isSelected ? AppPalette.brand.opacity(0.12) : AppPalette.cardStrong.opacity(0.36), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .background(isSelected ? AppPalette.brand.opacity(0.14) : AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(isSelected ? AppPalette.brand.opacity(0.55) : AppPalette.line.opacity(0.45), lineWidth: 1)
+                .stroke(isSelected ? AppPalette.brand.opacity(0.55) : AppPalette.line.opacity(0.40), lineWidth: 1)
         )
     }
 }
+
+// MARK: - PlatformActionRow
 
 struct PlatformActionRow: View {
     let action: PlatformActionPayload
@@ -91,8 +93,15 @@ struct PlatformActionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            // Thick left accent bar
             RoundedRectangle(cornerRadius: 2)
-                .fill(sideColor)
+                .fill(
+                    LinearGradient(
+                        colors: [sideColor, sideColor.opacity(0.4)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
                 .frame(width: 3)
 
             VStack(alignment: .leading, spacing: isCompact ? 8 : 6) {
@@ -112,12 +121,16 @@ struct PlatformActionRow: View {
                         Text(isBuy ? "买入" : "卖出")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(sideColor)
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 9)
                             .padding(.vertical, 4)
-                            .background(sideColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+                            .background(sideColor.opacity(0.14), in: Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(sideColor.opacity(0.22), lineWidth: 1)
+                            )
                     }
 
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         compactMetricPill(title: "时间", value: action.txnDate ?? action.createdAt ?? "未知", tint: AppPalette.muted)
                         compactMetricPill(title: "调仓", value: decimalText(action.tradeValuation), tint: AppPalette.ink)
                         compactMetricPill(title: "当前", value: decimalText(action.currentValuation), tint: AppPalette.ink)
@@ -138,12 +151,17 @@ struct PlatformActionRow: View {
                             Text(isBuy ? "买入" : "卖出")
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundStyle(sideColor)
-                                .padding(.horizontal, 8)
+                                .padding(.horizontal, 9)
                                 .padding(.vertical, 4)
-                                .background(sideColor.opacity(0.10), in: Capsule())
+                                .background(sideColor.opacity(0.14), in: Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(sideColor.opacity(0.22), lineWidth: 1)
+                                )
                             if let article = action.articleUrl, let url = URL(string: article) {
                                 Link("打开平台原文", destination: url)
                                     .font(.system(size: 10))
+                                    .foregroundStyle(AppPalette.brand)
                             }
                         }
                     }
@@ -158,10 +176,10 @@ struct PlatformActionRow: View {
             }
         }
         .padding(isCompact ? 8 : 10)
-        .background(isSelected ? AppPalette.brand.opacity(0.14) : AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .background(isSelected ? AppPalette.brand.opacity(0.12) : AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(isSelected ? AppPalette.brand.opacity(0.6) : AppPalette.line.opacity(0.35), lineWidth: 1)
+                .stroke(isSelected ? AppPalette.brand.opacity(0.50) : AppPalette.line.opacity(0.35), lineWidth: 1)
         )
     }
 
@@ -190,9 +208,15 @@ struct PlatformActionRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(tint.opacity(0.14), lineWidth: 1)
+        )
     }
 }
+
+// MARK: - PlatformActionDetailCard
 
 struct PlatformActionDetailCard: View {
     let action: PlatformActionPayload
@@ -204,7 +228,6 @@ struct PlatformActionDetailCard: View {
 
     private var sideText: String { isBuy ? "买入" : "卖出" }
     private var sideColor: Color { isBuy ? AppPalette.positive : AppPalette.warning }
-
     private var changeTint: Color {
         AppPalette.marketTint(for: action.valuationChangePct ?? action.valuationChangeAmount)
     }
@@ -213,7 +236,13 @@ struct PlatformActionDetailCard: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(sideColor)
+                    .fill(
+                        LinearGradient(
+                            colors: [sideColor, sideColor.opacity(0.3)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
                     .frame(width: 4, height: 52)
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -227,7 +256,11 @@ struct PlatformActionDetailCard: View {
                             .foregroundStyle(sideColor)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 4)
-                            .background(sideColor.opacity(0.12), in: Capsule())
+                            .background(sideColor.opacity(0.14), in: Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(sideColor.opacity(0.22), lineWidth: 1)
+                            )
                     }
 
                     Text("\(action.fundName ?? action.title ?? "未命名标的") · \(action.fundCode ?? "无代码")")
@@ -270,6 +303,7 @@ struct PlatformActionDetailCard: View {
                     Link(destination: url) {
                         Label("打开平台原文", systemImage: "arrow.up.right.square")
                             .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(AppPalette.brand)
                     }
                 }
             }
@@ -300,7 +334,7 @@ struct PlatformActionDetailCard: View {
         .background(tint.opacity(0.07), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(tint.opacity(0.15), lineWidth: 1)
+                .stroke(tint.opacity(0.14), lineWidth: 1)
         )
     }
 
@@ -313,6 +347,8 @@ struct PlatformActionDetailCard: View {
         return "\(title)：\(parts.joined(separator: " · "))"
     }
 }
+
+// MARK: - WrapLine
 
 struct WrapLine: View {
     let items: [String]
@@ -339,14 +375,16 @@ struct WrapLine: View {
                 .foregroundStyle(AppPalette.muted)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 6))
+                .background(AppPalette.cardStrong.opacity(0.60), in: RoundedRectangle(cornerRadius: 6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(AppPalette.line.opacity(0.22), lineWidth: 1)
+                        .stroke(AppPalette.line.opacity(0.30), lineWidth: 1)
                 )
         }
     }
 }
+
+// MARK: - HoldingCard
 
 struct HoldingCard: View {
     let holding: HoldingItemPayload
@@ -361,11 +399,11 @@ struct HoldingCard: View {
             compactLayout
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .padding(.vertical, 10)
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.5), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
         )
     }
 
@@ -404,7 +442,13 @@ struct HoldingCard: View {
 
     private var accentBar: some View {
         RoundedRectangle(cornerRadius: 2)
-            .fill(profitTint.opacity(0.9))
+            .fill(
+                LinearGradient(
+                    colors: [profitTint, profitTint.opacity(0.3)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
             .frame(width: 3, height: 42)
     }
 
@@ -494,6 +538,8 @@ private struct HoldingCardMetric: View {
         .frame(minWidth: 54, alignment: .leading)
     }
 }
+
+// MARK: - PlatformHoldingsPieChart
 
 struct PlatformHoldingsPieChart: View {
     let holdings: [HoldingItemPayload]
@@ -588,10 +634,10 @@ struct PlatformHoldingsPieChart: View {
                 }
             }
             .padding(14)
-            .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                    .stroke(AppPalette.line.opacity(0.32), lineWidth: 1)
+                    .stroke(AppPalette.line.opacity(0.35), lineWidth: 1)
             )
         }
     }
@@ -695,6 +741,8 @@ private struct HoldingAllocationSlice: Identifiable {
     var id: String { label }
 }
 
+// MARK: - PlatformMonthlyOverview
+
 struct PlatformMonthlyOverview: View {
     let months: [PlatformMonthSummary]
 
@@ -750,7 +798,11 @@ struct PlatformMonthlyOverview: View {
                     .font(.system(size: 18))
                     .foregroundStyle(AppPalette.brand)
                     .frame(width: 38, height: 38)
-                    .background(AppPalette.brand.opacity(0.12), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                    .background(AppPalette.brand.opacity(0.14), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                            .stroke(AppPalette.brand.opacity(0.22), lineWidth: 1)
+                    )
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("近 12 个月")
@@ -788,7 +840,7 @@ struct PlatformMonthlyOverview: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(AppPalette.card.opacity(0.82), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
                 .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
@@ -807,10 +859,10 @@ struct PlatformMonthlyOverview: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(AppPalette.card.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.32), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(0.35), lineWidth: 1)
         )
     }
 
@@ -880,13 +932,13 @@ struct PlatformMonthlyOverview: View {
                 AxisValueLabel()
                     .font(.system(size: 9, design: .rounded))
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                    .foregroundStyle(AppPalette.line.opacity(0.4))
+                    .foregroundStyle(AppPalette.line.opacity(0.30))
             }
         }
         .chartXAxis {
             AxisMarks(values: months.map(\.month)) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                    .foregroundStyle(AppPalette.line.opacity(0.22))
+                    .foregroundStyle(AppPalette.line.opacity(0.18))
                 if let month = value.as(String.self) {
                     AxisValueLabel {
                         Text(monthAxisLabel(month))
@@ -940,7 +992,11 @@ struct PlatformMonthlyOverview: View {
         }
         .padding(8)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 8))
-        .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.28), radius: 8, y: 4)
     }
 
     private func rhythmLine(title: String, value: Int, tint: Color) -> some View {
@@ -960,7 +1016,7 @@ struct PlatformMonthlyOverview: View {
                     Capsule()
                         .fill(AppPalette.cardStrong)
                     Capsule()
-                        .fill(tint.opacity(0.78))
+                        .fill(tint.opacity(0.70))
                         .frame(width: max(6, proxy.size.width * ratio))
                 }
             }

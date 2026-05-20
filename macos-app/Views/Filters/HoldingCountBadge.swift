@@ -5,10 +5,14 @@ struct HoldingCountBadge: View {
 
     var body: some View {
         Text("\(count) 持仓")
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(AppPalette.muted)
-            .padding(.horizontal, 8)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(AppPalette.brand)
+            .padding(.horizontal, 9)
             .padding(.vertical, 4)
-            .background(AppPalette.card, in: Capsule())
+            .background(AppPalette.brand.opacity(0.12), in: Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(AppPalette.brand.opacity(0.22), lineWidth: 1)
+            )
     }
 }
