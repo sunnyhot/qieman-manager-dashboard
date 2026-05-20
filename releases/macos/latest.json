@@ -1,14 +1,14 @@
 {
-    "tag_name": "v2.3.9",
-    "name": "QiemanDashboard v2.3.9",
-    "body": "性能优化：细粒度缓存失效、并行启动加载、搜索防抖、懒渲染、Python线程池优化",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.3.9",
+    "tag_name": "v2.4.0",
+    "name": "QiemanDashboard v2.4.0",
+    "body": "调仓界面深色科技风重构：AppPalette色彩系统、筛选栏Pill化、组件全面暗色化",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.4.0",
     "published_at": "2026-05-20T00:00:00Z",
     "assets": [
         {
-            "name": "QiemanDashboard-2.3.9.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.3.9/QiemanDashboard-2.3.9.zip",
-            "size": 3610635,
+            "name": "QiemanDashboard-2.4.0.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.4.0/QiemanDashboard-2.4.0.zip",
+            "size": 3111844,
             "content_type": "application/zip"
         }
     ]
