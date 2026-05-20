@@ -21,7 +21,7 @@ extension AppModel {
             investmentPlans = nextPlans
             investmentPlansDraft = ""
             clearInvestmentPlanCaches()
-            clearPortfolioCaches()
+            rebuildAssetRows()
             try investmentPlansStore.save(nextPlans, to: investmentPlanFileURL)
             noticeMessage = "已\(mode.actionText)保存 \(importedPlans.count) 条定投计划。"
             Task { await applyPersonalAssetAutomation() }
@@ -71,7 +71,7 @@ extension AppModel {
             }
             investmentPlans = nextPlans.sorted(by: sortInvestmentPlans)
             clearInvestmentPlanCaches()
-            clearPortfolioCaches()
+            rebuildAssetRows()
             try investmentPlansStore.save(investmentPlans, to: investmentPlanFileURL)
             let itemText = row.fundCode.map { "\(row.fundName)（\($0)）" } ?? row.fundName
             noticeMessage = "已将 \(itemText) 的 \(targetIDs.count) 条计划调整为\(status)。"
@@ -98,7 +98,7 @@ extension AppModel {
             }
             investmentPlans = nextPlans.sorted(by: sortInvestmentPlans)
             clearInvestmentPlanCaches()
-            clearPortfolioCaches()
+            rebuildAssetRows()
             try investmentPlansStore.save(investmentPlans, to: investmentPlanFileURL)
             let itemText = existingPlan.fundCode.map { "\(existingPlan.fundName)（\($0)）" } ?? existingPlan.fundName
             noticeMessage = "已将 \(itemText) 的计划调整为\(normalizedStatus)。"
@@ -147,7 +147,7 @@ extension AppModel {
             investmentPlans.append(plan)
             investmentPlans.sort(by: sortInvestmentPlans)
             clearInvestmentPlanCaches()
-            clearPortfolioCaches()
+            rebuildAssetRows()
             try investmentPlansStore.save(investmentPlans, to: investmentPlanFileURL)
             let itemText = plan.fundCode.map { "\(plan.fundName)（\($0)）" } ?? plan.fundName
             noticeMessage = "已添加 \(itemText) 的定投计划。"
@@ -204,7 +204,7 @@ extension AppModel {
             nextPlans[existingIndex] = plan
             investmentPlans = nextPlans.sorted(by: sortInvestmentPlans)
             clearInvestmentPlanCaches()
-            clearPortfolioCaches()
+            rebuildAssetRows()
             try investmentPlansStore.save(investmentPlans, to: investmentPlanFileURL)
 
             let itemText = plan.fundCode.map { "\(plan.fundName)（\($0)）" } ?? plan.fundName
@@ -231,7 +231,7 @@ extension AppModel {
             let nextPlans = investmentPlans.filter { $0.id != planID }
             investmentPlans = nextPlans.sorted(by: sortInvestmentPlans)
             clearInvestmentPlanCaches()
-            clearPortfolioCaches()
+            rebuildAssetRows()
             if investmentPlans.isEmpty {
                 try investmentPlansStore.delete(at: investmentPlanFileURL)
             } else {
@@ -262,7 +262,7 @@ extension AppModel {
             investmentPlans = try investmentPlansStore.load(from: investmentPlanFileURL)
                 .sorted(by: sortInvestmentPlans)
             clearInvestmentPlanCaches()
-            clearPortfolioCaches()
+            rebuildAssetRows()
             investmentPlansDraft = ""
         } catch {
             errorMessage = error.localizedDescription

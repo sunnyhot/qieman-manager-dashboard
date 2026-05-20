@@ -71,7 +71,7 @@ extension AppModel {
                 try investmentPlansStore.save(nextInvestmentPlans, to: investmentPlanFileURL)
             }
             if holdingsChanged || pendingChanged || plansChanged {
-                clearPortfolioCaches()
+                rebuildAssetRows()
                 clearPendingTradeCaches()
                 clearInvestmentPlanCaches()
             }

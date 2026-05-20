@@ -65,6 +65,8 @@ final class AppModel: ObservableObject {
     @Published var pendingTrades: [PersonalPendingTrade] = []
     @Published var investmentPlans: [PersonalInvestmentPlan] = []
     @Published var marketIndexQuotes: [MarketIndexKind: MarketIndexQuote] = [:]
+    @Published var personalAssetRows: [PersonalAssetAggregateRow] = []
+    @Published var personalAssetSummary: PersonalAssetAggregateSummary?
     @Published var managerWatchSettings = ManagerWatchSettings.default
     @Published var menuBarTickerSettings = MenuBarTickerSettings.load()
 
@@ -143,8 +145,6 @@ final class AppModel: ObservableObject {
     var _nativeClientInitialized = false
 
     // Cached computed property backing stores
-    var _cachedAssetRows: [PersonalAssetAggregateRow]?
-    var _cachedAssetSummary: PersonalAssetAggregateSummary?
     var _cachedMonthlyPlatformSummary: [PlatformMonthSummary]?
     var _cachedActiveInvestmentPlans: [PersonalInvestmentPlan]?
     var _cachedPausedInvestmentPlans: [PersonalInvestmentPlan]?
@@ -153,19 +153,13 @@ final class AppModel: ObservableObject {
     var _cachedPendingTradeSummary: PersonalPendingTradeSummary?
 
     func clearCachedComputedProperties() {
-        _cachedAssetRows = nil
-        _cachedAssetSummary = nil
+        rebuildAssetRows()
         _cachedMonthlyPlatformSummary = nil
         _cachedActiveInvestmentPlans = nil
         _cachedPausedInvestmentPlans = nil
         _cachedEndedInvestmentPlans = nil
         _cachedInvestmentPlanSummary = nil
         _cachedPendingTradeSummary = nil
-    }
-
-    func clearPortfolioCaches() {
-        _cachedAssetRows = nil
-        _cachedAssetSummary = nil
     }
 
     func clearPlatformCaches() {
