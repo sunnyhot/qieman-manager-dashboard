@@ -1,0 +1,105 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    runs-on: macos-15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          # tag: v2.4.0 → version: 2.4.0
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Build macOS App
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          SIGN_IDENTITY: '-'
+          TARGET_ARCH: arm64
+        run: |
+          bash scripts/build_macos_app.sh
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          # 提取上一个 tag 到当前 tag 之间的 commit log
+          PREV_TAG=$(git tag --sort=-v:refname | head -5 | tail -1)
+          if [ "$PREV_TAG" = "${{ steps.version.outputs.tag }}" ]; then
+            PREV_TAG=""
+          fi
+
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s" --no-merges)
+          else
+            COMMITS=$(git log -10 --pretty=format:"- %s" --no-merges)
+          fi
+
+          # 写入多行 output
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "body<<$EOF" >> "$GITHUB_OUTPUT"
+          echo "## 且慢主理人看板 ${{ steps.version.outputs.tag }}" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "$COMMITS" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "---" >> "$GITHUB_OUTPUT"
+          echo "🤖 自动构建 by GitHub Actions" >> "$GITHUB_OUTPUT"
+          echo "$EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: 且慢主理人看板 ${{ steps.version.outputs.tag }}
+          body: ${{ steps.notes.outputs.body }}
+          files: |
+            /tmp/QiemanDashboard-${{ steps.version.outputs.version }}.zip
+
+      - name: Update latest.json
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          ZIP_NAME="QiemanDashboard-${VERSION}.zip"
+          ZIP_SIZE=$(stat -f%z "/tmp/${ZIP_NAME}")
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${ZIP_NAME}"
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${TAG}"
+
+          # 用 gh api 获取 release body 作为 changelog
+          BODY=$(gh release view "${TAG}" --json body -q '.body' | head -1)
+
+          cat > releases/macos/latest.json <<JSON
+          {
+              "tag_name": "${TAG}",
+              "name": "QiemanDashboard ${TAG}",
+              "body": "${BODY}",
+              "html_url": "${RELEASE_URL}",
+              "published_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "assets": [
+                  {
+                      "name": "${ZIP_NAME}",
+                      "browser_download_url": "${DOWNLOAD_URL}",
+                      "size": ${ZIP_SIZE},
+                      "content_type": "application/zip"
+                  }
+              ]
+          }
+          JSON
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add releases/macos/latest.json
+          git diff --cached --quiet || git commit -m "release: update ${TAG}"
+          git push
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
