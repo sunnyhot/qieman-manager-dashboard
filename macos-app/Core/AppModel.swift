@@ -49,70 +49,30 @@ struct LiveRefreshError: LocalizedError {
 
 @MainActor
 final class AppModel: ObservableObject {
-    @Published var selectedSection: AppSection = .overview
-    @Published var form = QueryFormState()
+    // MARK: Sub-models
+    @Published private(set) var portfolioState = PortfolioState()
+    @Published private(set) var forumState = ForumState()
+    @Published private(set) var platformState = PlatformState()
+    @Published private(set) var authState = AuthState()
+    @Published private(set) var uiState = UIState()
+    @Published private(set) var updateState = UpdateState()
 
+    // MARK: Remaining @Published properties
+    @Published var form = QueryFormState()
     @Published var status: StatusPayload?
-    @Published var currentSnapshot: SnapshotPayload?
-    @Published var platformPayload: PlatformPayload?
-    @Published var authPayload: AuthCheckPayload?
-    @Published var commentsPayload: CommentsPayload?
-    @Published var portfolioDraft = ""
-    @Published var pendingTradesDraft = ""
-    @Published var investmentPlansDraft = ""
-    @Published var userPortfolioHoldings: [UserPortfolioHolding] = []
-    @Published var userPortfolioSnapshot: UserPortfolioSnapshot?
-    @Published var pendingTrades: [PersonalPendingTrade] = []
-    @Published var investmentPlans: [PersonalInvestmentPlan] = []
-    @Published var marketIndexQuotes: [MarketIndexKind: MarketIndexQuote] = [:]
+    @Published var isBootstrapping = false
+    @Published var isRefreshing = false
+    @Published var isProcessingImport = false
+    @Published var noticeMessage = ""
+    @Published var errorMessage = ""
+    @Published var baseURL: URL?
+    @Published var logFileURL: URL?
+    @Published var dataDirectoryURL: URL?
     @Published var managerWatchSettings = ManagerWatchSettings.default
     @Published var menuBarTickerSettings = MenuBarTickerSettings.load()
 
     /// 调仓筛选状态
     let filterState = PlatformFilterState()
-
-    @Published var selectedPostID: String?
-    @Published var selectedPlatformActionID: String?
-    @Published var commentSortType = "hot"
-    @Published var onlyManagerReplies = false
-    @Published var launchAtLoginEnabled = false
-    @Published var appearance: AppAppearance = AppAppearance.load() { didSet { appearance.save() } }
-    @Published var showsInDock: Bool = (UserDefaults.standard.object(forKey: "qieman.dashboard.showsInDock") as? Bool) ?? true {
-        didSet {
-            UserDefaults.standard.set(showsInDock, forKey: "qieman.dashboard.showsInDock")
-            NSApplication.shared.setActivationPolicy(showsInDock ? .regular : .accessory)
-        }
-    }
-
-    @Published var isBootstrapping = false
-    @Published var isRefreshing = false
-    @Published var isCheckingAuth = false
-    @Published var isLoadingComments = false
-    @Published var isPresentingLoginSheet = false
-    @Published var showAdvancedParams = false
-    @Published var isRefreshingPortfolio = false
-    @Published var isRefreshingMarketIndices = false
-    @Published var isProcessingImport = false
-    @Published var isResolvingPortfolioNames = false
-    @Published var isCheckingForUpdates = false
-    @Published var availableUpdate: AppUpdateRelease?
-    @Published var isPresentingUpdateSheet = false
-    @Published var isInstallingUpdate = false
-    @Published var updateInstallProgress = ""
-    @Published var updateDownloadFraction: Double = 0
-
-    @Published var noticeMessage = ""
-    @Published var errorMessage = ""
-
-    @Published var autoCheckForUpdatesOnLaunch: Bool = (UserDefaults.standard.object(forKey: "qieman.dashboard.update.autoCheckOnLaunch") as? Bool) ?? true {
-        didSet {
-            UserDefaults.standard.set(autoCheckForUpdatesOnLaunch, forKey: "qieman.dashboard.update.autoCheckOnLaunch")
-        }
-    }
-
-    @Published var baseURL: URL?
-    @Published var logFileURL: URL?
-    @Published var dataDirectoryURL: URL?
 
     weak var appDelegate: QiemanApplicationDelegate?
 
@@ -142,48 +102,268 @@ final class AppModel: ObservableObject {
     var _nativeClient: QiemanNativeClient?
     var _nativeClientInitialized = false
 
-    // Cached computed property backing stores
-    var _cachedAssetRows: [PersonalAssetAggregateRow]?
-    var _cachedAssetSummary: PersonalAssetAggregateSummary?
-    var _cachedMonthlyPlatformSummary: [PlatformMonthSummary]?
-    var _cachedActiveInvestmentPlans: [PersonalInvestmentPlan]?
-    var _cachedPausedInvestmentPlans: [PersonalInvestmentPlan]?
-    var _cachedEndedInvestmentPlans: [PersonalInvestmentPlan]?
-    var _cachedInvestmentPlanSummary: PersonalInvestmentPlanSummary?
-    var _cachedPendingTradeSummary: PersonalPendingTradeSummary?
+    // MARK: Proxy computed properties (forwarding to sub-models)
+
+    // PortfolioState proxies
+    var userPortfolioHoldings: [UserPortfolioHolding] {
+        get { portfolioState.userPortfolioHoldings }
+        set { portfolioState.userPortfolioHoldings = newValue }
+    }
+
+    var userPortfolioSnapshot: UserPortfolioSnapshot? {
+        get { portfolioState.userPortfolioSnapshot }
+        set { portfolioState.userPortfolioSnapshot = newValue }
+    }
+
+    var isRefreshingPortfolio: Bool {
+        get { portfolioState.isRefreshingPortfolio }
+        set { portfolioState.isRefreshingPortfolio = newValue }
+    }
+
+    var isResolvingPortfolioNames: Bool {
+        get { portfolioState.isResolvingPortfolioNames }
+        set { portfolioState.isResolvingPortfolioNames = newValue }
+    }
+
+    var pendingTrades: [PersonalPendingTrade] {
+        get { portfolioState.pendingTrades }
+        set { portfolioState.pendingTrades = newValue }
+    }
+
+    var pendingTradesDraft: String {
+        get { portfolioState.pendingTradesDraft }
+        set { portfolioState.pendingTradesDraft = newValue }
+    }
+
+    var investmentPlans: [PersonalInvestmentPlan] {
+        get { portfolioState.investmentPlans }
+        set { portfolioState.investmentPlans = newValue }
+    }
+
+    var investmentPlansDraft: String {
+        get { portfolioState.investmentPlansDraft }
+        set { portfolioState.investmentPlansDraft = newValue }
+    }
+
+    var marketIndexQuotes: [MarketIndexKind: MarketIndexQuote] {
+        get { portfolioState.marketIndexQuotes }
+        set { portfolioState.marketIndexQuotes = newValue }
+    }
+
+    var isRefreshingMarketIndices: Bool {
+        get { portfolioState.isRefreshingMarketIndices }
+        set { portfolioState.isRefreshingMarketIndices = newValue }
+    }
+
+    // ForumState proxies
+    var currentSnapshot: SnapshotPayload? {
+        get { forumState.currentSnapshot }
+        set { forumState.currentSnapshot = newValue }
+    }
+
+    var commentsPayload: CommentsPayload? {
+        get { forumState.commentsPayload }
+        set { forumState.commentsPayload = newValue }
+    }
+
+    var selectedPostID: String? {
+        get { forumState.selectedPostID }
+        set { forumState.selectedPostID = newValue }
+    }
+
+    var commentSortType: String {
+        get { forumState.commentSortType }
+        set { forumState.commentSortType = newValue }
+    }
+
+    var onlyManagerReplies: Bool {
+        get { forumState.onlyManagerReplies }
+        set { forumState.onlyManagerReplies = newValue }
+    }
+
+    var isLoadingComments: Bool {
+        get { forumState.isLoadingComments }
+        set { forumState.isLoadingComments = newValue }
+    }
+
+    // PlatformState proxies
+    var platformPayload: PlatformPayload? {
+        get { platformState.platformPayload }
+        set { platformState.platformPayload = newValue }
+    }
+
+    var selectedPlatformActionID: String? {
+        get { platformState.selectedPlatformActionID }
+        set { platformState.selectedPlatformActionID = newValue }
+    }
+
+    // AuthState proxies
+    var authPayload: AuthCheckPayload? {
+        get { authState.authPayload }
+        set { authState.authPayload = newValue }
+    }
+
+    var isCheckingAuth: Bool {
+        get { authState.isCheckingAuth }
+        set { authState.isCheckingAuth = newValue }
+    }
+
+    var isPresentingLoginSheet: Bool {
+        get { authState.isPresentingLoginSheet }
+        set { authState.isPresentingLoginSheet = newValue }
+    }
+
+    // UIState proxies
+    var selectedSection: AppSection {
+        get { uiState.selectedSection }
+        set { uiState.selectedSection = newValue }
+    }
+
+    var showsInDock: Bool {
+        get { uiState.showsInDock }
+        set { uiState.showsInDock = newValue }
+    }
+
+    var appearance: AppAppearance {
+        get { uiState.appearance }
+        set { uiState.appearance = newValue }
+    }
+
+    var showAdvancedParams: Bool {
+        get { uiState.showAdvancedParams }
+        set { uiState.showAdvancedParams = newValue }
+    }
+
+    var launchAtLoginEnabled: Bool {
+        get { uiState.launchAtLoginEnabled }
+        set { uiState.launchAtLoginEnabled = newValue }
+    }
+
+    var portfolioDraft: String {
+        get { uiState.portfolioDraft }
+        set { uiState.portfolioDraft = newValue }
+    }
+
+    // UpdateState proxies
+    var isCheckingForUpdates: Bool {
+        get { updateState.isCheckingForUpdates }
+        set { updateState.isCheckingForUpdates = newValue }
+    }
+
+    var availableUpdate: AppUpdateRelease? {
+        get { updateState.availableUpdate }
+        set { updateState.availableUpdate = newValue }
+    }
+
+    var isPresentingUpdateSheet: Bool {
+        get { updateState.isPresentingUpdateSheet }
+        set { updateState.isPresentingUpdateSheet = newValue }
+    }
+
+    var isInstallingUpdate: Bool {
+        get { updateState.isInstallingUpdate }
+        set { updateState.isInstallingUpdate = newValue }
+    }
+
+    var updateInstallProgress: String {
+        get { updateState.updateInstallProgress }
+        set { updateState.updateInstallProgress = newValue }
+    }
+
+    var updateDownloadFraction: Double {
+        get { updateState.updateDownloadFraction }
+        set { updateState.updateDownloadFraction = newValue }
+    }
+
+    var autoCheckForUpdatesOnLaunch: Bool {
+        get { updateState.autoCheckForUpdatesOnLaunch }
+        set { updateState.autoCheckForUpdatesOnLaunch = newValue }
+    }
+
+    // MARK: Cache proxies (forwarding to portfolioState)
+
+    var _cachedAssetRows: [PersonalAssetAggregateRow]? {
+        get { portfolioState._cachedAssetRows }
+        set { portfolioState._cachedAssetRows = newValue }
+    }
+
+    var _cachedAssetSummary: PersonalAssetAggregateSummary? {
+        get { portfolioState._cachedAssetSummary }
+        set { portfolioState._cachedAssetSummary = newValue }
+    }
+
+    var _cachedMonthlyPlatformSummary: [PlatformMonthSummary]? {
+        get { portfolioState._cachedMonthlyPlatformSummary }
+        set { portfolioState._cachedMonthlyPlatformSummary = newValue }
+    }
+
+    var _cachedActiveInvestmentPlans: [PersonalInvestmentPlan]? {
+        get { portfolioState._cachedActiveInvestmentPlans }
+        set { portfolioState._cachedActiveInvestmentPlans = newValue }
+    }
+
+    var _cachedPausedInvestmentPlans: [PersonalInvestmentPlan]? {
+        get { portfolioState._cachedPausedInvestmentPlans }
+        set { portfolioState._cachedPausedInvestmentPlans = newValue }
+    }
+
+    var _cachedEndedInvestmentPlans: [PersonalInvestmentPlan]? {
+        get { portfolioState._cachedEndedInvestmentPlans }
+        set { portfolioState._cachedEndedInvestmentPlans = newValue }
+    }
+
+    var _cachedInvestmentPlanSummary: PersonalInvestmentPlanSummary? {
+        get { portfolioState._cachedInvestmentPlanSummary }
+        set { portfolioState._cachedInvestmentPlanSummary = newValue }
+    }
+
+    var _cachedPendingTradeSummary: PersonalPendingTradeSummary? {
+        get { portfolioState._cachedPendingTradeSummary }
+        set { portfolioState._cachedPendingTradeSummary = newValue }
+    }
 
     func clearCachedComputedProperties() {
-        _cachedAssetRows = nil
-        _cachedAssetSummary = nil
-        _cachedMonthlyPlatformSummary = nil
-        _cachedActiveInvestmentPlans = nil
-        _cachedPausedInvestmentPlans = nil
-        _cachedEndedInvestmentPlans = nil
-        _cachedInvestmentPlanSummary = nil
-        _cachedPendingTradeSummary = nil
+        portfolioState.clearAllCaches()
     }
 
     func clearPortfolioCaches() {
-        _cachedAssetRows = nil
-        _cachedAssetSummary = nil
+        portfolioState.clearPortfolioCaches()
     }
 
     func clearPlatformCaches() {
-        _cachedMonthlyPlatformSummary = nil
+        portfolioState.clearPlatformCaches()
     }
 
     func clearInvestmentPlanCaches() {
-        _cachedActiveInvestmentPlans = nil
-        _cachedPausedInvestmentPlans = nil
-        _cachedEndedInvestmentPlans = nil
-        _cachedInvestmentPlanSummary = nil
+        portfolioState.clearInvestmentPlanCaches()
     }
 
     func clearPendingTradeCaches() {
-        _cachedPendingTradeSummary = nil
+        portfolioState.clearPendingTradeCaches()
     }
 
     init() {
+        // Forward sub-model changes so views observing AppModel via
+        // @EnvironmentObject still re-render.
+        portfolioState.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        forumState.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        platformState.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        authState.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        uiState.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        updateState.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+
         // Forward filterState changes so PlatformSectionView (which observes
         // AppModel via @EnvironmentObject) re-renders when filters change.
         filterState.objectWillChange
