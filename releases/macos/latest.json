@@ -1,14 +1,14 @@
 {
-    "tag_name": "v2.4.0",
-    "name": "QiemanDashboard v2.4.0",
-    "body": "调仓界面深色科技风重构：AppPalette色彩系统、筛选栏Pill化、组件全面暗色化",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.4.0",
-    "published_at": "2026-05-20T00:00:00Z",
+    "tag_name": "v2.4.1",
+    "name": "QiemanDashboard v2.4.1",
+    "body": "持仓界面排版溢出修复 + GitHub Actions CI 自动构建",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.4.1",
+    "published_at": "2026-05-20T11:59:51Z",
     "assets": [
         {
-            "name": "QiemanDashboard-2.4.0.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.4.0/QiemanDashboard-2.4.0.zip",
-            "size": 3111844,
+            "name": "QiemanDashboard-2.4.1.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.4.1/QiemanDashboard-2.4.1.zip",
+            "size": 3137876,
             "content_type": "application/zip"
         }
     ]
