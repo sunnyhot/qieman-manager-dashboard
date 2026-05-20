@@ -1,14 +1,14 @@
 {
-    "tag_name": "v2.5.0",
-    "name": "且慢主理人看板 v2.5.0",
-    "body": "## 性能优化大版本\n\n- AppModel @Published 拆分为 6 个子 ObservableObject\n- PersonalAssetBrowser 视图拆分为独立文件\n- personalAssetRows 显式缓存 + 增量更新\n- PortfolioRefresh 防抖/节流 + 去重刷新\n- dashboard_server.py 模块拆分为 dashboard/ 包\n- 平台数据预加载并行化\n- QiemanPlatformNativeClient 按数据类型拆分",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.5.0",
-    "published_at": "2026-05-20T20:56:05Z",
+    "tag_name": "v2.5.1",
+    "name": "QiemanDashboard v2.5.1",
+    "body": "fix: 持仓分组视觉加强 + 编译修复",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.5.1",
+    "published_at": "2026-05-20T13:33:00Z",
     "assets": [
         {
-            "name": "QiemanDashboard-2.5.0.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.5.0/QiemanDashboard-2.5.0.zip",
-            "size": 3115440,
+            "name": "QiemanDashboard-2.5.1.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.5.1/QiemanDashboard-2.5.1.zip",
+            "size": 3117489,
             "content_type": "application/zip"
         }
     ]
