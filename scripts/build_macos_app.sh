@@ -130,6 +130,47 @@ fi
 echo "[8/8] 生成分发压缩包"
 ditto -c -k --sequesterRsrc --keepParent "$APP_DIR" "$ZIP_FILE"
 
+echo "[9/9] 验证构建产物"
+# --- 产物完整性检查（防止空包/损坏包发布到用户端）---
+
+# 1. App bundle 必须存在
+if [ ! -d "$APP_DIR" ]; then
+  echo "❌ 验证失败: App bundle 不存在 ($APP_DIR)"
+  exit 1
+fi
+
+# 2. 可执行文件必须存在且有执行权限
+EXECUTABLE="$MACOS_DIR/$APP_NAME"
+if [ ! -x "$EXECUTABLE" ]; then
+  echo "❌ 验证失败: 可执行文件不存在或无执行权限 ($EXECUTABLE)"
+  exit 1
+fi
+
+# 3. Zip 文件必须存在且 >= 1MB（防止空包）
+if [ ! -f "$ZIP_FILE" ]; then
+  echo "❌ 验证失败: Zip 文件不存在 ($ZIP_FILE)"
+  exit 1
+fi
+ZIP_SIZE=$(stat -f%z "$ZIP_FILE" 2>/dev/null || stat -c%s "$ZIP_FILE" 2>/dev/null)
+MIN_ZIP_SIZE=$((1 * 1024 * 1024))  # 1MB
+if [ "$ZIP_SIZE" -lt "$MIN_ZIP_SIZE" ]; then
+  echo "❌ 验证失败: Zip 文件过小 ($ZIP_SIZE bytes < $MIN_ZIP_SIZE bytes)，构建可能失败"
+  exit 1
+fi
+
+# 4. Zip 必须能通过完整性校验
+if ! unzip -t "$ZIP_FILE" > /dev/null 2>&1; then
+  echo "❌ 验证失败: Zip 完整性校验失败 (unzip -t)"
+  exit 1
+fi
+
+# 5. Zip 内必须包含 App bundle
+if ! unzip -l "$ZIP_FILE" | grep -q "${APP_NAME}.app/"; then
+  echo "❌ 验证失败: Zip 内未找到 ${APP_NAME}.app"
+  exit 1
+fi
+
+echo "✅ 构建产物验证通过 (zip: $ZIP_SIZE bytes)"
 echo "完成"
 echo "App 已生成: $APP_DIR"
 echo "压缩包: $ZIP_FILE"
