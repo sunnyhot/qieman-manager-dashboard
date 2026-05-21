@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.5.6] - 2026-05-21
+
+### Fixed
+- 修复收到推送通知后 createMainWindow() 在后台线程崩溃 (SIGABRT) (LUC-195)
+  - 在 AppModel.init() 的 Combine 订阅中添加 .receive(on: DispatchQueue.main)
+
 ## [2.5.5] - 2026-05-21
 
 ### Fixed
