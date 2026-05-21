@@ -1,14 +1,14 @@
 {
-    "tag_name": "v2.5.5",
-    "name": "QiemanDashboard v2.5.5",
-    "body": "## 且慢主理人看板 v2.5.5\n\n- release: v2.5.5\n- feat: set activationPolicy in applicationDidFinishLaunching\n- release: update v2.5.4\n- fix: improve light mode contrast\n- release: update v2.5.3\n- chore: prepare v2.5.3 release\n- release: update latest feed to v2.5.2\n- fix: prevent personal asset table overlap\n- fix: 构建脚本增加产物完整性验证\n- release: update v2.5.1\n\n---\n🤖 自动构建 by GitHub Actions",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.5.5",
-    "published_at": "2026-05-21T08:07:57Z",
+    "tag_name": "v2.5.6",
+    "name": "QiemanDashboard v2.5.6",
+    "body": "## 且慢主理人看板 v2.5.6\n\n- release: v2.5.6 — 修复推送通知后 createMainWindow() 后台线程崩溃\n- LUC-196: 添加 .receive(on: DispatchQueue.main) 修复推送通知 Combine 订阅后台线程崩溃\n- release: update v2.5.5\n- release: update latest feed to v2.5.5\n- release: v2.5.5\n- feat: set activationPolicy in applicationDidFinishLaunching\n- release: update v2.5.4\n- fix: improve light mode contrast\n- release: update v2.5.3\n- chore: prepare v2.5.3 release\n- release: update latest feed to v2.5.2\n\n---\n🤖 自动构建 by GitHub Actions",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.5.6",
+    "published_at": "2026-05-21T13:57:38Z",
     "assets": [
         {
-            "name": "QiemanDashboard-2.5.5.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.5.5/QiemanDashboard-2.5.5.zip",
-            "size": 3120955,
+            "name": "QiemanDashboard-2.5.6.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.5.6/QiemanDashboard-2.5.6.zip",
+            "size": 3121376,
             "content_type": "application/zip"
         }
     ]
