@@ -92,8 +92,7 @@ struct PlatformActionRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Thick left accent bar
+        HStack(spacing: isCompact ? 8 : 12) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(
                     LinearGradient(
@@ -102,27 +101,29 @@ struct PlatformActionRow: View {
                         endPoint: .bottom
                     )
                 )
-                .frame(width: 3)
+                .frame(width: isCompact ? 2 : 3)
 
-            VStack(alignment: .leading, spacing: isCompact ? 8 : 6) {
+            VStack(alignment: .leading, spacing: isCompact ? 6 : 6) {
                 if isCompact {
-                    HStack(alignment: .top, spacing: 10) {
-                        VStack(alignment: .leading, spacing: 3) {
+                    HStack(alignment: .center, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(action.displayTitle)
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(AppPalette.ink)
                                 .lineLimit(1)
+                                .minimumScaleFactor(0.82)
                             Text("\(action.fundName ?? action.title ?? "未命名标的") · \(action.fundCode ?? "无代码")")
                                 .font(.system(size: 10))
                                 .foregroundStyle(AppPalette.muted)
                                 .lineLimit(1)
+                                .minimumScaleFactor(0.82)
                         }
                         Spacer(minLength: 8)
                         Text(isBuy ? "买入" : "卖出")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
                             .foregroundStyle(sideColor)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
                             .background(sideColor.opacity(0.14), in: Capsule())
                             .overlay(
                                 Capsule()
@@ -130,11 +131,11 @@ struct PlatformActionRow: View {
                             )
                     }
 
-                    HStack(spacing: 8) {
-                        compactMetricPill(title: "时间", value: action.txnDate ?? action.createdAt ?? "未知", tint: AppPalette.muted)
+                    HStack(spacing: 6) {
+                        compactMetricPill(title: "时间", value: compactDateText(action.txnDate ?? action.createdAt), tint: AppPalette.muted)
                         compactMetricPill(title: "调仓", value: decimalText(action.tradeValuation), tint: AppPalette.ink)
                         compactMetricPill(title: "当前", value: decimalText(action.currentValuation), tint: AppPalette.ink)
-                        compactMetricPill(title: "变化", value: percentText(action.valuationChangePct), tint: changeTint)
+                        compactMetricPill(title: "变化", value: percentText(action.valuationChangePct), tint: changeTint, isEmphasized: true)
                     }
                 } else {
                     HStack {
@@ -175,7 +176,8 @@ struct PlatformActionRow: View {
                 }
             }
         }
-        .padding(isCompact ? 8 : 10)
+        .padding(.horizontal, isCompact ? 8 : 10)
+        .padding(.vertical, isCompact ? 7 : 10)
         .background(isSelected ? AppPalette.brand.opacity(0.12) : AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
@@ -193,21 +195,29 @@ struct PlatformActionRow: View {
         return String(format: "%+.2f%%", value)
     }
 
+    private func compactDateText(_ value: String?) -> String {
+        guard let value, !value.isEmpty else { return "未知" }
+        if value.count >= 10 {
+            return String(value.prefix(10))
+        }
+        return value
+    }
+
     @ViewBuilder
-    private func compactMetricPill(title: String, value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+    private func compactMetricPill(title: String, value: String, tint: Color, isEmphasized: Bool = false) -> some View {
+        HStack(spacing: 5) {
             Text(title)
-                .font(.system(size: 9, weight: .medium))
+                .font(.system(size: 9, weight: .medium, design: .rounded))
                 .foregroundStyle(AppPalette.muted)
             Text(value)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .font(.system(size: isEmphasized ? 11 : 10, weight: isEmphasized ? .bold : .semibold, design: .monospaced))
                 .foregroundStyle(tint)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.72)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 5)
         .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
