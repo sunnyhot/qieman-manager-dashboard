@@ -48,6 +48,10 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
                 }
             }
         }
+
+        // Apply Dock visibility setting immediately at launch, before any UI appears.
+        let showInDock = (UserDefaults.standard.object(forKey: "qieman.dashboard.showsInDock") as? Bool) ?? true
+        NSApplication.shared.setActivationPolicy(showInDock ? .regular : .accessory)
     }
 
     func configure(model: AppModel) {
