@@ -385,6 +385,7 @@ final class AppModel: ObservableObject {
             .store(in: &cancellables)
 
         NotificationCenter.default.publisher(for: .qiemanNotificationDeepLink)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] note in
                 guard let payload = note.object as? NotificationDeepLinkPayload else { return }
                 self?.handleNotificationDeepLink(payload)
