@@ -50,11 +50,10 @@ git push origin main "$TAG"
 3. 等待 GitHub Actions 完成 `Build & Release` workflow。
 
 ```bash
-gh run list --workflow "Build & Release" --limit 3
-gh run watch
+git ls-remote origin main
 ```
 
-如果没有登录 GitHub CLI，打开仓库的 Actions 页面查看。workflow 成功后应完成这些动作：
+打开仓库的 Actions 页面查看构建状态，或用 `git ls-remote origin main` 观察 `main` 是否出现新的 bot commit。workflow 成功后应完成这些动作：
 
 - 构建 `/tmp/QiemanDashboard-$VERSION.zip`
 - 创建 GitHub Release：`https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/$TAG`
@@ -67,6 +66,8 @@ gh run watch
 
 ```bash
 git pull --rebase origin main
+git show --no-patch --format='%h %an <%ae> | %s' HEAD
+git show HEAD:releases/macos/latest.json | python3 -m json.tool
 ```
 
 再检查线上更新清单和 Release asset：
@@ -76,7 +77,7 @@ curl -fsSL "https://raw.githubusercontent.com/sunnyhot/qieman-manager-dashboard/
 curl -I -L "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/$TAG/QiemanDashboard-$VERSION.zip"
 ```
 
-确认 raw `latest.json` 已返回新 `tag_name`，且 zip 地址返回 `200` 并带有合理的 `content-length`。如果用户 App 已经是同版本，检查更新会正常显示没有更新。
+确认 `latest.json` 已返回新 `tag_name`，且 zip 地址返回 `200` 并带有合理的 `content-length`。`raw.githubusercontent.com` 可能会短暂缓存旧内容；如果 `git show HEAD:releases/macos/latest.json` 已是新版本但 raw 还没更新，等几分钟再重试 App 内检查更新。如果用户 App 已经是同版本，检查更新会正常显示没有更新。
 
 5. 如果 Actions 失败，可在本地临时复现构建问题：
 

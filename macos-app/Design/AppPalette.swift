@@ -9,23 +9,23 @@ enum AppPalette {
     // MARK: - Brand & Surfaces
 
     /// Electric blue brand accent
-    static let brand = adaptive(light: rgb(0.31, 0.55, 1.00), dark: rgb(0.31, 0.55, 1.00))
-    static let brandSoft = adaptive(light: rgb(0.16, 0.24, 0.42), dark: rgb(0.10, 0.15, 0.28))
+    static let brand = adaptive(light: rgb(0.16, 0.40, 0.88), dark: rgb(0.31, 0.55, 1.00))
+    static let brandSoft = adaptive(light: rgb(0.88, 0.93, 1.00), dark: rgb(0.10, 0.15, 0.28))
     /// Deep navy background
-    static let surface = adaptive(light: rgb(0.96, 0.96, 0.98), dark: rgb(0.04, 0.05, 0.09))
-    static let surfaceVariant = adaptive(light: rgb(0.92, 0.93, 0.96), dark: rgb(0.05, 0.07, 0.12))
+    static let surface = adaptive(light: rgb(0.94, 0.96, 0.99), dark: rgb(0.04, 0.05, 0.09))
+    static let surfaceVariant = adaptive(light: rgb(0.87, 0.91, 0.96), dark: rgb(0.05, 0.07, 0.12))
     /// Card background — semi-transparent deep navy
-    static let card = adaptive(light: rgb(0.98, 0.98, 1.00), dark: rgb(0.10, 0.12, 0.18))
+    static let card = adaptive(light: rgb(1.00, 1.00, 1.00), dark: rgb(0.10, 0.12, 0.18))
     /// Card strong / elevated
-    static let cardStrong = adaptive(light: rgb(1.00, 1.00, 1.00), dark: rgb(0.13, 0.15, 0.22))
+    static let cardStrong = adaptive(light: rgb(0.95, 0.97, 1.00), dark: rgb(0.13, 0.15, 0.22))
     /// Card hover state
-    static let cardHover = adaptive(light: rgb(0.95, 0.96, 0.98), dark: rgb(0.16, 0.18, 0.26))
+    static let cardHover = adaptive(light: rgb(0.90, 0.94, 0.99), dark: rgb(0.16, 0.18, 0.26))
     /// Primary text
-    static let ink = adaptive(light: rgb(0.08, 0.09, 0.12), dark: rgb(0.92, 0.94, 0.98))
+    static let ink = adaptive(light: rgb(0.04, 0.06, 0.11), dark: rgb(0.92, 0.94, 0.98))
     /// Secondary / muted text
-    static let muted = adaptive(light: rgb(0.40, 0.43, 0.52), dark: rgb(0.55, 0.58, 0.68))
+    static let muted = adaptive(light: rgb(0.28, 0.33, 0.43), dark: rgb(0.55, 0.58, 0.68))
     /// Border / line
-    static let line = adaptive(light: rgb(0.85, 0.86, 0.90), dark: rgb(0.18, 0.20, 0.28))
+    static let line = adaptive(light: rgb(0.70, 0.76, 0.86), dark: rgb(0.18, 0.20, 0.28))
     /// Text on brand-colored surfaces
     static let onBrand = adaptive(light: rgb(0.99, 0.99, 1.00), dark: rgb(0.99, 0.99, 1.00))
 
@@ -36,16 +36,16 @@ enum AppPalette {
 
     // MARK: - Semantic Colors
 
-    static let positive = adaptive(light: rgb(0.14, 0.62, 0.36), dark: rgb(0.20, 0.78, 0.44))
-    static let warning = adaptive(light: rgb(0.80, 0.52, 0.14), dark: rgb(0.96, 0.66, 0.24))
-    static let danger = adaptive(light: rgb(0.78, 0.20, 0.18), dark: rgb(0.96, 0.36, 0.32))
-    static let info = adaptive(light: rgb(0.22, 0.48, 0.82), dark: rgb(0.38, 0.62, 0.96))
-    static let accentWarm = adaptive(light: rgb(0.72, 0.48, 0.18), dark: rgb(0.90, 0.62, 0.28))
+    static let positive = adaptive(light: rgb(0.02, 0.48, 0.28), dark: rgb(0.20, 0.78, 0.44))
+    static let warning = adaptive(light: rgb(0.66, 0.40, 0.04), dark: rgb(0.96, 0.66, 0.24))
+    static let danger = adaptive(light: rgb(0.70, 0.12, 0.12), dark: rgb(0.96, 0.36, 0.32))
+    static let info = adaptive(light: rgb(0.10, 0.35, 0.70), dark: rgb(0.38, 0.62, 0.96))
+    static let accentWarm = adaptive(light: rgb(0.62, 0.34, 0.08), dark: rgb(0.90, 0.62, 0.28))
 
     // MARK: - Chinese Market Convention (red=up, green=down)
 
-    static let marketGain = adaptive(light: rgb(0.78, 0.20, 0.18), dark: rgb(0.96, 0.36, 0.32))
-    static let marketLoss = adaptive(light: rgb(0.14, 0.62, 0.36), dark: rgb(0.20, 0.78, 0.44))
+    static let marketGain = adaptive(light: rgb(0.70, 0.12, 0.12), dark: rgb(0.96, 0.36, 0.32))
+    static let marketLoss = adaptive(light: rgb(0.02, 0.48, 0.28), dark: rgb(0.20, 0.78, 0.44))
 
     static func marketTint(for value: Double?) -> Color {
         guard let value else { return muted }
@@ -73,8 +73,8 @@ enum AppPalette {
         LinearGradient(
             colors: [
                 surface,
-                Color(red: 0.03, green: 0.05, blue: 0.10).opacity(0.92),
-                brandSoft.opacity(0.18),
+                adaptive(light: rgb(0.90, 0.93, 0.98), dark: rgb(0.03, 0.05, 0.10)).opacity(0.92),
+                brandSoft.opacity(0.62),
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -86,7 +86,7 @@ enum AppPalette {
             colors: [
                 brandSoft.opacity(0.96),
                 cardStrong.opacity(0.94),
-                Color(red: 0.31, green: 0.55, blue: 1.00).opacity(0.08),
+                brand.opacity(0.10),
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
