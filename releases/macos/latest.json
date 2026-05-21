@@ -1,14 +1,14 @@
 {
-    "tag_name": "v2.5.3",
-    "name": "QiemanDashboard v2.5.3",
-    "body": "## 且慢主理人看板 v2.5.3\n\n- chore: prepare v2.5.3 release\n- release: update latest feed to v2.5.2\n- fix: prevent personal asset table overlap\n- fix: 构建脚本增加产物完整性验证\n- release: update v2.5.1\n- fix: QiemanDashboardApp 编译错误 — 内联 appearance 同步逻辑\n- fix: latest.json 指向 v2.5.0（zip 已验证有效 3.1MB）\n- fix: latest.json 指向 v2.4.3（v2.5.0 zip 为空）\n\n---\n🤖 自动构建 by GitHub Actions",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.5.3",
-    "published_at": "2026-05-21T02:08:08Z",
+    "tag_name": "v2.5.4",
+    "name": "QiemanDashboard v2.5.4",
+    "body": "## 且慢主理人看板 v2.5.4\n\n- fix: improve light mode contrast\n- release: update v2.5.3\n- chore: prepare v2.5.3 release\n- release: update latest feed to v2.5.2\n- fix: prevent personal asset table overlap\n- fix: 构建脚本增加产物完整性验证\n- release: update v2.5.1\n- fix: QiemanDashboardApp 编译错误 — 内联 appearance 同步逻辑\n- fix: latest.json 指向 v2.5.0（zip 已验证有效 3.1MB）\n- fix: latest.json 指向 v2.4.3（v2.5.0 zip 为空）\n- fix: 解决 AppModel 合并冲突 + 去掉 clipShape 避免裁剪详情\n- fix: 去掉 clipShape 避免裁剪表格详情内容\n\n---\n🤖 自动构建 by GitHub Actions",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.5.4",
+    "published_at": "2026-05-21T02:24:40Z",
     "assets": [
         {
-            "name": "QiemanDashboard-2.5.3.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.5.3/QiemanDashboard-2.5.3.zip",
-            "size": 3120232,
+            "name": "QiemanDashboard-2.5.4.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.5.4/QiemanDashboard-2.5.4.zip",
+            "size": 3120735,
             "content_type": "application/zip"
         }
     ]
