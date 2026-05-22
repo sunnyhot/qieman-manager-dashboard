@@ -317,3 +317,71 @@ struct LabeledValue: View {
         }
     }
 }
+
+// MARK: - Reusable Material Components
+
+/// A translucent material panel suitable for sidebar, toolbar, or section backgrounds.
+/// Uses NSVisualEffectView for consistent vibrancy across macOS 13+.
+struct MaterialPanel: NSViewRepresentable {
+    var material: NSVisualEffectView.Material
+    var blendingMode: NSVisualEffectView.BlendingMode = .behindWindow
+    var emphasized: Bool = false
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        view.isEmphasized = emphasized
+        view.wantsLayer = true
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+        nsView.isEmphasized = emphasized
+        nsView.state = .active
+    }
+}
+
+/// Convenience modifier that wraps content in a material background with optional border and corner radius.
+struct MaterialBackgroundModifier: ViewModifier {
+    var material: NSVisualEffectView.Material
+    var blendingMode: NSVisualEffectView.BlendingMode = .behindWindow
+    var cornerRadius: CGFloat
+    var borderColor: Color?
+    var borderWidth: CGFloat = 1
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                MaterialPanel(material: material, blendingMode: blendingMode)
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(borderColor ?? AppPalette.line.opacity(0.35), lineWidth: borderWidth)
+            )
+    }
+}
+
+extension View {
+    /// Apply a translucent material background with rounded corners and optional border.
+    func materialBackground(
+        _ material: NSVisualEffectView.Material = .sidebar,
+        blendingMode: NSVisualEffectView.BlendingMode = .behindWindow,
+        cornerRadius: CGFloat = AppPalette.panelRadius,
+        borderColor: Color? = nil,
+        borderWidth: CGFloat = 1
+    ) -> some View {
+        modifier(MaterialBackgroundModifier(
+            material: material,
+            blendingMode: blendingMode,
+            cornerRadius: cornerRadius,
+            borderColor: borderColor,
+            borderWidth: borderWidth
+        ))
+    }
+}

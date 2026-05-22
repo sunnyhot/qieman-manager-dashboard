@@ -72,7 +72,14 @@ struct ContentView: View {
             .modifier(SidebarFloatingCompatModifier())
         } detail: {
             mainContent
-                .background(AppPalette.canvasGradient)
+                .background(
+                    ZStack {
+                        AppPalette.canvasGradient
+                        // Subtle material overlay for depth on macOS 14+
+                        MaterialPanel(material: .underWindowBackground, blendingMode: .behindWindow)
+                            .opacity(0.30)
+                    }
+                )
         }
         .frame(minWidth: 860, minHeight: 600)
         .task {
@@ -186,7 +193,10 @@ struct ContentView: View {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .padding(.bottom, 14)
-            .background(AppPalette.paper.opacity(0.96))
+            .background(
+                MaterialPanel(material: .windowBackground, blendingMode: .withinWindow)
+                    .opacity(0.96)
+            )
 
             Divider()
         }
@@ -604,18 +614,18 @@ struct SidebarFloatingCompatModifier: ViewModifier {
             .padding(.leading, 8)
             .padding(.trailing, 4)
             .background(
-                VisualEffectBlurView(material: .sidebar)
+                MaterialPanel(material: .sidebar, blendingMode: .behindWindow)
                     .ignoresSafeArea()
             )
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .shadow(color: Color.black.opacity(0.08), radius: 4, x: 1, y: 0)
+            .shadow(color: Color.black.opacity(0.06), radius: 6, x: 1, y: 1)
     }
 }
 
-// MARK: - NSVisualEffectView Wrapper
+// MARK: - NSVisualEffectView Wrapper (Legacy Alias)
 
-/// Wraps `NSVisualEffectView` to provide a blurred material backdrop on macOS 14+.
-/// Uses `.sidebar` material which matches the system sidebar appearance.
+/// Wraps `NSVisualEffectView` to provide a blurred material backdrop.
+/// Kept for backward compatibility; new code should use `MaterialPanel` instead.
 struct VisualEffectBlurView: NSViewRepresentable {
     var material: NSVisualEffectView.Material
 

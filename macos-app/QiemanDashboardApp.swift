@@ -340,6 +340,14 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         window.title = "且慢主理人"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
+
+        // Transparent toolbar for proper content-under-titlebar layout
+        // without occluding content behind the system title bar area.
+        let toolbar = NSToolbar(identifier: "MainToolbar")
+        toolbar.showsBaselineSeparator = false
+        window.toolbar = toolbar
+        window.toolbarStyle = .unified
+
         window.appearance = model.appearance.nsAppearance
         let hostingView = NSHostingView(rootView: contentView)
         hostingView.appearance = model.appearance.nsAppearance
