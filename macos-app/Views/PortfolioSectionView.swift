@@ -26,7 +26,7 @@ struct PortfolioSectionView: View {
         let dailyChangeTint = AppPalette.marketTint(for: dailyChange?.amount)
 
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
                     MetricCard(
                         title: "总持仓",
@@ -228,7 +228,7 @@ struct PortfolioSectionView: View {
                     }
                 }
             }
-            .padding(16)
+            .padding(14)
         }
         .sheet(isPresented: $isPresentingAddPendingTrade) {
             PersonalPendingTradeEditSheet()

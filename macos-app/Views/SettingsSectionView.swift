@@ -58,7 +58,7 @@ struct SettingsSectionView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 14) {
                 overviewBand
                 selectedSettingsPanel
                     .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -74,7 +74,7 @@ struct SettingsSectionView: View {
             overviewIntro
             overviewMetrics
         }
-        .padding(18)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
