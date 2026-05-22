@@ -411,7 +411,6 @@ struct ContentView: View {
             mainWin.performZoom(nil)
             return
         }
-        }
         // Fallback: find the first suitable window, excluding panels/sheets.
         guard let targetWindow = NSApplication.shared.windows.first(where: { window in
             window.isVisible
