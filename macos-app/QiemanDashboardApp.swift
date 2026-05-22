@@ -372,6 +372,13 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         }
     }
 
+    /// Exposes the stored main window reference for zoom toggling.
+    /// Returns `nil` if the window has been destroyed or is a panel/sheet.
+    @MainActor var mainWindowForZoom: NSWindow? {
+        guard let win = mainWindow, win.isVisible, win.canBecomeMain else { return nil }
+        return win
+    }
+
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         [.banner, .sound, .list]
     }
