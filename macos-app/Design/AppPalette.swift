@@ -2,11 +2,26 @@ import AppKit
 import SwiftUI
 
 enum AppPalette {
+    // MARK: - Radii
+
     static let cardRadius: CGFloat = 10
     static let panelRadius: CGFloat = 12
     static let controlRadius: CGFloat = 8
 
-    // MARK: - Brand & Surfaces
+    // MARK: - Surfaces (semantic)
+
+    /// Window-level background — used behind the main content area.
+    static let windowBackground = surface
+    /// Toolbar / top bar background.
+    static let toolbarBackground = surface
+    /// Sidebar footer background (inherits from sidebar material).
+    static let sidebarBackground = surface
+    /// Elevated panel background (settings panels, filter panels).
+    static let panelBackground = card
+    /// Inline card background (stat chips, mini stats).
+    static let inlineBackground = card
+
+    // MARK: - Brand & Base Surfaces
 
     /// Electric blue brand accent
     static let brand = adaptive(light: rgb(0.16, 0.40, 0.88), dark: rgb(0.31, 0.55, 1.00))
@@ -20,14 +35,27 @@ enum AppPalette {
     static let cardStrong = adaptive(light: rgb(0.95, 0.97, 1.00), dark: rgb(0.13, 0.15, 0.22))
     /// Card hover state
     static let cardHover = adaptive(light: rgb(0.90, 0.94, 0.99), dark: rgb(0.16, 0.18, 0.26))
+
+    // MARK: - Text
+
     /// Primary text
     static let ink = adaptive(light: rgb(0.04, 0.06, 0.11), dark: rgb(0.92, 0.94, 0.98))
     /// Secondary / muted text
     static let muted = adaptive(light: rgb(0.28, 0.33, 0.43), dark: rgb(0.55, 0.58, 0.68))
-    /// Border / line
-    static let line = adaptive(light: rgb(0.70, 0.76, 0.86), dark: rgb(0.18, 0.20, 0.28))
     /// Text on brand-colored surfaces
     static let onBrand = adaptive(light: rgb(0.99, 0.99, 1.00), dark: rgb(0.99, 0.99, 1.00))
+
+    // MARK: - Borders / Lines
+
+    /// Standard hairline border for cards, panels, chips.
+    static let hairline = adaptive(light: rgb(0.70, 0.76, 0.86), dark: rgb(0.18, 0.20, 0.28))
+    /// Legacy alias — maps to `hairline`.
+    static let line = hairline
+
+    // MARK: - Control Fill
+
+    /// Default input/control fill (text fields, segmented chips).
+    static let controlFill = cardStrong
 
     // MARK: - Legacy Aliases (backward compat)
 
@@ -102,6 +130,61 @@ enum AppPalette {
         )
     }
 
+    // MARK: - Unified Stroke Opacities
+
+    /// Default border stroke opacity for cards & panels.
+    static let strokeDefault: Double = 0.50
+    /// Subtle / lighter border for inline elements (chips, badges).
+    static let strokeSubtle: Double = 0.35
+    /// Strong / emphasis border (selected states, settings).
+    static let strokeStrong: Double = 0.70
+
+    // MARK: - Unified Background Opacities
+
+    /// Opacity used for toolbar background overlay.
+    static let bgToolbar: Double = 0.96
+    /// Opacity used for panel-level overlay (filter panel, collapsible sections).
+    static let bgPanel: Double = 0.52
+    /// Opacity for settings panel background.
+    static let bgSettings: Double = 0.94
+    /// Opacity for selected/active row fill.
+    static let bgSelected: Double = 0.94
+    /// Opacity for default row fill.
+    static let bgDefault: Double = 0.76
+
+    // MARK: - Text Opacities
+
+    /// Dimmed / tertiary text opacity (footnotes, timestamps).
+    static let textDimmed: Double = 0.72
+
+    // MARK: - Accent Tint Opacities (for icon backgrounds)
+
+    /// Opacity for accent-tinted icon backgrounds.
+    static let accentFill: Double = 0.14
+    /// Opacity for accent-tinted icon border.
+    static let accentBorder: Double = 0.22
+    /// Opacity for subtle accent background (e.g. pill, status).
+    static let accentSubtle: Double = 0.10
+    /// Opacity for text on accent fill.
+    static let accentOnFill: Double = 0.09
+
+    // MARK: - Shadow Presets
+
+    /// Shadow for section-level cards (SectionCard).
+    static let sectionShadowColor: Color = .black.opacity(0.18)
+    static let sectionShadowRadius: CGFloat = 12
+    static let sectionShadowY: CGFloat = 4
+
+    /// Shadow for panel-level containers (SettingsPanel).
+    static let panelShadowColor: Color = .black.opacity(0.05)
+    static let panelShadowRadius: CGFloat = 8
+    static let panelShadowY: CGFloat = 2
+
+    /// Shadow for floating sidebar.
+    static let sidebarShadowColor: Color = .black.opacity(0.08)
+    static let sidebarShadowRadius: CGFloat = 4
+    static let sidebarShadowX: CGFloat = 1
+
     // MARK: - Helpers
 
     private static func adaptive(light: NSColor, dark: NSColor) -> Color {
@@ -123,11 +206,64 @@ enum AppPalette {
 // MARK: - ShapeStyle helper for stroke with Color
 
 extension ShapeStyle where Self == Color {
-    static var lineColor: Color { AppPalette.line }
+    static var lineColor: Color { AppPalette.hairline }
 }
 
 extension Shape {
     func stroke(lineColor: Color, lineWidth: CGFloat = 1) -> some View {
         self.stroke(lineColor, lineWidth: lineWidth)
+    }
+}
+
+// MARK: - View Extension: Unified Stroke & Card Style
+
+extension View {
+    /// Applies a standard card stroke border.
+    func cardStroke(_ radius: CGFloat = AppPalette.cardRadius, opacity: Double = AppPalette.strokeDefault) -> some View {
+        overlay(
+            RoundedRectangle(cornerRadius: radius)
+                .stroke(AppPalette.hairline.opacity(opacity), lineWidth: 1)
+        )
+    }
+
+    /// Applies a standard panel stroke border.
+    func panelStroke(opacity: Double = AppPalette.strokeDefault) -> some View {
+        overlay(
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
+                .stroke(AppPalette.hairline.opacity(opacity), lineWidth: 1)
+        )
+    }
+
+    /// Applies section-level shadow.
+    func sectionShadow() -> some View {
+        shadow(color: AppPalette.sectionShadowColor, radius: AppPalette.sectionShadowRadius, y: AppPalette.sectionShadowY)
+    }
+
+    /// Applies panel-level shadow.
+    func panelShadow() -> some View {
+        shadow(color: AppPalette.panelShadowColor, radius: AppPalette.panelShadowRadius, y: AppPalette.panelShadowY)
+    }
+
+    /// Applies the standard input field style (background + border).
+    func inputFieldStyle() -> some View {
+        self
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(AppPalette.controlFill, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                    .stroke(AppPalette.hairline.opacity(AppPalette.strokeStrong), lineWidth: 1)
+            )
+    }
+
+    /// Applies an accent-tinted icon container style.
+    func accentIconStyle(tint: Color, size: CGFloat = 26) -> some View {
+        self
+            .frame(width: size, height: size)
+            .background(tint.opacity(AppPalette.accentFill), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                    .stroke(tint.opacity(AppPalette.accentBorder), lineWidth: 1)
+            )
     }
 }
