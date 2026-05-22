@@ -189,8 +189,7 @@ enum AppPalette {
         )
     }
 
-<<<<<<< HEAD
-    // MARK: - Unified Stroke Opacities
+    // MARK: Unified Stroke Opacities
 
     /// Default border stroke opacity for cards & panels.
     static let strokeDefault: Double = 0.50

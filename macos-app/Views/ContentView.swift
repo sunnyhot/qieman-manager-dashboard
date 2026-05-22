@@ -402,16 +402,25 @@ struct ContentView: View {
         .contentShape(RoundedRectangle(cornerRadius: AppPalette.controlRadius))
     }
 
+    /// Double-click the toolbar title area to zoom (maximize/restore) the main window.
+    /// Only targets the app's tracked main window — never a sheet, popover, or NSPanel.
     private func toggleMainWindowZoom() {
-        // Find the main content window, excluding NSPanel (popover), windows with
-        // attached sheets, and auxiliary windows so zoom never fires on the wrong target.
-        let targetWindow = NSApplication.shared.windows.first {
-            $0.isVisible
-                && $0.canBecomeMain
-                && !($0 is NSPanel)
-                && $0.attachedSheet == nil
+        // Prefer the AppDelegate's tracked mainWindow reference.
+        if let delegate = NSApplication.shared.delegate as? QiemanApplicationDelegate,
+           let mainWin = delegate.mainWindowForZoom {
+            mainWin.performZoom(nil)
+            return
         }
-        targetWindow?.performZoom(nil)
+        }
+        // Fallback: find the first suitable window, excluding panels/sheets.
+        guard let targetWindow = NSApplication.shared.windows.first(where: { window in
+            window.isVisible
+                && window.canBecomeMain
+                && !(window is NSPanel)
+                && !window.isSheet
+                && window.styleMask.contains(.resizable)
+        }) else { return }
+        targetWindow.performZoom(nil)
     }
 
     @ViewBuilder
