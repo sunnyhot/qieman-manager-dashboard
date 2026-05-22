@@ -24,7 +24,8 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     private var lastEntryIDs: [String] = []
     private var lastMenuBarRenderState: MenuBarRenderState?
     /// Retains a reference to the main window so it can be re-shown after closing.
-    private var mainWindow: NSWindow?
+    /// Set by both the SwiftUI WindowGroup (onAppear) and createMainWindow().
+    fileprivate(set) var mainWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
@@ -364,12 +365,29 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     }
 
     @MainActor func showMainWindow() {
-        if let window = mainWindow, !window.isVisible {
-            window.makeKeyAndOrderFront(nil)
-            NSApplication.shared.activate(ignoringOtherApps: true)
-        } else if mainWindow == nil {
-            createMainWindow()
+        // 1. Re-show the tracked main window if it still exists.
+        if let window = mainWindow {
+            if !window.isVisible {
+                window.makeKeyAndOrderFront(nil)
+                NSApplication.shared.activate(ignoringOtherApps: true)
+            }
+            return
         }
+        // 2. Search for an existing SwiftUI WindowGroup window (may have been hidden
+        //    by windowShouldClose but never tracked in mainWindow).
+        if let existing = NSApplication.shared.windows.first(where: {
+            $0.isVisible == false
+                && $0.canBecomeMain
+                && !($0 is NSPanel)
+                && $0.title == "且慢主理人"
+        }) {
+            mainWindow = existing
+            existing.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            return
+        }
+        // 3. No window at all — create one.
+        createMainWindow()
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
@@ -424,6 +442,12 @@ struct QiemanDashboardApp: App {
                         for view in window.contentView?.subviews ?? [] {
                             (view as? NSHostingView<AnyView>)?.appearance = target
                         }
+                    }
+                    // Track the SwiftUI WindowGroup window so that
+                    // showMainWindow() can re-show it instead of creating a
+                    // duplicate via createMainWindow().
+                    if let keyWin = NSApp.keyWindow ?? NSApplication.shared.windows.first(where: { $0.canBecomeMain && !($0 is NSPanel) }) {
+                        appDelegate.mainWindow = keyWin
                     }
                 }
         }

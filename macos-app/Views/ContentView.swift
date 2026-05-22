@@ -159,23 +159,27 @@ struct ContentView: View {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 16) {
                         toolbarTitleBlock
+                            .contentShape(Rectangle())
+                            .onTapGesture(count: 2) {
+                                toggleMainWindowZoom()
+                            }
                         Spacer(minLength: 12)
+                            .contentShape(Rectangle())
+                            .onTapGesture(count: 2) {
+                                toggleMainWindowZoom()
+                            }
                         toolbarActionRow
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) {
-                        toggleMainWindowZoom()
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
                         toolbarTitleBlock
+                            .contentShape(Rectangle())
+                            .onTapGesture(count: 2) {
+                                toggleMainWindowZoom()
+                            }
                         ScrollView(.horizontal, showsIndicators: false) {
                             toolbarActionRow
                         }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) {
-                        toggleMainWindowZoom()
                     }
                 }
 
@@ -396,8 +400,13 @@ struct ContentView: View {
     }
 
     private func toggleMainWindowZoom() {
-        let targetWindow = NSApp.keyWindow ?? NSApplication.shared.windows.first {
-            $0.isVisible && $0.canBecomeMain && !($0 is NSPanel)
+        // Find the main content window, excluding NSPanel (popover), windows with
+        // attached sheets, and auxiliary windows so zoom never fires on the wrong target.
+        let targetWindow = NSApplication.shared.windows.first {
+            $0.isVisible
+                && $0.canBecomeMain
+                && !($0 is NSPanel)
+                && $0.attachedSheet == nil
         }
         targetWindow?.performZoom(nil)
     }
