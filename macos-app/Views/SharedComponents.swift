@@ -60,10 +60,10 @@ struct SnapshotMiniBadge: View {
             .lineLimit(1)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(tint.opacity(0.14), in: Capsule())
+            .background(tint.opacity(AppPalette.accentFill), in: Capsule())
             .overlay(
                 Capsule()
-                    .stroke(tint.opacity(0.22), lineWidth: 1)
+                    .stroke(tint.opacity(AppPalette.accentBorder), lineWidth: 1)
             )
     }
 }
@@ -93,12 +93,7 @@ struct MetricCard: View {
                 Image(systemName: icon)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(accent)
-                    .frame(width: 26, height: 26)
-                    .background(accent.opacity(0.14), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                            .stroke(accent.opacity(0.18), lineWidth: 1)
-                    )
+                    .accentIconStyle(tint: accent, size: 26)
 
                 Text(title)
                     .font(.system(size: 10, weight: .semibold))
@@ -126,10 +121,7 @@ struct MetricCard: View {
         .frame(minHeight: 76, alignment: .leading)
         .padding(12)
         .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.50), lineWidth: 1)
-        )
+        .cardStroke()
     }
 }
 
@@ -163,12 +155,7 @@ struct SectionCard<Trailing: View, Content: View>: View {
                 Image(systemName: icon)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
-                    .frame(width: 22, height: 22)
-                    .background(AppPalette.brand.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(AppPalette.brand.opacity(0.22), lineWidth: 1)
-                    )
+                    .accentIconStyle(tint: AppPalette.brand, size: 22)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.system(size: 13, weight: .semibold))
@@ -187,11 +174,8 @@ struct SectionCard<Trailing: View, Content: View>: View {
         }
         .padding(14)
         .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.50), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.18), radius: 12, y: 4)
+        .panelStroke()
+        .sectionShadow()
     }
 }
 
@@ -218,10 +202,7 @@ struct EmptySectionState: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(AppPalette.cardHover, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.35), lineWidth: 1)
-        )
+        .cardStroke(opacity: AppPalette.strokeSubtle)
     }
 }
 
@@ -243,10 +224,7 @@ struct StatChip: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.40), lineWidth: 1)
-        )
+        .cardStroke(opacity: 0.40)
     }
 }
 
@@ -260,10 +238,10 @@ struct ToolbarBadge: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+            .background(tint.opacity(AppPalette.accentFill), in: RoundedRectangle(cornerRadius: 6))
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
-                    .stroke(tint.opacity(0.22), lineWidth: 1)
+                    .stroke(tint.opacity(AppPalette.accentBorder), lineWidth: 1)
             )
     }
 }
@@ -284,7 +262,7 @@ struct ToastBar: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .background(tint.opacity(AppPalette.accentSubtle), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
                 .stroke(tint.opacity(0.28), lineWidth: 1)

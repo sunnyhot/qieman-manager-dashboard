@@ -135,7 +135,7 @@ struct ContentView: View {
             if let logURL = model.logFileURL {
                 Text(logURL.lastPathComponent)
                     .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted.opacity(0.72))
+                    .foregroundStyle(AppPalette.muted.opacity(AppPalette.textDimmed))
                     .lineLimit(1)
             }
         }
@@ -190,7 +190,7 @@ struct ContentView: View {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .padding(.bottom, 14)
-            .background(AppPalette.paper.opacity(0.96))
+            .background(AppPalette.toolbarBackground.opacity(AppPalette.bgToolbar))
 
             Divider()
         }
@@ -256,7 +256,7 @@ struct ContentView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppPalette.paper.opacity(0.94))
+                .background(AppPalette.toolbarBackground.opacity(AppPalette.bgSettings))
             }
             .buttonStyle(.plain)
 
@@ -318,10 +318,10 @@ struct ContentView: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .background(AppPalette.card.opacity(0.52), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .background(AppPalette.panelBackground.opacity(AppPalette.bgPanel), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.42), lineWidth: 1)
+                .stroke(AppPalette.hairline.opacity(AppPalette.strokeSubtle), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: AppPalette.panelRadius))
     }
@@ -365,13 +365,7 @@ struct ContentView: View {
                 .foregroundStyle(AppPalette.muted)
             TextField("", text: text)
                 .textFieldStyle(.plain)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
-                )
+                .inputFieldStyle()
                 .controlSize(.regular)
         }
         .frame(minWidth: minWidth, maxWidth: .infinity, alignment: .leading)
@@ -389,10 +383,10 @@ struct ContentView: View {
                 .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(isSelected ? AppPalette.brand : AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .background(isSelected ? AppPalette.brand : AppPalette.controlFill, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                        .stroke(isSelected ? AppPalette.brand.opacity(0.40) : AppPalette.line.opacity(0.42), lineWidth: 1)
+                        .stroke(isSelected ? AppPalette.brand.opacity(0.40) : AppPalette.hairline.opacity(AppPalette.strokeSubtle), lineWidth: 1)
                 )
         }
         .buttonStyle(PressResponsiveButtonStyle())
@@ -617,7 +611,7 @@ struct SidebarFloatingCompatModifier: ViewModifier {
                     .ignoresSafeArea()
             )
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .shadow(color: Color.black.opacity(0.08), radius: 4, x: 1, y: 0)
+            .shadow(color: AppPalette.sidebarShadowColor, radius: AppPalette.sidebarShadowRadius, x: AppPalette.sidebarShadowX, y: 0)
     }
 }
 

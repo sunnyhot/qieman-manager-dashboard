@@ -20,7 +20,7 @@ struct SettingsPanel<Content: View>: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
                     .frame(width: 30, height: 30)
-                    .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                    .background(AppPalette.brand.opacity(AppPalette.accentSubtle), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.system(size: 14, weight: .bold))
@@ -37,12 +37,12 @@ struct SettingsPanel<Content: View>: View {
         }
         .padding(15)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .background(AppPalette.panelBackground.opacity(AppPalette.bgSettings), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.70), lineWidth: 1)
+                .stroke(AppPalette.hairline.opacity(AppPalette.strokeStrong), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+        .panelShadow()
     }
 }
 
@@ -60,7 +60,7 @@ struct SettingsMetric: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 30, height: 30)
-                .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .background(tint.opacity(AppPalette.accentOnFill), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -88,10 +88,10 @@ struct SettingsMetric: View {
         }
         .padding(11)
         .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
-        .background(AppPalette.cardStrong.opacity(isSelected ? 0.94 : 0.76), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .background(AppPalette.cardStrong.opacity(isSelected ? AppPalette.bgSelected : AppPalette.bgDefault), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(isSelected ? tint.opacity(0.72) : AppPalette.line.opacity(0.42), lineWidth: isSelected ? 1.2 : 1)
+                .stroke(isSelected ? tint.opacity(0.72) : AppPalette.hairline.opacity(AppPalette.strokeSubtle), lineWidth: isSelected ? 1.2 : 1)
         )
     }
 }
@@ -109,7 +109,7 @@ struct SettingsRow: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 28, height: 28)
-                .background(tint.opacity(0.09), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .background(tint.opacity(AppPalette.accentOnFill), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -148,7 +148,7 @@ struct SettingsToggleRow: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 28, height: 28)
-                .background(tint.opacity(0.09), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .background(tint.opacity(AppPalette.accentOnFill), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -193,7 +193,7 @@ struct SettingsStatePill: View {
         .background(Color(nsColor: .controlBackgroundColor).opacity(0.62), in: Capsule())
         .overlay(
             Capsule()
-                .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
+                .stroke(AppPalette.hairline.opacity(0.45), lineWidth: 1)
         )
     }
 }
@@ -225,7 +225,7 @@ struct SettingsDivider: View {
 
     var body: some View {
         Divider()
-            .overlay(AppPalette.line.opacity(0.35))
+            .overlay(AppPalette.hairline.opacity(AppPalette.strokeSubtle))
             .padding(.leading, isInset ? 39 : 0)
     }
 }
