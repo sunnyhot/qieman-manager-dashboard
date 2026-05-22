@@ -142,6 +142,18 @@ enum AppPalette {
             )
     }
 
+    /// NSVisualEffectView.Material convenience aliases for consistent usage.
+    enum Materials {
+        /// Primary sidebar / panel background material.
+        static let sidebar: NSVisualEffectView.Material = .sidebar
+        /// Toolbar / header area material.
+        static let toolbar: NSVisualEffectView.Material = .windowBackground
+        /// Content area background material for subtle depth.
+        static let content: NSVisualEffectView.Material = .underWindowBackground
+        /// Elevated card / popover material.
+        static let popover: NSVisualEffectView.Material = .hudWindow
+    }
+
     // MARK: - Gradients
 
     static var canvasGradient: LinearGradient {
