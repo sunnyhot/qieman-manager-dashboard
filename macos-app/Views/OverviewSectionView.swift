@@ -351,7 +351,7 @@ struct OverviewSectionView: View {
             .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                    .stroke(AppPalette.line.opacity(0.32), lineWidth: 1)
+                    .stroke(AppPalette.line.opacity(AppPalette.borderLight), lineWidth: 1)
             )
         }
         .buttonStyle(PressResponsiveButtonStyle())
@@ -424,7 +424,7 @@ struct OverviewHeroCard: View {
         .background(AppPalette.heroGradient, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.65), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(AppPalette.borderHeavy), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.06), radius: 10, y: 3)
     }

@@ -429,7 +429,7 @@ struct PersonalAssetTableRow: View {
             }
             .foregroundStyle(AppPalette.brand)
             .frame(width: 42, height: 28)
-            .background(AppPalette.brand.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+            .background(AppPalette.brand.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)

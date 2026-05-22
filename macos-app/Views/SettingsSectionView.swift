@@ -78,8 +78,7 @@ struct SettingsSectionView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.65), lineWidth: 1)
+            AppPalette.borderOverlay(radius: AppPalette.panelRadius, opacity: AppPalette.borderHeavy)
         )
         .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
     }

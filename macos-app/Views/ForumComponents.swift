@@ -43,7 +43,7 @@ struct CommentBlock: View {
                             }
                         }
                         .padding(8)
-                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 8))
+                        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                     }
                 }
                 .padding(.leading, 8)

@@ -7,6 +7,53 @@ enum AppPalette {
     static let cardRadius: CGFloat = 10
     static let panelRadius: CGFloat = 12
     static let controlRadius: CGFloat = 8
+    static let badgeRadius: CGFloat = 6
+    static let iconBoxRadius: CGFloat = 6
+
+    // MARK: - Spacing Tokens
+
+    /// Micro spacing: icon-to-text, tight gaps (4pt)
+    static let spaceXS: CGFloat = 4
+    /// Small spacing: within component rows (6-8pt)
+    static let spaceS: CGFloat = 8
+    /// Medium spacing: between elements inside a card (10-12pt)
+    static let spaceM: CGFloat = 12
+    /// Large spacing: between cards/sections (14-16pt)
+    static let spaceL: CGFloat = 16
+    /// Extra-large spacing: hero/panel padding (18-20pt)
+    static let spaceXL: CGFloat = 20
+
+    /// Content area horizontal padding (used by section ScrollView containers)
+    static let contentPadding: CGFloat = 16
+    /// Toolbar horizontal padding
+    static let toolbarPaddingH: CGFloat = 16
+    /// Toolbar top padding
+    static let toolbarPaddingTop: CGFloat = 16
+    /// Toolbar bottom padding
+    static let toolbarPaddingBottom: CGFloat = 14
+
+    // MARK: - Shadow Tokens
+
+    static func cardShadow(opacity: Double = 0.18, radius: CGFloat = 12, y: CGFloat = 4) -> some View {
+        Color.clear.shadow(color: .black.opacity(opacity), radius: radius, x: 0, y: y)
+    }
+
+    static func subtleShadow(opacity: Double = 0.06, radius: CGFloat = 10, y: CGFloat = 3) -> some View {
+        Color.clear.shadow(color: .black.opacity(opacity), radius: radius, x: 0, y: y)
+    }
+
+    static func panelShadow(opacity: Double = 0.05, radius: CGFloat = 8, y: CGFloat = 2) -> some View {
+        Color.clear.shadow(color: .black.opacity(opacity), radius: radius, x: 0, y: y)
+    }
+
+    // MARK: - Border / Stroke Opacity Presets
+
+    static let borderLight: Double = 0.32
+    static let borderMedium: Double = 0.42
+    static let borderStrong: Double = 0.50
+    static let borderHeavy: Double = 0.65
+    static let borderFaint: Double = 0.22
+    static let borderSubtle: Double = 0.35
 
     // MARK: - Surfaces (semantic)
 
@@ -130,6 +177,7 @@ enum AppPalette {
         )
     }
 
+<<<<<<< HEAD
     // MARK: - Unified Stroke Opacities
 
     /// Default border stroke opacity for cards & panels.
@@ -184,6 +232,14 @@ enum AppPalette {
     static let sidebarShadowColor: Color = .black.opacity(0.08)
     static let sidebarShadowRadius: CGFloat = 4
     static let sidebarShadowX: CGFloat = 1
+
+    // MARK: - Reusable Stroke Overlay
+
+    /// Standard card/panel border stroke overlay using the line color.
+    static func borderOverlay(radius: CGFloat, opacity: Double = borderStrong) -> some View {
+        RoundedRectangle(cornerRadius: radius)
+            .stroke(AppPalette.line.opacity(opacity), lineWidth: 1)
+    }
 
     // MARK: - Helpers
 
