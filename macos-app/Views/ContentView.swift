@@ -112,8 +112,8 @@ struct ContentView: View {
     // MARK: - Sidebar Footer
 
     private var sidebarFooter: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: AppPalette.spaceS + 2) {
+            HStack(spacing: AppPalette.spaceS) {
                 Circle()
                     .fill(model.cookieAvailable ? AppPalette.positive : AppPalette.warning)
                     .frame(width: 7, height: 7)
@@ -139,8 +139,8 @@ struct ContentView: View {
                     .lineLimit(1)
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.bottom, 18)
+        .padding(.horizontal, AppPalette.spaceXL - 2)
+        .padding(.bottom, AppPalette.spaceXL - 2)
     }
 
     // MARK: - Main Content
@@ -155,11 +155,11 @@ struct ContentView: View {
 
     private var toolbar: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 12) {
+            VStack(spacing: AppPalette.spaceM) {
                 ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 16) {
+                    HStack(alignment: .top, spacing: AppPalette.spaceL) {
                         toolbarTitleBlock
-                        Spacer(minLength: 12)
+                        Spacer(minLength: AppPalette.spaceM)
                         toolbarActionRow
                     }
                     .contentShape(Rectangle())
@@ -167,7 +167,7 @@ struct ContentView: View {
                         toggleMainWindowZoom()
                     }
 
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: AppPalette.spaceM) {
                         toolbarTitleBlock
                         ScrollView(.horizontal, showsIndicators: false) {
                             toolbarActionRow
@@ -183,9 +183,9 @@ struct ContentView: View {
                     queryToolbarPanel
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 14)
+            .padding(.horizontal, AppPalette.toolbarPaddingH)
+            .padding(.top, AppPalette.toolbarPaddingTop)
+            .padding(.bottom, AppPalette.toolbarPaddingBottom)
             .background(AppPalette.paper.opacity(0.96))
 
             Divider()
@@ -193,16 +193,16 @@ struct ContentView: View {
     }
 
     private var queryToolbarPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
             // ① QueryMode 芯片行 — 始终显示
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) {
+                HStack(spacing: AppPalette.spaceS) {
                     ForEach(QueryMode.allCases) { mode in
                         queryModeChip(mode: mode)
                     }
                 }
 
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 126), spacing: 8)], alignment: .leading, spacing: 8) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 126), spacing: AppPalette.spaceS)], alignment: .leading, spacing: AppPalette.spaceS) {
                     ForEach(QueryMode.allCases) { mode in
                         queryModeChip(mode: mode)
                     }
@@ -229,7 +229,7 @@ struct ContentView: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(AppPalette.brand)
                         .frame(width: 18, height: 18)
-                        .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: 4))
+                        .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
 
                     Text("社区动态筛选")
                         .font(.system(size: 12, weight: .semibold))
@@ -250,7 +250,7 @@ struct ContentView: View {
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(AppPalette.muted)
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, AppPalette.spaceM)
                 .padding(.vertical, 9)
                 .background(AppPalette.paper.opacity(0.94))
             }
@@ -310,14 +310,13 @@ struct ContentView: View {
                         }
                     }
                 }
-                .padding(12)
+                .padding(AppPalette.spaceM)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .background(AppPalette.card.opacity(0.52), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.42), lineWidth: 1)
+            AppPalette.borderOverlay(radius: AppPalette.panelRadius, opacity: AppPalette.borderMedium)
         )
         .clipShape(RoundedRectangle(cornerRadius: AppPalette.panelRadius))
     }
@@ -327,7 +326,7 @@ struct ContentView: View {
             Text(model.selectedSection.rawValue)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(AppPalette.ink)
-            HStack(spacing: 6) {
+            HStack(spacing: AppPalette.spaceXS + 2) {
                 ToolbarBadge(
                     title: model.cookieAvailable ? "Cookie 可用" : "Cookie 缺失",
                     tint: model.cookieAvailable ? AppPalette.positive : AppPalette.warning
@@ -355,18 +354,17 @@ struct ContentView: View {
     }
 
     private func toolbarField(_ label: String, text: Binding<String>, minWidth: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: AppPalette.spaceXS + 2) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(AppPalette.muted)
             TextField("", text: text)
                 .textFieldStyle(.plain)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, AppPalette.spaceM)
                 .padding(.vertical, 9)
                 .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                    AppPalette.borderOverlay(radius: AppPalette.controlRadius, opacity: 0.7)
                 )
                 .controlSize(.regular)
         }
@@ -383,12 +381,12 @@ struct ContentView: View {
             Text(mode.label)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, AppPalette.spaceL)
                 .padding(.vertical, 10)
                 .background(isSelected ? AppPalette.brand : AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                        .stroke(isSelected ? AppPalette.brand.opacity(0.40) : AppPalette.line.opacity(0.42), lineWidth: 1)
+                        .stroke(isSelected ? AppPalette.brand.opacity(0.40) : AppPalette.line.opacity(AppPalette.borderMedium), lineWidth: 1)
                 )
         }
         .buttonStyle(PressResponsiveButtonStyle())
@@ -405,7 +403,7 @@ struct ContentView: View {
     @ViewBuilder
     private var notifications: some View {
         if !model.noticeMessage.isEmpty || !model.errorMessage.isEmpty {
-            VStack(spacing: 4) {
+            VStack(spacing: AppPalette.spaceXS) {
                 if !model.noticeMessage.isEmpty {
                     ToastBar(text: model.noticeMessage, tint: AppPalette.positive)
                         .task(id: model.noticeMessage) {
@@ -419,8 +417,8 @@ struct ContentView: View {
                         }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .padding(.horizontal, AppPalette.contentPadding)
+            .padding(.top, AppPalette.spaceS)
             .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
@@ -504,7 +502,7 @@ private struct AppUpdateSheet: View {
                     .frame(width: 48, height: 48)
                     .background(AppPalette.brandSoft, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: AppPalette.spaceS - 2) {
                     Text("发现新版本")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(AppPalette.positive)
@@ -520,7 +518,7 @@ private struct AppUpdateSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
+                HStack(spacing: AppPalette.spaceS) {
                     if let asset = release.asset {
                         ToolbarBadge(title: asset.name, tint: AppPalette.info)
                         ToolbarBadge(title: asset.sizeText, tint: AppPalette.muted)
@@ -536,14 +534,14 @@ private struct AppUpdateSheet: View {
                 Text(releaseNotesPreview)
                     .font(.system(size: 13))
                     .foregroundStyle(AppPalette.ink)
-                    .lineSpacing(4)
+                    .lineSpacing(AppPalette.spaceXS)
                     .lineLimit(8)
-                    .padding(12)
+                    .padding(AppPalette.spaceM)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
 
                 if isInstalling {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: AppPalette.spaceS) {
                         if downloadFraction > 0 {
                             // Determinate progress bar during download
                             ProgressView(value: downloadFraction, total: 1.0)
@@ -600,15 +598,15 @@ private struct AppUpdateSheet: View {
 struct SidebarFloatingCompatModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .padding(.vertical, 8)
-            .padding(.leading, 8)
-            .padding(.trailing, 4)
+            .padding(.vertical, AppPalette.spaceS)
+            .padding(.leading, AppPalette.spaceS)
+            .padding(.trailing, AppPalette.spaceXS)
             .background(
                 VisualEffectBlurView(material: .sidebar)
                     .ignoresSafeArea()
             )
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .shadow(color: Color.black.opacity(0.08), radius: 4, x: 1, y: 0)
+            .clipShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+            .shadow(color: Color.black.opacity(0.08), radius: AppPalette.spaceXS, x: 1, y: 0)
     }
 }
 

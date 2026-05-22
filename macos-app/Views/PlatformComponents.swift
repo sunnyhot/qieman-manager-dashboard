@@ -218,9 +218,9 @@ struct PlatformActionRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 7)
         .padding(.vertical, 5)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                 .stroke(tint.opacity(0.14), lineWidth: 1)
         )
     }
@@ -385,10 +385,10 @@ struct WrapLine: View {
                 .foregroundStyle(AppPalette.muted)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
-                .background(AppPalette.cardStrong.opacity(0.60), in: RoundedRectangle(cornerRadius: 6))
+                .background(AppPalette.cardStrong.opacity(0.60), in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(AppPalette.line.opacity(0.30), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
+                        .stroke(AppPalette.line.opacity(AppPalette.borderSubtle), lineWidth: 1)
                 )
         }
     }
@@ -1000,10 +1000,10 @@ struct PlatformMonthlyOverview: View {
                 .font(.system(size: 9))
                 .foregroundStyle(AppPalette.muted)
         }
-        .padding(8)
-        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: 8))
+        .padding(AppPalette.spaceS)
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                 .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.28), radius: 8, y: 4)

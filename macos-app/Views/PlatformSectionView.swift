@@ -72,7 +72,7 @@ struct PlatformSectionView: View {
                             }
                         }
                     }
-                    .padding(12)
+                    .padding(AppPalette.contentPadding)
                 }
             }
         }
@@ -94,10 +94,10 @@ struct PlatformSectionView: View {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(AppPalette.brand)
                         .frame(width: 20, height: 20)
-                        .background(AppPalette.brand.opacity(0.14), in: RoundedRectangle(cornerRadius: 5))
+                        .background(AppPalette.brand.opacity(0.14), in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 5)
-                                .stroke(AppPalette.brand.opacity(0.22), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
+                                .stroke(AppPalette.brand.opacity(AppPalette.borderFaint), lineWidth: 1)
                         )
 
                     Text("交易时间总览")
@@ -153,8 +153,7 @@ struct PlatformSectionView: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.50), lineWidth: 1)
+            AppPalette.borderOverlay(radius: AppPalette.panelRadius, opacity: AppPalette.borderStrong)
         )
     }
 
@@ -219,8 +218,7 @@ struct PlatformSectionView: View {
                 .padding(10)
                 .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                        .stroke(AppPalette.line.opacity(0.35), lineWidth: 1)
+                    AppPalette.borderOverlay(radius: AppPalette.cardRadius, opacity: AppPalette.borderSubtle)
                 )
             } else {
                 LazyVStack(spacing: 4) {
@@ -259,10 +257,10 @@ struct PlatformSectionView: View {
                     .foregroundStyle(AppPalette.ink)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 6))
+                    .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(AppPalette.line.opacity(0.40), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
+                            .stroke(AppPalette.line.opacity(AppPalette.borderMedium), lineWidth: 1)
                     )
                     .disabled(currentPage == 0)
                     .opacity(currentPage == 0 ? 0.4 : 1.0)
@@ -283,10 +281,10 @@ struct PlatformSectionView: View {
                     .foregroundStyle(AppPalette.ink)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 6))
+                    .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(AppPalette.line.opacity(0.40), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
+                            .stroke(AppPalette.line.opacity(AppPalette.borderMedium), lineWidth: 1)
                     )
                     .disabled(currentPage >= totalPages - 1)
                     .opacity(currentPage >= totalPages - 1 ? 0.4 : 1.0)
@@ -299,8 +297,7 @@ struct PlatformSectionView: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.50), lineWidth: 1)
+            AppPalette.borderOverlay(radius: AppPalette.panelRadius, opacity: AppPalette.borderStrong)
         )
     }
 
@@ -344,8 +341,7 @@ struct PlatformSectionView: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.50), lineWidth: 1)
+            AppPalette.borderOverlay(radius: AppPalette.panelRadius, opacity: AppPalette.borderStrong)
         )
     }
 }

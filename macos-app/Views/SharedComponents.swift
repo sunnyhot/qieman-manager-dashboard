@@ -58,12 +58,12 @@ struct SnapshotMiniBadge: View {
             .font(.system(size: 9, weight: .semibold))
             .foregroundStyle(tint)
             .lineLimit(1)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, AppPalette.spaceS)
+            .padding(.vertical, AppPalette.spaceXS)
             .background(tint.opacity(0.14), in: Capsule())
             .overlay(
                 Capsule()
-                    .stroke(tint.opacity(0.22), lineWidth: 1)
+                    .stroke(tint.opacity(AppPalette.borderFaint), lineWidth: 1)
             )
     }
 }
@@ -88,8 +88,8 @@ struct MetricCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: AppPalette.spaceXS + 2) {
+            HStack(spacing: AppPalette.spaceS) {
                 Image(systemName: icon)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(accent)
@@ -124,11 +124,10 @@ struct MetricCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(minHeight: 76, alignment: .leading)
-        .padding(12)
+        .padding(AppPalette.spaceM)
         .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.50), lineWidth: 1)
+            AppPalette.borderOverlay(radius: AppPalette.cardRadius, opacity: AppPalette.borderStrong)
         )
     }
 }
@@ -158,16 +157,16 @@ struct SectionCard<Trailing: View, Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppPalette.spaceM - 2) {
+            HStack(alignment: .top, spacing: AppPalette.spaceS) {
                 Image(systemName: icon)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
                     .frame(width: 22, height: 22)
-                    .background(AppPalette.brand.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+                    .background(AppPalette.brand.opacity(0.14), in: RoundedRectangle(cornerRadius: AppPalette.iconBoxRadius))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(AppPalette.brand.opacity(0.22), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: AppPalette.iconBoxRadius)
+                            .stroke(AppPalette.brand.opacity(AppPalette.borderFaint), lineWidth: 1)
                     )
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -188,10 +187,9 @@ struct SectionCard<Trailing: View, Content: View>: View {
         .padding(14)
         .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(0.50), lineWidth: 1)
+            AppPalette.borderOverlay(radius: AppPalette.panelRadius, opacity: AppPalette.borderStrong)
         )
-        .shadow(color: Color.black.opacity(0.18), radius: 12, y: 4)
+        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
     }
 }
 
@@ -202,7 +200,7 @@ struct EmptySectionState: View {
     let action: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: AppPalette.spaceM - 2) {
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(AppPalette.ink)
@@ -219,8 +217,7 @@ struct EmptySectionState: View {
         .padding(14)
         .background(AppPalette.cardHover, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.35), lineWidth: 1)
+            AppPalette.borderOverlay(radius: AppPalette.cardRadius, opacity: AppPalette.borderSubtle)
         )
     }
 }
@@ -241,11 +238,10 @@ struct StatChip: View {
                 .minimumScaleFactor(0.7)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.vertical, AppPalette.spaceS)
         .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.40), lineWidth: 1)
+            AppPalette.borderOverlay(radius: AppPalette.cardRadius, opacity: 0.40)
         )
     }
 }
@@ -258,12 +254,12 @@ struct ToolbarBadge: View {
         Text(title)
             .font(.system(size: 10, weight: .medium))
             .foregroundStyle(tint)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+            .padding(.horizontal, AppPalette.spaceS)
+            .padding(.vertical, AppPalette.spaceXS)
+            .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(tint.opacity(0.22), lineWidth: 1)
+                RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
+                    .stroke(tint.opacity(AppPalette.borderFaint), lineWidth: 1)
             )
     }
 }
@@ -273,7 +269,7 @@ struct ToastBar: View {
     let tint: Color
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: AppPalette.spaceS) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(tint)
                 .frame(width: 3, height: 14)
@@ -282,12 +278,11 @@ struct ToastBar: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundStyle(AppPalette.ink)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, AppPalette.spaceM)
+        .padding(.vertical, AppPalette.spaceS)
         .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(tint.opacity(0.28), lineWidth: 1)
+            AppPalette.borderOverlay(radius: AppPalette.cardRadius, opacity: 0.28)
         )
     }
 }

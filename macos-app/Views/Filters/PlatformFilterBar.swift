@@ -86,9 +86,9 @@ struct PlatformFilterBar: View {
                 .foregroundStyle(AppPalette.ink)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 8))
+                .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
                 )
             }

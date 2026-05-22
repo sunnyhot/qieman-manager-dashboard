@@ -34,9 +34,9 @@ struct PlatformSearchField: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: 8))
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                 .stroke(isFocused ? AppPalette.brand.opacity(0.50) : AppPalette.line.opacity(0.45), lineWidth: 1)
         )
     }
