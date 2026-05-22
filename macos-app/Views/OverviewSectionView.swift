@@ -63,7 +63,7 @@ struct OverviewSectionView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 OverviewHeroCard()
 
                 ViewThatFits {
@@ -170,7 +170,7 @@ struct OverviewSectionView: View {
                     }
                 }
             }
-            .padding(16)
+            .padding(14)
         }
     }
 
@@ -407,20 +407,20 @@ struct OverviewHeroCard: View {
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: 24) {
+            HStack(alignment: .center, spacing: 20) {
                 heroCopy
-                    .frame(minWidth: 480, maxWidth: .infinity, alignment: .leading)
-                heroSummaryCard(fixedWidth: 540)
+                    .frame(minWidth: 320, maxWidth: .infinity, alignment: .leading)
+                heroSummaryCard(fixedWidth: 420)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 heroCopy
                 heroSummaryCard(fixedWidth: nil)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
+        .padding(16)
         .background(AppPalette.heroGradient, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.panelRadius)
@@ -432,8 +432,10 @@ struct OverviewHeroCard: View {
     private var heroCopy: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("资产主屏")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundStyle(AppPalette.ink)
+                .minimumScaleFactor(0.72)
+                .lineLimit(1)
             Text("这页现在先看你的资产全貌，再看主理人动态。每个标的会把「已持有、买入中、定投计划」聚合到同一个原生视图里，避免来回切页面对账。")
                 .font(.system(size: 13))
                 .foregroundStyle(AppPalette.muted)
@@ -459,7 +461,7 @@ struct OverviewHeroCard: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(AppPalette.muted)
                     Text(model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? (model.hasPersonalPortfolio ? "待刷新" : "未配置"))
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundStyle(AppPalette.ink)
                         .monospacedDigit()
                         .lineLimit(1)
@@ -503,8 +505,8 @@ struct OverviewHeroCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .frame(minHeight: 136, alignment: .topLeading)
+        .padding(14)
+        .frame(minHeight: 120, alignment: .topLeading)
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(width: fixedWidth, alignment: .leading)
         .background(AppPalette.cardStrong.opacity(0.90), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))

@@ -4,7 +4,7 @@ import SwiftUI
 
 struct ForumSectionView: View {
     @EnvironmentObject private var model: AppModel
-    private let compactThreshold: CGFloat = 1120
+    private let compactThreshold: CGFloat = 900
     private let detailAnchor = "forum-detail-panel"
 
     var body: some View {
@@ -146,7 +146,7 @@ struct ForumSectionView: View {
                                     Text("最新评论").tag("latest")
                                 }
                                 .pickerStyle(.segmented)
-                                .frame(width: 200)
+                                .frame(maxWidth: 220)
 
                                 Toggle("只看主理人回复", isOn: $model.onlyManagerReplies)
                                     .toggleStyle(.checkbox)

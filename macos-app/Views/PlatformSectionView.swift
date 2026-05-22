@@ -4,7 +4,7 @@ import SwiftUI
 
 struct PlatformSectionView: View {
     @EnvironmentObject private var model: AppModel
-    private let compactThreshold: CGFloat = 1120
+    private let compactThreshold: CGFloat = 900
     private let detailAnchor = "platform-detail-panel"
 
     // MARK: - Body

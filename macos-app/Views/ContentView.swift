@@ -74,7 +74,7 @@ struct ContentView: View {
             mainContent
                 .background(AppPalette.canvasGradient)
         }
-        .frame(minWidth: 860, minHeight: 600)
+        .frame(minWidth: 860, idealWidth: 1200, minHeight: 600)
         .task {
             await model.start()
             model.refreshDataForSectionIfNeeded(model.selectedSection)
@@ -187,9 +187,9 @@ struct ContentView: View {
                     queryToolbarPanel
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 14)
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 12)
             .background(AppPalette.toolbarBackground.opacity(AppPalette.bgToolbar))
 
             Divider()
