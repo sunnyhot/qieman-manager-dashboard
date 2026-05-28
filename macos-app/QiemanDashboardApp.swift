@@ -18,6 +18,8 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     private var model: AppModel?
     private var cancellables = Set<AnyCancellable>()
     private var eventMonitor: Any?
+    /// Local monitor for double-click events in the titlebar/toolbar area.
+    private var titlebarDoubleClickMonitor: Any?
     private var didConfigure = false
     private var carouselPageIndex = 0
     private var carouselTimer: Timer?
@@ -53,6 +55,13 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         // Apply Dock visibility setting immediately at launch, before any UI appears.
         let showInDock = (UserDefaults.standard.object(forKey: "qieman.dashboard.showsInDock") as? Bool) ?? true
         NSApplication.shared.setActivationPolicy(showInDock ? .regular : .accessory)
+
+        // Install local monitor to handle double-click in the titlebar/toolbar area.
+        // SwiftUI's .onTapGesture cannot reach the native macOS titlebar region when
+        // using hiddenTitleBar + titlebarAppearsTransparent, so we intercept at AppKit level.
+        titlebarDoubleClickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            self?.handleTitlebarDoubleClick(event) ?? event
+        }
     }
 
     func configure(model: AppModel) {
@@ -405,6 +414,56 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         return win
     }
 
+    // MARK: - Titlebar Double-Click Zoom
+
+    /// Intercepts double-clicks in the native titlebar / unified toolbar region and
+    /// forwards them as zoom toggles.  This is needed because the window uses
+    /// `.hiddenTitleBar` + `titlebarAppearsTransparent = true`, which means SwiftUI
+    /// tap gestures cannot reach the macOS-owned titlebar area above the content view.
+    private func handleTitlebarDoubleClick(_ event: NSEvent) -> NSEvent {
+        // Only care about double-clicks
+        guard event.clickCount == 2 else { return event }
+
+        let window = event.window
+
+        // Only target our main window — skip panels, popovers, sheets
+        guard let win = window,
+              win == mainWindow,
+              !(win is NSPanel),
+              !win.isSheet,
+              win.styleMask.contains(.resizable)
+        else { return event }
+
+        // Convert the click location to window coordinates
+        let clickPoint = event.locationInWindow
+
+        // Determine the titlebar height:
+        // For a window with a toolbar (unified style), the titlebar region is the area
+        // above the content view's frame. With fullSizeContentView, the content view
+        // spans the full window, but the "titlebar" region is still the top portion
+        // defined by the window's frameRect(forContentRect:) difference.
+        let contentFrame = win.contentView?.frame ?? .zero
+        let contentRectForContentRect = win.contentRect(forFrameRect: win.frame)
+        let titlebarHeight = win.frame.height - contentRectForContentRect.height
+
+        // The titlebar area in window-local coordinates is the top region above
+        // where the content rect would start (if it didn't extend into the titlebar).
+        // In window-local coords (origin = bottom-left), the titlebar is:
+        //   y >= contentFrame.height (which is the full window height with fullSizeContentView)
+        // But since fullSizeContentView makes contentFrame == window frame, we need
+        // to check if the click is in the top `titlebarHeight` points.
+        let titlebarBottomInWindowCoords = contentFrame.height - titlebarHeight
+
+        // If the click is in the titlebar region (top area), trigger zoom
+        if clickPoint.y >= titlebarBottomInWindowCoords {
+            win.performZoom(nil)
+            // Swallow the event so it doesn't propagate further
+            return NSEvent()  // dummy event — effectively swallowed
+        }
+
+        return event
+    }
+
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         [.banner, .sound, .list]
     }
@@ -419,6 +478,9 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         carouselTimer?.invalidate()
         if let eventMonitor {
             NSEvent.removeMonitor(eventMonitor)
+        }
+        if let titlebarDoubleClickMonitor {
+            NSEvent.removeMonitor(titlebarDoubleClickMonitor)
         }
     }
 }
