@@ -22,6 +22,7 @@ struct AppUpdateRelease: Identifiable, Equatable {
     let publishedAt: Date?
     let asset: AppUpdateAsset?
     let currentVersion: String
+    let sha256: String?
 
     var downloadURL: URL {
         asset?.downloadURL ?? htmlURL
@@ -60,6 +61,7 @@ struct AppUpdateChecker {
         let htmlURL: URL
         let publishedAt: Date?
         let assets: [GitHubAssetPayload]
+        let sha256: String?
 
         private enum CodingKeys: String, CodingKey {
             case tagName = "tag_name"
@@ -68,6 +70,7 @@ struct AppUpdateChecker {
             case htmlURL = "html_url"
             case publishedAt = "published_at"
             case assets
+            case sha256
         }
     }
 
@@ -76,12 +79,14 @@ struct AppUpdateChecker {
         let browserDownloadURL: URL
         let size: Int
         let contentType: String?
+        let sha256: String?
 
         private enum CodingKeys: String, CodingKey {
             case name
             case browserDownloadURL = "browser_download_url"
             case size
             case contentType = "content_type"
+            case sha256
         }
     }
 
@@ -123,6 +128,9 @@ struct AppUpdateChecker {
             return nil
         }
 
+        // Extract sha256: prefer top-level, fall back to asset-level
+        let manifestSHA256 = payload.sha256 ?? Self.sha256FromAssets(payload.assets)
+
         return AppUpdateRelease(
             tagName: payload.tagName,
             version: releaseVersion,
@@ -131,7 +139,8 @@ struct AppUpdateChecker {
             htmlURL: payload.htmlURL,
             publishedAt: payload.publishedAt,
             asset: Self.preferredAsset(from: payload.assets),
-            currentVersion: currentVersion
+            currentVersion: currentVersion,
+            sha256: manifestSHA256
         )
     }
 
@@ -142,7 +151,7 @@ struct AppUpdateChecker {
 
     static var defaultFeedURLString: String {
         let value = Bundle.main.object(forInfoDictionaryKey: "QiemanUpdateFeedURL") as? String
-        return nonEmpty(value) ?? "https://raw.githubusercontent.com/\(defaultRepository)/main/releases/macos/latest.json"
+        return nonEmpty(value) ?? "https://github.com/\(defaultRepository)/releases/latest/download/latest.json"
     }
 
     static var bundleVersion: String {
@@ -193,6 +202,12 @@ struct AppUpdateChecker {
             size: preferred.size,
             contentType: preferred.contentType
         )
+    }
+
+    /// Extract sha256 from the unified manifest "asset" object if embedded in assets array.
+    /// The new manifest format has a top-level "sha256" field, but this serves as fallback.
+    private static func sha256FromAssets(_ assets: [GitHubAssetPayload]) -> String? {
+        assets.first { $0.name.lowercased().hasSuffix(".zip") }?.sha256
     }
 
     private static func versionParts(_ value: String) -> [Int] {

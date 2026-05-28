@@ -33,6 +33,56 @@ jobs:
         run: |
           bash scripts/build_macos_app.sh
 
+      - name: Compute sha256 and generate latest.json
+        id: manifest
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          ZIP_NAME="QiemanDashboard-${VERSION}.zip"
+          ZIP_PATH="/tmp/${ZIP_NAME}"
+          ZIP_SIZE=$(stat -f%z "$ZIP_PATH")
+          SHA256=$(shasum -a 256 "$ZIP_PATH" | cut -d' ' -f1)
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${ZIP_NAME}"
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${TAG}"
+
+          export TAG VERSION ZIP_NAME ZIP_SIZE SHA256 DOWNLOAD_URL RELEASE_URL
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          payload = {
+              "version": os.environ["VERSION"],
+              "tag": os.environ["TAG"],
+              "asset": {
+                  "name": os.environ["ZIP_NAME"],
+                  "download_url": os.environ["DOWNLOAD_URL"],
+                  "size": int(os.environ["ZIP_SIZE"]),
+                  "content_type": "application/zip",
+                  "sha256": os.environ["SHA256"],
+              },
+              "sha256": os.environ["SHA256"],
+              "notes": "",
+              "html_url": os.environ["RELEASE_URL"],
+              "published_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              # Backward-compatible fields for existing AppUpdateChecker
+              "tag_name": os.environ["TAG"],
+              "name": f"QiemanDashboard {os.environ['TAG']}",
+              "body": "",
+              "assets": [
+                  {
+                      "name": os.environ["ZIP_NAME"],
+                      "browser_download_url": os.environ["DOWNLOAD_URL"],
+                      "size": int(os.environ["ZIP_SIZE"]),
+                      "content_type": "application/zip",
+                  }
+              ],
+          }
+          with open("/tmp/latest.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f, ensure_ascii=False, indent=4)
+              f.write("\n")
+          PY
+
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+
       - name: Generate release notes
         id: notes
         run: |
@@ -67,34 +117,46 @@ jobs:
           body: ${{ steps.notes.outputs.body }}
           files: |
             /tmp/QiemanDashboard-${{ steps.version.outputs.version }}.zip
+            /tmp/latest.json
 
-      - name: Update latest.json
+      - name: Update latest.json on main branch
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG="${{ steps.version.outputs.tag }}"
           ZIP_NAME="QiemanDashboard-${VERSION}.zip"
-          ZIP_SIZE=$(stat -f%z "/tmp/${ZIP_NAME}")
+          ZIP_PATH="/tmp/${ZIP_NAME}"
+          ZIP_SIZE=$(stat -f%z "$ZIP_PATH")
+          SHA256="${{ steps.manifest.outputs.sha256 }}"
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${ZIP_NAME}"
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${TAG}"
 
           git fetch origin main
           git switch -C main origin/main
 
-          # 用 gh api 获取 release body 作为 changelog
           BODY=$(gh release view "${TAG}" --json body -q '.body')
 
-          export TAG ZIP_NAME ZIP_SIZE DOWNLOAD_URL RELEASE_URL BODY
+          export TAG VERSION ZIP_NAME ZIP_SIZE SHA256 DOWNLOAD_URL RELEASE_URL BODY
           python3 - <<'PY'
-          import json
-          import os
-          from datetime import datetime, timezone
+          import json, os
 
           payload = {
+              "version": os.environ["VERSION"],
+              "tag": os.environ["TAG"],
+              "asset": {
+                  "name": os.environ["ZIP_NAME"],
+                  "download_url": os.environ["DOWNLOAD_URL"],
+                  "size": int(os.environ["ZIP_SIZE"]),
+                  "content_type": "application/zip",
+                  "sha256": os.environ["SHA256"],
+              },
+              "sha256": os.environ["SHA256"],
+              "notes": os.environ["BODY"],
+              "html_url": os.environ["RELEASE_URL"],
+              "published_at": "",
+              # Backward-compatible fields
               "tag_name": os.environ["TAG"],
               "name": f"QiemanDashboard {os.environ['TAG']}",
               "body": os.environ["BODY"],
-              "html_url": os.environ["RELEASE_URL"],
-              "published_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "assets": [
                   {
                       "name": os.environ["ZIP_NAME"],
