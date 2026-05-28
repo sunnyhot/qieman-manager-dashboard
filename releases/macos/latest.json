@@ -1,25 +1,25 @@
 {
-    "version": "2.6.0",
-    "tag": "v2.6.0",
+    "version": "2.7.0",
+    "tag": "v2.7.0",
     "asset": {
-        "name": "QiemanDashboard-2.6.0.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.6.0/QiemanDashboard-2.6.0.zip",
-        "size": 3126305,
+        "name": "QiemanDashboard-2.7.0.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.0/QiemanDashboard-2.7.0.zip",
+        "size": 3127746,
         "content_type": "application/zip",
-        "sha256": ""
+        "sha256": "983df79a1e08b4cf9fae882081b3abf649660ce7fb477e92f918d842512179a0"
     },
-    "sha256": "",
-    "notes": "## 且慢主理人看板 v2.6.0\n\n- release: v2.6.0 — 整体布局优化与 macOS 特效适配，支持双击窗口最大化\n- fix: remove stray closing brace in toggleMainWindowZoom\n- LUC-206: optimize layout density and responsive adaptation\n- LUC-207: 收敛主窗口布局与设计系统\n- LUC-204: macOS 主窗口标题栏与双击最大化行为补齐\n- feat(LUC-208): adapt macOS material effects and window appearance\n- LUC-209: 完善双击窗口最大化与回归验证\n- LUC-205: 统一 macOS 现代材质与视觉层级设计系统\n- release: update v2.5.6\n- release: v2.5.6 — 修复推送通知后 createMainWindow() 后台线程崩溃\n- LUC-196: 添加 .receive(on: DispatchQueue.main) 修复推送通知 Combine 订阅后台线程崩溃\n- release: update v2.5.5\n- release: update latest feed to v2.5.5\n- release: v2.5.5\n- feat: set activationPolicy in applicationDidFinishLaunching\n- release: update v2.5.4\n- fix: improve light mode contrast\n- release: update v2.5.3\n\n---\n🤖 自动构建 by GitHub Actions",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.6.0",
-    "published_at": "2026-05-22T10:42:15Z",
-    "tag_name": "v2.6.0",
-    "name": "QiemanDashboard v2.6.0",
-    "body": "## 且慢主理人看板 v2.6.0\n\n- release: v2.6.0 — 整体布局优化与 macOS 特效适配，支持双击窗口最大化\n- fix: remove stray closing brace in toggleMainWindowZoom\n- LUC-206: optimize layout density and responsive adaptation\n- LUC-207: 收敛主窗口布局与设计系统\n- LUC-204: macOS 主窗口标题栏与双击最大化行为补齐\n- feat(LUC-208): adapt macOS material effects and window appearance\n- LUC-209: 完善双击窗口最大化与回归验证\n- LUC-205: 统一 macOS 现代材质与视觉层级设计系统\n- release: update v2.5.6\n- release: v2.5.6 — 修复推送通知后 createMainWindow() 后台线程崩溃\n- LUC-196: 添加 .receive(on: DispatchQueue.main) 修复推送通知 Combine 订阅后台线程崩溃\n- release: update v2.5.5\n- release: update latest feed to v2.5.5\n- release: v2.5.5\n- feat: set activationPolicy in applicationDidFinishLaunching\n- release: update v2.5.4\n- fix: improve light mode contrast\n- release: update v2.5.3\n\n---\n🤖 自动构建 by GitHub Actions",
+    "sha256": "983df79a1e08b4cf9fae882081b3abf649660ce7fb477e92f918d842512179a0",
+    "notes": "## 且慢主理人看板 v2.7.0\n\n- release: v2.7.0 — 改用 Release asset latest.json 替代 GitHub REST API 自动更新\n- release: v2.6.1 — 修复顶部标题栏区域双击未放大\n- LUC-244: 修复顶部标题栏区域双击未放大 — AppKit层拦截双击事件\n- LUC-240: migrate update feed to Release asset latest.json with sha256\n- release: update v2.6.0\n- release: v2.6.0 — 整体布局优化与 macOS 特效适配，支持双击窗口最大化\n- fix: remove stray closing brace in toggleMainWindowZoom\n- LUC-206: optimize layout density and responsive adaptation\n- LUC-207: 收敛主窗口布局与设计系统\n- LUC-204: macOS 主窗口标题栏与双击最大化行为补齐\n- feat(LUC-208): adapt macOS material effects and window appearance\n- LUC-209: 完善双击窗口最大化与回归验证\n- LUC-205: 统一 macOS 现代材质与视觉层级设计系统\n- release: update v2.5.6\n- release: v2.5.6 — 修复推送通知后 createMainWindow() 后台线程崩溃\n- LUC-196: 添加 .receive(on: DispatchQueue.main) 修复推送通知 Combine 订阅后台线程崩溃\n- release: update v2.5.5\n- release: update latest feed to v2.5.5\n\n---\n🤖 自动构建 by GitHub Actions",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.0",
+    "published_at": "",
+    "tag_name": "v2.7.0",
+    "name": "QiemanDashboard v2.7.0",
+    "body": "## 且慢主理人看板 v2.7.0\n\n- release: v2.7.0 — 改用 Release asset latest.json 替代 GitHub REST API 自动更新\n- release: v2.6.1 — 修复顶部标题栏区域双击未放大\n- LUC-244: 修复顶部标题栏区域双击未放大 — AppKit层拦截双击事件\n- LUC-240: migrate update feed to Release asset latest.json with sha256\n- release: update v2.6.0\n- release: v2.6.0 — 整体布局优化与 macOS 特效适配，支持双击窗口最大化\n- fix: remove stray closing brace in toggleMainWindowZoom\n- LUC-206: optimize layout density and responsive adaptation\n- LUC-207: 收敛主窗口布局与设计系统\n- LUC-204: macOS 主窗口标题栏与双击最大化行为补齐\n- feat(LUC-208): adapt macOS material effects and window appearance\n- LUC-209: 完善双击窗口最大化与回归验证\n- LUC-205: 统一 macOS 现代材质与视觉层级设计系统\n- release: update v2.5.6\n- release: v2.5.6 — 修复推送通知后 createMainWindow() 后台线程崩溃\n- LUC-196: 添加 .receive(on: DispatchQueue.main) 修复推送通知 Combine 订阅后台线程崩溃\n- release: update v2.5.5\n- release: update latest feed to v2.5.5\n\n---\n🤖 自动构建 by GitHub Actions",
     "assets": [
         {
-            "name": "QiemanDashboard-2.6.0.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.6.0/QiemanDashboard-2.6.0.zip",
-            "size": 3126305,
+            "name": "QiemanDashboard-2.7.0.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.0/QiemanDashboard-2.7.0.zip",
+            "size": 3127746,
             "content_type": "application/zip"
         }
     ]
