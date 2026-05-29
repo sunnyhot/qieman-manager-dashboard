@@ -229,6 +229,61 @@ struct ManagerWatchSettings: Codable, Hashable {
     var lastSuccessAt: String?
     var lastErrorMessage: String?
 
+    enum CodingKeys: String, CodingKey {
+        case isEnabled
+        case intervalMinutes
+        case prodCode
+        case managerName
+        case watchPlatform
+        case watchForum
+        case latestSeenPlatformActionID
+        case latestSeenForumRecordID
+        case lastCheckedAt
+        case lastSuccessAt
+        case lastErrorMessage
+    }
+
+    init(
+        isEnabled: Bool = false,
+        intervalMinutes: Int = 10,
+        prodCode: String = "LONG_WIN",
+        managerName: String = "ETF拯救世界",
+        watchPlatform: Bool = true,
+        watchForum: Bool = true,
+        latestSeenPlatformActionID: String? = nil,
+        latestSeenForumRecordID: String? = nil,
+        lastCheckedAt: String? = nil,
+        lastSuccessAt: String? = nil,
+        lastErrorMessage: String? = nil
+    ) {
+        self.isEnabled = isEnabled
+        self.intervalMinutes = intervalMinutes
+        self.prodCode = prodCode
+        self.managerName = managerName
+        self.watchPlatform = watchPlatform
+        self.watchForum = watchForum
+        self.latestSeenPlatformActionID = latestSeenPlatformActionID
+        self.latestSeenForumRecordID = latestSeenForumRecordID
+        self.lastCheckedAt = lastCheckedAt
+        self.lastSuccessAt = lastSuccessAt
+        self.lastErrorMessage = lastErrorMessage
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? false
+        self.intervalMinutes = try container.decodeIfPresent(Int.self, forKey: .intervalMinutes) ?? 10
+        self.prodCode = try container.decodeIfPresent(String.self, forKey: .prodCode) ?? "LONG_WIN"
+        self.managerName = try container.decodeIfPresent(String.self, forKey: .managerName) ?? "ETF拯救世界"
+        self.watchPlatform = try container.decodeIfPresent(Bool.self, forKey: .watchPlatform) ?? true
+        self.watchForum = try container.decodeIfPresent(Bool.self, forKey: .watchForum) ?? true
+        self.latestSeenPlatformActionID = try container.decodeIfPresent(String.self, forKey: .latestSeenPlatformActionID)
+        self.latestSeenForumRecordID = try container.decodeIfPresent(String.self, forKey: .latestSeenForumRecordID)
+        self.lastCheckedAt = try container.decodeIfPresent(String.self, forKey: .lastCheckedAt)
+        self.lastSuccessAt = try container.decodeIfPresent(String.self, forKey: .lastSuccessAt)
+        self.lastErrorMessage = try container.decodeIfPresent(String.self, forKey: .lastErrorMessage)
+    }
+
     static let `default` = ManagerWatchSettings(
         isEnabled: false,
         intervalMinutes: ManagerWatchIntervalOption.tenMinutes.rawValue,
@@ -1176,6 +1231,37 @@ struct PersonalPendingTrade: Codable, Hashable, Identifiable {
         self.note = note
     }
 
+    enum CodingKeys: String, CodingKey {
+        case id
+        case occurredAt
+        case actionLabel
+        case fundName
+        case targetFundName
+        case fundCode
+        case targetFundCode
+        case amountText
+        case amountValue
+        case unitValue
+        case status
+        case note
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        self.occurredAt = try container.decodeIfPresent(String.self, forKey: .occurredAt) ?? ""
+        self.actionLabel = try container.decodeIfPresent(String.self, forKey: .actionLabel) ?? ""
+        self.fundName = try container.decodeIfPresent(String.self, forKey: .fundName) ?? ""
+        self.targetFundName = try container.decodeIfPresent(String.self, forKey: .targetFundName)
+        self.fundCode = try container.decodeIfPresent(String.self, forKey: .fundCode)
+        self.targetFundCode = try container.decodeIfPresent(String.self, forKey: .targetFundCode)
+        self.amountText = try container.decodeIfPresent(String.self, forKey: .amountText) ?? ""
+        self.amountValue = try container.decodeIfPresent(Double.self, forKey: .amountValue)
+        self.unitValue = try container.decodeIfPresent(Double.self, forKey: .unitValue)
+        self.status = try container.decodeIfPresent(String.self, forKey: .status) ?? ""
+        self.note = try container.decodeIfPresent(String.self, forKey: .note)
+    }
+
     var displayTitle: String {
         if let targetFundName, !targetFundName.isEmpty {
             return "\(fundName) -> \(targetFundName)"
@@ -1252,6 +1338,41 @@ struct PersonalInvestmentPlan: Codable, Hashable, Identifiable {
         self.nextExecutionDate = nextExecutionDate
         self.status = status
         self.note = note
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case planTypeLabel
+        case fundName
+        case fundCode
+        case scheduleText
+        case amountText
+        case minAmount
+        case maxAmount
+        case investedPeriods
+        case cumulativeInvestedAmount
+        case paymentMethod
+        case nextExecutionDate
+        case status
+        case note
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        self.planTypeLabel = try container.decodeIfPresent(String.self, forKey: .planTypeLabel) ?? ""
+        self.fundName = try container.decodeIfPresent(String.self, forKey: .fundName) ?? ""
+        self.fundCode = try container.decodeIfPresent(String.self, forKey: .fundCode)
+        self.scheduleText = try container.decodeIfPresent(String.self, forKey: .scheduleText) ?? ""
+        self.amountText = try container.decodeIfPresent(String.self, forKey: .amountText) ?? ""
+        self.minAmount = try container.decodeIfPresent(Double.self, forKey: .minAmount)
+        self.maxAmount = try container.decodeIfPresent(Double.self, forKey: .maxAmount)
+        self.investedPeriods = try container.decodeIfPresent(Int.self, forKey: .investedPeriods)
+        self.cumulativeInvestedAmount = try container.decodeIfPresent(Double.self, forKey: .cumulativeInvestedAmount)
+        self.paymentMethod = try container.decodeIfPresent(String.self, forKey: .paymentMethod)
+        self.nextExecutionDate = try container.decodeIfPresent(String.self, forKey: .nextExecutionDate) ?? ""
+        self.status = try container.decodeIfPresent(String.self, forKey: .status) ?? "进行中"
+        self.note = try container.decodeIfPresent(String.self, forKey: .note)
     }
 
     var isSmartPlan: Bool {
