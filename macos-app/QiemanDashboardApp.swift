@@ -446,16 +446,11 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         let contentRectForContentRect = win.contentRect(forFrameRect: win.frame)
         let titlebarHeight = win.frame.height - contentRectForContentRect.height
 
-        // The titlebar area in window-local coordinates is the top region above
-        // where the content rect would start (if it didn't extend into the titlebar).
-        // In window-local coords (origin = bottom-left), the titlebar is:
-        //   y >= contentFrame.height (which is the full window height with fullSizeContentView)
-        // But since fullSizeContentView makes contentFrame == window frame, we need
-        // to check if the click is in the top `titlebarHeight` points.
-        let titlebarBottomInWindowCoords = contentFrame.height - titlebarHeight
-
-        // If the click is in the titlebar region (top area), trigger zoom
-        if clickPoint.y >= titlebarBottomInWindowCoords {
+        if MainWindowZoomPolicy.isInDoubleClickZoomBand(
+            clickY: clickPoint.y,
+            contentHeight: contentFrame.height,
+            nativeTitlebarHeight: titlebarHeight
+        ) {
             win.performZoom(nil)
             // Swallow the event so it doesn't propagate further
             return NSEvent()  // dummy event — effectively swallowed

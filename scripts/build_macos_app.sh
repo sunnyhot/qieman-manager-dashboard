@@ -165,7 +165,7 @@ if ! unzip -t "$ZIP_FILE" > /dev/null 2>&1; then
 fi
 
 # 5. Zip 内必须包含 App bundle
-if ! unzip -l "$ZIP_FILE" | grep -q "${APP_NAME}.app/"; then
+if ! zipinfo -1 "$ZIP_FILE" | awk -v app="${APP_NAME}.app/" '$0 == app || index($0, app) == 1 { found = 1 } END { exit found ? 0 : 1 }'; then
   echo "❌ 验证失败: Zip 内未找到 ${APP_NAME}.app"
   exit 1
 fi
