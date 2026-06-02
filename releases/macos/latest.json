@@ -1,25 +1,25 @@
 {
-    "version": "2.7.1",
-    "tag": "v2.7.1",
+    "version": "2.7.2",
+    "tag": "v2.7.2",
     "asset": {
-        "name": "QiemanDashboard-2.7.1.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.1/QiemanDashboard-2.7.1.zip",
-        "size": 3127531,
+        "name": "QiemanDashboard-2.7.2.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.2/QiemanDashboard-2.7.2.zip",
+        "size": 3127833,
         "content_type": "application/zip",
-        "sha256": "1880f2cba04d3d11944fea347cdfb6dc7c0debe94b2c03d89f481e18fad79257"
+        "sha256": "5c95682faabd0792ab388000587f56c36df1151530c977a69bda6deda785c456"
     },
-    "sha256": "1880f2cba04d3d11944fea347cdfb6dc7c0debe94b2c03d89f481e18fad79257",
-    "notes": "## 且慢主理人看板 v2.7.1\n\n- LUC-254: Add backward-compatible init(from decoder:) to three Codable models\n- release: update v2.7.0\n- release: v2.7.0 — 改用 Release asset latest.json 替代 GitHub REST API 自动更新\n- LUC-240: migrate update feed to Release asset latest.json with sha256\n- release: update v2.6.1\n- release: v2.6.1 — 修复顶部标题栏区域双击未放大\n- LUC-244: 修复顶部标题栏区域双击未放大 — AppKit层拦截双击事件\n- release: update v2.6.0\n- release: v2.6.0 — 整体布局优化与 macOS 特效适配，支持双击窗口最大化\n- fix: remove stray closing brace in toggleMainWindowZoom\n- LUC-206: optimize layout density and responsive adaptation\n- LUC-207: 收敛主窗口布局与设计系统\n- LUC-204: macOS 主窗口标题栏与双击最大化行为补齐\n- feat(LUC-208): adapt macOS material effects and window appearance\n- LUC-209: 完善双击窗口最大化与回归验证\n- LUC-205: 统一 macOS 现代材质与视觉层级设计系统\n- release: update v2.5.6\n\n---\n🤖 自动构建 by GitHub Actions",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.1",
+    "sha256": "5c95682faabd0792ab388000587f56c36df1151530c977a69bda6deda785c456",
+    "notes": "## 且慢主理人看板 v2.7.2\n\n- fix: expand titlebar zoom hit area\n- release: update v2.7.1\n- LUC-254: Add backward-compatible init(from decoder:) to three Codable models\n- release: update v2.7.0\n- release: v2.7.0 — 改用 Release asset latest.json 替代 GitHub REST API 自动更新\n- LUC-240: migrate update feed to Release asset latest.json with sha256\n- release: update v2.6.1\n- release: v2.6.1 — 修复顶部标题栏区域双击未放大\n- LUC-244: 修复顶部标题栏区域双击未放大 — AppKit层拦截双击事件\n- release: update v2.6.0\n\n---\n🤖 自动构建 by GitHub Actions",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.2",
     "published_at": "",
-    "tag_name": "v2.7.1",
-    "name": "QiemanDashboard v2.7.1",
-    "body": "## 且慢主理人看板 v2.7.1\n\n- LUC-254: Add backward-compatible init(from decoder:) to three Codable models\n- release: update v2.7.0\n- release: v2.7.0 — 改用 Release asset latest.json 替代 GitHub REST API 自动更新\n- LUC-240: migrate update feed to Release asset latest.json with sha256\n- release: update v2.6.1\n- release: v2.6.1 — 修复顶部标题栏区域双击未放大\n- LUC-244: 修复顶部标题栏区域双击未放大 — AppKit层拦截双击事件\n- release: update v2.6.0\n- release: v2.6.0 — 整体布局优化与 macOS 特效适配，支持双击窗口最大化\n- fix: remove stray closing brace in toggleMainWindowZoom\n- LUC-206: optimize layout density and responsive adaptation\n- LUC-207: 收敛主窗口布局与设计系统\n- LUC-204: macOS 主窗口标题栏与双击最大化行为补齐\n- feat(LUC-208): adapt macOS material effects and window appearance\n- LUC-209: 完善双击窗口最大化与回归验证\n- LUC-205: 统一 macOS 现代材质与视觉层级设计系统\n- release: update v2.5.6\n\n---\n🤖 自动构建 by GitHub Actions",
+    "tag_name": "v2.7.2",
+    "name": "QiemanDashboard v2.7.2",
+    "body": "## 且慢主理人看板 v2.7.2\n\n- fix: expand titlebar zoom hit area\n- release: update v2.7.1\n- LUC-254: Add backward-compatible init(from decoder:) to three Codable models\n- release: update v2.7.0\n- release: v2.7.0 — 改用 Release asset latest.json 替代 GitHub REST API 自动更新\n- LUC-240: migrate update feed to Release asset latest.json with sha256\n- release: update v2.6.1\n- release: v2.6.1 — 修复顶部标题栏区域双击未放大\n- LUC-244: 修复顶部标题栏区域双击未放大 — AppKit层拦截双击事件\n- release: update v2.6.0\n\n---\n🤖 自动构建 by GitHub Actions",
     "assets": [
         {
-            "name": "QiemanDashboard-2.7.1.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.1/QiemanDashboard-2.7.1.zip",
-            "size": 3127531,
+            "name": "QiemanDashboard-2.7.2.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.2/QiemanDashboard-2.7.2.zip",
+            "size": 3127833,
             "content_type": "application/zip"
         }
     ]
