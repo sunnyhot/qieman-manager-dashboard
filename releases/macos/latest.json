@@ -1,25 +1,25 @@
 {
-    "version": "2.7.3",
-    "tag": "v2.7.3",
+    "version": "2.7.4",
+    "tag": "v2.7.4",
     "asset": {
-        "name": "QiemanDashboard-2.7.3.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.3/QiemanDashboard-2.7.3.zip",
-        "size": 3130346,
+        "name": "QiemanDashboard-2.7.4.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.4/QiemanDashboard-2.7.4.zip",
+        "size": 3133642,
         "content_type": "application/zip",
-        "sha256": "3bf0c0d1f709052376ec925392d3916a7a81bf0a70cc3daa47c3ea80b019ab35"
+        "sha256": "54231871499915e8cda13dd3832ead9de9607ffe0bf7faee290ca1f99d2afa3b"
     },
-    "sha256": "3bf0c0d1f709052376ec925392d3916a7a81bf0a70cc3daa47c3ea80b019ab35",
-    "notes": "## 且慢主理人看板 v2.7.3\n\n- fix: include release notes in update manifest\n\n---\n🤖 自动构建 by GitHub Actions",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.3",
+    "sha256": "54231871499915e8cda13dd3832ead9de9607ffe0bf7faee290ca1f99d2afa3b",
+    "notes": "## 且慢主理人看板 v2.7.4\n\n- 优化升级弹窗，仅展示本次更新内容\n\n---\n🤖 自动构建 by GitHub Actions",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.4",
     "published_at": "",
-    "tag_name": "v2.7.3",
-    "name": "QiemanDashboard v2.7.3",
-    "body": "## 且慢主理人看板 v2.7.3\n\n- fix: include release notes in update manifest\n\n---\n🤖 自动构建 by GitHub Actions",
+    "tag_name": "v2.7.4",
+    "name": "QiemanDashboard v2.7.4",
+    "body": "## 且慢主理人看板 v2.7.4\n\n- 优化升级弹窗，仅展示本次更新内容\n\n---\n🤖 自动构建 by GitHub Actions",
     "assets": [
         {
-            "name": "QiemanDashboard-2.7.3.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.3/QiemanDashboard-2.7.3.zip",
-            "size": 3130346,
+            "name": "QiemanDashboard-2.7.4.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.4/QiemanDashboard-2.7.4.zip",
+            "size": 3133642,
             "content_type": "application/zip"
         }
     ]
