@@ -1,25 +1,25 @@
 {
-    "version": "2.7.4",
-    "tag": "v2.7.4",
+    "version": "2.7.6",
+    "tag": "v2.7.6",
     "asset": {
-        "name": "QiemanDashboard-2.7.4.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.4/QiemanDashboard-2.7.4.zip",
-        "size": 3133642,
+        "name": "QiemanDashboard-2.7.6.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.6/QiemanDashboard-2.7.6.zip",
+        "size": 3133641,
         "content_type": "application/zip",
-        "sha256": "54231871499915e8cda13dd3832ead9de9607ffe0bf7faee290ca1f99d2afa3b"
+        "sha256": "71e33c9506d7b0f9dafa861aac01305e17db44bdf60e813753748392c895a626"
     },
-    "sha256": "54231871499915e8cda13dd3832ead9de9607ffe0bf7faee290ca1f99d2afa3b",
-    "notes": "优化升级弹窗，仅展示本次更新内容",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.4",
+    "sha256": "71e33c9506d7b0f9dafa861aac01305e17db44bdf60e813753748392c895a626",
+    "notes": "修复发布工作流 env 配置\n过滤内部更新清单同步提交",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.6",
     "published_at": "",
-    "tag_name": "v2.7.4",
-    "name": "QiemanDashboard v2.7.4",
-    "body": "优化升级弹窗，仅展示本次更新内容",
+    "tag_name": "v2.7.6",
+    "name": "QiemanDashboard v2.7.6",
+    "body": "修复发布工作流 env 配置\n过滤内部更新清单同步提交",
     "assets": [
         {
-            "name": "QiemanDashboard-2.7.4.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.4/QiemanDashboard-2.7.4.zip",
-            "size": 3133642,
+            "name": "QiemanDashboard-2.7.6.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.6/QiemanDashboard-2.7.6.zip",
+            "size": 3133641,
             "content_type": "application/zip"
         }
     ]
