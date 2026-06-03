@@ -41,21 +41,53 @@ jobs:
           PREV_TAG=$(git tag --sort=-v:refname | awk -v tag="$TAG" '$0 != tag { print; exit }')
 
           if [ -n "$PREV_TAG" ]; then
-            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s" --no-merges --invert-grep --grep='^release: update ')
+            RAW_COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"%s" --no-merges --invert-grep --grep='^release: update ')
           else
-            COMMITS=$(git log -10 --pretty=format:"- %s" --no-merges --invert-grep --grep='^release: update ')
+            RAW_COMMITS=$(git log -10 --pretty=format:"%s" --no-merges --invert-grep --grep='^release: update ')
           fi
 
-          if [ -z "$COMMITS" ]; then
-            COMMITS="- 本次发布仅更新构建资产"
+          export RAW_COMMITS
+          NOTES=$(python3 - <<'PY'
+          import os
+          import re
+
+          localized = {
+              "include release notes in update manifest": "升级弹窗现在会显示本次更新内容。",
+              "format update release notes for display": "优化升级弹窗展示，只显示本次版本更新内容。",
+              "expand titlebar zoom hit area": "扩大顶部标题栏双击放大的响应区域。",
+          }
+
+          items = []
+          for raw in os.environ.get("RAW_COMMITS", "").splitlines():
+              text = raw.strip()
+              if not text:
+                  continue
+              text = re.sub(r"^(feat|fix|chore|docs|style|refactor|perf|test)(\([^)]+\))?:\s*", "", text, flags=re.I).strip()
+              text = localized.get(text.lower(), text)
+              if text and text not in items:
+                  items.append(text)
+
+          print("\n".join(items))
+          PY
+          )
+
+          if [ -z "$NOTES" ]; then
+            NOTES="本次发布仅更新构建资产。"
           fi
 
           # 写入多行 output
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "app_notes<<$EOF" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "$EOF" >> "$GITHUB_OUTPUT"
+
+          BULLETS=$(printf '%s\n' "$NOTES" | sed 's/^/- /')
+
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           echo "body<<$EOF" >> "$GITHUB_OUTPUT"
           echo "## 且慢主理人看板 ${{ steps.version.outputs.tag }}" >> "$GITHUB_OUTPUT"
           echo "" >> "$GITHUB_OUTPUT"
-          echo "$COMMITS" >> "$GITHUB_OUTPUT"
+          echo "$BULLETS" >> "$GITHUB_OUTPUT"
           echo "" >> "$GITHUB_OUTPUT"
           echo "---" >> "$GITHUB_OUTPUT"
           echo "🤖 自动构建 by GitHub Actions" >> "$GITHUB_OUTPUT"
@@ -64,7 +96,7 @@ jobs:
       - name: Compute sha256 and generate latest.json
         id: manifest
         env:
-          BODY: ${{ steps.notes.outputs.body }}
+          BODY: ${{ steps.notes.outputs.app_notes }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG="${{ steps.version.outputs.tag }}"

@@ -498,9 +498,9 @@ private struct AppUpdateSheet: View {
     let onReleasePage: () -> Void
     let onDismiss: () -> Void
 
-    private var releaseNotesPreview: String {
-        let trimmed = release.notes.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "这个版本没有填写更新说明。" : trimmed
+    private var releaseNoteItems: [String] {
+        let items = AppUpdateReleaseNotesFormatter.items(from: release.notes)
+        return items.isEmpty ? ["这个版本没有填写更新说明。"] : items
     }
 
     private var publishedText: String? {
@@ -555,16 +555,25 @@ private struct AppUpdateSheet: View {
 
                 VStack(alignment: .leading, spacing: AppPalette.spaceS) {
                     Text("本次更新")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(AppPalette.muted)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
 
                     ScrollView {
-                        Text(releaseNotesPreview)
-                            .font(.system(size: 13))
-                            .foregroundStyle(AppPalette.ink)
-                            .lineSpacing(AppPalette.spaceXS)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        VStack(alignment: .leading, spacing: AppPalette.spaceS) {
+                            ForEach(Array(releaseNoteItems.enumerated()), id: \.offset) { _, item in
+                                HStack(alignment: .firstTextBaseline, spacing: AppPalette.spaceS) {
+                                    Text("•")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(AppPalette.muted)
+                                    Text(item)
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(AppPalette.ink)
+                                        .lineSpacing(AppPalette.spaceXS)
+                                        .textSelection(.enabled)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(maxHeight: 180)
                 }
