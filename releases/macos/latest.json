@@ -9,12 +9,12 @@
         "sha256": "71e33c9506d7b0f9dafa861aac01305e17db44bdf60e813753748392c895a626"
     },
     "sha256": "71e33c9506d7b0f9dafa861aac01305e17db44bdf60e813753748392c895a626",
-    "notes": "修复发布工作流 env 配置\n过滤内部更新清单同步提交",
+    "notes": "优化升级发布流程，确保更新包正常上线。",
     "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.6",
     "published_at": "",
     "tag_name": "v2.7.6",
     "name": "QiemanDashboard v2.7.6",
-    "body": "修复发布工作流 env 配置\n过滤内部更新清单同步提交",
+    "body": "优化升级发布流程，确保更新包正常上线。",
     "assets": [
         {
             "name": "QiemanDashboard-2.7.6.zip",
