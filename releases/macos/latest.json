@@ -1,25 +1,25 @@
 {
-    "version": "2.7.2",
-    "tag": "v2.7.2",
+    "version": "2.7.3",
+    "tag": "v2.7.3",
     "asset": {
-        "name": "QiemanDashboard-2.7.2.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.2/QiemanDashboard-2.7.2.zip",
-        "size": 3127833,
+        "name": "QiemanDashboard-2.7.3.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.3/QiemanDashboard-2.7.3.zip",
+        "size": 3130346,
         "content_type": "application/zip",
-        "sha256": "5c95682faabd0792ab388000587f56c36df1151530c977a69bda6deda785c456"
+        "sha256": "3bf0c0d1f709052376ec925392d3916a7a81bf0a70cc3daa47c3ea80b019ab35"
     },
-    "sha256": "5c95682faabd0792ab388000587f56c36df1151530c977a69bda6deda785c456",
-    "notes": "## 且慢主理人看板 v2.7.2\n\n- fix: expand titlebar zoom hit area\n- release: update v2.7.1\n- LUC-254: Add backward-compatible init(from decoder:) to three Codable models\n- release: update v2.7.0\n- release: v2.7.0 — 改用 Release asset latest.json 替代 GitHub REST API 自动更新\n- LUC-240: migrate update feed to Release asset latest.json with sha256\n- release: update v2.6.1\n- release: v2.6.1 — 修复顶部标题栏区域双击未放大\n- LUC-244: 修复顶部标题栏区域双击未放大 — AppKit层拦截双击事件\n- release: update v2.6.0\n\n---\n🤖 自动构建 by GitHub Actions",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.2",
+    "sha256": "3bf0c0d1f709052376ec925392d3916a7a81bf0a70cc3daa47c3ea80b019ab35",
+    "notes": "## 且慢主理人看板 v2.7.3\n\n- fix: include release notes in update manifest\n\n---\n🤖 自动构建 by GitHub Actions",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.3",
     "published_at": "",
-    "tag_name": "v2.7.2",
-    "name": "QiemanDashboard v2.7.2",
-    "body": "## 且慢主理人看板 v2.7.2\n\n- fix: expand titlebar zoom hit area\n- release: update v2.7.1\n- LUC-254: Add backward-compatible init(from decoder:) to three Codable models\n- release: update v2.7.0\n- release: v2.7.0 — 改用 Release asset latest.json 替代 GitHub REST API 自动更新\n- LUC-240: migrate update feed to Release asset latest.json with sha256\n- release: update v2.6.1\n- release: v2.6.1 — 修复顶部标题栏区域双击未放大\n- LUC-244: 修复顶部标题栏区域双击未放大 — AppKit层拦截双击事件\n- release: update v2.6.0\n\n---\n🤖 自动构建 by GitHub Actions",
+    "tag_name": "v2.7.3",
+    "name": "QiemanDashboard v2.7.3",
+    "body": "## 且慢主理人看板 v2.7.3\n\n- fix: include release notes in update manifest\n\n---\n🤖 自动构建 by GitHub Actions",
     "assets": [
         {
-            "name": "QiemanDashboard-2.7.2.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.2/QiemanDashboard-2.7.2.zip",
-            "size": 3127833,
+            "name": "QiemanDashboard-2.7.3.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.3/QiemanDashboard-2.7.3.zip",
+            "size": 3130346,
             "content_type": "application/zip"
         }
     ]
