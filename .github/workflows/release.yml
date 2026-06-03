@@ -56,6 +56,9 @@ jobs:
               "format update release notes for display": "优化升级弹窗展示，只显示本次版本更新内容。",
               "expand titlebar zoom hit area": "扩大顶部标题栏双击放大的响应区域。",
           }
+          hidden = {
+              "align checked-in update notes",
+          }
 
           items = []
           for raw in os.environ.get("RAW_COMMITS", "").splitlines():
@@ -63,6 +66,8 @@ jobs:
               if not text:
                   continue
               text = re.sub(r"^(feat|fix|chore|docs|style|refactor|perf|test)(\([^)]+\))?:\s*", "", text, flags=re.I).strip()
+              if text.lower() in hidden:
+                  continue
               text = localized.get(text.lower(), text)
               if text and text not in items:
                   items.append(text)
