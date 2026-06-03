@@ -9,12 +9,12 @@
         "sha256": "54231871499915e8cda13dd3832ead9de9607ffe0bf7faee290ca1f99d2afa3b"
     },
     "sha256": "54231871499915e8cda13dd3832ead9de9607ffe0bf7faee290ca1f99d2afa3b",
-    "notes": "## 且慢主理人看板 v2.7.4\n\n- 优化升级弹窗，仅展示本次更新内容\n\n---\n🤖 自动构建 by GitHub Actions",
+    "notes": "优化升级弹窗，仅展示本次更新内容",
     "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.4",
     "published_at": "",
     "tag_name": "v2.7.4",
     "name": "QiemanDashboard v2.7.4",
-    "body": "## 且慢主理人看板 v2.7.4\n\n- 优化升级弹窗，仅展示本次更新内容\n\n---\n🤖 自动构建 by GitHub Actions",
+    "body": "优化升级弹窗，仅展示本次更新内容",
     "assets": [
         {
             "name": "QiemanDashboard-2.7.4.zip",

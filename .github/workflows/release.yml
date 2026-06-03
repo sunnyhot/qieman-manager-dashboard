@@ -156,6 +156,8 @@ jobs:
             /tmp/latest.json
 
       - name: Update latest.json on main branch
+        env:
+          BODY: ${{ steps.notes.outputs.app_notes }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG="${{ steps.version.outputs.tag }}"
@@ -168,8 +170,6 @@ jobs:
 
           git fetch origin main
           git switch -C main origin/main
-
-          BODY=$(gh release view "${TAG}" --json body -q '.body')
 
           export TAG VERSION ZIP_NAME ZIP_SIZE SHA256 DOWNLOAD_URL RELEASE_URL BODY
           python3 - <<'PY'
