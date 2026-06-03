@@ -139,6 +139,22 @@ final class AppUpdateCheckerTests: XCTestCase {
             "Default feed URL should NOT use raw.githubusercontent.com, got: \(url)"
         )
     }
+
+    // MARK: - Release Notes
+
+    func testReleaseNotesFallsBackToManifestNotesWhenBodyIsEmpty() {
+        XCTAssertEqual(
+            AppUpdateChecker.releaseNotes(body: "", notes: "本次更新：展示升级内容"),
+            "本次更新：展示升级内容"
+        )
+    }
+
+    func testReleaseNotesPrefersBodyWhenBothFieldsExist() {
+        XCTAssertEqual(
+            AppUpdateChecker.releaseNotes(body: "GitHub Release 正文", notes: "清单 notes"),
+            "GitHub Release 正文"
+        )
+    }
 }
 
 // Mirror of the private GitHubReleasePayload for testing decode logic

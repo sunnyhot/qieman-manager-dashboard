@@ -58,6 +58,7 @@ struct AppUpdateChecker {
         let tagName: String
         let name: String?
         let body: String?
+        let notes: String?
         let htmlURL: URL
         let publishedAt: Date?
         let assets: [GitHubAssetPayload]
@@ -67,6 +68,7 @@ struct AppUpdateChecker {
             case tagName = "tag_name"
             case name
             case body
+            case notes
             case htmlURL = "html_url"
             case publishedAt = "published_at"
             case assets
@@ -135,7 +137,7 @@ struct AppUpdateChecker {
             tagName: payload.tagName,
             version: releaseVersion,
             title: payload.name ?? "",
-            notes: payload.body ?? "",
+            notes: Self.releaseNotes(body: payload.body, notes: payload.notes),
             htmlURL: payload.htmlURL,
             publishedAt: payload.publishedAt,
             asset: Self.preferredAsset(from: payload.assets),
@@ -185,6 +187,10 @@ struct AppUpdateChecker {
             if left < right { return .orderedAscending }
         }
         return .orderedSame
+    }
+
+    static func releaseNotes(body: String?, notes: String?) -> String {
+        nonEmpty(body) ?? nonEmpty(notes) ?? ""
     }
 
     private static func preferredAsset(from assets: [GitHubAssetPayload]) -> AppUpdateAsset? {

@@ -553,14 +553,24 @@ private struct AppUpdateSheet: View {
                     }
                 }
 
-                Text(releaseNotesPreview)
-                    .font(.system(size: 13))
-                    .foregroundStyle(AppPalette.ink)
-                    .lineSpacing(AppPalette.spaceXS)
-                    .lineLimit(8)
-                    .padding(AppPalette.spaceM)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                VStack(alignment: .leading, spacing: AppPalette.spaceS) {
+                    Text("本次更新")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.muted)
+
+                    ScrollView {
+                        Text(releaseNotesPreview)
+                            .font(.system(size: 13))
+                            .foregroundStyle(AppPalette.ink)
+                            .lineSpacing(AppPalette.spaceXS)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 180)
+                }
+                .padding(AppPalette.spaceM)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
 
                 if isInstalling {
                     VStack(alignment: .leading, spacing: AppPalette.spaceS) {

@@ -33,8 +33,38 @@ jobs:
         run: |
           bash scripts/build_macos_app.sh
 
+      - name: Generate release notes
+        id: notes
+        run: |
+          # 提取上一个 tag 到当前 tag 之间的 commit log
+          TAG="${{ steps.version.outputs.tag }}"
+          PREV_TAG=$(git tag --sort=-v:refname | awk -v tag="$TAG" '$0 != tag { print; exit }')
+
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s" --no-merges --invert-grep --grep='^release: update ')
+          else
+            COMMITS=$(git log -10 --pretty=format:"- %s" --no-merges --invert-grep --grep='^release: update ')
+          fi
+
+          if [ -z "$COMMITS" ]; then
+            COMMITS="- 本次发布仅更新构建资产"
+          fi
+
+          # 写入多行 output
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "body<<$EOF" >> "$GITHUB_OUTPUT"
+          echo "## 且慢主理人看板 ${{ steps.version.outputs.tag }}" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "$COMMITS" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "---" >> "$GITHUB_OUTPUT"
+          echo "🤖 自动构建 by GitHub Actions" >> "$GITHUB_OUTPUT"
+          echo "$EOF" >> "$GITHUB_OUTPUT"
+
       - name: Compute sha256 and generate latest.json
         id: manifest
+        env:
+          BODY: ${{ steps.notes.outputs.body }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG="${{ steps.version.outputs.tag }}"
@@ -45,7 +75,7 @@ jobs:
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${ZIP_NAME}"
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${TAG}"
 
-          export TAG VERSION ZIP_NAME ZIP_SIZE SHA256 DOWNLOAD_URL RELEASE_URL
+          export TAG VERSION ZIP_NAME ZIP_SIZE SHA256 DOWNLOAD_URL RELEASE_URL BODY
           python3 - <<'PY'
           import json, os
           from datetime import datetime, timezone
@@ -60,13 +90,13 @@ jobs:
                   "sha256": os.environ["SHA256"],
               },
               "sha256": os.environ["SHA256"],
-              "notes": "",
+              "notes": os.environ["BODY"],
               "html_url": os.environ["RELEASE_URL"],
               "published_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               # Backward-compatible fields for existing AppUpdateChecker
               "tag_name": os.environ["TAG"],
               "name": f"QiemanDashboard {os.environ['TAG']}",
-              "body": "",
+              "body": os.environ["BODY"],
               "assets": [
                   {
                       "name": os.environ["ZIP_NAME"],
@@ -82,32 +112,6 @@ jobs:
           PY
 
           echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
-
-      - name: Generate release notes
-        id: notes
-        run: |
-          # 提取上一个 tag 到当前 tag 之间的 commit log
-          PREV_TAG=$(git tag --sort=-v:refname | head -5 | tail -1)
-          if [ "$PREV_TAG" = "${{ steps.version.outputs.tag }}" ]; then
-            PREV_TAG=""
-          fi
-
-          if [ -n "$PREV_TAG" ]; then
-            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s" --no-merges)
-          else
-            COMMITS=$(git log -10 --pretty=format:"- %s" --no-merges)
-          fi
-
-          # 写入多行 output
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "body<<$EOF" >> "$GITHUB_OUTPUT"
-          echo "## 且慢主理人看板 ${{ steps.version.outputs.tag }}" >> "$GITHUB_OUTPUT"
-          echo "" >> "$GITHUB_OUTPUT"
-          echo "$COMMITS" >> "$GITHUB_OUTPUT"
-          echo "" >> "$GITHUB_OUTPUT"
-          echo "---" >> "$GITHUB_OUTPUT"
-          echo "🤖 自动构建 by GitHub Actions" >> "$GITHUB_OUTPUT"
-          echo "$EOF" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
