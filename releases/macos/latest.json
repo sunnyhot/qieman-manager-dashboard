@@ -1,24 +1,24 @@
 {
-    "version": "2.7.6",
-    "tag": "v2.7.6",
+    "version": "2.7.7",
+    "tag": "v2.7.7",
     "asset": {
-        "name": "QiemanDashboard-2.7.6.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.6/QiemanDashboard-2.7.6.zip",
+        "name": "QiemanDashboard-2.7.7.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.7/QiemanDashboard-2.7.7.zip",
         "size": 3133641,
         "content_type": "application/zip",
-        "sha256": "71e33c9506d7b0f9dafa861aac01305e17db44bdf60e813753748392c895a626"
+        "sha256": "4cbd13bb3a999ce4dddb36ab172c4c158c383b8de9554fab3a0749f32529961e"
     },
-    "sha256": "71e33c9506d7b0f9dafa861aac01305e17db44bdf60e813753748392c895a626",
-    "notes": "优化升级发布流程，确保更新包正常上线。",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.6",
+    "sha256": "4cbd13bb3a999ce4dddb36ab172c4c158c383b8de9554fab3a0749f32529961e",
+    "notes": "本次发布仅更新构建资产。",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.7",
     "published_at": "",
-    "tag_name": "v2.7.6",
-    "name": "QiemanDashboard v2.7.6",
-    "body": "优化升级发布流程，确保更新包正常上线。",
+    "tag_name": "v2.7.7",
+    "name": "QiemanDashboard v2.7.7",
+    "body": "本次发布仅更新构建资产。",
     "assets": [
         {
-            "name": "QiemanDashboard-2.7.6.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.6/QiemanDashboard-2.7.6.zip",
+            "name": "QiemanDashboard-2.7.7.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.7/QiemanDashboard-2.7.7.zip",
             "size": 3133641,
             "content_type": "application/zip"
         }
