@@ -11,7 +11,11 @@ struct PersonalAssetTableRow: View {
     var priceWidth: CGFloat = 120
     var fifthWidth: CGFloat = 150
     var sixthWidth: CGFloat = 190
-    var actionWidth: CGFloat = 52
+    var actionWidth: CGFloat = 128
+    var isSelectedForComparison = false
+    var isComparisonToggleDisabled = false
+    var onToggleComparison: (() -> Void)?
+    var onOpenDetail: (() -> Void)?
 
     @State private var pendingDeleteScope: PersonalAssetDeleteScope?
     @State private var pendingUnitAdjustmentMode: PersonalAssetUnitAdjustmentMode?
@@ -206,6 +210,32 @@ struct PersonalAssetTableRow: View {
 
             HStack {
                 Spacer()
+                Button {
+                    onToggleComparison?()
+                } label: {
+                    Image(systemName: isSelectedForComparison ? "checkmark.square.fill" : "square.grid.2x2")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(isSelectedForComparison ? AppPalette.onBrand : AppPalette.brand)
+                        .frame(width: 28, height: 28)
+                        .background(isSelectedForComparison ? AppPalette.brand : AppPalette.brand.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                }
+                .buttonStyle(PressResponsiveButtonStyle())
+                .disabled(isComparisonToggleDisabled)
+                .opacity(isComparisonToggleDisabled ? 0.42 : 1)
+                .help(isSelectedForComparison ? "移出对比" : "加入对比")
+
+                Button {
+                    onOpenDetail?()
+                } label: {
+                    Image(systemName: "sidebar.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.info)
+                        .frame(width: 28, height: 28)
+                        .background(AppPalette.info.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                }
+                .buttonStyle(PressResponsiveButtonStyle())
+                .help("查看详情")
+
                 if hasRowActions {
                     actionMenu
                 }

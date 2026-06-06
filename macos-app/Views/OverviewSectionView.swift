@@ -65,6 +65,13 @@ struct OverviewSectionView: View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
                 OverviewHeroCard()
+                TodayBriefPanel(items: model.todayBriefItems, action: openBrief)
+                DashboardInsightPanel(
+                    managerSummary: model.managerActivitySummary,
+                    freshnessSummary: model.dashboardFreshnessSummary,
+                    managerAction: openManagerActivity,
+                    freshnessAction: openFreshness
+                )
 
                 ViewThatFits {
                     LazyVGrid(columns: overviewMetricWideColumns, spacing: 12) {
@@ -177,6 +184,61 @@ struct OverviewSectionView: View {
     private func openPortfolio() {
         withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
             model.selectedSection = .portfolio
+        }
+    }
+
+    private func openBrief(_ item: TodayBriefItem) {
+        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            switch item.destination {
+            case .portfolio:
+                model.selectedSection = .portfolio
+            case .platform:
+                if let action = model.latestPlatformActions.first {
+                    model.selectPlatformAction(action.id)
+                }
+                model.selectedSection = .platform
+            case .forum:
+                if let record = model.forumRecords.first {
+                    model.selectedPostID = record.id
+                }
+                model.selectedSection = .forum
+            case .settings:
+                model.selectedSection = .settings
+            }
+        }
+    }
+
+    private func openManagerActivity(_ item: ManagerActivityItem) {
+        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            switch item.kind {
+            case .platformAction:
+                if let action = model.latestPlatformActions.first {
+                    model.selectPlatformAction(action.id)
+                }
+                model.selectedSection = .platform
+            case .forumRecord:
+                if let record = model.forumRecords.first {
+                    model.selectedPostID = record.id
+                }
+                model.selectedSection = .forum
+            case .watchStatus:
+                model.selectedSection = .settings
+            }
+        }
+    }
+
+    private func openFreshness(_ item: DashboardFreshnessItem) {
+        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            switch item.kind {
+            case .portfolio:
+                model.selectedSection = .portfolio
+            case .platform:
+                model.selectedSection = .platform
+            case .forum:
+                model.selectedSection = .forum
+            case .auth, .managerWatch, .system:
+                model.selectedSection = .settings
+            }
         }
     }
 
@@ -372,6 +434,384 @@ struct OverviewSectionView: View {
     }
 }
 
+private extension TodayBriefTone {
+    var overviewTint: Color {
+        switch self {
+        case .brand:
+            return AppPalette.brand
+        case .info:
+            return AppPalette.info
+        case .warning:
+            return AppPalette.warning
+        case .danger:
+            return AppPalette.danger
+        case .positive:
+            return AppPalette.positive
+        case .muted:
+            return AppPalette.muted
+        case .marketGain:
+            return AppPalette.marketGain
+        case .marketLoss:
+            return AppPalette.marketLoss
+        }
+    }
+}
+
+struct TodayBriefPanel: View {
+    let items: [TodayBriefItem]
+    let action: (TodayBriefItem) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.brand)
+                    .accentIconStyle(tint: AppPalette.brand, size: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("今日看点")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text("优先级看板")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                ToolbarBadge(title: items.isEmpty ? "暂无" : "\(items.count) 项", tint: items.isEmpty ? AppPalette.muted : AppPalette.brand)
+            }
+
+            if items.isEmpty {
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(AppPalette.positive)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("今天暂无需要处理的事项")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(AppPalette.ink)
+                        Text("持仓、计划和主理人动态刷新后会自动出现在这里")
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppPalette.muted)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
+                .padding(12)
+                .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                .cardStroke(opacity: 0.28)
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 10)], spacing: 10) {
+                    ForEach(items) { item in
+                        TodayBriefItemButton(item: item) {
+                            action(item)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .panelStroke()
+        .sectionShadow()
+    }
+}
+
+struct TodayBriefItemButton: View {
+    let item: TodayBriefItem
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: item.iconName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(item.tone.overviewTint)
+                    .frame(width: 32, height: 32)
+                    .background(item.tone.overviewTint.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                            .stroke(item.tone.overviewTint.opacity(0.18), lineWidth: 1)
+                    )
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(item.title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                    Text(item.detail)
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(item.metric)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(item.tone.overviewTint)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.68)
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                .frame(minWidth: 54, alignment: .trailing)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+            .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                    .stroke(item.tone.overviewTint.opacity(0.18), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
+        .help(item.title)
+    }
+}
+
+private extension DashboardInsightTone {
+    var overviewTint: Color {
+        switch self {
+        case .brand:
+            return AppPalette.brand
+        case .info:
+            return AppPalette.info
+        case .warning:
+            return AppPalette.warning
+        case .error:
+            return AppPalette.danger
+        case .positive:
+            return AppPalette.positive
+        case .muted:
+            return AppPalette.muted
+        }
+    }
+}
+
+struct DashboardInsightPanel: View {
+    let managerSummary: ManagerActivitySummary
+    let freshnessSummary: DashboardFreshnessSummary
+    let managerAction: (ManagerActivityItem) -> Void
+    let freshnessAction: (DashboardFreshnessItem) -> Void
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 12) {
+                ManagerActivityPanel(summary: managerSummary, action: managerAction)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                FreshnessStatusPanel(summary: freshnessSummary, action: freshnessAction)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                ManagerActivityPanel(summary: managerSummary, action: managerAction)
+                FreshnessStatusPanel(summary: freshnessSummary, action: freshnessAction)
+            }
+        }
+    }
+}
+
+struct ManagerActivityPanel: View {
+    let summary: ManagerActivitySummary
+    let action: (ManagerActivityItem) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            panelHeader(
+                title: "主理人动态",
+                subtitle: summary.title,
+                icon: "person.crop.circle.badge.clock",
+                badge: summary.items.isEmpty ? "暂无动态" : "\(summary.items.count) 项",
+                tint: AppPalette.brand
+            )
+
+            if summary.items.isEmpty {
+                emptyInsight(title: "暂无调仓或发言摘要", detail: summary.subtitle, icon: "text.bubble")
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(summary.items) { item in
+                        Button {
+                            action(item)
+                        } label: {
+                            insightRow(
+                                icon: managerIcon(for: item.kind),
+                                title: item.title,
+                                detail: item.detail,
+                                metric: item.metric,
+                                tint: item.tone.overviewTint
+                            )
+                        }
+                        .buttonStyle(PressResponsiveButtonStyle())
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .panelStroke()
+        .sectionShadow()
+    }
+
+    private func managerIcon(for kind: ManagerActivityKind) -> String {
+        switch kind {
+        case .platformAction:
+            return "arrow.left.arrow.right"
+        case .forumRecord:
+            return "text.bubble"
+        case .watchStatus:
+            return "bell.and.waves.left.and.right"
+        }
+    }
+}
+
+struct FreshnessStatusPanel: View {
+    let summary: DashboardFreshnessSummary
+    let action: (DashboardFreshnessItem) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            panelHeader(
+                title: "数据状态",
+                subtitle: summary.headline,
+                icon: "dot.radiowaves.left.and.right",
+                badge: summary.headline,
+                tint: summary.headline == "数据状态正常" ? AppPalette.positive : AppPalette.warning
+            )
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
+                ForEach(Array(summary.items.prefix(6))) { item in
+                    Button {
+                        action(item)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 5) {
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(item.tone.overviewTint)
+                                    .frame(width: 7, height: 7)
+                                Text(item.title)
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(AppPalette.muted)
+                                    .lineLimit(1)
+                            }
+
+                            Text(item.status)
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundStyle(item.tone.overviewTint)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                            Text(item.detail)
+                                .font(.system(size: 9))
+                                .foregroundStyle(AppPalette.muted)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
+                        .padding(10)
+                        .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                                .stroke(item.tone.overviewTint.opacity(0.16), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(PressResponsiveButtonStyle())
+                    .help(item.detail)
+                }
+            }
+        }
+        .padding(14)
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .panelStroke()
+        .sectionShadow()
+    }
+}
+
+private func panelHeader(title: String, subtitle: String, icon: String, badge: String, tint: Color) -> some View {
+    HStack(alignment: .top, spacing: 10) {
+        Image(systemName: icon)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(tint)
+            .accentIconStyle(tint: tint, size: 24)
+
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(AppPalette.ink)
+            Text(subtitle)
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.muted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+        ToolbarBadge(title: badge, tint: tint)
+    }
+}
+
+private func emptyInsight(title: String, detail: String, icon: String) -> some View {
+    HStack(spacing: 10) {
+        Image(systemName: icon)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(AppPalette.muted)
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppPalette.ink)
+            Text(detail)
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.muted)
+                .lineLimit(2)
+        }
+    }
+    .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
+    .padding(12)
+    .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+}
+
+private func insightRow(icon: String, title: String, detail: String, metric: String, tint: Color) -> some View {
+    HStack(alignment: .center, spacing: 10) {
+        Image(systemName: icon)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: 30, height: 30)
+            .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppPalette.ink)
+                .lineLimit(1)
+            Text(detail.isEmpty ? "暂无附加信息" : detail)
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.muted)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+        Text(metric)
+            .font(.system(size: 12, weight: .bold, design: .rounded))
+            .foregroundStyle(tint)
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+    }
+    .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+    .padding(10)
+    .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+    .overlay(
+        RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+            .stroke(tint.opacity(0.16), lineWidth: 1)
+    )
+}
+
 struct OverviewJumpMetricCard: View {
     let title: String
     let value: String
@@ -431,12 +871,12 @@ struct OverviewHeroCard: View {
 
     private var heroCopy: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("资产主屏")
+            Text("今日看板")
                 .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundStyle(AppPalette.ink)
                 .minimumScaleFactor(0.72)
                 .lineLimit(1)
-            Text("这页现在先看你的资产全貌，再看主理人动态。每个标的会把「已持有、买入中、定投计划」聚合到同一个原生视图里，避免来回切页面对账。")
+            Text("今日收益 · 待确认交易 · 定投计划 · 主理人动态")
                 .font(.system(size: 13))
                 .foregroundStyle(AppPalette.muted)
                 .fixedSize(horizontal: false, vertical: true)

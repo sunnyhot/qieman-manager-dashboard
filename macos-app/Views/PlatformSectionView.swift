@@ -18,6 +18,10 @@ struct PlatformSectionView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         PlatformFilterBar(filterState: model.filterState)
 
+                        if model.hasPlatformActions || !model.platformHoldings.isEmpty {
+                            StrategyRadarPanel(summary: model.strategyRadarSummary)
+                        }
+
                         if !model.monthlyPlatformSummary.isEmpty || !model.platformHoldings.isEmpty {
                             collapsibleMonthlySection
                         }

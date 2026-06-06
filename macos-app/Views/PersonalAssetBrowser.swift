@@ -13,10 +13,14 @@ private struct PersonalAssetGroupStats {
 struct PersonalAssetBrowser: View {
     let rows: [PersonalAssetAggregateRow]
 
+    private let comparisonMaxCount = 4
+
     @State private var searchText = ""
     @State private var debouncedSearchText = ""
     @State private var filterScope: PersonalAssetFilterScope = .all
     @State private var sortOption: PersonalAssetSortOption = .defaultOption
+    @State private var comparisonSelection: [String] = []
+    @State private var selectedDetailRow: PersonalAssetAggregateRow?
 
     private var normalizedSearchText: String {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -24,6 +28,11 @@ struct PersonalAssetBrowser: View {
 
     var body: some View {
         let presentation = makePresentation(keyword: debouncedSearchText)
+        let comparisonSummary = PersonalAssetComparisonSummary.make(
+            rows: rows,
+            selectedIDs: comparisonSelection,
+            maxCount: comparisonMaxCount
+        )
 
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
@@ -59,6 +68,14 @@ struct PersonalAssetBrowser: View {
                 .padding(.vertical, 2)
             }
 
+            if !comparisonSummary.items.isEmpty {
+                PersonalAssetComparisonPanel(
+                    summary: comparisonSummary,
+                    onRemove: removeComparisonItem,
+                    onClear: clearComparisonSelection
+                )
+            }
+
             if presentation.visibleRows.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("当前筛选下没有标的。")
@@ -72,13 +89,26 @@ struct PersonalAssetBrowser: View {
                 .padding(14)
                 .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
             } else {
-                PersonalAssetGroupedTable(rows: presentation.visibleRows)
+                PersonalAssetGroupedTable(
+                    rows: presentation.visibleRows,
+                    comparisonSelection: comparisonSelection,
+                    comparisonMaxCount: comparisonMaxCount,
+                    onToggleComparison: toggleComparison
+                ) { row in
+                    selectedDetailRow = row
+                }
             }
+        }
+        .sheet(item: $selectedDetailRow) { row in
+            PersonalAssetDetailSheet(row: row)
         }
         .task(id: searchText) {
             try? await Task.sleep(nanoseconds: 150_000_000)
             guard !Task.isCancelled else { return }
             debouncedSearchText = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+        .onChange(of: rows.map(\.id)) { _, validIDs in
+            comparisonSelection.removeAll { !validIDs.contains($0) }
         }
     }
 
@@ -215,6 +245,168 @@ struct PersonalAssetBrowser: View {
         }
     }
 
+    private func toggleComparison(_ row: PersonalAssetAggregateRow) {
+        withAnimation(.interactiveSpring(response: 0.22, dampingFraction: 0.9)) {
+            if let index = comparisonSelection.firstIndex(of: row.id) {
+                comparisonSelection.remove(at: index)
+            } else if comparisonSelection.count < comparisonMaxCount {
+                comparisonSelection.append(row.id)
+            }
+        }
+    }
+
+    private func removeComparisonItem(_ id: String) {
+        withAnimation(.interactiveSpring(response: 0.22, dampingFraction: 0.9)) {
+            comparisonSelection.removeAll { $0 == id }
+        }
+    }
+
+    private func clearComparisonSelection() {
+        withAnimation(.interactiveSpring(response: 0.22, dampingFraction: 0.9)) {
+            comparisonSelection.removeAll()
+        }
+    }
+}
+
+struct PersonalAssetComparisonPanel: View {
+    let summary: PersonalAssetComparisonSummary
+    let onRemove: (String) -> Void
+    let onClear: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: "rectangle.split.3x1")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.brand)
+                    .accentIconStyle(tint: AppPalette.brand, size: 26)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("基金对比")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text(summary.detail)
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+
+                ToolbarBadge(title: summary.headline, tint: summary.items.count >= 2 ? AppPalette.brand : AppPalette.info)
+
+                Button(action: onClear) {
+                    Image(systemName: "xmark.circle")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(AppPalette.muted)
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(PressResponsiveButtonStyle())
+                .help("清空对比")
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 184), spacing: 10)], spacing: 10) {
+                ForEach(summary.items) { item in
+                    PersonalAssetComparisonCard(item: item) {
+                        onRemove(item.id)
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(AppPalette.cardStrong.opacity(0.68), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.brand.opacity(0.18), lineWidth: 1)
+        )
+    }
+}
+
+struct PersonalAssetComparisonCard: View {
+    let item: PersonalAssetComparisonItem
+    let onRemove: () -> Void
+
+    private var profitTint: Color {
+        AppPalette.marketTint(for: item.profitValue)
+    }
+
+    private var dailyTint: Color {
+        AppPalette.marketTint(for: item.dailyChangeValue)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.title)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.76)
+                    HStack(spacing: 6) {
+                        ToolbarBadge(title: item.codeText, tint: AppPalette.info)
+                        ToolbarBadge(title: item.statusText, tint: AppPalette.brand)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Button(action: onRemove) {
+                    Image(systemName: "minus.circle")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.muted)
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(PressResponsiveButtonStyle())
+                .help("移出对比")
+            }
+
+            VStack(spacing: 7) {
+                comparisonMetric(title: "综合占用", value: item.exposureText, tint: AppPalette.ink)
+                comparisonMetric(title: "实时市值", value: item.marketValueText, tint: AppPalette.ink)
+                comparisonMetric(title: "总收益", value: "\(item.profitText) · \(item.profitRateText)", tint: profitTint)
+                comparisonMetric(title: "今日涨跌", value: "\(item.dailyChangeText) · \(item.dailyChangeRateText)", tint: dailyTint)
+                comparisonMetric(title: "待确认", value: item.pendingText, tint: AppPalette.warning)
+                comparisonMetric(title: "计划档案", value: item.planText, tint: AppPalette.info)
+            }
+
+            FlowLayout(spacing: 6) {
+                if item.isLargestExposure {
+                    SnapshotMiniBadge(text: "市值最大", tint: AppPalette.brand)
+                }
+                if item.isBestProfitRate {
+                    SnapshotMiniBadge(text: "收益率最高", tint: AppPalette.marketGain)
+                }
+                if item.isLargestDailyMover {
+                    SnapshotMiniBadge(text: "波动最大", tint: AppPalette.warning)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, minHeight: 212, alignment: .topLeading)
+        .padding(12)
+        .background(AppPalette.card.opacity(0.86), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.line.opacity(0.36), lineWidth: 1)
+        )
+    }
+
+    private func comparisonMetric(title: String, value: String, tint: Color) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(title)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(AppPalette.muted)
+                .frame(width: 48, alignment: .leading)
+            Text(value)
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(tint)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+            Spacer(minLength: 0)
+        }
+    }
 }
 
 struct PersonalAssetGroupedTable: View {
@@ -224,8 +416,18 @@ struct PersonalAssetGroupedTable: View {
     private let onExchangeFundStats: PersonalAssetGroupStats
     let stockRows: [PersonalAssetAggregateRow]
     private let stockStats: PersonalAssetGroupStats
+    let comparisonSelection: [String]
+    let comparisonMaxCount: Int
+    let onToggleComparison: (PersonalAssetAggregateRow) -> Void
+    let onOpenDetail: (PersonalAssetAggregateRow) -> Void
 
-    init(rows: [PersonalAssetAggregateRow]) {
+    init(
+        rows: [PersonalAssetAggregateRow],
+        comparisonSelection: [String] = [],
+        comparisonMaxCount: Int = 4,
+        onToggleComparison: @escaping (PersonalAssetAggregateRow) -> Void = { _ in },
+        onOpenDetail: @escaping (PersonalAssetAggregateRow) -> Void = { _ in }
+    ) {
         var offExchangeFundRows: [PersonalAssetAggregateRow] = []
         var onExchangeFundRows: [PersonalAssetAggregateRow] = []
         var stockRows: [PersonalAssetAggregateRow] = []
@@ -246,6 +448,10 @@ struct PersonalAssetGroupedTable: View {
         self.onExchangeFundStats = Self.groupStats(rows: onExchangeFundRows)
         self.stockRows = stockRows
         self.stockStats = Self.groupStats(rows: stockRows)
+        self.comparisonSelection = comparisonSelection
+        self.comparisonMaxCount = comparisonMaxCount
+        self.onToggleComparison = onToggleComparison
+        self.onOpenDetail = onOpenDetail
     }
 
     var body: some View {
@@ -297,7 +503,14 @@ struct PersonalAssetGroupedTable: View {
                     .frame(height: 1)
             }
 
-            PersonalAssetTable(rows: rows, usesMarketTradeColumns: usesMarketTradeColumns)
+            PersonalAssetTable(
+                rows: rows,
+                usesMarketTradeColumns: usesMarketTradeColumns,
+                comparisonSelection: comparisonSelection,
+                comparisonMaxCount: comparisonMaxCount,
+                onToggleComparison: onToggleComparison,
+                onOpenDetail: onOpenDetail
+            )
         }
     }
 
@@ -320,13 +533,28 @@ struct PersonalAssetGroupedTable: View {
 struct PersonalAssetTable: View {
     let rows: [PersonalAssetAggregateRow]
     let usesMarketTradeColumns: Bool
+    let comparisonSelection: [String]
+    let comparisonMaxCount: Int
+    let onToggleComparison: (PersonalAssetAggregateRow) -> Void
+    let onOpenDetail: (PersonalAssetAggregateRow) -> Void
 
     /// Compact threshold — below this width we switch to responsive column widths
     static let compactThreshold: CGFloat = 780
 
-    init(rows: [PersonalAssetAggregateRow], usesMarketTradeColumns: Bool = false) {
+    init(
+        rows: [PersonalAssetAggregateRow],
+        usesMarketTradeColumns: Bool = false,
+        comparisonSelection: [String] = [],
+        comparisonMaxCount: Int = 4,
+        onToggleComparison: @escaping (PersonalAssetAggregateRow) -> Void = { _ in },
+        onOpenDetail: @escaping (PersonalAssetAggregateRow) -> Void = { _ in }
+    ) {
         self.rows = rows
         self.usesMarketTradeColumns = usesMarketTradeColumns
+        self.comparisonSelection = comparisonSelection
+        self.comparisonMaxCount = comparisonMaxCount
+        self.onToggleComparison = onToggleComparison
+        self.onOpenDetail = onOpenDetail
     }
 
     var body: some View {
@@ -368,7 +596,7 @@ struct PersonalAssetTable: View {
     }
 
     private func actionColWidth(isCompact: Bool) -> CGFloat {
-        isCompact ? 40 : 52
+        isCompact ? 118 : 128
     }
 
     @ViewBuilder
@@ -423,6 +651,7 @@ struct PersonalAssetTable: View {
 
             LazyVStack(spacing: 8) {
                 ForEach(rows) { row in
+                    let isSelectedForComparison = comparisonSelection.contains(row.id)
                     PersonalAssetTableRow(
                         row: row,
                         isCompact: isCompact,
@@ -432,7 +661,15 @@ struct PersonalAssetTable: View {
                         priceWidth: priceColWidth(isCompact: isCompact),
                         fifthWidth: fifthColWidth(isCompact: isCompact),
                         sixthWidth: sixthColWidth(isCompact: isCompact),
-                        actionWidth: actionColWidth(isCompact: isCompact)
+                        actionWidth: actionColWidth(isCompact: isCompact),
+                        isSelectedForComparison: isSelectedForComparison,
+                        isComparisonToggleDisabled: !isSelectedForComparison && comparisonSelection.count >= comparisonMaxCount,
+                        onToggleComparison: {
+                            onToggleComparison(row)
+                        },
+                        onOpenDetail: {
+                            onOpenDetail(row)
+                        }
                     )
                 }
             }
