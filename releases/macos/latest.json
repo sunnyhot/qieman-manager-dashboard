@@ -1,25 +1,25 @@
 {
-    "version": "2.7.7",
-    "tag": "v2.7.7",
+    "version": "2.7.8",
+    "tag": "v2.7.8",
     "asset": {
-        "name": "QiemanDashboard-2.7.7.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.7/QiemanDashboard-2.7.7.zip",
-        "size": 3133641,
+        "name": "QiemanDashboard-2.7.8.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.8/QiemanDashboard-2.7.8.zip",
+        "size": 3426410,
         "content_type": "application/zip",
-        "sha256": "4cbd13bb3a999ce4dddb36ab172c4c158c383b8de9554fab3a0749f32529961e"
+        "sha256": "2ffe4b91e3be0a3adb6a850853318634514e5f22f8d5665425560a1a3bd280e8"
     },
-    "sha256": "4cbd13bb3a999ce4dddb36ab172c4c158c383b8de9554fab3a0749f32529961e",
-    "notes": "本次发布仅更新构建资产。",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.7",
+    "sha256": "2ffe4b91e3be0a3adb6a850853318634514e5f22f8d5665425560a1a3bd280e8",
+    "notes": "新增今日简报、持仓分析和策略雷达",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.8",
     "published_at": "",
-    "tag_name": "v2.7.7",
-    "name": "QiemanDashboard v2.7.7",
-    "body": "本次发布仅更新构建资产。",
+    "tag_name": "v2.7.8",
+    "name": "QiemanDashboard v2.7.8",
+    "body": "新增今日简报、持仓分析和策略雷达",
     "assets": [
         {
-            "name": "QiemanDashboard-2.7.7.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.7/QiemanDashboard-2.7.7.zip",
-            "size": 3133641,
+            "name": "QiemanDashboard-2.7.8.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.8/QiemanDashboard-2.7.8.zip",
+            "size": 3426410,
             "content_type": "application/zip"
         }
     ]
