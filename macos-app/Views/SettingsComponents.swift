@@ -88,10 +88,15 @@ struct SettingsMetric: View {
         }
         .padding(11)
         .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
-        .background(AppPalette.cardStrong.opacity(isSelected ? AppPalette.bgSelected : AppPalette.bgDefault), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(isSelected ? tint.opacity(0.72) : AppPalette.hairline.opacity(AppPalette.strokeSubtle), lineWidth: isSelected ? 1.2 : 1)
+        .interactiveSurface(
+            isSelected: isSelected,
+            tint: tint,
+            fill: AppPalette.cardStrong.opacity(AppPalette.bgDefault),
+            hoverFill: AppPalette.cardHover,
+            selectedFill: AppPalette.cardStrong.opacity(AppPalette.bgSelected),
+            strokeOpacity: AppPalette.strokeSubtle,
+            activeStrokeOpacity: 0.72,
+            lift: 0.8
         )
     }
 }

@@ -127,10 +127,75 @@ struct MetricCard: View {
 
 struct PressResponsiveButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
+        PressResponsiveButtonLabel(configuration: configuration)
+    }
+}
+
+private struct PressResponsiveButtonLabel: View {
+    let configuration: PressResponsiveButtonStyle.Configuration
+    @State private var isHovering = false
+
+    var body: some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.975 : 1)
-            .opacity(configuration.isPressed ? 0.88 : 1)
+            .scaleEffect(configuration.isPressed ? 0.965 : (isHovering ? 1.025 : 1))
+            .opacity(configuration.isPressed ? 0.84 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .animation(.easeOut(duration: 0.16), value: isHovering)
+            .onHover { hovering in
+                isHovering = hovering
+            }
+    }
+}
+
+struct InteractiveSurfaceModifier: ViewModifier {
+    var isSelected = false
+    var tint: Color = AppPalette.brand
+    var radius: CGFloat = AppPalette.cardRadius
+    var fill: Color = AppPalette.card
+    var hoverFill: Color = AppPalette.cardHover
+    var selectedFill: Color?
+    var strokeOpacity: Double = 0.34
+    var activeStrokeOpacity: Double = 0.58
+    var lift: CGFloat = 1
+
+    @State private var isHovering = false
+
+    private var isActive: Bool {
+        isSelected || isHovering
+    }
+
+    private var surfaceFill: Color {
+        if isSelected {
+            return selectedFill ?? tint.opacity(0.13)
+        }
+        if isHovering {
+            return hoverFill
+        }
+        return fill
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .background(surfaceFill, in: RoundedRectangle(cornerRadius: radius))
+            .overlay(
+                RoundedRectangle(cornerRadius: radius)
+                    .stroke(
+                        isActive ? tint.opacity(activeStrokeOpacity) : AppPalette.line.opacity(strokeOpacity),
+                        lineWidth: isSelected ? 1.2 : 1
+                    )
+            )
+            .shadow(
+                color: isActive ? tint.opacity(0.10) : .clear,
+                radius: isActive ? 9 : 0,
+                x: 0,
+                y: isActive ? 3 : 0
+            )
+            .offset(y: isHovering ? -lift : 0)
+            .animation(.easeOut(duration: 0.16), value: isHovering)
+            .animation(.easeOut(duration: 0.16), value: isSelected)
+            .onHover { hovering in
+                isHovering = hovering
+            }
     }
 }
 
@@ -345,6 +410,30 @@ struct MaterialBackgroundModifier: ViewModifier {
 }
 
 extension View {
+    func interactiveSurface(
+        isSelected: Bool = false,
+        tint: Color = AppPalette.brand,
+        radius: CGFloat = AppPalette.cardRadius,
+        fill: Color = AppPalette.card,
+        hoverFill: Color = AppPalette.cardHover,
+        selectedFill: Color? = nil,
+        strokeOpacity: Double = 0.34,
+        activeStrokeOpacity: Double = 0.58,
+        lift: CGFloat = 1
+    ) -> some View {
+        modifier(InteractiveSurfaceModifier(
+            isSelected: isSelected,
+            tint: tint,
+            radius: radius,
+            fill: fill,
+            hoverFill: hoverFill,
+            selectedFill: selectedFill,
+            strokeOpacity: strokeOpacity,
+            activeStrokeOpacity: activeStrokeOpacity,
+            lift: lift
+        ))
+    }
+
     /// Apply a translucent material background with rounded corners and optional border.
     func materialBackground(
         _ material: NSVisualEffectView.Material = .sidebar,

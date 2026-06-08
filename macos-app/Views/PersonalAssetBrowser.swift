@@ -175,10 +175,16 @@ struct PersonalAssetBrowser: View {
                 .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(isSelected ? AppPalette.brand : AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                        .stroke(isSelected ? AppPalette.brand.opacity(0.40) : AppPalette.line.opacity(0.42), lineWidth: 1)
+                .interactiveSurface(
+                    isSelected: isSelected,
+                    tint: AppPalette.brand,
+                    radius: AppPalette.controlRadius,
+                    fill: AppPalette.cardStrong,
+                    hoverFill: AppPalette.cardHover,
+                    selectedFill: AppPalette.brand,
+                    strokeOpacity: 0.42,
+                    activeStrokeOpacity: 0.44,
+                    lift: 0.6
                 )
         }
         .buttonStyle(PressResponsiveButtonStyle())
@@ -385,10 +391,13 @@ struct PersonalAssetComparisonCard: View {
         }
         .frame(maxWidth: .infinity, minHeight: 212, alignment: .topLeading)
         .padding(12)
-        .background(AppPalette.card.opacity(0.86), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.36), lineWidth: 1)
+        .interactiveSurface(
+            tint: AppPalette.brand,
+            fill: AppPalette.card.opacity(0.86),
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.36,
+            activeStrokeOpacity: 0.48,
+            lift: 0.8
         )
     }
 

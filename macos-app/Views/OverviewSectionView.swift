@@ -410,10 +410,13 @@ struct OverviewSectionView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                    .stroke(AppPalette.line.opacity(AppPalette.borderLight), lineWidth: 1)
+            .interactiveSurface(
+                tint: AppPalette.brand,
+                fill: AppPalette.card,
+                hoverFill: AppPalette.cardHover,
+                strokeOpacity: AppPalette.borderLight,
+                activeStrokeOpacity: 0.52,
+                lift: 0.8
             )
         }
         .buttonStyle(PressResponsiveButtonStyle())
@@ -565,10 +568,13 @@ struct TodayBriefItemButton: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
-            .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                    .stroke(item.tone.overviewTint.opacity(0.18), lineWidth: 1)
+            .interactiveSurface(
+                tint: item.tone.overviewTint,
+                fill: AppPalette.cardStrong.opacity(0.72),
+                hoverFill: AppPalette.cardHover,
+                strokeOpacity: 0.18,
+                activeStrokeOpacity: 0.40,
+                lift: 0.8
             )
         }
         .buttonStyle(PressResponsiveButtonStyle())
@@ -714,10 +720,13 @@ struct FreshnessStatusPanel: View {
                         }
                         .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
                         .padding(10)
-                        .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                                .stroke(item.tone.overviewTint.opacity(0.16), lineWidth: 1)
+                        .interactiveSurface(
+                            tint: item.tone.overviewTint,
+                            fill: AppPalette.cardStrong.opacity(0.72),
+                            hoverFill: AppPalette.cardHover,
+                            strokeOpacity: 0.16,
+                            activeStrokeOpacity: 0.36,
+                            lift: 0.6
                         )
                     }
                     .buttonStyle(PressResponsiveButtonStyle())
@@ -805,10 +814,13 @@ private func insightRow(icon: String, title: String, detail: String, metric: Str
     }
     .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
     .padding(10)
-    .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-    .overlay(
-        RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-            .stroke(tint.opacity(0.16), lineWidth: 1)
+    .interactiveSurface(
+        tint: tint,
+        fill: AppPalette.cardStrong.opacity(0.72),
+        hoverFill: AppPalette.cardHover,
+        strokeOpacity: 0.16,
+        activeStrokeOpacity: 0.36,
+        lift: 0.6
     )
 }
 

@@ -50,10 +50,12 @@ struct CommentBlock: View {
             }
         }
         .padding(12)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.28), lineWidth: 1)
+        .interactiveSurface(
+            tint: AppPalette.brand,
+            fill: AppPalette.card,
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.28,
+            lift: 0.6
         )
     }
 }
@@ -155,10 +157,13 @@ struct InvestmentPlanCard: View {
             }
         }
         .padding(12)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.28), lineWidth: 1)
+        .interactiveSurface(
+            tint: accent,
+            fill: AppPalette.card,
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.28,
+            activeStrokeOpacity: 0.46,
+            lift: 0.8
         )
     }
 }
@@ -250,10 +255,13 @@ struct PendingTradeCard: View {
             }
         }
         .padding(12)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.28), lineWidth: 1)
+        .interactiveSurface(
+            tint: accent,
+            fill: AppPalette.card,
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.28,
+            activeStrokeOpacity: 0.46,
+            lift: 0.8
         )
     }
 }

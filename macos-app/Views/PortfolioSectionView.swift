@@ -418,10 +418,13 @@ struct PortfolioDiagnosticTile: View {
         }
         .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
         .padding(12)
-        .background(AppPalette.cardStrong.opacity(0.74), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(item.level.color.opacity(0.18), lineWidth: 1)
+        .interactiveSurface(
+            tint: item.level.color,
+            fill: AppPalette.cardStrong.opacity(0.74),
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.18,
+            activeStrokeOpacity: 0.38,
+            lift: 0.8
         )
     }
 }
@@ -558,10 +561,14 @@ struct ProfitAttributionEntryRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(AppPalette.cardStrong.opacity(0.56), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                .stroke(AppPalette.line.opacity(0.26), lineWidth: 1)
+        .interactiveSurface(
+            tint: entry.kind.color,
+            radius: AppPalette.controlRadius,
+            fill: AppPalette.cardStrong.opacity(0.56),
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.26,
+            activeStrokeOpacity: 0.40,
+            lift: 0.6
         )
     }
 }
@@ -676,10 +683,13 @@ struct PortfolioReminderTile: View {
         }
         .frame(maxWidth: .infinity, minHeight: 86, alignment: .leading)
         .padding(12)
-        .background(AppPalette.cardStrong.opacity(0.66), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(item.urgency.color.opacity(0.18), lineWidth: 1)
+        .interactiveSurface(
+            tint: item.urgency.color,
+            fill: AppPalette.cardStrong.opacity(0.66),
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.18,
+            activeStrokeOpacity: 0.38,
+            lift: 0.8
         )
     }
 }
@@ -760,10 +770,14 @@ struct PlanSimulationItemRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(AppPalette.cardStrong.opacity(0.56), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                .stroke(AppPalette.line.opacity(0.26), lineWidth: 1)
+        .interactiveSurface(
+            tint: AppPalette.info,
+            radius: AppPalette.controlRadius,
+            fill: AppPalette.cardStrong.opacity(0.56),
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.26,
+            activeStrokeOpacity: 0.40,
+            lift: 0.6
         )
     }
 }

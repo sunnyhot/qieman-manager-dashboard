@@ -244,10 +244,15 @@ struct PersonalAssetTableRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.28), lineWidth: 1)
+        .interactiveSurface(
+            isSelected: isSelectedForComparison,
+            tint: isSelectedForComparison ? AppPalette.brand : AppPalette.info,
+            fill: AppPalette.card,
+            hoverFill: AppPalette.cardHover,
+            selectedFill: AppPalette.brandSoft.opacity(0.76),
+            strokeOpacity: 0.28,
+            activeStrokeOpacity: 0.62,
+            lift: 0.6
         )
         .alert(deleteConfirmationTitle, isPresented: deleteConfirmationBinding) {
             Button("删除", role: .destructive) {

@@ -29,10 +29,11 @@ struct ForumRecordRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.35), lineWidth: 1)
+        .interactiveSurface(
+            tint: AppPalette.brand,
+            fill: AppPalette.card,
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.35
         )
     }
 }
@@ -70,10 +71,15 @@ struct ForumSelectableRow: View {
         }
         .padding(isCompact ? 9 : 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(isSelected ? AppPalette.brand.opacity(0.14) : AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(isSelected ? AppPalette.brand.opacity(0.55) : AppPalette.line.opacity(0.40), lineWidth: 1)
+        .interactiveSurface(
+            isSelected: isSelected,
+            tint: AppPalette.brand,
+            fill: AppPalette.cardStrong,
+            hoverFill: AppPalette.cardHover,
+            selectedFill: AppPalette.brand.opacity(0.14),
+            strokeOpacity: 0.40,
+            activeStrokeOpacity: 0.58,
+            lift: isCompact ? 0.6 : 1
         )
     }
 }
@@ -178,10 +184,15 @@ struct PlatformActionRow: View {
         }
         .padding(.horizontal, isCompact ? 8 : 10)
         .padding(.vertical, isCompact ? 7 : 10)
-        .background(isSelected ? AppPalette.brand.opacity(0.12) : AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(isSelected ? AppPalette.brand.opacity(0.50) : AppPalette.line.opacity(0.35), lineWidth: 1)
+        .interactiveSurface(
+            isSelected: isSelected,
+            tint: isSelected ? AppPalette.brand : sideColor,
+            fill: AppPalette.card,
+            hoverFill: AppPalette.cardHover,
+            selectedFill: AppPalette.brand.opacity(0.12),
+            strokeOpacity: 0.35,
+            activeStrokeOpacity: 0.54,
+            lift: isCompact ? 0.6 : 1
         )
     }
 
@@ -332,10 +343,12 @@ struct StrategyRadarTile: View {
         }
         .frame(maxWidth: .infinity, minHeight: 116, alignment: .topLeading)
         .padding(12)
-        .background(AppPalette.cardStrong.opacity(0.64), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(scoreTint.opacity(0.16), lineWidth: 1)
+        .interactiveSurface(
+            tint: scoreTint,
+            fill: AppPalette.cardStrong.opacity(0.64),
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.16,
+            activeStrokeOpacity: 0.30
         )
     }
 }
@@ -524,10 +537,13 @@ struct HoldingCard: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.45), lineWidth: 1)
+        .interactiveSurface(
+            tint: profitTint,
+            fill: AppPalette.card,
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.45,
+            activeStrokeOpacity: 0.50,
+            lift: 0.8
         )
     }
 
