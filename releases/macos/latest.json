@@ -1,25 +1,25 @@
 {
-    "version": "2.7.9",
-    "tag": "v2.7.9",
+    "version": "2.7.10",
+    "tag": "v2.7.10",
     "asset": {
-        "name": "QiemanDashboard-2.7.9.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.9/QiemanDashboard-2.7.9.zip",
-        "size": 3429245,
+        "name": "QiemanDashboard-2.7.10.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.10/QiemanDashboard-2.7.10.zip",
+        "size": 3425284,
         "content_type": "application/zip",
-        "sha256": "310099e181782f3bbbbc9b9fc1c4ff9592ba61b2dd4ca67c1ea480bdd4d9d775"
+        "sha256": "cb02e919e12bac27fa44b7b1211c1dfb3d9c261e8d3509892d2c392046387119"
     },
-    "sha256": "310099e181782f3bbbbc9b9fc1c4ff9592ba61b2dd4ca67c1ea480bdd4d9d775",
-    "notes": "修复开机自启动未生效",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.9",
+    "sha256": "cb02e919e12bac27fa44b7b1211c1dfb3d9c261e8d3509892d2c392046387119",
+    "notes": "优化看板列表悬停与选中反馈",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.7.10",
     "published_at": "",
-    "tag_name": "v2.7.9",
-    "name": "QiemanDashboard v2.7.9",
-    "body": "修复开机自启动未生效",
+    "tag_name": "v2.7.10",
+    "name": "QiemanDashboard v2.7.10",
+    "body": "优化看板列表悬停与选中反馈",
     "assets": [
         {
-            "name": "QiemanDashboard-2.7.9.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.9/QiemanDashboard-2.7.9.zip",
-            "size": 3429245,
+            "name": "QiemanDashboard-2.7.10.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.7.10/QiemanDashboard-2.7.10.zip",
+            "size": 3425284,
             "content_type": "application/zip"
         }
     ]
