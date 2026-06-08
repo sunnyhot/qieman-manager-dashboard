@@ -58,6 +58,7 @@ jobs:
           }
           hidden = {
               "align checked-in update notes",
+              "更新 agent 项目指南",
           }
 
           items = []
