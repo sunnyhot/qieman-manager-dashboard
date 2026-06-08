@@ -191,30 +191,65 @@ extension AppModel {
     }
 
     func refreshLaunchAtLoginStatus() {
+        let launchAgent = LaunchAtLoginAgent()
         if #available(macOS 13.0, *) {
-            launchAtLoginEnabled = SMAppService.mainApp.status == .enabled
+            let serviceEnabled = SMAppService.mainApp.status == .enabled
+            if serviceEnabled && !launchAgent.isInstalled {
+                try? launchAgent.install()
+            }
+            launchAtLoginEnabled = serviceEnabled || launchAgent.isInstalled
         } else {
-            launchAtLoginEnabled = false
+            launchAtLoginEnabled = launchAgent.isInstalled
         }
     }
 
     func setLaunchAtLoginEnabled(_ isEnabled: Bool) {
-        if #available(macOS 13.0, *) {
+        let launchAgent = LaunchAtLoginAgent()
+        var failures: [String] = []
+
+        if #available(macOS 13.0, *), isEnabled {
             do {
-                if isEnabled {
+                if SMAppService.mainApp.status != .enabled {
                     try SMAppService.mainApp.register()
-                } else {
-                    try SMAppService.mainApp.unregister()
                 }
-                refreshLaunchAtLoginStatus()
-                noticeMessage = isEnabled ? "已开启开机自启。" : "已关闭开机自启。"
             } catch {
-                refreshLaunchAtLoginStatus()
-                errorMessage = "设置开机自启失败：\(error.localizedDescription)"
+                failures.append(error.localizedDescription)
             }
+        }
+
+        do {
+            if isEnabled {
+                try launchAgent.install()
+            } else {
+                try launchAgent.uninstall()
+            }
+        } catch {
+            failures.append(error.localizedDescription)
+        }
+
+        if #available(macOS 13.0, *), !isEnabled {
+            do {
+                switch SMAppService.mainApp.status {
+                case .enabled, .requiresApproval:
+                    try SMAppService.mainApp.unregister()
+                case .notFound, .notRegistered:
+                    break
+                @unknown default:
+                    break
+                }
+            } catch {
+                failures.append(error.localizedDescription)
+            }
+        }
+
+        refreshLaunchAtLoginStatus()
+
+        if failures.isEmpty {
+            noticeMessage = isEnabled ? "已开启开机自启。" : "已关闭开机自启。"
+        } else if isEnabled && launchAgent.isInstalled {
+            noticeMessage = "已开启开机自启（兼容模式）。"
         } else {
-            launchAtLoginEnabled = false
-            errorMessage = "当前系统版本不支持开机自启设置。"
+            errorMessage = "设置开机自启失败：\(failures.joined(separator: "；"))"
         }
     }
 

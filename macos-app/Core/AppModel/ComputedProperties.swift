@@ -151,6 +151,10 @@ extension AppModel {
     }
 
     var launchAtLoginStatusText: String {
+        let launchAgent = LaunchAtLoginAgent()
+        if launchAgent.isInstalled {
+            return "已开启"
+        }
         if #available(macOS 13.0, *) {
             switch SMAppService.mainApp.status {
             case .enabled:
@@ -165,7 +169,7 @@ extension AppModel {
                 return "未知"
             }
         }
-        return "系统不支持"
+        return "已关闭"
     }
 
     var hasForumPosts: Bool {
