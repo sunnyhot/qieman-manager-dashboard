@@ -24,6 +24,7 @@ extension AppModel {
             clearPendingTradeCaches()
             rebuildAssetRows()
             try pendingTradesStore.save(nextTrades, to: pendingTradeFileURL)
+            invalidateLatestImportUndo()
             noticeMessage = "已\(mode.actionText)保存 \(importedTrades.count) 条买入中记录。"
             Task { await applyPersonalAssetAutomation() }
         } catch {
@@ -68,6 +69,7 @@ extension AppModel {
             clearPendingTradeCaches()
             rebuildAssetRows()
             try pendingTradesStore.save(pendingTrades, to: pendingTradeFileURL)
+            invalidateLatestImportUndo()
             noticeMessage = "已添加 \(trade.displayTitle) 的买入中记录。"
             Task { await applyPersonalAssetAutomation() }
             return true
@@ -119,6 +121,7 @@ extension AppModel {
             clearPendingTradeCaches()
             rebuildAssetRows()
             try pendingTradesStore.save(pendingTrades, to: pendingTradeFileURL)
+            invalidateLatestImportUndo()
             noticeMessage = "已更新 \(trade.displayTitle) 的买入中记录。"
             Task { await applyPersonalAssetAutomation() }
             return true
@@ -147,6 +150,7 @@ extension AppModel {
             } else {
                 try pendingTradesStore.save(pendingTrades, to: pendingTradeFileURL)
             }
+            invalidateLatestImportUndo()
             noticeMessage = "已删除 \(existingTrade.displayTitle) 的买入中记录。"
             Task { await applyPersonalAssetAutomation() }
         } catch {

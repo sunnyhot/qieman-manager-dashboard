@@ -23,6 +23,7 @@ extension AppModel {
             clearInvestmentPlanCaches()
             rebuildAssetRows()
             try investmentPlansStore.save(nextPlans, to: investmentPlanFileURL)
+            invalidateLatestImportUndo()
             noticeMessage = "已\(mode.actionText)保存 \(importedPlans.count) 条定投计划。"
             Task { await applyPersonalAssetAutomation() }
         } catch {
@@ -73,6 +74,7 @@ extension AppModel {
             clearInvestmentPlanCaches()
             rebuildAssetRows()
             try investmentPlansStore.save(investmentPlans, to: investmentPlanFileURL)
+            invalidateLatestImportUndo()
             let itemText = row.fundCode.map { "\(row.fundName)（\($0)）" } ?? row.fundName
             noticeMessage = "已将 \(itemText) 的 \(targetIDs.count) 条计划调整为\(status)。"
         } catch {
@@ -100,6 +102,7 @@ extension AppModel {
             clearInvestmentPlanCaches()
             rebuildAssetRows()
             try investmentPlansStore.save(investmentPlans, to: investmentPlanFileURL)
+            invalidateLatestImportUndo()
             let itemText = existingPlan.fundCode.map { "\(existingPlan.fundName)（\($0)）" } ?? existingPlan.fundName
             noticeMessage = "已将 \(itemText) 的计划调整为\(normalizedStatus)。"
             Task { await applyPersonalAssetAutomation() }
@@ -149,6 +152,7 @@ extension AppModel {
             clearInvestmentPlanCaches()
             rebuildAssetRows()
             try investmentPlansStore.save(investmentPlans, to: investmentPlanFileURL)
+            invalidateLatestImportUndo()
             let itemText = plan.fundCode.map { "\(plan.fundName)（\($0)）" } ?? plan.fundName
             noticeMessage = "已添加 \(itemText) 的定投计划。"
             Task { await applyPersonalAssetAutomation() }
@@ -206,6 +210,7 @@ extension AppModel {
             clearInvestmentPlanCaches()
             rebuildAssetRows()
             try investmentPlansStore.save(investmentPlans, to: investmentPlanFileURL)
+            invalidateLatestImportUndo()
 
             let itemText = plan.fundCode.map { "\(plan.fundName)（\($0)）" } ?? plan.fundName
             noticeMessage = "已更新 \(itemText) 的定投计划。"
@@ -237,6 +242,7 @@ extension AppModel {
             } else {
                 try investmentPlansStore.save(investmentPlans, to: investmentPlanFileURL)
             }
+            invalidateLatestImportUndo()
             let itemText = existingPlan.fundCode.map { "\(existingPlan.fundName)（\($0)）" } ?? existingPlan.fundName
             noticeMessage = "已删除 \(itemText) 的定投计划。"
             Task { await applyPersonalAssetAutomation() }

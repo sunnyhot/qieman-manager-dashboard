@@ -23,6 +23,7 @@ extension AppModel {
             userPortfolioSnapshot = nil
             rebuildAssetRows()
             try portfolioStore.save(nextHoldings, to: portfolioFileURL)
+            invalidateLatestImportUndo()
             portfolioDraft = ""
 
             let savedCount = importedHoldings.count
@@ -50,6 +51,7 @@ extension AppModel {
             userPortfolioSnapshot = nil
             rebuildAssetRows()
             portfolioDraft = ""
+            invalidateLatestImportUndo()
             noticeMessage = "已清空个人持仓。"
         } catch {
             errorMessage = error.localizedDescription
@@ -130,6 +132,7 @@ extension AppModel {
             }
 
             rebuildAssetRows()
+            invalidateLatestImportUndo()
             let itemText = row.fundCode.map { "\(row.fundName)（\($0)）" } ?? row.fundName
             noticeMessage = "已删除 \(itemText) 的\(deletedParts.joined(separator: "、"))记录。"
 
@@ -201,6 +204,7 @@ extension AppModel {
             userPortfolioSnapshot = nil
             rebuildAssetRows()
             try portfolioStore.save(nextHoldings, to: portfolioFileURL)
+            invalidateLatestImportUndo()
 
             let itemText = row.fundCode.map { "\(row.fundName)（\($0)）" } ?? row.fundName
             noticeMessage = isArchived ? "已归档 \(itemText) 的持仓记录。" : "已恢复 \(itemText) 的持仓记录。"
@@ -296,6 +300,7 @@ extension AppModel {
             userPortfolioSnapshot = nil
             rebuildAssetRows()
             try portfolioStore.save(nextHoldings, to: portfolioFileURL)
+            invalidateLatestImportUndo()
 
             let itemText = normalizedOptionalName(displayNameText) ?? row.fundName
             noticeMessage = "已更新 \(itemText)（\(fundCode)）的持仓明细。"
@@ -385,6 +390,7 @@ extension AppModel {
             userPortfolioSnapshot = nil
             rebuildAssetRows()
             try portfolioStore.save(nextHoldings, to: portfolioFileURL)
+            invalidateLatestImportUndo()
 
             let nameText = normalizedDisplayName.map { "\($0)（\(fundCode)）" } ?? fundCode
             let typeText = assetType == .stock
@@ -567,6 +573,7 @@ extension AppModel {
             } else {
                 try portfolioStore.save(nextHoldings, to: portfolioFileURL)
             }
+            invalidateLatestImportUndo()
 
             let itemText = row.fundCode.map { "\(row.fundName)（\($0)）" } ?? row.fundName
             let actionText = mode == .add ? "添加" : "删除"
