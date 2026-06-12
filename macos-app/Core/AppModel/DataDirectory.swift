@@ -26,6 +26,7 @@ extension AppModel {
             loadPendingTrades()
             loadInvestmentPlans()
             loadManagerWatchSettings()
+            loadEnhancementState()
 
             noticeMessage = "数据存储目录已更新，重启应用后本地服务将使用新目录。"
         } catch {
@@ -60,6 +61,7 @@ extension AppModel {
         loadPendingTrades()
         loadInvestmentPlans()
         loadManagerWatchSettings()
+        loadEnhancementState()
 
         noticeMessage = "数据存储目录已恢复为默认位置，重启应用后本地服务将使用新目录。"
     }

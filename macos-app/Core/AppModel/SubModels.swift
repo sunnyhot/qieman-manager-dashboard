@@ -123,3 +123,25 @@ final class UpdateState: ObservableObject {
         }
     }
 }
+
+// MARK: - EnhancementState
+
+@MainActor
+final class EnhancementState: ObservableObject {
+    @Published var selectedTab: EnhancementCenterTab = .review
+    @Published var lastMonthlyReportExport: MonthlyReportExportMetadata?
+    @Published var managerWatchTimelineEvents: [ManagerWatchTimelineEvent] = []
+    @Published var activeImportPreviewSession: ImportPreviewSession?
+    @Published var importUndoSnapshot: ImportUndoSnapshot?
+    @Published var portfolioInsightSnapshots: [PortfolioInsightSnapshot] = []
+    @Published var pendingOverwriteReportURL: URL?
+}
+
+enum EnhancementCenterTab: String, CaseIterable, Identifiable {
+    case review = "复盘"
+    case watch = "巡检"
+    case importPreview = "导入"
+    case insight = "洞察"
+
+    var id: String { rawValue }
+}

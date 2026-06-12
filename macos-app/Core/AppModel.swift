@@ -67,6 +67,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var authState = AuthState()
     @Published private(set) var uiState = UIState()
     @Published private(set) var updateState = UpdateState()
+    @Published private(set) var enhancementState = EnhancementState()
 
     // MARK: Remaining @Published properties
     @Published var form = QueryFormState()
@@ -294,6 +295,42 @@ final class AppModel: ObservableObject {
         set { updateState.autoCheckForUpdatesOnLaunch = newValue }
     }
 
+    // EnhancementState proxies
+    var selectedEnhancementTab: EnhancementCenterTab {
+        get { enhancementState.selectedTab }
+        set { enhancementState.selectedTab = newValue }
+    }
+
+    var lastMonthlyReportExport: MonthlyReportExportMetadata? {
+        get { enhancementState.lastMonthlyReportExport }
+        set { enhancementState.lastMonthlyReportExport = newValue }
+    }
+
+    var managerWatchTimelineEvents: [ManagerWatchTimelineEvent] {
+        get { enhancementState.managerWatchTimelineEvents }
+        set { enhancementState.managerWatchTimelineEvents = newValue }
+    }
+
+    var activeImportPreviewSession: ImportPreviewSession? {
+        get { enhancementState.activeImportPreviewSession }
+        set { enhancementState.activeImportPreviewSession = newValue }
+    }
+
+    var importUndoSnapshot: ImportUndoSnapshot? {
+        get { enhancementState.importUndoSnapshot }
+        set { enhancementState.importUndoSnapshot = newValue }
+    }
+
+    var portfolioInsightSnapshots: [PortfolioInsightSnapshot] {
+        get { enhancementState.portfolioInsightSnapshots }
+        set { enhancementState.portfolioInsightSnapshots = newValue }
+    }
+
+    var pendingOverwriteReportURL: URL? {
+        get { enhancementState.pendingOverwriteReportURL }
+        set { enhancementState.pendingOverwriteReportURL = newValue }
+    }
+
     // MARK: Cache proxies (forwarding to portfolioState)
 
     var _cachedAssetRows: [PersonalAssetAggregateRow]? {
@@ -377,6 +414,9 @@ final class AppModel: ObservableObject {
         updateState.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
+        enhancementState.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
 
         // Forward filterState changes so PlatformSectionView (which observes
         // AppModel via @EnvironmentObject) re-renders when filters change.
@@ -414,6 +454,7 @@ final class AppModel: ObservableObject {
             loadPendingTrades()
             loadInvestmentPlans()
             loadManagerWatchSettings()
+            loadEnhancementState()
             refreshLaunchAtLoginStatus()
             rebuildNativeStatus()
             if !didApplyDefaultForm, let defaultForm = status?.defaultForm {

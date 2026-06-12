@@ -41,6 +41,22 @@ extension AppModel {
         dataDirectoryURL?.appendingPathComponent("user-investment-plans.json", isDirectory: false)
     }
 
+    var monthlyReportExportMetadataURL: URL? {
+        dataDirectoryURL?.appendingPathComponent("monthly-report-export.json", isDirectory: false)
+    }
+
+    var managerWatchTimelineFileURL: URL? {
+        dataDirectoryURL?.appendingPathComponent("manager-watch-timeline.json", isDirectory: false)
+    }
+
+    var importUndoSnapshotFileURL: URL? {
+        dataDirectoryURL?.appendingPathComponent("latest-import-undo.json", isDirectory: false)
+    }
+
+    var portfolioInsightSnapshotsFileURL: URL? {
+        dataDirectoryURL?.appendingPathComponent("portfolio-insight-snapshots.json", isDirectory: false)
+    }
+
     var hasLiveService: Bool {
         baseURL != nil
     }
