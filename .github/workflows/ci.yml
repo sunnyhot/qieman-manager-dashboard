@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  swift:
+    name: Swift build and tests
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Swift package
+        run: swift build --package-path macos-app
+
+      - name: Run Swift tests
+        working-directory: macos-app
+        run: swift test
+
+  python:
+    name: Python syntax check
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compile Python sources
+        run: python3 -m compileall -q dashboard qieman_scraper.py qieman_community_scraper.py scripts
