@@ -1,0 +1,39 @@
+[
+  {
+    "adjustmentId": 501,
+    "adjustCreateTime": 1781040600000,
+    "adjustTxnDate": 1781040600000,
+    "comment": "样例调仓",
+    "url": "https://qieman.com/articles/501",
+    "orders": [
+      {
+        "orderCode": "022",
+        "variety": "沪深300",
+        "tradeUnit": 100,
+        "postPlanUnit": 100,
+        "strategyType": "宽基",
+        "largeClass": "权益",
+        "nav": "1.2345",
+        "navDate": 1780954200000,
+        "fund": {
+          "fundCode": "000300",
+          "fundName": "沪深300ETF联接"
+        }
+      },
+      {
+        "orderCode": "024",
+        "variety": "中证红利",
+        "tradeUnit": 20,
+        "postPlanUnit": 0,
+        "strategyType": "红利",
+        "largeClass": "权益",
+        "nav": "1.1111",
+        "navDate": 1780954200000,
+        "fund": {
+          "fundCode": "000922",
+          "fundName": "中证红利指数"
+        }
+      }
+    ]
+  }
+]

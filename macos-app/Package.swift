@@ -13,7 +13,8 @@ let package = Package(
         .testTarget(
             name: "QiemanDashboardTests",
             dependencies: ["QiemanDashboard"],
-            path: "Tests/QiemanDashboardTests"
+            path: "Tests/QiemanDashboardTests",
+            resources: [.copy("Fixtures")]
         )
     ]
 )

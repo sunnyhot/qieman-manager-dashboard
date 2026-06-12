@@ -12,7 +12,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Swift package
         run: swift build --package-path macos-app
@@ -26,7 +26,10 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Compile Python sources
         run: python3 -m compileall -q dashboard_server.py dashboard qieman_scraper.py qieman_community_scraper.py scripts
+
+      - name: Run Python contract tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
