@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -83,21 +83,25 @@ jobs:
 
           # 写入多行 output
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "app_notes<<$EOF" >> "$GITHUB_OUTPUT"
-          echo "$NOTES" >> "$GITHUB_OUTPUT"
-          echo "$EOF" >> "$GITHUB_OUTPUT"
+          {
+            echo "app_notes<<$EOF"
+            echo "$NOTES"
+            echo "$EOF"
+          } >> "$GITHUB_OUTPUT"
 
           BULLETS=$(printf '%s\n' "$NOTES" | sed 's/^/- /')
 
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "body<<$EOF" >> "$GITHUB_OUTPUT"
-          echo "## 且慢主理人看板 ${{ steps.version.outputs.tag }}" >> "$GITHUB_OUTPUT"
-          echo "" >> "$GITHUB_OUTPUT"
-          echo "$BULLETS" >> "$GITHUB_OUTPUT"
-          echo "" >> "$GITHUB_OUTPUT"
-          echo "---" >> "$GITHUB_OUTPUT"
-          echo "🤖 自动构建 by GitHub Actions" >> "$GITHUB_OUTPUT"
-          echo "$EOF" >> "$GITHUB_OUTPUT"
+          {
+            echo "body<<$EOF"
+            echo "## 且慢主理人看板 ${{ steps.version.outputs.tag }}"
+            echo ""
+            echo "$BULLETS"
+            echo ""
+            echo "---"
+            echo "🤖 自动构建 by GitHub Actions"
+            echo "$EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Compute sha256 and generate latest.json
         id: manifest
@@ -152,7 +156,7 @@ jobs:
           echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: 且慢主理人看板 ${{ steps.version.outputs.tag }}
