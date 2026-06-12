@@ -119,18 +119,47 @@ extension AppModel {
         let prodCode = managerWatchSettings.prodCode.trimmingCharacters(in: .whitespacesAndNewlines)
         let managerName = managerWatchSettings.managerName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prodCode.isEmpty, !managerName.isEmpty else {
+            recordManagerWatchTimelineEvent(
+                ManagerWatchTimelineEvent(
+                    kind: .failed,
+                    prodCode: prodCode,
+                    managerName: managerName,
+                    title: "巡检目标缺失",
+                    detail: "通知巡检需要产品代码和主理人名称。",
+                    errorMessage: "通知巡检需要产品代码和主理人名称。"
+                )
+            )
             if manual {
                 errorMessage = "通知巡检需要产品代码和主理人名称。"
             }
             return
         }
         guard managerWatchSettings.watchForum || managerWatchSettings.watchPlatform else {
+            recordManagerWatchTimelineEvent(
+                ManagerWatchTimelineEvent(
+                    kind: .failed,
+                    prodCode: prodCode,
+                    managerName: managerName,
+                    title: "巡检范围为空",
+                    detail: "至少要开启调仓或发言其中一项。",
+                    errorMessage: "通知巡检至少要开启调仓或发言其中一项。"
+                )
+            )
             if manual {
                 errorMessage = "通知巡检至少要开启\u{201c}调仓\u{201d}或\u{201c}发言\u{201d}其中一项。"
             }
             return
         }
 
+        recordManagerWatchTimelineEvent(
+            ManagerWatchTimelineEvent(
+                kind: .pollStarted,
+                prodCode: prodCode,
+                managerName: managerName,
+                title: manual ? "手动巡检开始" : "自动巡检开始",
+                detail: managerWatchScopeText
+            )
+        )
         managerWatchSettings.lastCheckedAt = Self.timestampString()
 
         var updateTitles: [String] = []
@@ -142,6 +171,17 @@ extension AppModel {
                 let snapshot = try await fetchForumWatchSnapshot(prodCode: prodCode, managerName: managerName)
                 let previousID = managerWatchSettings.latestSeenForumRecordID
                 let newRecords = unseenItems(snapshot.records, previousID: previousID)
+                if previousID != nil, newRecords.isEmpty {
+                    recordManagerWatchTimelineEvent(
+                        ManagerWatchTimelineEvent(
+                            kind: .duplicateSuppressed,
+                            prodCode: prodCode,
+                            managerName: managerName,
+                            title: "发言无新增",
+                            detail: "最新发言已在巡检基线内，未重复通知。"
+                        )
+                    )
+                }
                 if previousID != nil, !newRecords.isEmpty, sendNotifications {
                     if let latest = newRecords.first {
                         pendingNotifications.append((
@@ -157,10 +197,30 @@ extension AppModel {
                         ))
                     }
                     updateTitles.append("新发言 \(newRecords.count) 条")
+                    recordManagerWatchTimelineEvent(
+                        ManagerWatchTimelineEvent(
+                            kind: .forumHit,
+                            prodCode: prodCode,
+                            managerName: managerName,
+                            title: "命中新发言 \(newRecords.count) 条",
+                            detail: newRecords.first?.titleText ?? "发现新的主理人发言",
+                            targetID: newRecords.first?.id
+                        )
+                    )
                 }
                 managerWatchSettings.latestSeenForumRecordID = snapshot.records.first?.id
             } catch {
                 encounteredErrors.append("发言巡检失败：\(error.localizedDescription)")
+                recordManagerWatchTimelineEvent(
+                    ManagerWatchTimelineEvent(
+                        kind: .failed,
+                        prodCode: prodCode,
+                        managerName: managerName,
+                        title: "发言巡检失败",
+                        detail: error.localizedDescription,
+                        errorMessage: error.localizedDescription
+                    )
+                )
             }
         }
 
@@ -170,6 +230,17 @@ extension AppModel {
                 let actions = platform.actions ?? []
                 let previousID = managerWatchSettings.latestSeenPlatformActionID
                 let newActions = unseenItems(actions, previousID: previousID)
+                if previousID != nil, newActions.isEmpty {
+                    recordManagerWatchTimelineEvent(
+                        ManagerWatchTimelineEvent(
+                            kind: .duplicateSuppressed,
+                            prodCode: prodCode,
+                            managerName: managerName,
+                            title: "调仓无新增",
+                            detail: "最新调仓已在巡检基线内，未重复通知。"
+                        )
+                    )
+                }
                 if previousID != nil, !newActions.isEmpty, sendNotifications {
                     if let latest = newActions.first {
                         pendingNotifications.append((
@@ -185,16 +256,58 @@ extension AppModel {
                         ))
                     }
                     updateTitles.append("新调仓 \(newActions.count) 条")
+                    recordManagerWatchTimelineEvent(
+                        ManagerWatchTimelineEvent(
+                            kind: .platformHit,
+                            prodCode: prodCode,
+                            managerName: managerName,
+                            title: "命中新调仓 \(newActions.count) 条",
+                            detail: newActions.first.map(platformNotificationBody(for:)) ?? "发现新的平台调仓",
+                            targetID: newActions.first?.id
+                        )
+                    )
                 }
                 managerWatchSettings.latestSeenPlatformActionID = actions.first?.id
             } catch {
                 encounteredErrors.append("调仓巡检失败：\(error.localizedDescription)")
+                recordManagerWatchTimelineEvent(
+                    ManagerWatchTimelineEvent(
+                        kind: .failed,
+                        prodCode: prodCode,
+                        managerName: managerName,
+                        title: "调仓巡检失败",
+                        detail: error.localizedDescription,
+                        errorMessage: error.localizedDescription
+                    )
+                )
             }
         }
 
+        let previousErrorMessage = managerWatchSettings.lastErrorMessage
         if encounteredErrors.isEmpty {
             managerWatchSettings.lastSuccessAt = managerWatchSettings.lastCheckedAt
             managerWatchSettings.lastErrorMessage = nil
+            if previousErrorMessage?.isEmpty == false {
+                recordManagerWatchTimelineEvent(
+                    ManagerWatchTimelineEvent(
+                        kind: .recovered,
+                        prodCode: prodCode,
+                        managerName: managerName,
+                        title: "巡检恢复",
+                        detail: "上次失败后，本次巡检已恢复成功。"
+                    )
+                )
+            } else if updateTitles.isEmpty {
+                recordManagerWatchTimelineEvent(
+                    ManagerWatchTimelineEvent(
+                        kind: .noUpdates,
+                        prodCode: prodCode,
+                        managerName: managerName,
+                        title: "巡检完成，无新增",
+                        detail: managerWatchScopeText
+                    )
+                )
+            }
         } else {
             managerWatchSettings.lastErrorMessage = encounteredErrors.joined(separator: "；")
             if manual {

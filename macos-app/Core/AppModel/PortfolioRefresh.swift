@@ -18,6 +18,7 @@ extension AppModel {
         let snapshot = try await platformClient.fetchUserPortfolioSnapshot(holdings: holdings)
         userPortfolioSnapshot = snapshot
         rebuildAssetRows()
+        recordPortfolioInsightSnapshotIfPossible(createdAt: snapshot.refreshedAt)
         if updateNotice {
             noticeMessage = "个人持仓估值已刷新。"
         }
