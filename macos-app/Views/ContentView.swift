@@ -53,7 +53,7 @@ struct ContentView: View {
         switch model.selectedSection {
         case .platform, .forum:
             return true
-        case .overview, .portfolio, .settings:
+        case .overview, .portfolio, .enhancement, .settings:
             return false
         }
     }
@@ -484,6 +484,9 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .forum:
             ForumSectionView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .enhancement:
+            EnhancementCenterView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }

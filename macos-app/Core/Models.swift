@@ -5,6 +5,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     case portfolio = "我的持仓"
     case platform = "平台调仓"
     case forum = "论坛发言"
+    case enhancement = "增强"
     case settings = "设置"
 
     var id: String { rawValue }
@@ -21,6 +22,8 @@ enum AppSection: String, CaseIterable, Identifiable {
             return "chart.bar.xaxis"
         case .forum:
             return "text.bubble"
+        case .enhancement:
+            return "sparkles"
         }
     }
 }

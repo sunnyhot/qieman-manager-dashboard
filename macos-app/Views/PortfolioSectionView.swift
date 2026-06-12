@@ -296,12 +296,9 @@ struct PortfolioSectionView: View {
     }
 
     private func copyMonthlyReport(_ report: MonthlyReportSummary) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(report.markdown, forType: .string)
+        model.copyMonthlyReportToPasteboard(report)
         didCopyMonthlyReport = true
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 1_600_000_000)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             didCopyMonthlyReport = false
         }
     }
