@@ -104,6 +104,10 @@ struct InvestmentPlansStore {
         return merged
     }
 
+    func previewKey(for plan: PersonalInvestmentPlan) -> String {
+        mergeKey(for: plan)
+    }
+
     func delete(at fileURL: URL) throws {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         try FileManager.default.removeItem(at: fileURL)

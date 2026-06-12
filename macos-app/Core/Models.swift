@@ -25,7 +25,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     }
 }
 
-enum PersonalDataImportTarget: String, CaseIterable, Identifiable {
+enum PersonalDataImportTarget: String, CaseIterable, Identifiable, Codable {
     case holdings = "持仓中"
     case pendingTrades = "买入中"
     case investmentPlans = "定投计划"
@@ -80,7 +80,7 @@ enum PersonalDataImportSource {
     }
 }
 
-enum PersonalDataSaveMode: String, CaseIterable, Identifiable {
+enum PersonalDataSaveMode: String, CaseIterable, Identifiable, Codable {
     case merge = "合并更新"
     case replace = "替换该类"
 

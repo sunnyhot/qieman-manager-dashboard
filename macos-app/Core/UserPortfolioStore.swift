@@ -95,6 +95,10 @@ struct UserPortfolioStore {
         return merged
     }
 
+    func previewKey(for holding: UserPortfolioHolding) -> String {
+        mergeKey(for: holding)
+    }
+
     private func parseLine(_ line: String) -> UserPortfolioHolding? {
         let normalized = line
             .replacingOccurrences(of: "，", with: ",")

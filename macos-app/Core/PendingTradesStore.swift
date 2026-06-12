@@ -110,6 +110,18 @@ struct PendingTradesStore {
         return merged.sorted { $0.occurredAt > $1.occurredAt }
     }
 
+    func previewKey(for trade: PersonalPendingTrade) -> String {
+        [
+            trade.occurredAt,
+            trade.actionLabel,
+            trade.fundCode ?? normalizedKey(trade.fundName),
+            trade.targetFundCode ?? normalizedKey(trade.targetFundName ?? ""),
+            trade.status,
+        ]
+        .map(normalizedKey)
+        .joined(separator: "|")
+    }
+
     func delete(at fileURL: URL) throws {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         try FileManager.default.removeItem(at: fileURL)
