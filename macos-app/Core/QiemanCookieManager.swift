@@ -9,6 +9,7 @@ struct QiemanCookieSaveResult {
 }
 
 final class QiemanCookieManager {
+    private static let ownerReadWritePermissions = NSNumber(value: Int16(0o600))
     private let cookieFileURL: URL?
 
     init(cookieFileURL: URL?) {
@@ -18,6 +19,7 @@ final class QiemanCookieManager {
     func loadCookieString() throws -> String {
         guard let cookieFileURL else { return "" }
         guard FileManager.default.fileExists(atPath: cookieFileURL.path) else { return "" }
+        try tightenCookieFilePermissionsIfNeeded()
         return try String(contentsOf: cookieFileURL, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
@@ -49,6 +51,7 @@ final class QiemanCookieManager {
 
         try FileManager.default.createDirectory(at: cookieFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try header.write(to: cookieFileURL, atomically: true, encoding: .utf8)
+        try tightenCookieFilePermissionsIfNeeded()
         return QiemanCookieSaveResult(
             saved: true,
             hasQiemanCookies: true,
@@ -64,6 +67,7 @@ final class QiemanCookieManager {
         guard !normalized.isEmpty else { return }
         try FileManager.default.createDirectory(at: cookieFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try normalized.write(to: cookieFileURL, atomically: true, encoding: .utf8)
+        try tightenCookieFilePermissionsIfNeeded()
     }
 
     func clearCookieFile() throws {
@@ -144,5 +148,14 @@ final class QiemanCookieManager {
             return String(trimmed.dropFirst(7))
         }
         return trimmed
+    }
+
+    private func tightenCookieFilePermissionsIfNeeded() throws {
+        guard let cookieFileURL else { return }
+        guard FileManager.default.fileExists(atPath: cookieFileURL.path) else { return }
+        try FileManager.default.setAttributes(
+            [.posixPermissions: Self.ownerReadWritePermissions],
+            ofItemAtPath: cookieFileURL.path
+        )
     }
 }
