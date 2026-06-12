@@ -13,7 +13,7 @@
 ## 构建
 
 ```bash
-APP_VERSION=2.2.50 bash scripts/build_macos_app.sh
+APP_VERSION=2.7.10 bash scripts/build_macos_app.sh
 ```
 
 产物：`dist/macos-app/QiemanDashboard.app`，分发包输出到 `/tmp/`。
@@ -95,7 +95,8 @@ unzip -t "/tmp/QiemanDashboard-$VERSION.zip"
 ├── scripts/             # 构建、图标、辅助脚本
 ├── skills/              # Agent 技能层（增量巡检、估值查询等）
 ├── releases/macos/      # latest.json 更新清单
-├── dashboard_server.py  # 浏览器版看板（调试用）
+├── dashboard/           # Python 本地看板服务包（路由、渲染、抓取协调、平台数据）
+├── dashboard_server.py  # Python 本地看板入口
 ├── qieman_scraper.py    # 公开内容抓取
 └── qieman_community_scraper.py  # 社区动态抓取
 ```

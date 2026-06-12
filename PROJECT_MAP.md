@@ -8,17 +8,18 @@
      8|- 支持支付宝持仓导入、自动更新、菜单栏小组件
      9|- 中国股市惯例：红色涨、绿色跌
     10|
-    11|**技术栈**: SwiftUI + AppKit (macOS 13+) | Python 3 (零第三方依赖) | swiftc 直接编译（无 SPM/Xcode 工程）
+    11|**技术栈**: SwiftUI + AppKit (macOS 14+) | Python 3 (零第三方依赖) | SPM 测试/校验 + swiftc 打包
     12|
     13|## 文件结构
     14|
     15|### 顶层文件
     16|| 文件 | 大小 | 职责 |
     17||---|---|---|
-    18|| `dashboard_server.py` | 206KB | Python HTTP 服务器（主后端）：路由、数据管理、API 代理、且慢数据抓取、持仓 CRUD |
-    19|| `qieman_scraper.py` | ~15KB | 且慢平台爬虫：文章、主理人、组合数据 |
-    20|| `qieman_community_scraper.py` | ~10KB | 且慢社区爬虫：社区讨论、评论 |
-    21|| `README.md` | — | 项目说明 |
+    18|| `dashboard_server.py` | 5 行 | Python 本地看板入口；实际服务逻辑在 `dashboard/` 包 |
+    19|| `dashboard/` | 5364 行 | HTTP 路由、HTML 渲染、平台数据、快照归一化、估值抓取 |
+    20|| `qieman_scraper.py` | 381 行 | 且慢平台爬虫：文章、主理人、组合数据 |
+    21|| `qieman_community_scraper.py` | 1175 行 | 且慢社区爬虫：社区讨论、评论 |
+    22|| `README.md` | — | 项目说明 |
     22|
     23|### macos-app/ — SwiftUI 原生前端
     24|
@@ -121,7 +122,7 @@
    121|swift scripts/render_macos_icon.swift
    122|```
    123|
-   124|**构建要求**: macOS 13+, Xcode CLI Tools, Python 3.9+
+   124|**构建要求**: macOS 14+, Xcode CLI Tools, Python 3.9+
    125|
    126|## 架构概览
    127|
@@ -151,18 +152,18 @@
    151|1. **@MainActor + ObservableObject** — AppModel 是单一状态容器，所有 View 通过 @EnvironmentObject 访问
    152|2. **中国股市惯例** — 红涨绿跌，所有涨跌颜色用 AppPalette 统一
    153|3. **Python 零依赖** — dashboard_server.py 不用任何 pip 包，纯标准库
-   154|4. **Cookie 认证** — 且慢登录态通过 QiemanCookieManager 管理，存 Keychain
+   154|4. **Cookie 认证** — 且慢登录态通过 QiemanCookieManager 管理，当前保存为本地受权限保护的 `qieman.cookie` 文件；后续可迁移 Keychain
    155|5. **自动更新** — GitHub Release + latest.json，AppSelfUpdater 处理下载安装
    156|6. **数据持久化** — SQLite/JSON 文件混合，通过各 Store 类管理
    157|
    158|## 已知坑点
    159|
-   160|1. **dashboard_server.py 巨大 (206KB)** — 单文件包含所有后端逻辑，修改需精确定位
+   160|1. **dashboard/ 服务包较大** — 路由、HTML 渲染、平台数据和快照归一化已从入口拆出，但仍需按模块精确定位
    161|2. **PersonalAssetBrowser.swift 巨大 (66KB)** — 资产浏览器视图未拆分
    162|3. **QiemanPlatformNativeClient.swift (62KB)** — 且慢 API 客户端庞大，接口多
    163|4. **双数据通道** — Swift 原生和 Python 服务器两套数据源，需注意一致性
    164|5. **Python 服务器端口冲突** — ServerController 需检测端口占用
-   165|6. **无 SPM 构建** — 用 swiftc 直接编译，无包管理
+   165|6. **双构建路径** — SPM 用于测试/校验，发布脚本仍用 swiftc 打包，需要保持两边源码集合一致
    166|7. **且慢 API 可能变动** — 非公开 API，随时可能变更需维护
    167|8. **支付宝导入格式** — 依赖支付宝导出 CSV 格式，格式变更需更新识别逻辑
    168|
