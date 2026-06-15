@@ -1,25 +1,25 @@
 {
-    "version": "2.8.0",
-    "tag": "v2.8.0",
+    "version": "2.8.1",
+    "tag": "v2.8.1",
     "asset": {
-        "name": "QiemanDashboard-2.8.0.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.0/QiemanDashboard-2.8.0.zip",
-        "size": 3607200,
+        "name": "QiemanDashboard-2.8.1.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.1/QiemanDashboard-2.8.1.zip",
+        "size": 3656813,
         "content_type": "application/zip",
-        "sha256": "a15179dc8df336296025a9708c08010ff8a85a5cbab7edf5885dbdbad1ab2e52"
+        "sha256": "e43ae6e2a5f0f1a9be6f7bf205b20f62630de961e5e1d91b2b07bae663e3e42e"
     },
-    "sha256": "a15179dc8df336296025a9708c08010ff8a85a5cbab7edf5885dbdbad1ab2e52",
-    "notes": "release: bump macos app to v2.8.0\nadd enhancement center UI\nwire import preview and undo\nrecord enhancement timeline events\nadd enhancement center state\nadd portfolio snapshot insights\nadd import preview and undo models\nadd manager watch timeline model\nadd monthly report exporter\nplan product enhancement center\ndesign product enhancement center\nci: harden release workflow outputs\nadd qieman contract fixtures\nalign project map and build metadata\nprotect qieman cookie file permissions\nrun download progress checks in XCTest\nci: include dashboard entrypoint in syntax check\nci: add regular validation workflow\nadd batch a implementation plan\nadd comprehensive optimization design",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.8.0",
+    "sha256": "e43ae6e2a5f0f1a9be6f7bf205b20f62630de961e5e1d91b2b07bae663e3e42e",
+    "notes": "keep qieman app visible on launch",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.8.1",
     "published_at": "",
-    "tag_name": "v2.8.0",
-    "name": "QiemanDashboard v2.8.0",
-    "body": "release: bump macos app to v2.8.0\nadd enhancement center UI\nwire import preview and undo\nrecord enhancement timeline events\nadd enhancement center state\nadd portfolio snapshot insights\nadd import preview and undo models\nadd manager watch timeline model\nadd monthly report exporter\nplan product enhancement center\ndesign product enhancement center\nci: harden release workflow outputs\nadd qieman contract fixtures\nalign project map and build metadata\nprotect qieman cookie file permissions\nrun download progress checks in XCTest\nci: include dashboard entrypoint in syntax check\nci: add regular validation workflow\nadd batch a implementation plan\nadd comprehensive optimization design",
+    "tag_name": "v2.8.1",
+    "name": "QiemanDashboard v2.8.1",
+    "body": "keep qieman app visible on launch",
     "assets": [
         {
-            "name": "QiemanDashboard-2.8.0.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.0/QiemanDashboard-2.8.0.zip",
-            "size": 3607200,
+            "name": "QiemanDashboard-2.8.1.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.1/QiemanDashboard-2.8.1.zip",
+            "size": 3656813,
             "content_type": "application/zip"
         }
     ]
