@@ -97,7 +97,9 @@ final class UIState: ObservableObject {
     @Published var showsInDock: Bool = (UserDefaults.standard.object(forKey: "qieman.dashboard.showsInDock") as? Bool) ?? true {
         didSet {
             UserDefaults.standard.set(showsInDock, forKey: "qieman.dashboard.showsInDock")
-            NSApplication.shared.setActivationPolicy(showsInDock ? .regular : .accessory)
+            NSApplication.shared.setActivationPolicy(
+                AppLaunchPresentationPolicy.configuredActivationPolicy(showsInDock: showsInDock)
+            )
         }
     }
 

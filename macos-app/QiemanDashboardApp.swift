@@ -7,6 +7,18 @@ private enum AppSceneIdentifier {
     static let mainWindow = "main-window"
 }
 
+enum AppLaunchPresentationPolicy {
+    static func initialActivationPolicy(storedShowsInDock: Bool) -> NSApplication.ActivationPolicy {
+        // Keep the first interactive launch regular so SwiftUI can create the
+        // initial WindowGroup even when the saved preference hides the Dock icon.
+        .regular
+    }
+
+    static func configuredActivationPolicy(showsInDock: Bool) -> NSApplication.ActivationPolicy {
+        showsInDock ? .regular : .accessory
+    }
+}
+
 final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private enum MenuBarRenderState: Equatable {
         case fallback(title: String)
@@ -52,9 +64,10 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
             }
         }
 
-        // Apply Dock visibility setting immediately at launch, before any UI appears.
         let showInDock = (UserDefaults.standard.object(forKey: "qieman.dashboard.showsInDock") as? Bool) ?? true
-        NSApplication.shared.setActivationPolicy(showInDock ? .regular : .accessory)
+        NSApplication.shared.setActivationPolicy(
+            AppLaunchPresentationPolicy.initialActivationPolicy(storedShowsInDock: showInDock)
+        )
 
         // Install local monitor to handle double-click in the titlebar/toolbar area.
         // SwiftUI's .onTapGesture cannot reach the native macOS titlebar region when
@@ -74,7 +87,9 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
 
         Task { @MainActor [weak self] in
             guard let self else { return }
-            NSApplication.shared.setActivationPolicy(model.showsInDock ? .regular : .accessory)
+            NSApplication.shared.setActivationPolicy(
+                AppLaunchPresentationPolicy.configuredActivationPolicy(showsInDock: model.showsInDock)
+            )
             let view = MenuBarPortfolioView()
                 .environmentObject(model)
             self.popover.contentViewController = NSHostingController(rootView: view)

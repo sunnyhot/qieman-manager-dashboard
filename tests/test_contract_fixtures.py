@@ -12,6 +12,11 @@ FIXTURES = ROOT / "macos-app" / "Tests" / "QiemanDashboardTests" / "Fixtures"
 
 
 class ContractFixtureTests(unittest.TestCase):
+    def test_macos_bundle_script_embeds_dashboard_package(self) -> None:
+        script = (ROOT / "scripts" / "build_macos_app.sh").read_text(encoding="utf-8")
+
+        self.assertIn('cp -R "$ROOT_DIR/dashboard" "$PAYLOAD_DIR/"', script)
+
     def test_post_snapshot_fixture_matches_python_normalizer(self) -> None:
         payload = normalize_snapshot(FIXTURES / "post-snapshot.json", include_records=True)
 
