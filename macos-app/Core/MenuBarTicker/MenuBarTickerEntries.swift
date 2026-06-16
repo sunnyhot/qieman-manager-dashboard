@@ -116,7 +116,19 @@ extension AppModel {
     }
 
     func menuBarTickerCandidateEntries(settings: MenuBarTickerSettings) -> [MenuBarTickerEntry] {
+        let telemetryStart = PerformanceTelemetry.start()
         var entries: [MenuBarTickerEntry] = []
+        defer {
+            PerformanceTelemetry.record(
+                "menuBar.entries.build",
+                startedAt: telemetryStart,
+                metadata: [
+                    "selectionCount": "\(settings.selections.count)",
+                    "rowCount": "\(userPortfolioSnapshot?.rows.count ?? 0)",
+                    "entryCount": "\(entries.count)"
+                ]
+            )
+        }
         let rows = userPortfolioSnapshot?.rows ?? []
         let aggregates = MenuBarTickerAggregateSet(rows: rows)
         var rowsByHoldingID: [UUID: UserPortfolioValuationRow]?

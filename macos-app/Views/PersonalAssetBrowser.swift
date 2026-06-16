@@ -194,6 +194,20 @@ struct PersonalAssetBrowser: View {
     private func makePresentation(keyword: String) -> PersonalAssetBrowserPresentation {
         var counts: [PersonalAssetFilterScope: Int] = [:]
         var visibleRows: [PersonalAssetAggregateRow] = []
+        let telemetryStart = PerformanceTelemetry.start()
+        defer {
+            PerformanceTelemetry.record(
+                "personalAsset.presentation",
+                startedAt: telemetryStart,
+                metadata: [
+                    "rowCount": "\(rows.count)",
+                    "visibleCount": "\(visibleRows.count)",
+                    "filter": filterScope.rawValue,
+                    "sort": sortOption.rawValue,
+                    "hasKeyword": "\(!keyword.isEmpty)"
+                ]
+            )
+        }
 
         for row in rows {
             counts[.all, default: 0] += 1

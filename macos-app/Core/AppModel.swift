@@ -443,6 +443,17 @@ final class AppModel: ObservableObject {
     func start() async {
         guard !didStart else { return }
         didStart = true
+        let telemetryStart = PerformanceTelemetry.start()
+        defer {
+            PerformanceTelemetry.record(
+                "app.start",
+                startedAt: telemetryStart,
+                metadata: [
+                    "hasPortfolio": "\(hasPersonalPortfolio)",
+                    "menuBarEnabled": "\(menuBarTickerSettings.isEnabled)"
+                ]
+            )
+        }
         isBootstrapping = true
         defer { isBootstrapping = false }
 
@@ -495,6 +506,20 @@ final class AppModel: ObservableObject {
     }
 
     func refreshLatest(persist: Bool, updateNotice: Bool = true) async throws {
+        let telemetryStart = PerformanceTelemetry.start()
+        var telemetryResult = "completed"
+        defer {
+            PerformanceTelemetry.record(
+                "refresh.latest",
+                startedAt: telemetryStart,
+                metadata: [
+                    "persist": "\(persist)",
+                    "result": telemetryResult,
+                    "snapshotRecords": "\(currentSnapshot?.records.count ?? 0)",
+                    "platformActions": "\(platformPayload?.actions?.count ?? 0)"
+                ]
+            )
+        }
         isRefreshing = true
         errorMessage = ""
         defer { isRefreshing = false }
@@ -535,6 +560,7 @@ final class AppModel: ObservableObject {
 
         guard refreshedSnapshot != nil || refreshedPlatform != nil else {
             let message = failures.isEmpty ? "原生刷新失败，论坛和平台数据都没有拉到。" : failures.joined(separator: "；")
+            telemetryResult = "failed"
             errorMessage = message
             throw LiveRefreshError(message: message)
         }
@@ -544,6 +570,7 @@ final class AppModel: ObservableObject {
                 noticeMessage = "已通过原生抓取刷新到最新结果。"
             }
         } else {
+            telemetryResult = "partial"
             errorMessage = failures.joined(separator: "；")
             if updateNotice {
                 noticeMessage = "已刷新可用数据，但有部分内容拉取失败。"

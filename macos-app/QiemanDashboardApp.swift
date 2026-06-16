@@ -42,6 +42,14 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     fileprivate(set) var mainWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let telemetryStart = PerformanceTelemetry.start()
+        defer {
+            PerformanceTelemetry.record(
+                "app.delegate.finishLaunching",
+                startedAt: telemetryStart
+            )
+        }
+
         UNUserNotificationCenter.current().delegate = self
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -80,6 +88,13 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     func configure(model: AppModel) {
         guard !didConfigure else { return }
         didConfigure = true
+        let telemetryStart = PerformanceTelemetry.start()
+        defer {
+            PerformanceTelemetry.record(
+                "app.delegate.configure",
+                startedAt: telemetryStart
+            )
+        }
         self.model = model
         Task { @MainActor in
             model.appDelegate = self
@@ -150,6 +165,18 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
 
     @MainActor private func updateTitle() {
         guard let model, let button = statusItem.button else { return }
+        let telemetryStart = PerformanceTelemetry.start()
+        var renderedEntryCount = 0
+        defer {
+            PerformanceTelemetry.record(
+                "menuBar.title.render",
+                startedAt: telemetryStart,
+                metadata: [
+                    "entryCount": "\(renderedEntryCount)",
+                    "enabled": "\(model.menuBarTickerSettings.isEnabled)"
+                ]
+            )
+        }
         let allEntries = model.menuBarTickerAllCandidates
         let settings = model.menuBarTickerSettings.normalized()
         let appearance = settings.appearance.normalized()
@@ -190,6 +217,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         let start = safePage * pageSize
         let end = min(start + pageSize, allEntries.count)
         let displayEntries = Array(allEntries[start..<end])
+        renderedEntryCount = displayEntries.count
 
         // Start or update the carousel timer before the render guard so interval-only
         // settings changes still take effect without forcing a redraw.

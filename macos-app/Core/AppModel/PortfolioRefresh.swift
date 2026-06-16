@@ -5,29 +5,75 @@ import Foundation
 extension AppModel {
     func refreshUserPortfolio(updateNotice: Bool = true) async throws {
         let holdings = activeUserPortfolioHoldings
+        let telemetryStart = PerformanceTelemetry.start()
+        var telemetryResult = "completed"
+        defer {
+            PerformanceTelemetry.record(
+                "refresh.portfolio",
+                startedAt: telemetryStart,
+                metadata: [
+                    "holdingCount": "\(holdings.count)",
+                    "rowCount": "\(userPortfolioSnapshot?.rows.count ?? 0)",
+                    "result": telemetryResult,
+                    "updateNotice": "\(updateNotice)"
+                ]
+            )
+        }
         guard !holdings.isEmpty else {
+            telemetryResult = "empty"
             userPortfolioSnapshot = nil
             rebuildAssetRows()
             await refreshMarketIndicesIfNeeded()
             return
         }
-        guard !isRefreshingPortfolio else { return }
+        guard !isRefreshingPortfolio else {
+            telemetryResult = "alreadyRefreshing"
+            return
+        }
         isRefreshingPortfolio = true
         defer { isRefreshingPortfolio = false }
 
-        let snapshot = try await platformClient.fetchUserPortfolioSnapshot(holdings: holdings)
-        userPortfolioSnapshot = snapshot
-        rebuildAssetRows()
-        recordPortfolioInsightSnapshotIfPossible(createdAt: snapshot.refreshedAt)
-        if updateNotice {
-            noticeMessage = "个人持仓估值已刷新。"
+        do {
+            let snapshot = try await platformClient.fetchUserPortfolioSnapshot(holdings: holdings)
+            userPortfolioSnapshot = snapshot
+            rebuildAssetRows()
+            recordPortfolioInsightSnapshotIfPossible(createdAt: snapshot.refreshedAt)
+            if updateNotice {
+                noticeMessage = "个人持仓估值已刷新。"
+            }
+            await refreshMarketIndicesIfNeeded()
+        } catch {
+            telemetryResult = "failed"
+            throw error
         }
-        await refreshMarketIndicesIfNeeded()
     }
 
     func refreshMarketIndices(kinds requestedKinds: [MarketIndexKind]? = nil, updateNotice: Bool = true) async {
+        let telemetryStart = PerformanceTelemetry.start()
+        var telemetryKindCount = 0
+        var telemetryResult = "completed"
+        defer {
+            PerformanceTelemetry.record(
+                "refresh.marketIndices",
+                startedAt: telemetryStart,
+                metadata: [
+                    "kindCount": "\(telemetryKindCount)",
+                    "quoteCount": "\(marketIndexQuotes.count)",
+                    "result": telemetryResult,
+                    "updateNotice": "\(updateNotice)"
+                ]
+            )
+        }
         let kinds = requestedKinds ?? selectedMenuBarMarketIndexKinds
-        guard !kinds.isEmpty, !isRefreshingMarketIndices else { return }
+        telemetryKindCount = kinds.count
+        guard !kinds.isEmpty else {
+            telemetryResult = "empty"
+            return
+        }
+        guard !isRefreshingMarketIndices else {
+            telemetryResult = "alreadyRefreshing"
+            return
+        }
 
         isRefreshingMarketIndices = true
         defer { isRefreshingMarketIndices = false }
@@ -39,6 +85,7 @@ extension AppModel {
                 noticeMessage = "大盘行情已刷新。"
             }
         } else if updateNotice {
+            telemetryResult = "emptyResponse"
             errorMessage = "大盘行情暂时没有拉到可用数据。"
         }
     }

@@ -6,6 +6,20 @@ extension AppModel {
     /// Filtered platform actions using the centralized filter state
     var filteredPlatformActions: [PlatformActionPayload] {
         var actions = platformPayload?.actions ?? []
+        let telemetryStart = PerformanceTelemetry.start()
+        let originalCount = actions.count
+        defer {
+            PerformanceTelemetry.record(
+                "platform.actions.filter",
+                startedAt: telemetryStart,
+                metadata: [
+                    "inputCount": "\(originalCount)",
+                    "outputCount": "\(actions.count)",
+                    "sideFilter": filterState.sideFilter.rawValue,
+                    "hasQuery": "\(!filterState.debouncedSearchText.trimmingCharacters(in: .whitespaces).isEmpty)"
+                ]
+            )
+        }
 
         // Side filter (check if side string contains "buy")
         switch filterState.sideFilter {
@@ -46,11 +60,27 @@ extension AppModel {
 
     /// Page-sliced filtered actions
     var paginatedPlatformActions: [PlatformActionPayload] {
+        let telemetryStart = PerformanceTelemetry.start()
         let filtered = filteredPlatformActions
         let start = filterState.currentPage * filterState.pageSize
         let end = min(start + filterState.pageSize, filtered.count)
-        guard start < filtered.count else { return [] }
-        return Array(filtered[start ..< end])
+        let pageActions: [PlatformActionPayload]
+        if start < filtered.count {
+            pageActions = Array(filtered[start ..< end])
+        } else {
+            pageActions = []
+        }
+        PerformanceTelemetry.record(
+            "platform.actions.paginate",
+            startedAt: telemetryStart,
+            metadata: [
+                "filteredCount": "\(filtered.count)",
+                "page": "\(filterState.currentPage)",
+                "pageSize": "\(filterState.pageSize)",
+                "pageCount": "\(pageActions.count)"
+            ]
+        )
+        return pageActions
     }
 
     /// Total number of pages
