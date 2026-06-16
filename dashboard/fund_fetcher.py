@@ -98,8 +98,7 @@ def fetch_fund_history_series(fund_code: str) -> Dict[str, Any]:
 
 
 def lookup_fund_nav_by_date(history: Dict[str, Any], date_text: Any) -> Dict[str, Any]:
-    keys = [safe_int(value) for value in list(history.get("keys") or [])]
-    series = [item for item in list(history.get("series") or []) if isinstance(item, dict)]
+    keys, series = _fund_history_lookup_tables(history)
     target_key = date_key_from_text(date_text)
     if not keys or not series or not target_key:
         return {}
@@ -191,6 +190,39 @@ def fetch_fund_quote(fund_code: str) -> Dict[str, Any]:
         source=price_source,
     )
     return result
+
+
+def _fund_history_lookup_signature(history: Dict[str, Any]) -> tuple[Any, ...]:
+    raw_keys = list(history.get("keys") or [])
+    raw_series = list(history.get("series") or [])
+    first_row = raw_series[0] if raw_series and isinstance(raw_series[0], dict) else {}
+    last_row = raw_series[-1] if raw_series and isinstance(raw_series[-1], dict) else {}
+    return (
+        len(raw_keys),
+        raw_keys[0] if raw_keys else None,
+        raw_keys[-1] if raw_keys else None,
+        len(raw_series),
+        first_row.get("date"),
+        first_row.get("nav"),
+        last_row.get("date"),
+        last_row.get("nav"),
+    )
+
+
+def _fund_history_lookup_tables(history: Dict[str, Any]) -> tuple[List[int], List[Dict[str, Any]]]:
+    signature = _fund_history_lookup_signature(history)
+    cached_signature = history.get("_lookup_signature")
+    cached_keys = history.get("_lookup_keys")
+    cached_series = history.get("_lookup_series")
+    if cached_signature == signature and isinstance(cached_keys, list) and isinstance(cached_series, list):
+        return cached_keys, cached_series
+
+    keys = [safe_int(value) for value in list(history.get("keys") or [])]
+    series = [item for item in list(history.get("series") or []) if isinstance(item, dict)]
+    history["_lookup_signature"] = signature
+    history["_lookup_keys"] = keys
+    history["_lookup_series"] = series
+    return keys, series
 
 
 def preload_fund_market_data(fund_codes: List[str]) -> tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
