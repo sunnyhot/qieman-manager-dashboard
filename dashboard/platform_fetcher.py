@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .cache import (
     FUND_QUOTE_TTL_SECONDS,
@@ -23,7 +23,7 @@ from .config import (
     HOLDING_THEME_KEYWORDS,
     PLATFORM_ORDER_SIDE_MAP,
 )
-from .fund_fetcher import lookup_fund_nav_by_date, preload_fund_market_data
+from .fund_fetcher import lookup_fund_nav_by_date, preload_fund_market_data, preload_selected_fund_market_data
 from .performance import performance_start, record_performance
 from .snapshot import build_dashboard_client
 from .utils import (
@@ -37,6 +37,8 @@ from .utils import (
     safe_float,
     safe_int,
 )
+
+MarketData = Tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]
 
 
 def get_snapshot_by_name(name: str) -> Dict[str, Any]:
@@ -85,17 +87,34 @@ def platform_action_timestamp(action: Dict[str, Any]) -> int:
     return safe_int(action.get("txn_ts")) or safe_int(action.get("created_ts"))
 
 
-def enrich_platform_actions_with_valuation(actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _action_needs_history_nav(action: Dict[str, Any]) -> bool:
+    return safe_float(action.get("nav")) <= 0
+
+
+def enrich_platform_actions_with_valuation(
+    actions: List[Dict[str, Any]],
+    market_data: Optional[MarketData] = None,
+) -> List[Dict[str, Any]]:
     source_actions = [dict(item) for item in actions if isinstance(item, dict)]
     if not source_actions:
         return actions
-    fund_codes = [normalize_text(item.get("fund_code")) for item in source_actions if normalize_text(item.get("fund_code"))]
-    histories, quotes = preload_fund_market_data(fund_codes)
+    quote_codes = [normalize_text(item.get("fund_code")) for item in source_actions if normalize_text(item.get("fund_code"))]
+    history_codes = [
+        normalize_text(item.get("fund_code"))
+        for item in source_actions
+        if normalize_text(item.get("fund_code")) and _action_needs_history_nav(item)
+    ]
+    histories, quotes = (
+        market_data
+        if market_data is not None
+        else preload_selected_fund_market_data(history_codes, quote_codes)
+    )
     enriched_actions: List[Dict[str, Any]] = []
     for action in source_actions:
         enriched = dict(action)
         fund_code = normalize_text(enriched.get("fund_code"))
         history = histories.get(fund_code) if fund_code else {}
+        history = history or {}
 
         trade_valuation = safe_float(enriched.get("nav"))
         trade_valuation_date = normalize_date_text(normalize_text(enriched.get("nav_date")))
@@ -112,6 +131,7 @@ def enrich_platform_actions_with_valuation(actions: List[Dict[str, Any]]) -> Lis
             trade_valuation_date = normalize_date_text(normalize_text(enriched.get("txn_date") or enriched.get("created_at")))
 
         quote = quotes.get(fund_code) if fund_code else {}
+        quote = quote or {}
         current_valuation = safe_float(quote.get("price"))
         current_valuation_time = normalize_text(quote.get("price_time"))
         current_valuation_source = normalize_text(quote.get("price_source_label")) or "当前估值"
@@ -138,22 +158,79 @@ def enrich_platform_actions_with_valuation(actions: List[Dict[str, Any]]) -> Lis
     return enriched_actions
 
 
-def enrich_platform_holdings_with_pricing(holdings: Dict[str, Any], actions: List[Dict[str, Any]]) -> Dict[str, Any]:
+def collect_platform_market_fund_code_sets(
+    platform_trades: Dict[str, Any],
+    display_actions: List[Dict[str, Any]],
+) -> tuple[List[str], List[str]]:
+    history_codes: List[str] = []
+    quote_codes: List[str] = []
+    holdings = platform_trades.get("holdings") if isinstance(platform_trades.get("holdings"), dict) else {}
+    holding_items = [item for item in list(holdings.get("items") or []) if isinstance(item, dict)]
+    current_keys = {
+        normalize_text(item.get("fund_code")) or normalize_text(item.get("label")) or normalize_text(item.get("fund_name"))
+        for item in holding_items
+    }
+    for item in holding_items:
+        quote_codes.append(normalize_text(item.get("fund_code")))
+
+    for action in list(platform_trades.get("actions") or []):
+        if not isinstance(action, dict) or not _action_needs_history_nav(action):
+            continue
+        action_key = normalize_text(action.get("fund_code")) or normalize_text(action.get("title")) or normalize_text(action.get("fund_name"))
+        if action_key and action_key in current_keys:
+            history_codes.append(normalize_text(action.get("fund_code")))
+
+    for action in display_actions:
+        if not isinstance(action, dict):
+            continue
+        quote_codes.append(normalize_text(action.get("fund_code")))
+        if _action_needs_history_nav(action):
+            history_codes.append(normalize_text(action.get("fund_code")))
+
+    return (
+        [code for code in dict.fromkeys(history_codes) if code],
+        [code for code in dict.fromkeys(quote_codes) if code],
+    )
+
+
+def preload_platform_market_data(platform_trades: Dict[str, Any], display_actions: List[Dict[str, Any]]) -> MarketData:
+    history_codes, quote_codes = collect_platform_market_fund_code_sets(platform_trades, display_actions)
+    if not history_codes and not quote_codes:
+        return {}, {}
+    return preload_selected_fund_market_data(history_codes, quote_codes)
+
+
+def enrich_platform_holdings_with_pricing(
+    holdings: Dict[str, Any],
+    actions: List[Dict[str, Any]],
+    market_data: Optional[MarketData] = None,
+) -> Dict[str, Any]:
     items = [dict(item) for item in list(holdings.get("items") or []) if isinstance(item, dict)]
     if not items:
         return holdings
     fund_codes = [normalize_text(item.get("fund_code")) for item in items if normalize_text(item.get("fund_code"))]
-    histories, quotes = preload_fund_market_data(fund_codes)
     current_keys = {
         normalize_text(item.get("fund_code")) or normalize_text(item.get("label")) or normalize_text(item.get("fund_name"))
         for item in items
     }
     action_map: Dict[str, List[Dict[str, Any]]] = {}
-    for action in sorted(actions, key=platform_action_timestamp):
+    source_actions = [action for action in actions if isinstance(action, dict)]
+    for action in sorted(source_actions, key=platform_action_timestamp):
         action_key = normalize_text(action.get("fund_code")) or normalize_text(action.get("title")) or normalize_text(action.get("fund_name"))
         if not action_key or action_key not in current_keys:
             continue
         action_map.setdefault(action_key, []).append(action)
+    if market_data is None:
+        history_codes: List[str] = []
+        for item in items:
+            fund_code = normalize_text(item.get("fund_code"))
+            asset_key = normalize_text(item.get("fund_code")) or normalize_text(item.get("label")) or normalize_text(item.get("fund_name"))
+            relevant_actions = [entry for entry in list(action_map.get(asset_key) or []) if isinstance(entry, dict)]
+            if fund_code and any(_action_needs_history_nav(action) for action in relevant_actions):
+                history_codes.append(fund_code)
+        histories, quotes = preload_selected_fund_market_data(history_codes, fund_codes)
+    else:
+        histories, quotes = market_data
     enriched_items: List[Dict[str, Any]] = []
     estimate_count = 0
     fallback_count = 0
@@ -167,6 +244,7 @@ def enrich_platform_holdings_with_pricing(holdings: Dict[str, Any], actions: Lis
         pricing_coverage_count = 0
         missing_nav_count = 0
         history = histories.get(fund_code) if fund_code else {}
+        history = history or {}
         for action in relevant_actions:
             trade_units = safe_int(action.get("trade_unit"))
             if trade_units <= 0:
@@ -198,6 +276,7 @@ def enrich_platform_holdings_with_pricing(holdings: Dict[str, Any], actions: Lis
         current_units = safe_int(item.get("current_units"))
         avg_cost = round(total_cost / current_units, 4) if current_units > 0 and simulated_units == current_units and total_cost > 0 else 0.0
         quote = quotes.get(fund_code) if fund_code else {}
+        quote = quote or {}
         current_price = safe_float(quote.get("price"))
         position_cost = round(avg_cost * current_units, 2) if avg_cost > 0 and current_units > 0 else 0.0
         position_value = round(current_price * current_units, 2) if current_price > 0 and current_units > 0 else 0.0
@@ -264,7 +343,10 @@ def platform_holdings_pricing_cache_key(platform_trades: Dict[str, Any], actions
     return f"{prod_code}:{len(action_tokens)}:{digest}"
 
 
-def get_priced_platform_holdings(platform_trades: Dict[str, Any]) -> Dict[str, Any]:
+def get_priced_platform_holdings(
+    platform_trades: Dict[str, Any],
+    market_data: Optional[MarketData] = None,
+) -> Dict[str, Any]:
     raw_holdings = platform_trades.get("holdings") if isinstance(platform_trades.get("holdings"), dict) else {}
     actions = [item for item in list(platform_trades.get("actions") or []) if isinstance(item, dict)]
     cache_key = platform_holdings_pricing_cache_key(platform_trades, actions)
@@ -272,7 +354,7 @@ def get_priced_platform_holdings(platform_trades: Dict[str, Any]) -> Dict[str, A
     cached = PLATFORM_HOLDINGS_PRICING_CACHE.get(cache_key)
     if cached and now - safe_float(cached.get("ts")) < FUND_QUOTE_TTL_SECONDS:
         return cached.get("data") if isinstance(cached.get("data"), dict) else raw_holdings
-    priced_holdings = enrich_platform_holdings_with_pricing(raw_holdings, actions)
+    priced_holdings = enrich_platform_holdings_with_pricing(raw_holdings, actions, market_data=market_data)
     store_ttl_cache_entry(PLATFORM_HOLDINGS_PRICING_CACHE, cache_key, priced_holdings, ts=now)
     return priced_holdings
 

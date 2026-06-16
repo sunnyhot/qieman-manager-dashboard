@@ -40,7 +40,9 @@ from .html_render import (
 )
 from .performance import timed
 from .platform_fetcher import (
+    filter_platform_actions,
     platform_effective_range,
+    preload_platform_market_data,
 )
 from .utils import (
     format_amount,
@@ -1027,6 +1029,18 @@ def render_platform_page(
     cookie_ok = COOKIE_FILE.exists()
     meta_refresh = build_meta_refresh(form_values, current_snapshot_name, path="/platform")
     product_code = normalize_text(form_values.get("prod_code")) or "未填写"
+    platform_payload = platform_trades or {}
+    platform_card_limit = 120
+    display_actions = (
+        filter_platform_actions(platform_payload, form_values, signal_filter)[:platform_card_limit]
+        if platform_payload.get("supported")
+        else []
+    )
+    platform_market_data = (
+        preload_platform_market_data(platform_payload, display_actions)
+        if platform_payload.get("supported")
+        else None
+    )
     chips = [
         f"产品 {product_code}",
         f"来源 {source_label or '未选择'}",
@@ -1321,9 +1335,9 @@ def render_platform_page(
       <div class="record-meta">{''.join(f'<span>{html.escape(item)}</span>' for item in chips if item)}</div>
     </section>
 
-    {render_platform_holdings_panel(platform_trades or {{}})}
+    {render_platform_holdings_panel(platform_payload, market_data=platform_market_data)}
 
-    {render_signal_panel(platform_trades or {{}}, form_values, current_snapshot_name, signal_filter, timeline_asset, page_path="/platform", card_limit=120, home_mode=False, section_anchor=PLATFORM_SIGNAL_SECTION_ID)}
+    {render_signal_panel(platform_payload, form_values, current_snapshot_name, signal_filter, timeline_asset, page_path="/platform", card_limit=platform_card_limit, home_mode=False, section_anchor=PLATFORM_SIGNAL_SECTION_ID, market_data=platform_market_data)}
   </div>
 </body>
 </html>"""

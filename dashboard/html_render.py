@@ -56,7 +56,10 @@ def _platform_action_valuation_cache_key(actions: List[Dict[str, Any]]) -> str:
     return f"{len(payload)}:{digest}"
 
 
-def enrich_displayed_platform_actions_with_cache(actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def enrich_displayed_platform_actions_with_cache(
+    actions: List[Dict[str, Any]],
+    market_data: Optional[Any] = None,
+) -> List[Dict[str, Any]]:
     source_actions = [dict(item) for item in actions if isinstance(item, dict)]
     if not source_actions:
         return actions
@@ -69,7 +72,10 @@ def enrich_displayed_platform_actions_with_cache(actions: List[Dict[str, Any]]) 
         if isinstance(data, list):
             return [dict(item) for item in data if isinstance(item, dict)]
 
-    enriched_actions = enrich_platform_actions_with_valuation(source_actions)
+    if market_data is None:
+        enriched_actions = enrich_platform_actions_with_valuation(source_actions)
+    else:
+        enriched_actions = enrich_platform_actions_with_valuation(source_actions, market_data=market_data)
     if isinstance(enriched_actions, list):
         store_ttl_cache_entry(
             PLATFORM_ACTION_VALUATION_CACHE,
@@ -90,6 +96,7 @@ def render_signal_panel(
     card_limit: int = 36,
     home_mode: bool = False,
     section_anchor: str = "",
+    market_data: Optional[Any] = None,
 ) -> str:
     if not platform_trades:
         return ""
@@ -147,7 +154,7 @@ def render_signal_panel(
             url = append_url_fragment(url, section_anchor)
             active = platform_window == value or (platform_window == "" and value == "all")
             window_toolbar.append(f'<a class="mini-btn{" active" if active else ""}" href="{html.escape(url)}">{html.escape(label)}</a>')
-    display_actions = enrich_displayed_platform_actions_with_cache(filtered_actions[:card_limit])
+    display_actions = enrich_displayed_platform_actions_with_cache(filtered_actions[:card_limit], market_data=market_data)
     signal_cards = []
     for action in display_actions:
         card_side = normalize_text(action.get("side")) or "watch"
@@ -275,10 +282,10 @@ def render_signal_panel(
     )
 
 
-def render_platform_holdings_panel(platform_trades: Dict[str, Any]) -> str:
+def render_platform_holdings_panel(platform_trades: Dict[str, Any], market_data: Optional[Any] = None) -> str:
     if not platform_trades or not platform_trades.get("supported"):
         return ""
-    holdings = get_priced_platform_holdings(platform_trades)
+    holdings = get_priced_platform_holdings(platform_trades, market_data=market_data)
     items = [item for item in list(holdings.get("items") or []) if isinstance(item, dict)]
     breakdown = holdings.get("breakdown") if isinstance(holdings.get("breakdown"), dict) else {}
     pricing_summary = holdings.get("pricing_summary") if isinstance(holdings.get("pricing_summary"), dict) else {}

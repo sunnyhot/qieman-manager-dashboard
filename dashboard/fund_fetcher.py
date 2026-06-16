@@ -245,9 +245,18 @@ def _fund_history_lookup_tables(history: Dict[str, Any]) -> tuple[List[int], Lis
     return keys, series
 
 
-def preload_fund_market_data(fund_codes: List[str]) -> tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
+def _unique_fund_codes(fund_codes: List[str]) -> List[str]:
+    return [code for code in dict.fromkeys(normalize_text(code) for code in fund_codes) if code]
+
+
+def preload_selected_fund_market_data(
+    history_fund_codes: List[str],
+    quote_fund_codes: List[str],
+) -> tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
     started_at = performance_start()
-    unique_codes = [code for code in dict.fromkeys(normalize_text(code) for code in fund_codes) if code]
+    unique_history_codes = _unique_fund_codes(history_fund_codes)
+    unique_quote_codes = _unique_fund_codes(quote_fund_codes)
+    unique_codes = _unique_fund_codes(unique_history_codes + unique_quote_codes)
     histories: Dict[str, Dict[str, Any]] = {}
     quotes: Dict[str, Dict[str, Any]] = {}
     if not unique_codes:
@@ -257,13 +266,14 @@ def preload_fund_market_data(fund_codes: List[str]) -> tuple[Dict[str, Dict[str,
     now = time.time()
     history_codes: List[str] = []
     quote_codes: List[str] = []
-    for code in unique_codes:
+    for code in unique_history_codes:
         cached_history = FUND_HISTORY_CACHE.get(code)
         if cached_history and now - safe_float(cached_history.get("loaded_at")) < FUND_HISTORY_TTL_SECONDS:
             histories[code] = cached_history
         else:
             history_codes.append(code)
 
+    for code in unique_quote_codes:
         cached_quote = FUND_QUOTE_CACHE.get(code)
         if cached_quote and now - safe_float(cached_quote.get("loaded_at")) < FUND_QUOTE_TTL_SECONDS:
             quotes[code] = cached_quote
@@ -310,3 +320,7 @@ def preload_fund_market_data(fund_codes: List[str]) -> tuple[Dict[str, Dict[str,
         quote_fetch_count=len(quote_codes),
     )
     return histories, quotes
+
+
+def preload_fund_market_data(fund_codes: List[str]) -> tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
+    return preload_selected_fund_market_data(fund_codes, fund_codes)
