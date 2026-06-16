@@ -120,6 +120,7 @@ extension AppModel {
     ) -> [MenuBarTickerEntry] {
         let telemetryStart = PerformanceTelemetry.start()
         var entries: [MenuBarTickerEntry] = []
+        var didBuildAggregates = false
         defer {
             PerformanceTelemetry.record(
                 "menuBar.entries.build",
@@ -127,18 +128,26 @@ extension AppModel {
                 metadata: [
                     "selectionCount": "\(settings.selections.count)",
                     "rowCount": "\(userPortfolioSnapshot?.rows.count ?? 0)",
-                    "entryCount": "\(entries.count)"
+                    "entryCount": "\(entries.count)",
+                    "aggregateBuilt": "\(didBuildAggregates)"
                 ]
             )
         }
         let rows = userPortfolioSnapshot?.rows ?? []
-        let aggregates = MenuBarTickerAggregateSet(rows: rows)
+        var aggregates: MenuBarTickerAggregateSet?
+        func aggregateSet() -> MenuBarTickerAggregateSet {
+            if let aggregates { return aggregates }
+            let built = MenuBarTickerAggregateSet(rows: rows)
+            aggregates = built
+            didBuildAggregates = true
+            return built
+        }
         var rowsByHoldingID: [UUID: UserPortfolioValuationRow]?
 
         selectionLoop: for selection in settings.selections {
             switch selection {
             case .kind(let kind):
-                if let entry = menuBarTickerEntry(for: kind, rows: rows, aggregates: aggregates) {
+                if let entry = menuBarTickerEntry(for: kind, rows: rows, aggregates: aggregateSet) {
                     entries.append(entry)
                     if let maxEntries, entries.count >= maxEntries { break selectionLoop }
                 }
@@ -167,7 +176,7 @@ extension AppModel {
     func menuBarTickerEntry(
         for kind: MenuBarTickerKind,
         rows: [UserPortfolioValuationRow],
-        aggregates: MenuBarTickerAggregateSet
+        aggregates: () -> MenuBarTickerAggregateSet
     ) -> MenuBarTickerEntry? {
         switch kind {
         case .totalValue:
@@ -183,36 +192,40 @@ extension AppModel {
                 tone: .neutral
             )
         case .overallDailyAmount:
-            return aggregates.all.amountEntry(id: kind.rawValue, title: "整体涨跌", compactTitle: "今", value: aggregates.all.dailyAmount)
+            let aggregate = aggregates().all
+            return aggregate.amountEntry(id: kind.rawValue, title: "整体涨跌", compactTitle: "今", value: aggregate.dailyAmount)
         case .overallDailyPct:
-            return aggregates.all.percentEntry(id: kind.rawValue, title: "整体涨跌率", compactTitle: "今", value: aggregates.all.dailyPct)
+            let aggregate = aggregates().all
+            return aggregate.percentEntry(id: kind.rawValue, title: "整体涨跌率", compactTitle: "今", value: aggregate.dailyPct)
         case .overallProfitAmount:
-            return aggregates.all.amountEntry(id: kind.rawValue, title: "整体收益", compactTitle: "益", value: aggregates.all.profitAmount)
+            let aggregate = aggregates().all
+            return aggregate.amountEntry(id: kind.rawValue, title: "整体收益", compactTitle: "益", value: aggregate.profitAmount)
         case .overallProfitPct:
-            return aggregates.all.percentEntry(id: kind.rawValue, title: "整体收益率", compactTitle: "益", value: aggregates.all.profitPct)
+            let aggregate = aggregates().all
+            return aggregate.percentEntry(id: kind.rawValue, title: "整体收益率", compactTitle: "益", value: aggregate.profitPct)
         case .offExchangeDailyAmount:
-            let aggregate = aggregates.fund(.offExchange)
+            let aggregate = aggregates().fund(.offExchange)
             return aggregate.amountEntry(id: kind.rawValue, title: "场外涨跌", compactTitle: "场外", value: aggregate.dailyAmount)
         case .offExchangeDailyPct:
-            let aggregate = aggregates.fund(.offExchange)
+            let aggregate = aggregates().fund(.offExchange)
             return aggregate.percentEntry(id: kind.rawValue, title: "场外涨跌率", compactTitle: "场外", value: aggregate.dailyPct)
         case .offExchangeProfitAmount:
-            let aggregate = aggregates.fund(.offExchange)
+            let aggregate = aggregates().fund(.offExchange)
             return aggregate.amountEntry(id: kind.rawValue, title: "场外收益", compactTitle: "场外益", value: aggregate.profitAmount)
         case .offExchangeProfitPct:
-            let aggregate = aggregates.fund(.offExchange)
+            let aggregate = aggregates().fund(.offExchange)
             return aggregate.percentEntry(id: kind.rawValue, title: "场外收益率", compactTitle: "场外益", value: aggregate.profitPct)
         case .onExchangeDailyAmount:
-            let aggregate = aggregates.fund(.onExchange)
+            let aggregate = aggregates().fund(.onExchange)
             return aggregate.amountEntry(id: kind.rawValue, title: "场内涨跌", compactTitle: "场内", value: aggregate.dailyAmount)
         case .onExchangeDailyPct:
-            let aggregate = aggregates.fund(.onExchange)
+            let aggregate = aggregates().fund(.onExchange)
             return aggregate.percentEntry(id: kind.rawValue, title: "场内涨跌率", compactTitle: "场内", value: aggregate.dailyPct)
         case .onExchangeProfitAmount:
-            let aggregate = aggregates.fund(.onExchange)
+            let aggregate = aggregates().fund(.onExchange)
             return aggregate.amountEntry(id: kind.rawValue, title: "场内收益", compactTitle: "场内益", value: aggregate.profitAmount)
         case .onExchangeProfitPct:
-            let aggregate = aggregates.fund(.onExchange)
+            let aggregate = aggregates().fund(.onExchange)
             return aggregate.percentEntry(id: kind.rawValue, title: "场内收益率", compactTitle: "场内益", value: aggregate.profitPct)
         case .sseIndexLevel, .sseIndexChangeAmount, .sseIndexChangePct,
              .csi300IndexLevel, .csi300IndexChangeAmount, .csi300IndexChangePct,
