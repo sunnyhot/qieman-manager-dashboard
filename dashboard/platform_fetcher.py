@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from .cache import (
     FUND_QUOTE_TTL_SECONDS,
+    PLATFORM_ACTION_PRESENTATION_CACHE,
     PLATFORM_HOLDINGS_PRICING_CACHE,
     PLATFORM_TRADE_CACHE,
     PLATFORM_TRADE_TTL_SECONDS,
@@ -419,11 +420,48 @@ def _finish_platform_action_summary(summary: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _platform_action_presentation_cache_key(
+    platform_trades: Dict[str, Any],
+    form_values: Dict[str, str],
+    selected_side: str,
+) -> str:
+    source_actions = platform_trades.get("actions") if isinstance(platform_trades, dict) else None
+    action_count = len(source_actions) if isinstance(source_actions, list) else 0
+    first_key = ""
+    last_key = ""
+    if isinstance(source_actions, list) and source_actions:
+        first = source_actions[0] if isinstance(source_actions[0], dict) else {}
+        last = source_actions[-1] if isinstance(source_actions[-1], dict) else {}
+        first_key = normalize_text(first.get("action_key")) or str(platform_action_timestamp(first))
+        last_key = normalize_text(last.get("action_key")) or str(platform_action_timestamp(last))
+    key_parts = [
+        str(id(platform_trades)),
+        str(id(source_actions)),
+        normalize_text(platform_trades.get("prod_code")) if isinstance(platform_trades, dict) else "",
+        str(action_count),
+        first_key,
+        last_key,
+        normalize_date_text(normalize_text(form_values.get("since"))),
+        normalize_date_text(normalize_text(form_values.get("until"))),
+        normalize_text(form_values.get("platform_window")) or "all",
+        normalize_text(selected_side) or "all",
+    ]
+    return "|".join(key_parts)
+
+
 def build_platform_action_presentation(
     platform_trades: Dict[str, Any],
     form_values: Dict[str, str],
     selected_side: str = "all",
 ) -> Dict[str, Any]:
+    cache_key = _platform_action_presentation_cache_key(platform_trades, form_values, selected_side)
+    now = time.time()
+    cached = PLATFORM_ACTION_PRESENTATION_CACHE.get(cache_key)
+    if cached and now - safe_float(cached.get("ts")) < PLATFORM_TRADE_TTL_SECONDS:
+        data = cached.get("data")
+        if isinstance(data, dict):
+            return data
+
     range_info = platform_effective_range(form_values)
     start_ms = safe_int(range_info.get("start_ms"))
     end_ms = safe_int(range_info.get("end_ms"))
@@ -459,7 +497,7 @@ def build_platform_action_presentation(
         for side, summary in summary_builders.items()
     }
     filtered_actions = actions_by_side[target_side] if target_side in {"buy", "sell"} else actions_by_side["all"]
-    return {
+    presentation = {
         "range_info": range_info,
         "all_actions": actions_by_side["all"],
         "filtered_actions": filtered_actions,
@@ -469,6 +507,11 @@ def build_platform_action_presentation(
         "summary_sell": summaries["sell"],
         "summaries": summaries,
     }
+    PLATFORM_ACTION_PRESENTATION_CACHE[cache_key] = {
+        "ts": now,
+        "data": presentation,
+    }
+    return presentation
 
 
 def build_platform_timeline_from_actions(actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
