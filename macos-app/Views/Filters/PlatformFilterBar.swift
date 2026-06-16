@@ -5,10 +5,12 @@ struct PlatformFilterBar: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
+        let presentation = model.platformActionPresentation
+
         ViewThatFits {
-            wideLayout
-            narrowLayout
-            compactLayout
+            wideLayout(counts: presentation.counts)
+            narrowLayout(counts: presentation.counts)
+            compactLayout(counts: presentation.counts)
         }
         .padding(12)
         .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
@@ -20,11 +22,11 @@ struct PlatformFilterBar: View {
 
     // MARK: - Wide: single row toolbar
 
-    private var wideLayout: some View {
+    private func wideLayout(counts: PlatformActionCounts) -> some View {
         HStack(spacing: 12) {
             PlatformSidePicker(
                 selection: $filterState.sideFilter,
-                counts: model.platformActionCounts
+                counts: counts
             )
 
             PlatformSearchField(
@@ -42,12 +44,12 @@ struct PlatformFilterBar: View {
 
     // MARK: - Narrow: two rows
 
-    private var narrowLayout: some View {
+    private func narrowLayout(counts: PlatformActionCounts) -> some View {
         VStack(spacing: 8) {
             HStack {
                 PlatformSidePicker(
                     selection: $filterState.sideFilter,
-                    counts: model.platformActionCounts
+                    counts: counts
                 )
 
                 Spacer()
@@ -65,14 +67,14 @@ struct PlatformFilterBar: View {
 
     // MARK: - Compact: Menu dropdown
 
-    private var compactLayout: some View {
+    private func compactLayout(counts: PlatformActionCounts) -> some View {
         HStack(spacing: 10) {
             Menu {
                 ForEach(PlatformSideFilter.allCases) { filter in
                     Button {
                         filterState.sideFilter = filter
                     } label: {
-                        Label(menuLabel(for: filter), systemImage: filter.systemImage)
+                        Label(menuLabel(for: filter, counts: counts), systemImage: filter.systemImage)
                     }
                 }
             } label: {
@@ -101,12 +103,12 @@ struct PlatformFilterBar: View {
         }
     }
 
-    private func menuLabel(for filter: PlatformSideFilter) -> String {
+    private func menuLabel(for filter: PlatformSideFilter, counts: PlatformActionCounts) -> String {
         let count: Int
         switch filter {
-        case .all: count = model.platformActionCounts.all
-        case .buy: count = model.platformActionCounts.buy
-        case .sell: count = model.platformActionCounts.sell
+        case .all: count = counts.all
+        case .buy: count = counts.buy
+        case .sell: count = counts.sell
         }
         return "\(filter.rawValue) (\(count))"
     }

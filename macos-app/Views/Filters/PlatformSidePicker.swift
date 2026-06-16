@@ -2,7 +2,7 @@ import SwiftUI
 
 struct PlatformSidePicker: View {
     @Binding var selection: PlatformSideFilter
-    let counts: (all: Int, buy: Int, sell: Int)
+    let counts: PlatformActionCounts
 
     var body: some View {
         HStack(spacing: 4) {

@@ -164,11 +164,11 @@ struct PlatformSectionView: View {
     // MARK: - List Panel
 
     private func platformListPanel(isCompact: Bool, scrollProxy: ScrollViewProxy) -> some View {
-        let allActions = model.filteredPlatformActions
-        let totalCount = allActions.count
-        let totalPages = model.totalPlatformPages
-        let currentPage = min(model.filterState.currentPage, totalPages - 1)
-        let pageActions = model.paginatedPlatformActions
+        let presentation = model.platformActionPresentation
+        let totalCount = presentation.filteredActions.count
+        let totalPages = presentation.totalPages
+        let currentPage = presentation.currentPage
+        let pageActions = presentation.pageActions
 
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
