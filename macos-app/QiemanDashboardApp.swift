@@ -194,14 +194,15 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
 
         if allEntries.isEmpty {
             stopCarousel()
-            let state = MenuBarRenderState.fallback(title: model.portfolioMenuBarTitle)
+            let fallbackTitle = model.portfolioMenuBarFallbackTitle
+            let state = MenuBarRenderState.fallback(title: fallbackTitle)
             guard state != lastMenuBarRenderState else { return }
             lastMenuBarRenderState = state
 
             let icon = NSImage(systemSymbolName: "chart.bar.fill", accessibilityDescription: "QiemanDashboard") ?? NSImage()
             icon.isTemplate = true
             button.image = icon
-            button.toolTip = model.portfolioMenuBarTitle
+            button.toolTip = fallbackTitle
             button.needsDisplay = true
             statusItem.length = NSStatusItem.squareLength
             return

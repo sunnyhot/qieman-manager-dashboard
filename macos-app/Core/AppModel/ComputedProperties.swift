@@ -116,23 +116,17 @@ extension AppModel {
         if let menuBarTickerTitle {
             return menuBarTickerTitle
         }
-        if let summary = personalAssetSummary, summary.totalEffectiveHoldingAmount > 0 {
-            let total = summary.totalEffectiveHoldingAmount
-            if total >= 10_000 {
-                return String(format: "%.1f万", total / 10_000)
-            }
-            return String(format: "%.0f", total)
-        }
-        if hasPersonalPortfolio {
-            return "持仓"
-        }
-        if hasPendingTrades {
-            return "待确认"
-        }
-        if hasInvestmentPlans {
-            return "计划"
-        }
-        return hasArchivedPortfolio ? "归档" : "未配置"
+        return portfolioMenuBarFallbackTitle
+    }
+
+    var portfolioMenuBarFallbackTitle: String {
+        PortfolioMenuBarTitle.fallback(
+            totalEffectiveHoldingAmount: personalAssetSummary?.totalEffectiveHoldingAmount,
+            hasPersonalPortfolio: hasPersonalPortfolio,
+            hasPendingTrades: hasPendingTrades,
+            hasInvestmentPlans: hasInvestmentPlans,
+            hasArchivedPortfolio: hasArchivedPortfolio
+        )
     }
 
     var portfolioAutoRefreshStatusText: String {
