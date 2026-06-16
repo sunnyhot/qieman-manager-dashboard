@@ -38,6 +38,7 @@ extension AppModel {
             userPortfolioSnapshot = snapshot
             rebuildAssetRows()
             recordPortfolioInsightSnapshotIfPossible(createdAt: snapshot.refreshedAt)
+            lastPortfolioRefreshAt = Date()
             if updateNotice {
                 noticeMessage = "个人持仓估值已刷新。"
             }

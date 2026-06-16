@@ -74,6 +74,8 @@ final class AppModel: ObservableObject {
     @Published var status: StatusPayload?
     @Published var isBootstrapping = false
     @Published var isRefreshing = false
+    var lastLatestRefreshAt: Date?
+    var lastPortfolioRefreshAt: Date?
     @Published var isProcessingImport = false
     @Published var noticeMessage = ""
     @Published var errorMessage = ""
@@ -557,6 +559,10 @@ final class AppModel: ObservableObject {
         }
 
         rebuildNativeStatus()
+
+        if refreshedSnapshot != nil || refreshedPlatform != nil {
+            lastLatestRefreshAt = Date()
+        }
 
         guard refreshedSnapshot != nil || refreshedPlatform != nil else {
             let message = failures.isEmpty ? "原生刷新失败，论坛和平台数据都没有拉到。" : failures.joined(separator: "；")

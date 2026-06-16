@@ -92,31 +92,32 @@ extension AppModel {
     }
 
     func refreshDataForSectionIfNeeded(_ section: AppSection) {
-        guard !isRefreshing else { return }
+        let decision = RefreshDecision.sectionTriggered(
+            section: section,
+            lastLatestRefreshAt: lastLatestRefreshAt,
+            lastPortfolioRefreshAt: lastPortfolioRefreshAt,
+            hasForumPosts: hasForumPosts,
+            hasPlatformActions: hasPlatformActions,
+            hasPersonalPortfolio: hasPersonalPortfolio,
+            hasPortfolioSnapshot: userPortfolioSnapshot != nil,
+            isRefreshingLatest: isRefreshing,
+            isRefreshingPortfolio: isRefreshingPortfolio
+        )
 
-        switch section {
-        case .overview:
-            guard !hasForumPosts || !hasPlatformActions else { return }
-        case .portfolio:
-            guard hasPersonalPortfolio, userPortfolioSnapshot == nil, !isRefreshingPortfolio else { return }
-            Task { try? await refreshUserPortfolio(updateNotice: false) }
-            return
-        case .platform:
-            guard !hasPlatformActions else { return }
-        case .forum:
-            if hasForumPosts {
+        switch decision {
+        case .skip:
+            if section == .forum, hasForumPosts {
                 ensureSelectedForumPost()
-                return
             }
-        default:
             return
+        case .refreshPortfolio:
+            Task { try? await refreshUserPortfolio(updateNotice: false) }
+        case .refreshLatest:
+            if (section == .overview || section == .forum), !form.mode.producesPostRecords {
+                form.mode = cookieAvailable ? .followingPosts : .groupManager
+            }
+            Task { try? await refreshLatest(persist: false, updateNotice: false) }
         }
-
-        if (section == .overview || section == .forum), !form.mode.producesPostRecords {
-            form.mode = cookieAvailable ? .followingPosts : .groupManager
-        }
-
-        Task { try? await refreshLatest(persist: false, updateNotice: false) }
     }
 
     func ensureSelectedForumPost(preferredID: String? = nil) {
