@@ -9,6 +9,7 @@ from .cache import (
     FUND_QUOTE_TTL_SECONDS,
     PLATFORM_ACTION_PRESENTATION_CACHE,
     PLATFORM_HOLDINGS_PRICING_CACHE,
+    PLATFORM_TIMELINE_CACHE,
     PLATFORM_TRADE_CACHE,
     PLATFORM_TRADE_TTL_SECONDS,
     platform_trade_lock,
@@ -514,7 +515,29 @@ def build_platform_action_presentation(
     return presentation
 
 
+def _platform_timeline_cache_key(actions: Any) -> str:
+    action_count = ""
+    first_key = ""
+    last_key = ""
+    if isinstance(actions, list):
+        action_count = str(len(actions))
+        if actions:
+            first = actions[0] if isinstance(actions[0], dict) else {}
+            last = actions[-1] if isinstance(actions[-1], dict) else {}
+            first_key = normalize_text(first.get("action_key")) or str(platform_action_timestamp(first))
+            last_key = normalize_text(last.get("action_key")) or str(platform_action_timestamp(last))
+    return "|".join([str(id(actions)), action_count, first_key, last_key])
+
+
 def build_platform_timeline_from_actions(actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    cache_key = _platform_timeline_cache_key(actions)
+    now = time.time()
+    cached = PLATFORM_TIMELINE_CACHE.get(cache_key)
+    if cached and now - safe_float(cached.get("ts")) < PLATFORM_TRADE_TTL_SECONDS:
+        data = cached.get("data")
+        if isinstance(data, list):
+            return data
+
     grouped: Dict[str, Dict[str, Any]] = {}
     for action in actions:
         label = normalize_text(action.get("title")) or normalize_text(action.get("fund_name")) or normalize_text(action.get("fund_code")) or "未命名标的"
@@ -555,6 +578,10 @@ def build_platform_timeline_from_actions(actions: List[Dict[str, Any]]) -> List[
             }
         )
     items.sort(key=lambda item: (-safe_int(item.get("event_count")), -safe_int(item.get("latest_ts"))))
+    PLATFORM_TIMELINE_CACHE[cache_key] = {
+        "ts": now,
+        "data": items,
+    }
     return items
 
 
