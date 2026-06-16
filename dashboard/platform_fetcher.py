@@ -661,9 +661,14 @@ def build_platform_timeline_from_actions(actions: List[Dict[str, Any]]) -> List[
 
 def build_platform_holdings_from_actions(actions: List[Dict[str, Any]]) -> Dict[str, Any]:
     latest_by_asset: Dict[str, Dict[str, Any]] = {}
-    for action in sorted(actions, key=platform_action_timestamp, reverse=True):
+    for action in actions:
+        if not isinstance(action, dict):
+            continue
+        action_ts = platform_action_timestamp(action)
         asset_key = normalize_text(action.get("fund_code")) or normalize_text(action.get("title")) or normalize_text(action.get("fund_name"))
-        if not asset_key or asset_key in latest_by_asset:
+        if not asset_key:
+            continue
+        if asset_key in latest_by_asset and action_ts <= safe_int(latest_by_asset[asset_key].get("latest_ts")):
             continue
         latest_by_asset[asset_key] = {
             "asset_key": asset_key,
@@ -674,7 +679,7 @@ def build_platform_holdings_from_actions(actions: List[Dict[str, Any]]) -> Dict[
             "latest_action": normalize_text(action.get("action")),
             "latest_action_title": normalize_text(action.get("action_title")),
             "latest_time": normalize_text(action.get("txn_date") or action.get("created_at")),
-            "latest_ts": platform_action_timestamp(action),
+            "latest_ts": action_ts,
             "strategy_type": normalize_text(action.get("strategy_type")),
             "large_class": normalize_text(action.get("large_class")),
             "buy_date": normalize_text(action.get("buy_date")),
