@@ -113,12 +113,24 @@ enum PerformanceTelemetry {
             sink(event)
             return
         }
+        if shouldWriteToStandardError {
+            writeToStandardError(event)
+            return
+        }
         guard shouldLogToOS else { return }
         logger.info("[perf] \(event.message, privacy: .public)")
     }
 
-    private static var shouldLogToOS: Bool {
+    private static var shouldWriteToStandardError: Bool {
         ProcessInfo.processInfo.environment["QIEMAN_PERF_LOG"] == "1"
-            || _isDebugAssertConfiguration()
+    }
+
+    private static var shouldLogToOS: Bool {
+        _isDebugAssertConfiguration()
+    }
+
+    private static func writeToStandardError(_ event: PerformanceTelemetryEvent) {
+        guard let data = "[perf] \(event.message)\n".data(using: .utf8) else { return }
+        FileHandle.standardError.write(data)
     }
 }
