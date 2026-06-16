@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from .cache import (
     PLATFORM_TRADE_CACHE,
     PLATFORM_TRADE_TTL_SECONDS,
+    platform_trade_lock,
 )
 from .config import (
     HOLDING_BROAD_INDEX_KEYWORDS,
@@ -634,29 +635,38 @@ def fetch_platform_trade_data(prod_code: str, timeout_seconds: int = 10) -> Dict
         cache_status = "hit"
         record_performance("platform.fetch", started_at, prod_code=target, cache=cache_status)
         return cached["data"]
-    client = build_dashboard_client()
-    try:
-        raw = client.get(
-            "/long-win/plan/adjustments",
-            {"desc": "true", "prodCode": target},
-            timeout=max(1, safe_int(timeout_seconds)),
+
+    with platform_trade_lock(target):
+        cached = PLATFORM_TRADE_CACHE.get(target)
+        now = time.time()
+        if cached and now - float(cached.get("ts", 0)) < PLATFORM_TRADE_TTL_SECONDS:
+            cache_status = "hit_after_wait"
+            record_performance("platform.fetch", started_at, prod_code=target, cache=cache_status)
+            return cached["data"]
+
+        client = build_dashboard_client()
+        try:
+            raw = client.get(
+                "/long-win/plan/adjustments",
+                {"desc": "true", "prodCode": target},
+                timeout=max(1, safe_int(timeout_seconds)),
+            )
+            if not isinstance(raw, list):
+                raise RuntimeError("平台调仓接口返回结构异常")
+            data = build_platform_trade_data(target, [item for item in raw if isinstance(item, dict)])
+        except Exception as exc:
+            data = {
+                "supported": False,
+                "error": str(exc),
+                "prod_code": target,
+            }
+        PLATFORM_TRADE_CACHE[target] = {"ts": now, "data": data}
+        record_performance(
+            "platform.fetch",
+            started_at,
+            prod_code=target,
+            cache=cache_status,
+            supported=bool(data.get("supported")),
+            action_count=len(data.get("actions") or []),
         )
-        if not isinstance(raw, list):
-            raise RuntimeError("平台调仓接口返回结构异常")
-        data = build_platform_trade_data(target, [item for item in raw if isinstance(item, dict)])
-    except Exception as exc:
-        data = {
-            "supported": False,
-            "error": str(exc),
-            "prod_code": target,
-        }
-    PLATFORM_TRADE_CACHE[target] = {"ts": now, "data": data}
-    record_performance(
-        "platform.fetch",
-        started_at,
-        prod_code=target,
-        cache=cache_status,
-        supported=bool(data.get("supported")),
-        action_count=len(data.get("actions") or []),
-    )
-    return data
+        return data
