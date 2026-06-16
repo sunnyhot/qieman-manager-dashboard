@@ -18,7 +18,11 @@ enum NativePlatformError: LocalizedError {
     }
 }
 
-fileprivate actor QiemanPlatformCache {
+actor QiemanPlatformCache {
+    static let maxPayloadEntries = 16
+    static let maxFundCacheEntries = 256
+    static let maxStockQuoteEntries = 256
+
     private var payloads: [String: (Date, PlatformPayload)] = [:]
     private var histories: [String: (Date, NativeFundHistory)] = [:]
     private var quotes: [String: (Date, NativeFundQuote)] = [:]
@@ -33,40 +37,40 @@ fileprivate actor QiemanPlatformCache {
     }
 
     func store(payload: PlatformPayload, for prodCode: String) {
-        payloads[prodCode] = (Date(), payload)
+        store(payload, for: prodCode, in: &payloads, maxEntries: Self.maxPayloadEntries)
     }
 
-    func history(for fundCode: String, ttl: TimeInterval) -> NativeFundHistory? {
+    fileprivate func history(for fundCode: String, ttl: TimeInterval) -> NativeFundHistory? {
         guard let (loadedAt, history) = histories[fundCode], Date().timeIntervalSince(loadedAt) < ttl else {
             return nil
         }
         return history
     }
 
-    func store(history: NativeFundHistory, for fundCode: String) {
-        histories[fundCode] = (Date(), history)
+    fileprivate func store(history: NativeFundHistory, for fundCode: String) {
+        store(history, for: fundCode, in: &histories, maxEntries: Self.maxFundCacheEntries)
     }
 
-    func quote(for fundCode: String, ttl: TimeInterval) -> NativeFundQuote? {
+    fileprivate func quote(for fundCode: String, ttl: TimeInterval) -> NativeFundQuote? {
         guard let (loadedAt, quote) = quotes[fundCode], Date().timeIntervalSince(loadedAt) < ttl else {
             return nil
         }
         return quote
     }
 
-    func store(quote: NativeFundQuote, for fundCode: String) {
-        quotes[fundCode] = (Date(), quote)
+    fileprivate func store(quote: NativeFundQuote, for fundCode: String) {
+        store(quote, for: fundCode, in: &quotes, maxEntries: Self.maxFundCacheEntries)
     }
 
-    func stockQuote(for stockCode: String, ttl: TimeInterval) -> NativeStockQuote? {
+    fileprivate func stockQuote(for stockCode: String, ttl: TimeInterval) -> NativeStockQuote? {
         guard let (loadedAt, quote) = stockQuotes[stockCode], Date().timeIntervalSince(loadedAt) < ttl else {
             return nil
         }
         return quote
     }
 
-    func store(stockQuote: NativeStockQuote, for stockCode: String) {
-        stockQuotes[stockCode] = (Date(), stockQuote)
+    fileprivate func store(stockQuote: NativeStockQuote, for stockCode: String) {
+        store(stockQuote, for: stockCode, in: &stockQuotes, maxEntries: Self.maxStockQuoteEntries)
     }
 
     func marketIndexQuote(for kind: MarketIndexKind, ttl: TimeInterval) -> MarketIndexQuote? {
@@ -78,6 +82,29 @@ fileprivate actor QiemanPlatformCache {
 
     func store(marketIndexQuote: MarketIndexQuote, for kind: MarketIndexKind) {
         marketIndexQuotes[kind] = (Date(), marketIndexQuote)
+    }
+
+    private func store<Value>(
+        _ value: Value,
+        for key: String,
+        in cache: inout [String: (Date, Value)],
+        maxEntries: Int
+    ) {
+        cache[key] = (Date(), value)
+        pruneOldest(&cache, maxEntries: maxEntries)
+    }
+
+    private func pruneOldest<Value>(
+        _ cache: inout [String: (Date, Value)],
+        maxEntries: Int
+    ) {
+        guard maxEntries > 0 else { return }
+        while cache.count > maxEntries {
+            guard let oldestKey = cache.min(by: { $0.value.0 < $1.value.0 })?.key else {
+                return
+            }
+            cache.removeValue(forKey: oldestKey)
+        }
     }
 }
 
