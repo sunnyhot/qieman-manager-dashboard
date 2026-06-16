@@ -1,10 +1,5 @@
 import SwiftUI
 
-private struct PersonalAssetBrowserPresentation {
-    let visibleRows: [PersonalAssetAggregateRow]
-    let filterCounts: [PersonalAssetFilterScope: Int]
-}
-
 private struct PersonalAssetGroupStats {
     let latestTime: String?
     let totalMarketValue: Double
@@ -22,17 +17,30 @@ struct PersonalAssetBrowser: View {
     @State private var comparisonSelection: [String] = []
     @State private var selectedDetailRow: PersonalAssetAggregateRow?
 
-    private var normalizedSearchText: String {
-        searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-
     var body: some View {
-        let presentation = makePresentation(keyword: debouncedSearchText)
-        let comparisonSummary = PersonalAssetComparisonSummary.make(
-            rows: rows,
-            selectedIDs: comparisonSelection,
-            maxCount: comparisonMaxCount
-        )
+        let presentation: PersonalAssetBrowserPresentationModel = {
+            let telemetryStart = PerformanceTelemetry.start()
+            let presentation = PersonalAssetBrowserPresentationModel.make(
+                rows: rows,
+                keyword: debouncedSearchText,
+                filterScope: filterScope,
+                sortOption: sortOption,
+                comparisonSelection: comparisonSelection,
+                comparisonMaxCount: comparisonMaxCount
+            )
+            PerformanceTelemetry.record(
+                "personalAsset.presentation",
+                startedAt: telemetryStart,
+                metadata: [
+                    "rowCount": "\(rows.count)",
+                    "visibleCount": "\(presentation.visibleRows.count)",
+                    "filter": filterScope.rawValue,
+                    "sort": sortOption.rawValue,
+                    "hasKeyword": "\(!debouncedSearchText.isEmpty)"
+                ]
+            )
+            return presentation
+        }()
 
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
@@ -68,9 +76,9 @@ struct PersonalAssetBrowser: View {
                 .padding(.vertical, 2)
             }
 
-            if !comparisonSummary.items.isEmpty {
+            if !presentation.comparisonSummary.items.isEmpty {
                 PersonalAssetComparisonPanel(
-                    summary: comparisonSummary,
+                    summary: presentation.comparisonSummary,
                     onRemove: removeComparisonItem,
                     onClear: clearComparisonSelection
                 )
@@ -107,8 +115,8 @@ struct PersonalAssetBrowser: View {
             guard !Task.isCancelled else { return }
             debouncedSearchText = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         }
-        .onChange(of: rows.map(\.id)) { _, validIDs in
-            comparisonSelection.removeAll { !validIDs.contains($0) }
+        .onChange(of: presentation.validComparisonSelection) { _, validSelection in
+            comparisonSelection = validSelection
         }
     }
 
@@ -189,80 +197,6 @@ struct PersonalAssetBrowser: View {
         }
         .buttonStyle(PressResponsiveButtonStyle())
         .contentShape(RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-    }
-
-    private func makePresentation(keyword: String) -> PersonalAssetBrowserPresentation {
-        var counts: [PersonalAssetFilterScope: Int] = [:]
-        var visibleRows: [PersonalAssetAggregateRow] = []
-        let telemetryStart = PerformanceTelemetry.start()
-        defer {
-            PerformanceTelemetry.record(
-                "personalAsset.presentation",
-                startedAt: telemetryStart,
-                metadata: [
-                    "rowCount": "\(rows.count)",
-                    "visibleCount": "\(visibleRows.count)",
-                    "filter": filterScope.rawValue,
-                    "sort": sortOption.rawValue,
-                    "hasKeyword": "\(!keyword.isEmpty)"
-                ]
-            )
-        }
-
-        for row in rows {
-            counts[.all, default: 0] += 1
-            if row.hasHolding {
-                counts[.holding, default: 0] += 1
-            }
-            if row.hasArchivedHolding {
-                counts[.archivedHolding, default: 0] += 1
-            }
-            if row.hasPending {
-                counts[.pending, default: 0] += 1
-            }
-            if row.activePlanCount > 0 {
-                counts[.activePlan, default: 0] += 1
-            }
-            if row.pausedPlanCount > 0 || row.endedPlanCount > 0 {
-                counts[.archivedPlan, default: 0] += 1
-            }
-            if row.hasDrawdownPlan {
-                counts[.drawdownMode, default: 0] += 1
-            }
-            if matchesSearch(row, keyword: keyword) && filterScopeMatch(filterScope, row: row) {
-                visibleRows.append(row)
-            }
-        }
-
-        return PersonalAssetBrowserPresentation(
-            visibleRows: PersonalAssetRowSorter.sorted(visibleRows, by: sortOption),
-            filterCounts: counts
-        )
-    }
-
-    private func matchesSearch(_ row: PersonalAssetAggregateRow, keyword: String) -> Bool {
-        guard !keyword.isEmpty else { return true }
-        return row.fundName.lowercased().contains(keyword)
-            || (row.fundCode?.lowercased().contains(keyword) ?? false)
-    }
-
-    private func filterScopeMatch(_ scope: PersonalAssetFilterScope, row: PersonalAssetAggregateRow) -> Bool {
-        switch scope {
-        case .all:
-            return true
-        case .holding:
-            return row.hasHolding
-        case .archivedHolding:
-            return row.hasArchivedHolding
-        case .pending:
-            return row.hasPending
-        case .activePlan:
-            return row.activePlanCount > 0
-        case .archivedPlan:
-            return row.pausedPlanCount > 0 || row.endedPlanCount > 0
-        case .drawdownMode:
-            return row.hasDrawdownPlan
-        }
     }
 
     private func toggleComparison(_ row: PersonalAssetAggregateRow) {
