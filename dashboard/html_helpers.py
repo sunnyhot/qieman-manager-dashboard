@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import html
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
+from .cache import PLATFORM_MONTHLY_OVERVIEW_CACHE, PLATFORM_TRADE_TTL_SECONDS
 from .config import (
     COOKIE_FILE,
     FORM_FIELDS,
@@ -197,7 +199,28 @@ def platform_action_date_text(action: Dict[str, Any]) -> str:
             return ""
     return ""
 
+def _platform_monthly_overview_cache_key(actions: Any, limit_months: int) -> str:
+    action_count = ""
+    first_key = ""
+    last_key = ""
+    if isinstance(actions, list):
+        action_count = str(len(actions))
+        if actions:
+            first = actions[0] if isinstance(actions[0], dict) else {}
+            last = actions[-1] if isinstance(actions[-1], dict) else {}
+            first_key = normalize_text(first.get("action_key")) or platform_action_date_text(first)
+            last_key = normalize_text(last.get("action_key")) or platform_action_date_text(last)
+    return "|".join([str(id(actions)), str(safe_int(limit_months)), action_count, first_key, last_key])
+
 def build_platform_monthly_overview(actions: List[Dict[str, Any]], limit_months: int = 12) -> Dict[str, Any]:
+    cache_key = _platform_monthly_overview_cache_key(actions, limit_months)
+    now = time.time()
+    cached = PLATFORM_MONTHLY_OVERVIEW_CACHE.get(cache_key)
+    if cached and now - safe_float(cached.get("ts")) < PLATFORM_TRADE_TTL_SECONDS:
+        data = cached.get("data")
+        if isinstance(data, dict):
+            return data
+
     buckets: Dict[str, Dict[str, Any]] = {}
     for action in actions:
         if not isinstance(action, dict):
@@ -261,7 +284,7 @@ def build_platform_monthly_overview(actions: List[Dict[str, Any]], limit_months:
     total_count = sum(safe_int(item.get("total_count")) for item in result_items)
     buy_count = sum(safe_int(item.get("buy_count")) for item in result_items)
     sell_count = sum(safe_int(item.get("sell_count")) for item in result_items)
-    return {
+    overview = {
         "items": result_items,
         "month_count": month_count,
         "total_count": total_count,
@@ -273,6 +296,11 @@ def build_platform_monthly_overview(actions: List[Dict[str, Any]], limit_months:
         "max_month_total": max_month_total,
         "max_side_count": max_side_count,
     }
+    PLATFORM_MONTHLY_OVERVIEW_CACHE[cache_key] = {
+        "ts": now,
+        "data": overview,
+    }
+    return overview
 
 def render_platform_trade_overview(actions: List[Dict[str, Any]], range_label: str, using_custom_range: bool) -> str:
     overview = build_platform_monthly_overview(actions, limit_months=12)
@@ -699,4 +727,3 @@ def render_forum_preview_panel(
         f'<div class="records">{list_html}</div>'
         '</section>'
     )
-
