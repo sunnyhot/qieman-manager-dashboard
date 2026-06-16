@@ -15,6 +15,7 @@ PLATFORM_TRADE_CACHE: Dict[str, Dict[str, Any]] = {}
 PLATFORM_TRADE_LOCKS: Dict[str, Lock] = {}
 PLATFORM_TRADE_LOCKS_GUARD = Lock()
 PLATFORM_HOLDINGS_PRICING_CACHE: Dict[str, Dict[str, Any]] = {}
+PLATFORM_ACTION_VALUATION_CACHE: Dict[str, Dict[str, Any]] = {}
 PLATFORM_ACTION_PRESENTATION_CACHE: Dict[str, Dict[str, Any]] = {}
 PLATFORM_TIMELINE_CACHE: Dict[str, Dict[str, Any]] = {}
 PLATFORM_MONTHLY_OVERVIEW_CACHE: Dict[str, Dict[str, Any]] = {}

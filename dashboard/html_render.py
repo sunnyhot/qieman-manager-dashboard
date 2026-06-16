@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import hashlib
 import html
+import json
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
+from .cache import FUND_QUOTE_TTL_SECONDS, PLATFORM_ACTION_VALUATION_CACHE, store_ttl_cache_entry
 from .config import (
     MODE_OPTIONS,
     PLATFORM_SIGNAL_SECTION_ID,
@@ -39,6 +43,41 @@ from .utils import (
     format_time,
     strip_html,
 )
+
+
+def _platform_action_valuation_cache_key(actions: List[Dict[str, Any]]) -> str:
+    payload = [
+        {key: action.get(key) for key in sorted(action.keys())}
+        for action in actions
+        if isinstance(action, dict)
+    ]
+    digest_source = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
+    digest = hashlib.sha1(digest_source.encode("utf-8")).hexdigest()[:16] if payload else "empty"
+    return f"{len(payload)}:{digest}"
+
+
+def enrich_displayed_platform_actions_with_cache(actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    source_actions = [dict(item) for item in actions if isinstance(item, dict)]
+    if not source_actions:
+        return actions
+
+    cache_key = _platform_action_valuation_cache_key(source_actions)
+    now = time.time()
+    cached = PLATFORM_ACTION_VALUATION_CACHE.get(cache_key)
+    if cached and now - safe_float(cached.get("ts")) < FUND_QUOTE_TTL_SECONDS:
+        data = cached.get("data")
+        if isinstance(data, list):
+            return [dict(item) for item in data if isinstance(item, dict)]
+
+    enriched_actions = enrich_platform_actions_with_valuation(source_actions)
+    if isinstance(enriched_actions, list):
+        store_ttl_cache_entry(
+            PLATFORM_ACTION_VALUATION_CACHE,
+            cache_key,
+            [dict(item) for item in enriched_actions if isinstance(item, dict)],
+            ts=now,
+        )
+    return enriched_actions
 
 
 def render_signal_panel(
@@ -108,7 +147,7 @@ def render_signal_panel(
             url = append_url_fragment(url, section_anchor)
             active = platform_window == value or (platform_window == "" and value == "all")
             window_toolbar.append(f'<a class="mini-btn{" active" if active else ""}" href="{html.escape(url)}">{html.escape(label)}</a>')
-    display_actions = enrich_platform_actions_with_valuation(filtered_actions[:card_limit])
+    display_actions = enrich_displayed_platform_actions_with_cache(filtered_actions[:card_limit])
     signal_cards = []
     for action in display_actions:
         card_side = normalize_text(action.get("side")) or "watch"

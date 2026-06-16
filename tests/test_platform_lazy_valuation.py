@@ -1,11 +1,20 @@
 import unittest
 from unittest.mock import patch
 
+from dashboard import cache
 from dashboard.html_render import render_signal_panel
 from dashboard.platform_fetcher import build_platform_trade_data
 
 
 class PlatformLazyValuationTests(unittest.TestCase):
+    def setUp(self) -> None:
+        if hasattr(cache, "PLATFORM_ACTION_VALUATION_CACHE"):
+            cache.PLATFORM_ACTION_VALUATION_CACHE.clear()
+
+    def tearDown(self) -> None:
+        if hasattr(cache, "PLATFORM_ACTION_VALUATION_CACHE"):
+            cache.PLATFORM_ACTION_VALUATION_CACHE.clear()
+
     def test_platform_trade_data_does_not_preload_action_valuations(self) -> None:
         raw_items = [
             {
@@ -86,6 +95,65 @@ class PlatformLazyValuationTests(unittest.TestCase):
         self.assertEqual([action["action_key"] for action in displayed_actions], ["buy-1", "buy-2"])
         self.assertIn("变化 +20.00%", html)
         self.assertNotIn("买入3份沪深300", html)
+
+    def test_signal_panel_reuses_displayed_action_valuations(self) -> None:
+        actions = [
+            {
+                "action_key": "buy-1",
+                "adjustment_id": 1,
+                "action_title": "买入1份沪深300",
+                "title": "沪深300",
+                "fund_code": "000300",
+                "fund_name": "沪深300",
+                "side": "buy",
+                "action": "买入",
+                "trade_unit": 1,
+                "txn_ts": 1_720_000_000_000,
+                "txn_date": "2024-07-04",
+                "created_at": "2024-07-04",
+            }
+        ]
+        platform_trades = {
+            "supported": True,
+            "prod_code": "LONG_WIN",
+            "actions": actions,
+        }
+
+        def enrich(displayed_actions):
+            return [
+                {
+                    **action,
+                    "trade_valuation": 1.0,
+                    "trade_valuation_date": "2024-07-04",
+                    "current_valuation": 1.2,
+                    "current_valuation_source": "当前估值",
+                    "current_valuation_time": "2024-07-05",
+                    "valuation_change_pct": 20.0,
+                }
+                for action in displayed_actions
+            ]
+
+        with patch("dashboard.html_render.enrich_platform_actions_with_valuation", side_effect=enrich) as enrich_mock:
+            first_html = render_signal_panel(
+                platform_trades,
+                {"platform_window": "all"},
+                "",
+                "all",
+                "all",
+                card_limit=1,
+            )
+            second_html = render_signal_panel(
+                platform_trades,
+                {"platform_window": "all"},
+                "",
+                "all",
+                "all",
+                card_limit=1,
+            )
+
+        self.assertEqual(enrich_mock.call_count, 1)
+        self.assertIn("变化 +20.00%", first_html)
+        self.assertIn("变化 +20.00%", second_html)
 
 
 if __name__ == "__main__":
