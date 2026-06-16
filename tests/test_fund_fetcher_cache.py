@@ -40,6 +40,19 @@ class FundFetcherCacheTests(unittest.TestCase):
         self.assertIs(histories["000300"], history)
         self.assertIs(quotes["000300"], quote)
 
+    def test_quote_uses_official_nav_payload_without_history_fetch(self) -> None:
+        payload = 'jsonpgz({"fundcode":"000300","name":"沪深300","gsz":"","dwjz":"1.234","jzrq":"2024-07-04","gszzl":""});'
+
+        with patch("dashboard.fund_fetcher.fetch_remote_text", return_value=payload):
+            with patch("dashboard.fund_fetcher.fetch_fund_history_series", return_value={"series": [], "keys": []}) as history_fetch:
+                quote = fund_fetcher.fetch_fund_quote("000300")
+
+        history_fetch.assert_not_called()
+        self.assertEqual(quote["price"], 1.234)
+        self.assertEqual(quote["price_source"], "official_nav")
+        self.assertEqual(quote["price_source_label"], "最近净值")
+        self.assertEqual(quote["official_nav_date"], "2024-07-04")
+
 
 if __name__ == "__main__":
     unittest.main()

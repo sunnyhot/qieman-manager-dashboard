@@ -168,6 +168,8 @@ def fetch_fund_quote(fund_code: str) -> Dict[str, Any]:
             if match:
                 payload = json.loads(match.group(1))
                 estimate_price = safe_float(payload.get("gsz"))
+                official_nav = safe_float(payload.get("dwjz"))
+                official_nav_date = normalize_text(payload.get("jzrq"))
                 if estimate_price > 0:
                     result = {
                         "fund_code": target,
@@ -176,9 +178,22 @@ def fetch_fund_quote(fund_code: str) -> Dict[str, Any]:
                         "price_time": normalize_text(payload.get("gztime")),
                         "price_source": "estimate",
                         "price_source_label": "盘中估值",
-                        "official_nav": safe_float(payload.get("dwjz")),
-                        "official_nav_date": normalize_text(payload.get("jzrq")),
+                        "official_nav": official_nav,
+                        "official_nav_date": official_nav_date,
                         "estimate_change_pct": safe_float(payload.get("gszzl")),
+                        "loaded_at": now,
+                    }
+                elif official_nav > 0:
+                    result = {
+                        "fund_code": target,
+                        "fund_name": normalize_text(payload.get("name")),
+                        "price": official_nav,
+                        "price_time": official_nav_date,
+                        "price_source": "official_nav",
+                        "price_source_label": "最近净值",
+                        "official_nav": official_nav,
+                        "official_nav_date": official_nav_date,
+                        "estimate_change_pct": 0.0,
                         "loaded_at": now,
                     }
         except Exception:
