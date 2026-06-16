@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
-from .cache import PLATFORM_MONTHLY_OVERVIEW_CACHE, PLATFORM_TRADE_TTL_SECONDS
+from .cache import PLATFORM_MONTHLY_OVERVIEW_CACHE, PLATFORM_TRADE_TTL_SECONDS, store_ttl_cache_entry
 from .config import (
     COOKIE_FILE,
     FORM_FIELDS,
@@ -296,10 +296,7 @@ def build_platform_monthly_overview(actions: List[Dict[str, Any]], limit_months:
         "max_month_total": max_month_total,
         "max_side_count": max_side_count,
     }
-    PLATFORM_MONTHLY_OVERVIEW_CACHE[cache_key] = {
-        "ts": now,
-        "data": overview,
-    }
+    store_ttl_cache_entry(PLATFORM_MONTHLY_OVERVIEW_CACHE, cache_key, overview, ts=now)
     return overview
 
 def render_platform_trade_overview(actions: List[Dict[str, Any]], range_label: str, using_custom_range: bool) -> str:

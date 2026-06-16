@@ -13,6 +13,7 @@ from .cache import (
     PLATFORM_TRADE_CACHE,
     PLATFORM_TRADE_TTL_SECONDS,
     platform_trade_lock,
+    store_ttl_cache_entry,
 )
 from .config import (
     HOLDING_BROAD_INDEX_KEYWORDS,
@@ -272,10 +273,7 @@ def get_priced_platform_holdings(platform_trades: Dict[str, Any]) -> Dict[str, A
     if cached and now - safe_float(cached.get("ts")) < FUND_QUOTE_TTL_SECONDS:
         return cached.get("data") if isinstance(cached.get("data"), dict) else raw_holdings
     priced_holdings = enrich_platform_holdings_with_pricing(raw_holdings, actions)
-    PLATFORM_HOLDINGS_PRICING_CACHE[cache_key] = {
-        "ts": now,
-        "data": priced_holdings,
-    }
+    store_ttl_cache_entry(PLATFORM_HOLDINGS_PRICING_CACHE, cache_key, priced_holdings, ts=now)
     return priced_holdings
 
 
@@ -508,10 +506,7 @@ def build_platform_action_presentation(
         "summary_sell": summaries["sell"],
         "summaries": summaries,
     }
-    PLATFORM_ACTION_PRESENTATION_CACHE[cache_key] = {
-        "ts": now,
-        "data": presentation,
-    }
+    store_ttl_cache_entry(PLATFORM_ACTION_PRESENTATION_CACHE, cache_key, presentation, ts=now)
     return presentation
 
 
@@ -578,10 +573,7 @@ def build_platform_timeline_from_actions(actions: List[Dict[str, Any]]) -> List[
             }
         )
     items.sort(key=lambda item: (-safe_int(item.get("event_count")), -safe_int(item.get("latest_ts"))))
-    PLATFORM_TIMELINE_CACHE[cache_key] = {
-        "ts": now,
-        "data": items,
-    }
+    store_ttl_cache_entry(PLATFORM_TIMELINE_CACHE, cache_key, items, ts=now)
     return items
 
 

@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 from qieman_community_scraper import QiemanApiError
 
-from .cache import COMMENTS_CACHE, COMMENTS_TTL_SECONDS
+from .cache import COMMENTS_CACHE, COMMENTS_TTL_SECONDS, store_ttl_cache_entry
 from .snapshot import build_dashboard_client
 from .utils import normalize_text, safe_int
 
@@ -94,10 +94,7 @@ def fetch_post_comments(
         "has_more": len(payload) >= page_size,
         "comments": comments,
     }
-    COMMENTS_CACHE[cache_key] = {
-        "ts": now,
-        "data": result,
-    }
+    store_ttl_cache_entry(COMMENTS_CACHE, cache_key, result, ts=now)
     return result
 
 
