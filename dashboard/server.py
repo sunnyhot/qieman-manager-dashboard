@@ -32,6 +32,7 @@ from .html_pages import (
     render_platform_page,
     render_timeline_page,
 )
+from .performance import performance_start, record_performance
 from .platform_fetcher import fetch_platform_trade_data, get_snapshot_by_name
 from .snapshot import run_auth_check, run_fetch
 from .utils import first_mapping_value, format_time, normalize_text, safe_int
@@ -64,6 +65,20 @@ def api_platform(prod_code: str) -> Dict[str, Any]:
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
+    def handle_one_request(self) -> None:
+        started_at = performance_start()
+        try:
+            super().handle_one_request()
+        finally:
+            raw_path = getattr(self, "path", "")
+            parsed = urlparse(raw_path) if raw_path else None
+            record_performance(
+                "dashboard.request",
+                started_at,
+                method=getattr(self, "command", ""),
+                route=parsed.path if parsed else "<unknown>",
+            )
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path in {"/", "/timeline", "/platform", "/forum"}:

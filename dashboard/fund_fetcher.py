@@ -14,6 +14,7 @@ from .cache import (
     FUND_QUOTE_CACHE,
     FUND_QUOTE_TTL_SECONDS,
 )
+from .performance import performance_start, record_performance
 from .utils import (
     date_key_from_text,
     fetch_remote_text,
@@ -24,12 +25,20 @@ from .utils import (
 
 
 def fetch_fund_history_series(fund_code: str) -> Dict[str, Any]:
+    started_at = performance_start()
+    cache_status = "miss"
     target = normalize_text(fund_code)
     if not target:
-        return {}
+        cache_status = "empty"
+        try:
+            return {}
+        finally:
+            record_performance("fund.history", started_at, has_code=False, cache=cache_status)
     cached = FUND_HISTORY_CACHE.get(target)
     now = time.time()
     if cached and now - safe_float(cached.get("loaded_at")) < FUND_HISTORY_TTL_SECONDS:
+        cache_status = "hit"
+        record_performance("fund.history", started_at, has_code=True, cache=cache_status)
         return cached
     result: Dict[str, Any] = {
         "fund_code": target,
@@ -78,6 +87,13 @@ def fetch_fund_history_series(fund_code: str) -> Dict[str, Any]:
     except Exception:
         pass
     FUND_HISTORY_CACHE[target] = result
+    record_performance(
+        "fund.history",
+        started_at,
+        has_code=True,
+        cache=cache_status,
+        series_count=len(result.get("series") or []),
+    )
     return result
 
 
@@ -94,12 +110,27 @@ def lookup_fund_nav_by_date(history: Dict[str, Any], date_text: Any) -> Dict[str
 
 
 def fetch_fund_quote(fund_code: str) -> Dict[str, Any]:
+    started_at = performance_start()
+    cache_status = "miss"
+    price_source = ""
     target = normalize_text(fund_code)
     if not target:
-        return {}
+        cache_status = "empty"
+        try:
+            return {}
+        finally:
+            record_performance("fund.quote", started_at, has_code=False, cache=cache_status)
     cached = FUND_QUOTE_CACHE.get(target)
     now = time.time()
     if cached and now - safe_float(cached.get("loaded_at")) < FUND_QUOTE_TTL_SECONDS:
+        cache_status = "hit"
+        record_performance(
+            "fund.quote",
+            started_at,
+            has_code=True,
+            cache=cache_status,
+            source=normalize_text(cached.get("price_source")),
+        )
         return cached
     result: Dict[str, Any] = {
         "fund_code": target,
@@ -151,6 +182,14 @@ def fetch_fund_quote(fund_code: str) -> Dict[str, Any]:
                 "loaded_at": now,
             }
     FUND_QUOTE_CACHE[target] = result
+    price_source = normalize_text(result.get("price_source"))
+    record_performance(
+        "fund.quote",
+        started_at,
+        has_code=True,
+        cache=cache_status,
+        source=price_source,
+    )
     return result
 
 

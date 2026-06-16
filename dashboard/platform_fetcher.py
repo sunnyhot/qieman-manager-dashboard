@@ -17,6 +17,7 @@ from .config import (
     PLATFORM_ORDER_SIDE_MAP,
 )
 from .fund_fetcher import lookup_fund_nav_by_date, preload_fund_market_data
+from .performance import performance_start, record_performance
 from .snapshot import build_dashboard_client
 from .utils import (
     format_decimal,
@@ -611,18 +612,27 @@ def build_platform_trade_data(prod_code: str, raw_items: List[Dict[str, Any]]) -
 
 def fetch_platform_trade_data(prod_code: str, timeout_seconds: int = 10) -> Dict[str, Any]:
     from .config import PLATFORM_FETCH_TIMEOUT_SECONDS
+    started_at = performance_start()
+    cache_status = "miss"
+
     if timeout_seconds <= 0:
         timeout_seconds = PLATFORM_FETCH_TIMEOUT_SECONDS
     target = normalize_text(prod_code)
     if not target:
-        return {
-            "supported": False,
-            "error": "没有产品代码，无法直拉平台调仓记录。",
-            "prod_code": "",
-        }
+        cache_status = "empty"
+        try:
+            return {
+                "supported": False,
+                "error": "没有产品代码，无法直拉平台调仓记录。",
+                "prod_code": "",
+            }
+        finally:
+            record_performance("platform.fetch", started_at, prod_code="<empty>", cache=cache_status)
     cached = PLATFORM_TRADE_CACHE.get(target)
     now = time.time()
     if cached and now - float(cached.get("ts", 0)) < PLATFORM_TRADE_TTL_SECONDS:
+        cache_status = "hit"
+        record_performance("platform.fetch", started_at, prod_code=target, cache=cache_status)
         return cached["data"]
     client = build_dashboard_client()
     try:
@@ -641,4 +651,12 @@ def fetch_platform_trade_data(prod_code: str, timeout_seconds: int = 10) -> Dict
             "prod_code": target,
         }
     PLATFORM_TRADE_CACHE[target] = {"ts": now, "data": data}
+    record_performance(
+        "platform.fetch",
+        started_at,
+        prod_code=target,
+        cache=cache_status,
+        supported=bool(data.get("supported")),
+        action_count=len(data.get("actions") or []),
+    )
     return data

@@ -38,6 +38,7 @@ from .html_render import (
     render_platform_timeline_section,
     render_signal_panel,
 )
+from .performance import timed
 from .platform_fetcher import (
     enrich_platform_holdings_with_pricing,
     filter_platform_actions,
@@ -58,6 +59,7 @@ from .utils import (
 )
 
 
+@timed("render.dashboard")
 def render_dashboard_page(
     *,
     form_values: Dict[str, str],
@@ -1015,6 +1017,7 @@ def render_dashboard_page(
 </body>
 </html>"""
 
+@timed("render.platform")
 def render_platform_page(
     *,
     form_values: Dict[str, str],
@@ -1328,6 +1331,7 @@ def render_platform_page(
 </body>
 </html>"""
 
+@timed("render.forum")
 def render_forum_page(
     *,
     form_values: Dict[str, str],
@@ -1525,6 +1529,7 @@ def render_forum_page(
 </body>
 </html>"""
 
+@timed("render.timeline")
 def render_timeline_page(
     *,
     form_values: Dict[str, str],
@@ -1772,4 +1777,3 @@ def render_timeline_page(
   </div>
 </body>
 </html>"""
-
