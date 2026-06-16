@@ -91,9 +91,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             error = ""
             current_snapshot: Optional[Dict[str, Any]] = None
 
-            should_fetch_latest_default = parsed.path in {"/", "/forum"} and not selected_name and not auto_run
+            uses_forum_snapshot = parsed.path in {"/", "/forum"}
+            should_fetch_latest_default = uses_forum_snapshot and not selected_name and not auto_run
 
-            if auto_run or should_fetch_latest_default:
+            if uses_forum_snapshot and (auto_run or should_fetch_latest_default):
                 try:
                     payload = dict(form_values)
                     payload["persist"] = False
