@@ -122,6 +122,30 @@ class DashboardHandler(BaseHTTPRequestHandler):
             only_manager_replies = first_mapping_value(params, "only_manager_replies") == "1"
             signal_filter = first_mapping_value(params, "signal_filter") or "all"
             timeline_asset = first_mapping_value(params, "timeline_asset") or "all"
+            if parsed.path == "/forum":
+                comments_payload, comment_error = load_comments_for_view(
+                    snapshot=current_snapshot,
+                    focus_post_id=focus_post_id,
+                    comment_sort=comment_sort,
+                    comment_page=comment_page,
+                    only_manager_replies=only_manager_replies,
+                )
+                self.respond_html(
+                    render_forum_page(
+                        form_values=form_values,
+                        current_snapshot=current_snapshot,
+                        current_snapshot_name=selected_name,
+                        source_label=source_label,
+                        focus_post_id=focus_post_id,
+                        comments_payload=comments_payload,
+                        comment_error=comment_error,
+                        comment_sort=comment_sort,
+                        comment_page=comment_page,
+                        only_manager_replies=only_manager_replies,
+                    )
+                )
+                return
+
             platform_timeout = HOME_PLATFORM_FETCH_TIMEOUT_SECONDS if parsed.path == "/" else PLATFORM_FETCH_TIMEOUT_SECONDS
             platform_trades = fetch_platform_trade_data(
                 normalize_text(form_values.get("prod_code")),
@@ -158,22 +182,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 comment_page=comment_page,
                 only_manager_replies=only_manager_replies,
             )
-            if parsed.path == "/forum":
-                self.respond_html(
-                    render_forum_page(
-                        form_values=form_values,
-                        current_snapshot=current_snapshot,
-                        current_snapshot_name=selected_name,
-                        source_label=source_label,
-                        focus_post_id=focus_post_id,
-                        comments_payload=comments_payload,
-                        comment_error=comment_error,
-                        comment_sort=comment_sort,
-                        comment_page=comment_page,
-                        only_manager_replies=only_manager_replies,
-                    )
-                )
-                return
             self.respond_html(
                 render_dashboard_page(
                     form_values=form_values,
