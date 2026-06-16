@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import time
 from typing import Any, Dict, Optional
 
 from qieman_community_scraper import QiemanApiError
 
+from .cache import COMMENTS_CACHE, COMMENTS_TTL_SECONDS
 from .snapshot import build_dashboard_client
 from .utils import normalize_text, safe_int
 
@@ -43,13 +45,30 @@ def fetch_post_comments(
     page_num: int = 1,
     manager_broker_user_id: str = "",
 ) -> Dict[str, Any]:
+    normalized_sort_type = sort_type.lower()
+    normalized_manager_broker_user_id = normalize_text(manager_broker_user_id)
+    cache_key = ":".join(
+        [
+            str(safe_int(post_id)),
+            str(safe_int(page_size)),
+            normalized_sort_type,
+            str(safe_int(page_num)),
+            normalized_manager_broker_user_id,
+        ]
+    )
+    now = time.time()
+    cached = COMMENTS_CACHE.get(cache_key)
+    if cached and now - float(cached.get("ts", 0)) < COMMENTS_TTL_SECONDS:
+        data = cached.get("data")
+        if isinstance(data, dict):
+            return data
+
     client = build_dashboard_client()
     params: Dict[str, Any] = {
         "pageNum": page_num,
         "pageSize": page_size,
         "postId": post_id,
     }
-    normalized_sort_type = sort_type.lower()
     if normalized_sort_type == "hot":
         params["sortType"] = "HOT"
     try:
@@ -64,10 +83,10 @@ def fetch_post_comments(
         raise RuntimeError("评论接口返回结构异常")
 
     comments = [normalize_comment(item) for item in payload if isinstance(item, dict)]
-    if manager_broker_user_id:
-        comments = [comment for comment in comments if comment_thread_has_broker_user(comment, manager_broker_user_id)]
+    if normalized_manager_broker_user_id:
+        comments = [comment for comment in comments if comment_thread_has_broker_user(comment, normalized_manager_broker_user_id)]
 
-    return {
+    result = {
         "post_id": post_id,
         "page_num": page_num,
         "page_size": page_size,
@@ -75,6 +94,11 @@ def fetch_post_comments(
         "has_more": len(payload) >= page_size,
         "comments": comments,
     }
+    COMMENTS_CACHE[cache_key] = {
+        "ts": now,
+        "data": result,
+    }
+    return result
 
 
 def load_comments_for_view(
