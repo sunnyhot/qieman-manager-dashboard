@@ -81,6 +81,55 @@ fileprivate actor QiemanPlatformCache {
     }
 }
 
+struct PlatformActionAssetBuckets {
+    let latestByAsset: [String: PlatformActionPayload]
+    private let actionsByAsset: [String: [PlatformActionPayload]]
+
+    init(actions: [PlatformActionPayload]) {
+        var latestByAsset: [String: PlatformActionPayload] = [:]
+        var actionsByAsset: [String: [PlatformActionPayload]] = [:]
+
+        for action in actions {
+            let assetKey = Self.assetKey(for: action)
+            guard !assetKey.isEmpty else { continue }
+
+            actionsByAsset[assetKey, default: []].append(action)
+
+            if let current = latestByAsset[assetKey],
+               Self.timestamp(action) <= Self.timestamp(current) {
+                continue
+            }
+            latestByAsset[assetKey] = action
+        }
+
+        self.latestByAsset = latestByAsset
+        self.actionsByAsset = actionsByAsset
+    }
+
+    func sortedActions(for assetKey: String) -> [PlatformActionPayload] {
+        (actionsByAsset[assetKey] ?? []).sorted {
+            Self.timestamp($0) < Self.timestamp($1)
+        }
+    }
+
+    static func assetKey(for action: PlatformActionPayload) -> String {
+        for value in [action.fundCode, action.title, action.fundName] {
+            let text = (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty {
+                return text
+            }
+        }
+        return ""
+    }
+
+    private static func timestamp(_ action: PlatformActionPayload) -> Int {
+        if let txnTs = action.txnTs, txnTs > 0 {
+            return txnTs
+        }
+        return action.createdTs ?? 0
+    }
+}
+
 final class QiemanPlatformNativeClient {
     private let baseURL = URL(string: "https://qieman.com")!
     private let apiBase = "/pmdj/v2"
@@ -517,23 +566,13 @@ final class QiemanPlatformNativeClient {
     }
 
     private func buildHoldings(actions: [PlatformActionPayload], histories: [String: NativeFundHistory], quotes: [String: NativeFundQuote]) -> PlatformHoldingsPayload {
-        var latestByAsset: [String: PlatformActionPayload] = [:]
-        for action in actions.sorted(by: { actionTimestamp($0.txnTs, createdTs: $0.createdTs) > actionTimestamp($1.txnTs, createdTs: $1.createdTs) }) {
-            let assetKey = firstNonEmpty([action.fundCode ?? "", action.title ?? "", action.fundName ?? ""])
-            if assetKey.isEmpty || latestByAsset[assetKey] != nil {
-                continue
-            }
-            latestByAsset[assetKey] = action
-        }
+        let assetBuckets = PlatformActionAssetBuckets(actions: actions)
 
         var items: [HoldingItemPayload] = []
-        for (_, latestAction) in latestByAsset {
+        for (assetKey, latestAction) in assetBuckets.latestByAsset {
             let currentUnits = latestAction.postPlanUnit ?? 0
             guard currentUnits > 0 else { continue }
-            let assetKey = firstNonEmpty([latestAction.fundCode ?? "", latestAction.title ?? "", latestAction.fundName ?? ""])
-            let relevantActions = actions
-                .filter { firstNonEmpty([$0.fundCode ?? "", $0.title ?? "", $0.fundName ?? ""]) == assetKey }
-                .sorted(by: { actionTimestamp($0.txnTs, createdTs: $0.createdTs) < actionTimestamp($1.txnTs, createdTs: $1.createdTs) })
+            let relevantActions = assetBuckets.sortedActions(for: assetKey)
 
             var simulatedUnits = 0
             var totalCost = 0.0
