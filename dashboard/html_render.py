@@ -30,7 +30,7 @@ from .html_helpers import (
 from .platform_fetcher import (
     build_platform_action_presentation,
     build_platform_timeline_from_actions,
-    enrich_platform_holdings_with_pricing,
+    get_priced_platform_holdings,
 )
 from .utils import (
     format_amount,
@@ -237,11 +237,7 @@ def render_signal_panel(
 def render_platform_holdings_panel(platform_trades: Dict[str, Any]) -> str:
     if not platform_trades or not platform_trades.get("supported"):
         return ""
-    raw_holdings = platform_trades.get("holdings") if isinstance(platform_trades.get("holdings"), dict) else {}
-    holdings = enrich_platform_holdings_with_pricing(
-        raw_holdings,
-        [item for item in list(platform_trades.get("actions") or []) if isinstance(item, dict)],
-    )
+    holdings = get_priced_platform_holdings(platform_trades)
     items = [item for item in list(holdings.get("items") or []) if isinstance(item, dict)]
     breakdown = holdings.get("breakdown") if isinstance(holdings.get("breakdown"), dict) else {}
     pricing_summary = holdings.get("pricing_summary") if isinstance(holdings.get("pricing_summary"), dict) else {}

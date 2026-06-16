@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from .cache import (
+    FUND_QUOTE_TTL_SECONDS,
+    PLATFORM_HOLDINGS_PRICING_CACHE,
     PLATFORM_TRADE_CACHE,
     PLATFORM_TRADE_TTL_SECONDS,
     platform_trade_lock,
@@ -236,6 +239,42 @@ def enrich_platform_holdings_with_pricing(holdings: Dict[str, Any], actions: Lis
         "asset_count": len(enriched_items),
     }
     return enriched_holdings
+
+
+def platform_holdings_pricing_cache_key(platform_trades: Dict[str, Any], actions: List[Dict[str, Any]]) -> str:
+    prod_code = normalize_text(platform_trades.get("prod_code")) if isinstance(platform_trades, dict) else ""
+    action_tokens: List[str] = []
+    for action in actions:
+        token = normalize_text(action.get("action_key"))
+        if not token:
+            token = ":".join(
+                [
+                    str(safe_int(action.get("adjustment_id"))),
+                    normalize_text(action.get("fund_code")),
+                    normalize_text(action.get("side")),
+                    str(platform_action_timestamp(action)),
+                ]
+            )
+        action_tokens.append(token)
+    digest_source = "|".join(action_tokens)
+    digest = hashlib.sha1(digest_source.encode("utf-8")).hexdigest()[:16] if digest_source else "empty"
+    return f"{prod_code}:{len(action_tokens)}:{digest}"
+
+
+def get_priced_platform_holdings(platform_trades: Dict[str, Any]) -> Dict[str, Any]:
+    raw_holdings = platform_trades.get("holdings") if isinstance(platform_trades.get("holdings"), dict) else {}
+    actions = [item for item in list(platform_trades.get("actions") or []) if isinstance(item, dict)]
+    cache_key = platform_holdings_pricing_cache_key(platform_trades, actions)
+    now = time.time()
+    cached = PLATFORM_HOLDINGS_PRICING_CACHE.get(cache_key)
+    if cached and now - safe_float(cached.get("ts")) < FUND_QUOTE_TTL_SECONDS:
+        return cached.get("data") if isinstance(cached.get("data"), dict) else raw_holdings
+    priced_holdings = enrich_platform_holdings_with_pricing(raw_holdings, actions)
+    PLATFORM_HOLDINGS_PRICING_CACHE[cache_key] = {
+        "ts": now,
+        "data": priced_holdings,
+    }
+    return priced_holdings
 
 
 def platform_window_label(value: str) -> str:

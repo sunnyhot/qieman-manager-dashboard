@@ -11,6 +11,7 @@ LIVE_SNAPSHOT: Optional[Dict[str, Any]] = None
 PLATFORM_TRADE_CACHE: Dict[str, Dict[str, Any]] = {}
 PLATFORM_TRADE_LOCKS: Dict[str, Lock] = {}
 PLATFORM_TRADE_LOCKS_GUARD = Lock()
+PLATFORM_HOLDINGS_PRICING_CACHE: Dict[str, Dict[str, Any]] = {}
 FUND_HISTORY_CACHE: Dict[str, Dict[str, Any]] = {}
 FUND_QUOTE_CACHE: Dict[str, Dict[str, Any]] = {}
 
