@@ -194,15 +194,47 @@ def fetch_fund_quote(fund_code: str) -> Dict[str, Any]:
 
 
 def preload_fund_market_data(fund_codes: List[str]) -> tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
+    started_at = performance_start()
     unique_codes = [code for code in dict.fromkeys(normalize_text(code) for code in fund_codes) if code]
     histories: Dict[str, Dict[str, Any]] = {}
     quotes: Dict[str, Dict[str, Any]] = {}
     if not unique_codes:
+        record_performance("fund.preload", started_at, code_count=0, history_fetch_count=0, quote_fetch_count=0)
         return histories, quotes
-    max_workers = max(1, min(12, len(unique_codes) * 2))
+
+    now = time.time()
+    history_codes: List[str] = []
+    quote_codes: List[str] = []
+    for code in unique_codes:
+        cached_history = FUND_HISTORY_CACHE.get(code)
+        if cached_history and now - safe_float(cached_history.get("loaded_at")) < FUND_HISTORY_TTL_SECONDS:
+            histories[code] = cached_history
+        else:
+            history_codes.append(code)
+
+        cached_quote = FUND_QUOTE_CACHE.get(code)
+        if cached_quote and now - safe_float(cached_quote.get("loaded_at")) < FUND_QUOTE_TTL_SECONDS:
+            quotes[code] = cached_quote
+        else:
+            quote_codes.append(code)
+
+    if not history_codes and not quote_codes:
+        record_performance(
+            "fund.preload",
+            started_at,
+            code_count=len(unique_codes),
+            history_cache_count=len(histories),
+            quote_cache_count=len(quotes),
+            history_fetch_count=0,
+            quote_fetch_count=0,
+        )
+        return histories, quotes
+
+    fetch_count = len(history_codes) + len(quote_codes)
+    max_workers = max(1, min(12, fetch_count))
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        history_futures = {executor.submit(fetch_fund_history_series, code): ("history", code) for code in unique_codes}
-        quote_futures = {executor.submit(fetch_fund_quote, code): ("quote", code) for code in unique_codes}
+        history_futures = {executor.submit(fetch_fund_history_series, code): ("history", code) for code in history_codes}
+        quote_futures = {executor.submit(fetch_fund_quote, code): ("quote", code) for code in quote_codes}
         all_futures = {**history_futures, **quote_futures}
         for future in as_completed(all_futures):
             kind, code = all_futures[future]
@@ -216,4 +248,13 @@ def preload_fund_market_data(fund_codes: List[str]) -> tuple[Dict[str, Dict[str,
                     histories[code] = {}
                 else:
                     quotes[code] = {}
+    record_performance(
+        "fund.preload",
+        started_at,
+        code_count=len(unique_codes),
+        history_cache_count=len(histories) - len(history_codes),
+        quote_cache_count=len(quotes) - len(quote_codes),
+        history_fetch_count=len(history_codes),
+        quote_fetch_count=len(quote_codes),
+    )
     return histories, quotes
