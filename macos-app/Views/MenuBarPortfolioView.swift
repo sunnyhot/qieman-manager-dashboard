@@ -77,10 +77,17 @@ struct MenuBarPortfolioView: View {
         .frame(width: 392, height: 720)
         .background(AppPalette.canvasGradient)
         .task {
-            if model.userPortfolioSnapshot == nil, model.hasPersonalPortfolio {
-                try? await model.refreshUserPortfolio(updateNotice: false)
+            for action in MenuBarPortfolioRefreshDecision.onAppear(
+                hasPortfolioSnapshot: model.userPortfolioSnapshot != nil,
+                hasPersonalPortfolio: model.hasPersonalPortfolio
+            ) {
+                switch action {
+                case .refreshPortfolio:
+                    try? await model.refreshUserPortfolio(updateNotice: false)
+                case .refreshMarketIndicesIfNeeded:
+                    await model.refreshMarketIndicesIfNeeded()
+                }
             }
-            await model.refreshMarketIndicesIfNeeded()
         }
     }
 
