@@ -10,8 +10,7 @@ extension AppModel {
     var menuBarTickerVisibleEntries: [MenuBarTickerEntry] {
         guard menuBarTickerSettings.isEnabled else { return [] }
         let settings = menuBarTickerSettings.normalized()
-        let entries = menuBarTickerCandidateEntries(settings: settings)
-        return Array(entries.prefix(settings.maxVisibleItems))
+        return menuBarTickerCandidateEntries(settings: settings, maxEntries: settings.maxVisibleItems)
     }
 
     var menuBarTickerTitle: String? {
@@ -115,7 +114,10 @@ extension AppModel {
         normalized.save()
     }
 
-    func menuBarTickerCandidateEntries(settings: MenuBarTickerSettings) -> [MenuBarTickerEntry] {
+    func menuBarTickerCandidateEntries(
+        settings: MenuBarTickerSettings,
+        maxEntries: Int? = nil
+    ) -> [MenuBarTickerEntry] {
         let telemetryStart = PerformanceTelemetry.start()
         var entries: [MenuBarTickerEntry] = []
         defer {
@@ -133,11 +135,12 @@ extension AppModel {
         let aggregates = MenuBarTickerAggregateSet(rows: rows)
         var rowsByHoldingID: [UUID: UserPortfolioValuationRow]?
 
-        for selection in settings.selections {
+        selectionLoop: for selection in settings.selections {
             switch selection {
             case .kind(let kind):
                 if let entry = menuBarTickerEntry(for: kind, rows: rows, aggregates: aggregates) {
                     entries.append(entry)
+                    if let maxEntries, entries.count >= maxEntries { break selectionLoop }
                 }
             case .holding(let sel):
                 let holdingRows: [UUID: UserPortfolioValuationRow]
@@ -154,6 +157,7 @@ extension AppModel {
                     continue
                 }
                 entries.append(entry)
+                if let maxEntries, entries.count >= maxEntries { break selectionLoop }
             }
         }
 
