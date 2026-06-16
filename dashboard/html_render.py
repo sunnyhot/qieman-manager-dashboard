@@ -30,6 +30,7 @@ from .html_helpers import (
 from .platform_fetcher import (
     build_platform_action_presentation,
     build_platform_timeline_from_actions,
+    enrich_platform_actions_with_valuation,
     get_priced_platform_holdings,
 )
 from .utils import (
@@ -107,8 +108,9 @@ def render_signal_panel(
             url = append_url_fragment(url, section_anchor)
             active = platform_window == value or (platform_window == "" and value == "all")
             window_toolbar.append(f'<a class="mini-btn{" active" if active else ""}" href="{html.escape(url)}">{html.escape(label)}</a>')
+    display_actions = enrich_platform_actions_with_valuation(filtered_actions[:card_limit])
     signal_cards = []
-    for action in filtered_actions[:card_limit]:
+    for action in display_actions:
         card_side = normalize_text(action.get("side")) or "watch"
         detail_bits = [
             normalize_text(action.get("title")),

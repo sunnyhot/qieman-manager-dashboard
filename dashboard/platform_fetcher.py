@@ -775,7 +775,6 @@ def build_platform_trade_data(prod_code: str, raw_items: List[Dict[str, Any]]) -
             }
         )
     actions = sorted(actions, key=platform_action_timestamp, reverse=True)
-    actions = enrich_platform_actions_with_valuation(actions)
     adjustments = sorted(
         adjustments,
         key=lambda item: safe_int(item.get("txn_ts")) or safe_int(item.get("created_ts")),
