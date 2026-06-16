@@ -13,6 +13,8 @@ from .cache import (
     FUND_HISTORY_TTL_SECONDS,
     FUND_QUOTE_CACHE,
     FUND_QUOTE_TTL_SECONDS,
+    fund_history_lock,
+    fund_quote_lock,
 )
 from .performance import performance_start, record_performance
 from .utils import (
@@ -40,61 +42,66 @@ def fetch_fund_history_series(fund_code: str) -> Dict[str, Any]:
         cache_status = "hit"
         record_performance("fund.history", started_at, has_code=True, cache=cache_status)
         return cached
-    result: Dict[str, Any] = {
-        "fund_code": target,
-        "fund_name": "",
-        "series": [],
-        "keys": [],
-        "loaded_at": now,
-    }
-    try:
-        text = fetch_remote_text(f"https://fund.eastmoney.com/pingzhongdata/{target}.js?v={int(now)}")
-        name_match = re.search(r'var\s+fS_name\s*=\s*"([^"]*)";', text)
-        trend_match = re.search(r'var\s+Data_netWorthTrend\s*=\s*(\[[\s\S]*?\]);', text)
-        if not trend_match:
-            FUND_HISTORY_CACHE[target] = result
-            return result
-        rows = json.loads(trend_match.group(1))
-        series: List[Dict[str, Any]] = []
-        keys: List[int] = []
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-            nav = safe_float(row.get("y"))
-            ts = safe_int(row.get("x"))
-            if nav <= 0 or ts <= 0:
-                continue
-            date_text = datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d")
-            date_key = date_key_from_text(date_text)
-            if not date_key:
-                continue
-            keys.append(date_key)
-            series.append(
-                {
-                    "date": date_text,
-                    "date_key": date_key,
-                    "nav": nav,
-                    "ts": ts,
-                }
-            )
-        result = {
+    with fund_history_lock(target):
+        cached = FUND_HISTORY_CACHE.get(target)
+        now = time.time()
+        if cached and now - safe_float(cached.get("loaded_at")) < FUND_HISTORY_TTL_SECONDS:
+            cache_status = "hit_after_wait"
+            record_performance("fund.history", started_at, has_code=True, cache=cache_status)
+            return cached
+        result: Dict[str, Any] = {
             "fund_code": target,
-            "fund_name": normalize_text(name_match.group(1)) if name_match else "",
-            "series": series,
-            "keys": keys,
+            "fund_name": "",
+            "series": [],
+            "keys": [],
             "loaded_at": now,
         }
-    except Exception:
-        pass
-    FUND_HISTORY_CACHE[target] = result
-    record_performance(
-        "fund.history",
-        started_at,
-        has_code=True,
-        cache=cache_status,
-        series_count=len(result.get("series") or []),
-    )
-    return result
+        try:
+            text = fetch_remote_text(f"https://fund.eastmoney.com/pingzhongdata/{target}.js?v={int(now)}")
+            name_match = re.search(r'var\s+fS_name\s*=\s*"([^"]*)";', text)
+            trend_match = re.search(r'var\s+Data_netWorthTrend\s*=\s*(\[[\s\S]*?\]);', text)
+            if trend_match:
+                rows = json.loads(trend_match.group(1))
+                series: List[Dict[str, Any]] = []
+                keys: List[int] = []
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    nav = safe_float(row.get("y"))
+                    ts = safe_int(row.get("x"))
+                    if nav <= 0 or ts <= 0:
+                        continue
+                    date_text = datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d")
+                    date_key = date_key_from_text(date_text)
+                    if not date_key:
+                        continue
+                    keys.append(date_key)
+                    series.append(
+                        {
+                            "date": date_text,
+                            "date_key": date_key,
+                            "nav": nav,
+                            "ts": ts,
+                        }
+                    )
+                result = {
+                    "fund_code": target,
+                    "fund_name": normalize_text(name_match.group(1)) if name_match else "",
+                    "series": series,
+                    "keys": keys,
+                    "loaded_at": now,
+                }
+        except Exception:
+            pass
+        FUND_HISTORY_CACHE[target] = result
+        record_performance(
+            "fund.history",
+            started_at,
+            has_code=True,
+            cache=cache_status,
+            series_count=len(result.get("series") or []),
+        )
+        return result
 
 
 def lookup_fund_nav_by_date(history: Dict[str, Any], date_text: Any) -> Dict[str, Any]:
@@ -131,65 +138,78 @@ def fetch_fund_quote(fund_code: str) -> Dict[str, Any]:
             source=normalize_text(cached.get("price_source")),
         )
         return cached
-    result: Dict[str, Any] = {
-        "fund_code": target,
-        "price": 0.0,
-        "price_time": "",
-        "price_source": "",
-        "price_source_label": "",
-        "official_nav": 0.0,
-        "official_nav_date": "",
-        "estimate_change_pct": 0.0,
-        "loaded_at": now,
-    }
-    try:
-        text = fetch_remote_text(f"https://fundgz.1234567.com.cn/js/{target}.js?rt={int(now)}")
-        match = re.search(r"jsonpgz\((\{[\s\S]*\})\);", text)
-        if match:
-            payload = json.loads(match.group(1))
-            estimate_price = safe_float(payload.get("gsz"))
-            if estimate_price > 0:
+    with fund_quote_lock(target):
+        cached = FUND_QUOTE_CACHE.get(target)
+        now = time.time()
+        if cached and now - safe_float(cached.get("loaded_at")) < FUND_QUOTE_TTL_SECONDS:
+            cache_status = "hit_after_wait"
+            record_performance(
+                "fund.quote",
+                started_at,
+                has_code=True,
+                cache=cache_status,
+                source=normalize_text(cached.get("price_source")),
+            )
+            return cached
+        result: Dict[str, Any] = {
+            "fund_code": target,
+            "price": 0.0,
+            "price_time": "",
+            "price_source": "",
+            "price_source_label": "",
+            "official_nav": 0.0,
+            "official_nav_date": "",
+            "estimate_change_pct": 0.0,
+            "loaded_at": now,
+        }
+        try:
+            text = fetch_remote_text(f"https://fundgz.1234567.com.cn/js/{target}.js?rt={int(now)}")
+            match = re.search(r"jsonpgz\((\{[\s\S]*\})\);", text)
+            if match:
+                payload = json.loads(match.group(1))
+                estimate_price = safe_float(payload.get("gsz"))
+                if estimate_price > 0:
+                    result = {
+                        "fund_code": target,
+                        "fund_name": normalize_text(payload.get("name")),
+                        "price": estimate_price,
+                        "price_time": normalize_text(payload.get("gztime")),
+                        "price_source": "estimate",
+                        "price_source_label": "盘中估值",
+                        "official_nav": safe_float(payload.get("dwjz")),
+                        "official_nav_date": normalize_text(payload.get("jzrq")),
+                        "estimate_change_pct": safe_float(payload.get("gszzl")),
+                        "loaded_at": now,
+                    }
+        except Exception:
+            pass
+        if safe_float(result.get("price")) <= 0:
+            history = fetch_fund_history_series(target)
+            series = [item for item in list(history.get("series") or []) if isinstance(item, dict)]
+            latest = series[-1] if series else {}
+            if latest:
                 result = {
                     "fund_code": target,
-                    "fund_name": normalize_text(payload.get("name")),
-                    "price": estimate_price,
-                    "price_time": normalize_text(payload.get("gztime")),
-                    "price_source": "estimate",
-                    "price_source_label": "盘中估值",
-                    "official_nav": safe_float(payload.get("dwjz")),
-                    "official_nav_date": normalize_text(payload.get("jzrq")),
-                    "estimate_change_pct": safe_float(payload.get("gszzl")),
+                    "fund_name": normalize_text(history.get("fund_name")),
+                    "price": safe_float(latest.get("nav")),
+                    "price_time": normalize_text(latest.get("date")),
+                    "price_source": "official_nav",
+                    "price_source_label": "最近净值",
+                    "official_nav": safe_float(latest.get("nav")),
+                    "official_nav_date": normalize_text(latest.get("date")),
+                    "estimate_change_pct": 0.0,
                     "loaded_at": now,
                 }
-    except Exception:
-        pass
-    if safe_float(result.get("price")) <= 0:
-        history = fetch_fund_history_series(target)
-        series = [item for item in list(history.get("series") or []) if isinstance(item, dict)]
-        latest = series[-1] if series else {}
-        if latest:
-            result = {
-                "fund_code": target,
-                "fund_name": normalize_text(history.get("fund_name")),
-                "price": safe_float(latest.get("nav")),
-                "price_time": normalize_text(latest.get("date")),
-                "price_source": "official_nav",
-                "price_source_label": "最近净值",
-                "official_nav": safe_float(latest.get("nav")),
-                "official_nav_date": normalize_text(latest.get("date")),
-                "estimate_change_pct": 0.0,
-                "loaded_at": now,
-            }
-    FUND_QUOTE_CACHE[target] = result
-    price_source = normalize_text(result.get("price_source"))
-    record_performance(
-        "fund.quote",
-        started_at,
-        has_code=True,
-        cache=cache_status,
-        source=price_source,
-    )
-    return result
+        FUND_QUOTE_CACHE[target] = result
+        price_source = normalize_text(result.get("price_source"))
+        record_performance(
+            "fund.quote",
+            started_at,
+            has_code=True,
+            cache=cache_status,
+            source=price_source,
+        )
+        return result
 
 
 def _fund_history_lookup_signature(history: Dict[str, Any]) -> tuple[Any, ...]:
