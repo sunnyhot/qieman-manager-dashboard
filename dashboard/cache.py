@@ -76,28 +76,43 @@ def store_loaded_cache_entry(
         target_cache.pop(oldest_key, None)
 
 
+def _store_lock(
+    lock_cache: Dict[str, Lock],
+    key: str,
+    *,
+    max_entries: int,
+) -> Lock:
+    lock = lock_cache.get(key)
+    if lock is None:
+        lock = Lock()
+        lock_cache[key] = lock
+    if max_entries <= 0:
+        return lock
+    while len(lock_cache) > max_entries:
+        removable_key = next(
+            (
+                item_key
+                for item_key, item_lock in lock_cache.items()
+                if item_key != key and not item_lock.locked()
+            ),
+            None,
+        )
+        if removable_key is None:
+            break
+        lock_cache.pop(removable_key, None)
+    return lock
+
+
 def platform_trade_lock(prod_code: str) -> Lock:
     with PLATFORM_TRADE_LOCKS_GUARD:
-        lock = PLATFORM_TRADE_LOCKS.get(prod_code)
-        if lock is None:
-            lock = Lock()
-            PLATFORM_TRADE_LOCKS[prod_code] = lock
-        return lock
+        return _store_lock(PLATFORM_TRADE_LOCKS, prod_code, max_entries=MAX_DERIVED_CACHE_ENTRIES)
 
 
 def fund_history_lock(fund_code: str) -> Lock:
     with FUND_HISTORY_LOCKS_GUARD:
-        lock = FUND_HISTORY_LOCKS.get(fund_code)
-        if lock is None:
-            lock = Lock()
-            FUND_HISTORY_LOCKS[fund_code] = lock
-        return lock
+        return _store_lock(FUND_HISTORY_LOCKS, fund_code, max_entries=MAX_FUND_CACHE_ENTRIES)
 
 
 def fund_quote_lock(fund_code: str) -> Lock:
     with FUND_QUOTE_LOCKS_GUARD:
-        lock = FUND_QUOTE_LOCKS.get(fund_code)
-        if lock is None:
-            lock = Lock()
-            FUND_QUOTE_LOCKS[fund_code] = lock
-        return lock
+        return _store_lock(FUND_QUOTE_LOCKS, fund_code, max_entries=MAX_FUND_CACHE_ENTRIES)

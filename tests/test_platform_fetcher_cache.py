@@ -63,6 +63,13 @@ class PlatformFetcherCacheTests(unittest.TestCase):
         self.assertLessEqual(len(cache.PLATFORM_TRADE_CACHE), cache.MAX_DERIVED_CACHE_ENTRIES)
         self.assertNotIn("PROD_0", cache.PLATFORM_TRADE_CACHE)
 
+    def test_platform_trade_lock_map_is_bounded(self) -> None:
+        for index in range(cache.MAX_DERIVED_CACHE_ENTRIES + 5):
+            cache.platform_trade_lock(f"PROD_{index}")
+
+        self.assertLessEqual(len(cache.PLATFORM_TRADE_LOCKS), cache.MAX_DERIVED_CACHE_ENTRIES)
+        self.assertNotIn("PROD_0", cache.PLATFORM_TRADE_LOCKS)
+
 
 if __name__ == "__main__":
     unittest.main()

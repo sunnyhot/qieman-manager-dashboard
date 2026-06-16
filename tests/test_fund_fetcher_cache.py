@@ -10,10 +10,14 @@ class FundFetcherCacheTests(unittest.TestCase):
     def setUp(self) -> None:
         fund_fetcher.FUND_HISTORY_CACHE.clear()
         fund_fetcher.FUND_QUOTE_CACHE.clear()
+        cache.FUND_HISTORY_LOCKS.clear()
+        cache.FUND_QUOTE_LOCKS.clear()
 
     def tearDown(self) -> None:
         fund_fetcher.FUND_HISTORY_CACHE.clear()
         fund_fetcher.FUND_QUOTE_CACHE.clear()
+        cache.FUND_HISTORY_LOCKS.clear()
+        cache.FUND_QUOTE_LOCKS.clear()
 
     def test_preload_returns_fresh_cache_without_creating_executor(self) -> None:
         now = time.time()
@@ -76,6 +80,16 @@ class FundFetcherCacheTests(unittest.TestCase):
 
         self.assertLessEqual(len(fund_fetcher.FUND_HISTORY_CACHE), cache.MAX_FUND_CACHE_ENTRIES)
         self.assertNotIn("000000", fund_fetcher.FUND_HISTORY_CACHE)
+
+    def test_fund_lock_maps_are_bounded(self) -> None:
+        for index in range(cache.MAX_FUND_CACHE_ENTRIES + 5):
+            cache.fund_history_lock(f"{index:06d}")
+            cache.fund_quote_lock(f"{index:06d}")
+
+        self.assertLessEqual(len(cache.FUND_HISTORY_LOCKS), cache.MAX_FUND_CACHE_ENTRIES)
+        self.assertLessEqual(len(cache.FUND_QUOTE_LOCKS), cache.MAX_FUND_CACHE_ENTRIES)
+        self.assertNotIn("000000", cache.FUND_HISTORY_LOCKS)
+        self.assertNotIn("000000", cache.FUND_QUOTE_LOCKS)
 
 
 if __name__ == "__main__":
