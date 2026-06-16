@@ -16,6 +16,7 @@ from .config import (
     PROJECT_DIR,
     SCRAPER_FILE,
 )
+from .cache import CLIENT_AUTH_CACHE
 from .utils import (
     build_generic_stats,
     build_list_stats,
@@ -297,6 +298,21 @@ def run_auth_check() -> Dict[str, Any]:
 
 
 def build_dashboard_client() -> QiemanCommunityClient:
-    cookie = COOKIE_FILE.read_text(encoding="utf-8").strip() if COOKIE_FILE.exists() else None
-    access_token = extract_access_token(cookie or "")
+    cookie = None
+    access_token = ""
+    if COOKIE_FILE.exists():
+        stat = COOKIE_FILE.stat()
+        signature = (getattr(stat, "st_mtime_ns", 0), getattr(stat, "st_size", 0))
+        cached_signature = CLIENT_AUTH_CACHE.get("signature")
+        if cached_signature == signature:
+            cookie = CLIENT_AUTH_CACHE.get("cookie")
+            access_token = CLIENT_AUTH_CACHE.get("access_token") or ""
+        else:
+            cookie = COOKIE_FILE.read_text(encoding="utf-8").strip()
+            access_token = extract_access_token(cookie or "") or ""
+            CLIENT_AUTH_CACHE["signature"] = signature
+            CLIENT_AUTH_CACHE["cookie"] = cookie
+            CLIENT_AUTH_CACHE["access_token"] = access_token
+    else:
+        CLIENT_AUTH_CACHE.clear()
     return QiemanCommunityClient(access_token=access_token, cookie=cookie)

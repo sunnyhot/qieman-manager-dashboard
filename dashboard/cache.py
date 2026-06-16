@@ -14,6 +14,7 @@ PLATFORM_TRADE_LOCKS: Dict[str, Lock] = {}
 PLATFORM_TRADE_LOCKS_GUARD = Lock()
 PLATFORM_HOLDINGS_PRICING_CACHE: Dict[str, Dict[str, Any]] = {}
 COMMENTS_CACHE: Dict[str, Dict[str, Any]] = {}
+CLIENT_AUTH_CACHE: Dict[str, Any] = {}
 FUND_HISTORY_CACHE: Dict[str, Dict[str, Any]] = {}
 FUND_HISTORY_LOCKS: Dict[str, Lock] = {}
 FUND_HISTORY_LOCKS_GUARD = Lock()
