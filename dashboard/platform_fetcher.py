@@ -346,6 +346,92 @@ def summarize_filtered_platform_actions(actions: List[Dict[str, Any]]) -> Dict[s
     }
 
 
+def _empty_platform_action_summary() -> Dict[str, Any]:
+    return {
+        "count": 0,
+        "buy_count": 0,
+        "sell_count": 0,
+        "adjustment_ids": set(),
+        "latest": None,
+    }
+
+
+def _accumulate_platform_action_summary(summary: Dict[str, Any], action: Dict[str, Any]) -> None:
+    summary["count"] += 1
+    if summary.get("latest") is None:
+        summary["latest"] = action
+    side = normalize_text(action.get("side"))
+    if side == "buy":
+        summary["buy_count"] += 1
+    if side == "sell":
+        summary["sell_count"] += 1
+    adjustment_id = safe_int(action.get("adjustment_id"))
+    if adjustment_id:
+        summary["adjustment_ids"].add(adjustment_id)
+
+
+def _finish_platform_action_summary(summary: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "count": safe_int(summary.get("count")),
+        "buy_count": safe_int(summary.get("buy_count")),
+        "sell_count": safe_int(summary.get("sell_count")),
+        "adjustment_count": len(summary.get("adjustment_ids") or set()),
+        "latest": summary.get("latest"),
+    }
+
+
+def build_platform_action_presentation(
+    platform_trades: Dict[str, Any],
+    form_values: Dict[str, str],
+    selected_side: str = "all",
+) -> Dict[str, Any]:
+    range_info = platform_effective_range(form_values)
+    start_ms = safe_int(range_info.get("start_ms"))
+    end_ms = safe_int(range_info.get("end_ms"))
+    target_side = normalize_text(selected_side) or "all"
+    actions_by_side: Dict[str, List[Dict[str, Any]]] = {
+        "all": [],
+        "buy": [],
+        "sell": [],
+    }
+    summary_builders: Dict[str, Dict[str, Any]] = {
+        "all": _empty_platform_action_summary(),
+        "buy": _empty_platform_action_summary(),
+        "sell": _empty_platform_action_summary(),
+    }
+    source_actions = platform_trades.get("actions") if isinstance(platform_trades, dict) else []
+    for action in source_actions or []:
+        if not isinstance(action, dict):
+            continue
+        action_ts = platform_action_timestamp(action)
+        if start_ms and (not action_ts or action_ts < start_ms):
+            continue
+        if end_ms and action_ts and action_ts >= end_ms:
+            continue
+        actions_by_side["all"].append(action)
+        _accumulate_platform_action_summary(summary_builders["all"], action)
+        side = normalize_text(action.get("side"))
+        if side in {"buy", "sell"}:
+            actions_by_side[side].append(action)
+            _accumulate_platform_action_summary(summary_builders[side], action)
+
+    summaries = {
+        side: _finish_platform_action_summary(summary)
+        for side, summary in summary_builders.items()
+    }
+    filtered_actions = actions_by_side[target_side] if target_side in {"buy", "sell"} else actions_by_side["all"]
+    return {
+        "range_info": range_info,
+        "all_actions": actions_by_side["all"],
+        "filtered_actions": filtered_actions,
+        "actions_by_side": actions_by_side,
+        "summary_all": summaries["all"],
+        "summary_buy": summaries["buy"],
+        "summary_sell": summaries["sell"],
+        "summaries": summaries,
+    }
+
+
 def build_platform_timeline_from_actions(actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     grouped: Dict[str, Dict[str, Any]] = {}
     for action in actions:

@@ -28,11 +28,9 @@ from .html_helpers import (
     snapshot_section_title,
 )
 from .platform_fetcher import (
+    build_platform_action_presentation,
     build_platform_timeline_from_actions,
     enrich_platform_holdings_with_pricing,
-    filter_platform_actions,
-    platform_effective_range,
-    summarize_filtered_platform_actions,
 )
 from .utils import (
     format_amount,
@@ -68,14 +66,15 @@ def render_signal_panel(
         )
     platform_window = normalize_text(form_values.get("platform_window")) or "all"
     section_anchor = normalize_text(section_anchor).lstrip("#")
-    range_info = platform_effective_range(form_values)
+    presentation = build_platform_action_presentation(platform_trades, form_values, signal_filter)
+    range_info = presentation["range_info"]
     range_label = normalize_text(range_info.get("label")) or "全部"
     using_custom_range = normalize_text(range_info.get("mode")) == "custom"
-    all_actions = filter_platform_actions(platform_trades, form_values, "all")
-    filtered_actions = filter_platform_actions(platform_trades, form_values, signal_filter)
-    summary_all = summarize_filtered_platform_actions(all_actions)
-    summary_buy = summarize_filtered_platform_actions(filter_platform_actions(platform_trades, form_values, "buy"))
-    summary_sell = summarize_filtered_platform_actions(filter_platform_actions(platform_trades, form_values, "sell"))
+    all_actions = presentation["all_actions"]
+    filtered_actions = presentation["filtered_actions"]
+    summary_all = presentation["summary_all"]
+    summary_buy = presentation["summary_buy"]
+    summary_sell = presentation["summary_sell"]
     trade_overview_html = render_platform_trade_overview(all_actions, range_label, using_custom_range)
     toolbar = []
     for value, label, count in [
@@ -407,16 +406,19 @@ def render_platform_timeline_section(
         )
     platform_window = normalize_text(form_values.get("platform_window")) or "all"
     section_anchor = PLATFORM_TIMELINE_SECTION_ID
-    range_info = platform_effective_range(form_values)
+    presentation = build_platform_action_presentation(platform_trades, form_values, signal_filter)
+    range_info = presentation["range_info"]
     range_label = normalize_text(range_info.get("label")) or "全部"
     using_custom_range = normalize_text(range_info.get("mode")) == "custom"
-    all_actions = filter_platform_actions(platform_trades, form_values, "all")
-    summary_all = summarize_filtered_platform_actions(all_actions)
+    filtered_actions = presentation["filtered_actions"]
+    summary_all = presentation["summary_all"]
+    summary_buy = presentation["summary_buy"]
+    summary_sell = presentation["summary_sell"]
     side_toolbar: List[str] = []
     for value, label, count in [
         ("all", "全部动作", safe_int(summary_all.get("count"))),
-        ("buy", "只看买入", safe_int(summarize_filtered_platform_actions(filter_platform_actions(platform_trades, form_values, "buy")).get("count"))),
-        ("sell", "只看卖出", safe_int(summarize_filtered_platform_actions(filter_platform_actions(platform_trades, form_values, "sell")).get("count"))),
+        ("buy", "只看买入", safe_int(summary_buy.get("count"))),
+        ("sell", "只看卖出", safe_int(summary_sell.get("count"))),
     ]:
         url = build_route_url(
             "/timeline",
@@ -447,7 +449,6 @@ def render_platform_timeline_section(
             active = platform_window == value or (platform_window == "" and value == "all")
             window_toolbar.append(f'<a class="mini-btn{" active" if active else ""}" href="{html.escape(url)}">{html.escape(label)}</a>')
 
-    filtered_actions = filter_platform_actions(platform_trades, form_values, signal_filter)
     asset_source_items = build_platform_timeline_from_actions(filtered_actions)
     filtered_items = asset_source_items
     if timeline_asset and timeline_asset != "all":

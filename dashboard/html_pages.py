@@ -40,10 +40,7 @@ from .html_render import (
 )
 from .performance import timed
 from .platform_fetcher import (
-    enrich_platform_holdings_with_pricing,
-    filter_platform_actions,
     platform_effective_range,
-    summarize_filtered_platform_actions,
 )
 from .utils import (
     format_amount,
