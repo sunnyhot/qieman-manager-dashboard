@@ -928,7 +928,7 @@ def fetch_platform_trade_data(prod_code: str, timeout_seconds: int = 10) -> Dict
                 "error": str(exc),
                 "prod_code": target,
             }
-        PLATFORM_TRADE_CACHE[target] = {"ts": now, "data": data}
+        store_ttl_cache_entry(PLATFORM_TRADE_CACHE, target, data, ts=now)
         record_performance(
             "platform.fetch",
             started_at,

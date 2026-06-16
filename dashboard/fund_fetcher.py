@@ -15,6 +15,7 @@ from .cache import (
     FUND_QUOTE_TTL_SECONDS,
     fund_history_lock,
     fund_quote_lock,
+    store_loaded_cache_entry,
 )
 from .performance import performance_start, record_performance
 from .utils import (
@@ -93,7 +94,7 @@ def fetch_fund_history_series(fund_code: str) -> Dict[str, Any]:
                 }
         except Exception:
             pass
-        FUND_HISTORY_CACHE[target] = result
+        store_loaded_cache_entry(FUND_HISTORY_CACHE, target, result)
         record_performance(
             "fund.history",
             started_at,
@@ -215,7 +216,7 @@ def fetch_fund_quote(fund_code: str) -> Dict[str, Any]:
                     "estimate_change_pct": 0.0,
                     "loaded_at": now,
                 }
-        FUND_QUOTE_CACHE[target] = result
+        store_loaded_cache_entry(FUND_QUOTE_CACHE, target, result)
         price_source = normalize_text(result.get("price_source"))
         record_performance(
             "fund.quote",

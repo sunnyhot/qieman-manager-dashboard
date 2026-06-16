@@ -9,14 +9,16 @@ from dashboard.platform_fetcher import fetch_platform_trade_data
 
 
 class SlowPlatformClient:
-    def __init__(self) -> None:
+    def __init__(self, delay: float = 0.05) -> None:
         self.call_count = 0
+        self.delay = delay
         self.lock = threading.Lock()
 
     def get(self, path, params, timeout):
         with self.lock:
             self.call_count += 1
-        time.sleep(0.05)
+        if self.delay > 0:
+            time.sleep(self.delay)
         return []
 
 
@@ -44,6 +46,22 @@ class PlatformFetcherCacheTests(unittest.TestCase):
 
         self.assertEqual(client.call_count, 1)
         self.assertEqual(results, [payload, payload])
+
+    def test_platform_trade_cache_is_bounded(self) -> None:
+        client = SlowPlatformClient(delay=0)
+
+        def build_payload(prod_code, raw_items):
+            return {"supported": True, "prod_code": prod_code, "actions": []}
+
+        with patch("dashboard.platform_fetcher.build_dashboard_client", return_value=client), patch(
+            "dashboard.platform_fetcher.build_platform_trade_data",
+            side_effect=build_payload,
+        ):
+            for index in range(cache.MAX_DERIVED_CACHE_ENTRIES + 5):
+                fetch_platform_trade_data(f"PROD_{index}")
+
+        self.assertLessEqual(len(cache.PLATFORM_TRADE_CACHE), cache.MAX_DERIVED_CACHE_ENTRIES)
+        self.assertNotIn("PROD_0", cache.PLATFORM_TRADE_CACHE)
 
 
 if __name__ == "__main__":
