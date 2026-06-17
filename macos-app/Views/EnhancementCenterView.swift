@@ -10,6 +10,7 @@ struct EnhancementCenterView: View {
     @State private var isImportingFile = false
     @State private var importSource: PersonalDataImportSource = .table
     @State private var selectedWatchFilter: EnhancementWatchFilter = .all
+    @State private var isMonthlyReportPreviewExpanded = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -317,33 +318,118 @@ struct EnhancementCenterView: View {
 
     private var reviewPanel: some View {
         SectionCard(title: "复盘", subtitle: model.monthlyReportSummary.title, icon: "doc.text") {
-            VStack(alignment: .leading, spacing: 12) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) {
-                        reportActions
-                        Spacer(minLength: 0)
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        reportActions
-                    }
-                }
-
-                if let export = model.lastMonthlyReportExport {
-                    Text("最近导出：\(URL(fileURLWithPath: export.filePath).lastPathComponent) · \(export.exportedAt)")
-                        .font(.system(size: 11))
-                        .foregroundStyle(AppPalette.muted)
-                }
-
-                Text(model.monthlyReportSummary.markdown)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(AppPalette.ink)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+                reportStatusStrip
+                reportSummaryGrid
+                reportActionRow
+                monthlyReportPreview
             }
         }
+    }
+
+    private var reportStatusStrip: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+            compactFact("报告月份", dashboardSummary.reportMetadata.monthText, tint: AppPalette.brand)
+            compactFact("生成时间", dashboardSummary.reportMetadata.generatedAt, tint: AppPalette.info)
+            compactFact("Markdown", dashboardSummary.reportMetadata.lineCountText, tint: AppPalette.positive)
+            compactFact(
+                "归档",
+                dashboardSummary.reportMetadata.archiveText,
+                tint: dashboardSummary.reportMetadata.isArchivedForCurrentMonth ? AppPalette.positive : AppPalette.warning
+            )
+        }
+    }
+
+    private var reportSummaryGrid: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+            compactFact("组合诊断", model.portfolioDiagnosticsSummary.headline, tint: AppPalette.info)
+            compactFact(
+                "提醒通知",
+                model.portfolioReminderSummary.headline,
+                tint: model.portfolioReminderSummary.actionCount > 0 ? AppPalette.warning : AppPalette.positive
+            )
+            compactFact(
+                "收益归因",
+                model.profitAttributionSummary.headline,
+                tint: AppPalette.marketTint(for: model.profitAttributionSummary.totalProfitValue)
+            )
+            compactFact(
+                "计划模拟",
+                model.planSimulationSummary.headline,
+                tint: model.planSimulationSummary.activePlanCount > 0 ? AppPalette.info : AppPalette.muted
+            )
+        }
+    }
+
+    private var reportActionRow: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: AppPalette.spaceS) {
+                reportActions
+                Spacer(minLength: 0)
+            }
+
+            VStack(alignment: .leading, spacing: AppPalette.spaceS) {
+                reportActions
+            }
+        }
+    }
+
+    private var monthlyReportPreview: some View {
+        VStack(alignment: .leading, spacing: AppPalette.spaceS) {
+            HStack {
+                Text("Markdown 预览")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+
+                Spacer(minLength: 0)
+
+                Button {
+                    withAnimation(.easeOut(duration: 0.18)) {
+                        isMonthlyReportPreviewExpanded.toggle()
+                    }
+                } label: {
+                    Label(
+                        isMonthlyReportPreviewExpanded ? "收起" : "展开全文",
+                        systemImage: isMonthlyReportPreviewExpanded ? "chevron.up" : "chevron.down"
+                    )
+                }
+                .buttonStyle(.bordered)
+            }
+
+            Text(model.monthlyReportSummary.markdown)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(AppPalette.ink)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxHeight: isMonthlyReportPreviewExpanded ? .infinity : 260, alignment: .top)
+                .clipped()
+                .padding(AppPalette.spaceM)
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                        .stroke(AppPalette.line.opacity(AppPalette.borderFaint), lineWidth: 1)
+                )
+        }
+    }
+
+    private func compactFact(_ title: String, _ value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppPalette.muted)
+            Text(value)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(AppPalette.spaceS)
+        .background(tint.opacity(AppPalette.accentFill), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                .stroke(tint.opacity(AppPalette.accentBorder), lineWidth: 1)
+        )
     }
 
     private var reportActions: some View {
@@ -390,57 +476,121 @@ struct EnhancementCenterView: View {
 
     private var importPanel: some View {
         SectionCard(title: "导入预演", subtitle: "先预览变更，再确认写入", icon: "arrow.triangle.2.circlepath") {
-            VStack(alignment: .leading, spacing: 12) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) {
-                        importControls
-                        Spacer(minLength: 0)
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        importControls
-                    }
-                }
-
-                TextEditor(text: draftBinding)
-                    .font(.system(size: 11, design: .monospaced))
-                    .frame(minHeight: 110)
-                    .padding(8)
-                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-
-                HStack(spacing: 10) {
-                    Button {
-                        model.prepareImportPreview(target: importTarget, mode: importMode)
-                    } label: {
-                        Label("生成预览", systemImage: "list.bullet.rectangle")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(AppPalette.brand)
-
-                    Button {
-                        model.confirmActiveImportPreview()
-                    } label: {
-                        Label("确认写入", systemImage: "checkmark.circle")
-                    }
-                    .disabled(model.activeImportPreviewSession?.canConfirm != true)
-                    .buttonStyle(.bordered)
-
-                    Button(role: .destructive) {
-                        model.undoLatestImport()
-                    } label: {
-                        Label("撤销上次导入", systemImage: "arrow.uturn.backward")
-                    }
-                    .disabled(!model.canUndoLatestImport)
-
-                    Spacer(minLength: 0)
-                }
-
+            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+                importControlBar
+                importDraftEditor
+                importPreviewSummary
+                importActionFooter
                 if let session = model.activeImportPreviewSession {
                     importPreviewRows(session)
                 } else {
                     emptyState("暂无导入预览", detail: "粘贴草稿或导入文件后点击生成预览。")
                 }
             }
+        }
+    }
+
+    private var importControlBar: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: AppPalette.spaceS) {
+                importControls
+                Button {
+                    model.prepareImportPreview(target: importTarget, mode: importMode)
+                } label: {
+                    Label("生成预览", systemImage: "list.bullet.rectangle")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppPalette.brand)
+                Spacer(minLength: 0)
+            }
+
+            VStack(alignment: .leading, spacing: AppPalette.spaceS) {
+                importControls
+                Button {
+                    model.prepareImportPreview(target: importTarget, mode: importMode)
+                } label: {
+                    Label("生成预览", systemImage: "list.bullet.rectangle")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppPalette.brand)
+            }
+        }
+    }
+
+    private var importDraftEditor: some View {
+        VStack(alignment: .leading, spacing: AppPalette.spaceS) {
+            Text("源草稿")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(AppPalette.ink)
+            TextEditor(text: draftBinding)
+                .font(.system(size: 11, design: .monospaced))
+                .frame(minHeight: 120)
+                .padding(AppPalette.spaceS)
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                        .stroke(AppPalette.line.opacity(AppPalette.borderFaint), lineWidth: 1)
+                )
+        }
+    }
+
+    private var importPreviewSummary: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+            importCountChip("新增", dashboardSummary.importCounts.added, tint: AppPalette.positive)
+            importCountChip("更新", dashboardSummary.importCounts.updated, tint: AppPalette.info)
+            importCountChip("不变", dashboardSummary.importCounts.unchanged, tint: AppPalette.muted)
+            importCountChip("重复", dashboardSummary.importCounts.duplicate, tint: AppPalette.warning)
+            importCountChip("移除", dashboardSummary.importCounts.removed, tint: AppPalette.warning)
+            importCountChip("阻塞", dashboardSummary.importCounts.blocked, tint: AppPalette.danger)
+        }
+    }
+
+    private func importCountChip(_ title: String, _ count: Int, tint: Color) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppPalette.muted)
+            Spacer(minLength: 0)
+            Text("\(count)")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(tint)
+        }
+        .padding(AppPalette.spaceS)
+        .background(tint.opacity(AppPalette.accentFill), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                .stroke(tint.opacity(AppPalette.accentBorder), lineWidth: 1)
+        )
+    }
+
+    private var importActionFooter: some View {
+        HStack(spacing: AppPalette.spaceS) {
+            Button {
+                model.confirmActiveImportPreview()
+            } label: {
+                Label("确认写入", systemImage: "checkmark.circle")
+            }
+            .disabled(model.activeImportPreviewSession?.canConfirm != true)
+            .buttonStyle(.borderedProminent)
+            .tint(AppPalette.brand)
+
+            if model.activeImportPreviewSession?.canConfirm != true {
+                Text(dashboardSummary.importCounts.blocked > 0 ? "存在阻塞项，暂不能写入" : "请先生成有效预览")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+
+            Spacer(minLength: 0)
+
+            Button(role: .destructive) {
+                model.undoLatestImport()
+            } label: {
+                Label("撤销上次导入", systemImage: "arrow.uturn.backward")
+            }
+            .disabled(!model.canUndoLatestImport)
         }
     }
 
@@ -551,7 +701,7 @@ struct EnhancementCenterView: View {
 
     private func importPreviewRows(_ session: ImportPreviewSession) -> some View {
         LazyVStack(alignment: .leading, spacing: 8) {
-            ForEach(ImportPreviewChangeKind.allCases, id: \.self) { kind in
+            ForEach(importPreviewDisplayOrder, id: \.self) { kind in
                 let rows = session.rows.filter { $0.kind == kind }
                 if !rows.isEmpty {
                     Text("\(label(for: kind)) \(rows.count)")
@@ -582,6 +732,10 @@ struct EnhancementCenterView: View {
                 }
             }
         }
+    }
+
+    private var importPreviewDisplayOrder: [ImportPreviewChangeKind] {
+        [.blocked, .duplicate, .removed, .updated, .added, .unchanged]
     }
 
     private func insightCard(_ card: PortfolioSnapshotInsightCard) -> some View {
