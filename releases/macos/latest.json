@@ -1,25 +1,25 @@
 {
-    "version": "2.8.3",
-    "tag": "v2.8.3",
+    "version": "2.8.4",
+    "tag": "v2.8.4",
     "asset": {
-        "name": "QiemanDashboard-2.8.3.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.3/QiemanDashboard-2.8.3.zip",
-        "size": 3683669,
+        "name": "QiemanDashboard-2.8.4.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.4/QiemanDashboard-2.8.4.zip",
+        "size": 3685505,
         "content_type": "application/zip",
-        "sha256": "da46dfc3a8b65d78c7bc6c07bf98038103d662b6e9d28ad25d84cd6a37788be8"
+        "sha256": "124093b5404aed1b3077cd2df2340ac994c4273ca126ed8ab1a029f0672b21e7"
     },
-    "sha256": "da46dfc3a8b65d78c7bc6c07bf98038103d662b6e9d28ad25d84cd6a37788be8",
-    "notes": "bump app version to 2.8.3\nshow live and estimated quotes in holding dropdowns",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.8.3",
+    "sha256": "124093b5404aed1b3077cd2df2340ac994c4273ca126ed8ab1a029f0672b21e7",
+    "notes": "bump app version to 2.8.4\nkeep holding dropdown details compact",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.8.4",
     "published_at": "",
-    "tag_name": "v2.8.3",
-    "name": "QiemanDashboard v2.8.3",
-    "body": "bump app version to 2.8.3\nshow live and estimated quotes in holding dropdowns",
+    "tag_name": "v2.8.4",
+    "name": "QiemanDashboard v2.8.4",
+    "body": "bump app version to 2.8.4\nkeep holding dropdown details compact",
     "assets": [
         {
-            "name": "QiemanDashboard-2.8.3.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.3/QiemanDashboard-2.8.3.zip",
-            "size": 3683669,
+            "name": "QiemanDashboard-2.8.4.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.4/QiemanDashboard-2.8.4.zip",
+            "size": 3685505,
             "content_type": "application/zip"
         }
     ]
