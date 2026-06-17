@@ -3,10 +3,6 @@ import Combine
 import SwiftUI
 import UserNotifications
 
-private enum AppSceneIdentifier {
-    static let mainWindow = "main-window"
-}
-
 enum AppLaunchPresentationPolicy {
     static func initialActivationPolicy(storedShowsInDock: Bool) -> NSApplication.ActivationPolicy {
         // Keep the first interactive launch regular so SwiftUI can create the
@@ -16,6 +12,12 @@ enum AppLaunchPresentationPolicy {
 
     static func configuredActivationPolicy(showsInDock: Bool) -> NSApplication.ActivationPolicy {
         showsInDock ? .regular : .accessory
+    }
+}
+
+enum AppRuntimeCapabilities {
+    static func shouldInstallNotificationDelegateAtLaunch(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        environment["QIEMAN_INSTALL_NOTIFICATION_DELEGATE_AT_LAUNCH"] == "1"
     }
 }
 
@@ -50,7 +52,9 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
             )
         }
 
-        UNUserNotificationCenter.current().delegate = self
+        if AppRuntimeCapabilities.shouldInstallNotificationDelegateAtLaunch() {
+            UNUserNotificationCenter.current().delegate = self
+        }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         guard let button = statusItem.button else { return }
@@ -542,7 +546,7 @@ struct QiemanDashboardApp: App {
     @StateObject private var model = AppModel()
 
     var body: some Scene {
-        WindowGroup(id: AppSceneIdentifier.mainWindow) {
+        WindowGroup {
             ContentView()
                 .environmentObject(model)
                 .tint(AppPalette.brand)
