@@ -1,25 +1,25 @@
 {
-    "version": "2.8.4",
-    "tag": "v2.8.4",
+    "version": "2.8.5",
+    "tag": "v2.8.5",
     "asset": {
-        "name": "QiemanDashboard-2.8.4.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.4/QiemanDashboard-2.8.4.zip",
-        "size": 3685505,
+        "name": "QiemanDashboard-2.8.5.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.5/QiemanDashboard-2.8.5.zip",
+        "size": 3784899,
         "content_type": "application/zip",
-        "sha256": "124093b5404aed1b3077cd2df2340ac994c4273ca126ed8ab1a029f0672b21e7"
+        "sha256": "4f7c2572ff174e521838ac5b3bff54ef5465ebccfd5f2911c3f69fe352b56b73"
     },
-    "sha256": "124093b5404aed1b3077cd2df2340ac994c4273ca126ed8ab1a029f0672b21e7",
-    "notes": "bump app version to 2.8.4\nkeep holding dropdown details compact",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.8.4",
+    "sha256": "4f7c2572ff174e521838ac5b3bff54ef5465ebccfd5f2911c3f69fe352b56b73",
+    "notes": "bump app version to 2.8.5\nstabilize app launch on macos beta\nrefine enhancement watch and insight panels\nrefine enhancement review and import panels\nadd enhancement workbench shell\nadd enhancement dashboard presentation\nplan enhancement center redesign\ndesign enhancement center redesign",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.8.5",
     "published_at": "",
-    "tag_name": "v2.8.4",
-    "name": "QiemanDashboard v2.8.4",
-    "body": "bump app version to 2.8.4\nkeep holding dropdown details compact",
+    "tag_name": "v2.8.5",
+    "name": "QiemanDashboard v2.8.5",
+    "body": "bump app version to 2.8.5\nstabilize app launch on macos beta\nrefine enhancement watch and insight panels\nrefine enhancement review and import panels\nadd enhancement workbench shell\nadd enhancement dashboard presentation\nplan enhancement center redesign\ndesign enhancement center redesign",
     "assets": [
         {
-            "name": "QiemanDashboard-2.8.4.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.4/QiemanDashboard-2.8.4.zip",
-            "size": 3685505,
+            "name": "QiemanDashboard-2.8.5.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.5/QiemanDashboard-2.8.5.zip",
+            "size": 3784899,
             "content_type": "application/zip"
         }
     ]
