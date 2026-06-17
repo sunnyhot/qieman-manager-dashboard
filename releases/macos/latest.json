@@ -1,25 +1,25 @@
 {
-    "version": "2.8.8",
-    "tag": "v2.8.8",
+    "version": "2.8.9",
+    "tag": "v2.8.9",
     "asset": {
-        "name": "QiemanDashboard-2.8.8.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.8/QiemanDashboard-2.8.8.zip",
-        "size": 3786284,
+        "name": "QiemanDashboard-2.8.9.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.9/QiemanDashboard-2.8.9.zip",
+        "size": 3786167,
         "content_type": "application/zip",
-        "sha256": "afa539f711c8fce428cc281e214f3a0accc69be12571bbb5dd61e9ba75090598"
+        "sha256": "0b97d7a0bcb9e93784e5eac4df0f40177d6c95573ce1191353e5d20c3e235d45"
     },
-    "sha256": "afa539f711c8fce428cc281e214f3a0accc69be12571bbb5dd61e9ba75090598",
-    "notes": "create main window during app delegate launch",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.8.8",
+    "sha256": "0b97d7a0bcb9e93784e5eac4df0f40177d6c95573ce1191353e5d20c3e235d45",
+    "notes": "avoid status item launch early return",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.8.9",
     "published_at": "",
-    "tag_name": "v2.8.8",
-    "name": "QiemanDashboard v2.8.8",
-    "body": "create main window during app delegate launch",
+    "tag_name": "v2.8.9",
+    "name": "QiemanDashboard v2.8.9",
+    "body": "avoid status item launch early return",
     "assets": [
         {
-            "name": "QiemanDashboard-2.8.8.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.8/QiemanDashboard-2.8.8.zip",
-            "size": 3786284,
+            "name": "QiemanDashboard-2.8.9.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.9/QiemanDashboard-2.8.9.zip",
+            "size": 3786167,
             "content_type": "application/zip"
         }
     ]
