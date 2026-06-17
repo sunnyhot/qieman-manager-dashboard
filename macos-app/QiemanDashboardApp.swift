@@ -68,12 +68,13 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        guard let button = statusItem.button else { return }
-        button.imagePosition = .imageOnly
-        button.imageScaling = .scaleNone
-        button.image = nil
-        button.action = #selector(togglePopover)
-        button.target = self
+        if let button = statusItem.button {
+            button.imagePosition = .imageOnly
+            button.imageScaling = .scaleNone
+            button.image = nil
+            button.action = #selector(togglePopover)
+            button.target = self
+        }
 
         popover = NSPopover()
         popover.contentSize = NSSize(width: 392, height: 720)
