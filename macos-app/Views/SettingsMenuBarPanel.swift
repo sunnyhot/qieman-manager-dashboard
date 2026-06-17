@@ -687,11 +687,10 @@ extension SettingsSectionView {
                     .foregroundStyle(AppPalette.ink)
                     .monospacedDigit()
                     .lineLimit(1)
-                Text(quote.detailText)
+                Text(quote.label)
                     .font(.system(size: 9))
                     .foregroundStyle(AppPalette.muted)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.75)
             }
             .frame(minWidth: 88, alignment: .trailing)
         }

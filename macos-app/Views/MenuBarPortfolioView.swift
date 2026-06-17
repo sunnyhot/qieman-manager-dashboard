@@ -292,25 +292,32 @@ private struct MenuBarHoldingRow: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
                     .lineLimit(1)
-                Text(row.holding.normalizedFundCode)
-                    .font(.system(size: 9))
-                    .foregroundStyle(AppPalette.muted)
-                    .monospacedDigit()
+                HStack(spacing: 4) {
+                    Text(row.holding.normalizedFundCode)
+                        .font(.system(size: 9))
+                        .foregroundStyle(AppPalette.muted)
+                        .monospacedDigit()
+                    Text("· \(quote.compactText)")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(AppPalette.ink.opacity(0.76))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .trailing, spacing: 1) {
-                Text(quote.price.map(decimalText) ?? "—")
+                Text(currencyOptional(row.marketValue, market: row.holding.detectedMarket))
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(AppPalette.ink)
                     .monospacedDigit()
                     .lineLimit(1)
-                Text(quote.detailText)
+                Text("\(unitsText(row.holding.units)) 份")
                     .font(.system(size: 9))
                     .foregroundStyle(AppPalette.muted)
                     .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
             }
             .frame(width: 96, alignment: .trailing)
 

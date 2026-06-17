@@ -1193,8 +1193,12 @@ struct UserPortfolioDisplayQuote: Hashable {
         return value.isEmpty ? nil : value
     }
 
-    var detailText: String {
-        [label, trimmedTime].compactMap { $0 }.joined(separator: " · ")
+    var compactLabel: String {
+        label.replacingOccurrences(of: "净值", with: "")
+    }
+
+    var compactText: String {
+        "\(compactLabel) \(price.map(decimalText) ?? "—")"
     }
 }
 

@@ -19,6 +19,7 @@ final class UserPortfolioDropdownQuoteTests: XCTestCase {
         XCTAssertEqual(quote.label, "实时净值")
         XCTAssertEqual(quote.price, 1520.5)
         XCTAssertEqual(quote.trimmedTime, "2026-06-17 14:30")
+        XCTAssertEqual(quote.compactText, "实时 1520.5000")
     }
 
     func testOnExchangeFundUsesRealtimeQuote() {
@@ -37,6 +38,7 @@ final class UserPortfolioDropdownQuoteTests: XCTestCase {
         XCTAssertEqual(quote.label, "实时净值")
         XCTAssertEqual(quote.price, 4.321)
         XCTAssertEqual(quote.trimmedTime, "2026-06-17 14:31")
+        XCTAssertEqual(quote.compactText, "实时 4.3210")
     }
 
     func testOffExchangeFundUsesEstimateBeforeTodayNav() {
@@ -54,6 +56,7 @@ final class UserPortfolioDropdownQuoteTests: XCTestCase {
         XCTAssertEqual(quote.label, "预估净值")
         XCTAssertEqual(quote.price, 1.2345)
         XCTAssertEqual(quote.trimmedTime, "2026-06-17 14:45")
+        XCTAssertEqual(quote.compactText, "预估 1.2345")
     }
 
     func testOffExchangeFundUsesConfirmedQuoteAfterTodayNav() {
@@ -71,6 +74,7 @@ final class UserPortfolioDropdownQuoteTests: XCTestCase {
         XCTAssertEqual(quote.label, "确认净值")
         XCTAssertEqual(quote.price, 1.2368)
         XCTAssertEqual(quote.trimmedTime, "2026-06-17")
+        XCTAssertEqual(quote.compactText, "确认 1.2368")
     }
 
     private func valuationRow(
