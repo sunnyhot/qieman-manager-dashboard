@@ -1,25 +1,25 @@
 {
-    "version": "2.8.6",
-    "tag": "v2.8.6",
+    "version": "2.8.7",
+    "tag": "v2.8.7",
     "asset": {
-        "name": "QiemanDashboard-2.8.6.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.6/QiemanDashboard-2.8.6.zip",
-        "size": 3784169,
+        "name": "QiemanDashboard-2.8.7.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.7/QiemanDashboard-2.8.7.zip",
+        "size": 3786332,
         "content_type": "application/zip",
-        "sha256": "7a61042adc6ecb47785100bb96766e632aabc0f27a91dd2b269d9b5fc1256ff3"
+        "sha256": "083f7edd4f75aee24a7bdf3e6dc83752a5e1228041339830fb3e97f9038686a1"
     },
-    "sha256": "7a61042adc6ecb47785100bb96766e632aabc0f27a91dd2b269d9b5fc1256ff3",
-    "notes": "show main window after restored hidden launch",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.8.6",
+    "sha256": "083f7edd4f75aee24a7bdf3e6dc83752a5e1228041339830fb3e97f9038686a1",
+    "notes": "register launch model from app delegate",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.8.7",
     "published_at": "",
-    "tag_name": "v2.8.6",
-    "name": "QiemanDashboard v2.8.6",
-    "body": "show main window after restored hidden launch",
+    "tag_name": "v2.8.7",
+    "name": "QiemanDashboard v2.8.7",
+    "body": "register launch model from app delegate",
     "assets": [
         {
-            "name": "QiemanDashboard-2.8.6.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.6/QiemanDashboard-2.8.6.zip",
-            "size": 3784169,
+            "name": "QiemanDashboard-2.8.7.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.7/QiemanDashboard-2.8.7.zip",
+            "size": 3786332,
             "content_type": "application/zip"
         }
     ]
