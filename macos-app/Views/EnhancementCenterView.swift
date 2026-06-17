@@ -9,29 +9,15 @@ struct EnhancementCenterView: View {
     @State private var didCopyReport = false
     @State private var isImportingFile = false
     @State private var importSource: PersonalDataImportSource = .table
+    @State private var selectedWatchFilter: EnhancementWatchFilter = .all
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 14) {
-                summaryGrid
-
-                Picker("增强中心", selection: $model.selectedEnhancementTab) {
-                    ForEach(EnhancementCenterTab.allCases) { tab in
-                        Text(tab.rawValue).tag(tab)
-                    }
-                }
-                .pickerStyle(.segmented)
-
-                switch model.selectedEnhancementTab {
-                case .review:
-                    reviewPanel
-                case .watch:
-                    watchPanel
-                case .importPreview:
-                    importPanel
-                case .insight:
-                    insightPanel
-                }
+            VStack(alignment: .leading, spacing: AppPalette.spaceL) {
+                let summary = dashboardSummary
+                dashboardHeader(summary)
+                statusCardGrid(summary)
+                workbenchContent(summary)
             }
             .padding(18)
         }
@@ -60,36 +46,272 @@ struct EnhancementCenterView: View {
         }
     }
 
-    private var summaryGrid: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 12)], spacing: 12) {
-            MetricCard(
-                title: "本月复盘",
-                value: model.monthlyReportSummary.monthText,
-                subtitle: model.lastMonthlyReportExport.map { "已导出 \($0.exportedAt)" } ?? "可复制或归档 Markdown",
-                icon: "doc.text",
-                accent: AppPalette.brand
-            )
-            MetricCard(
-                title: "巡检",
-                value: model.managerWatchTimelineSummary.latestStatusText,
-                subtitle: "\(model.managerWatchTimelineEvents.count) 条时间线记录",
-                icon: "bell.badge",
-                accent: model.managerWatchTimelineSummary.failureCount > 0 ? AppPalette.warning : AppPalette.positive
-            )
-            MetricCard(
-                title: "导入安全",
-                value: model.canUndoLatestImport ? "可撤销" : "无待撤销",
-                subtitle: model.activeImportPreviewSession.map { "\($0.rows.count) 条预览变更" } ?? "先预览，再写入",
-                icon: "arrow.triangle.2.circlepath",
-                accent: model.canUndoLatestImport ? AppPalette.warning : AppPalette.info
-            )
-            MetricCard(
-                title: "组合洞察",
-                value: model.portfolioSnapshotInsightSummary.hasEnoughHistory ? "已生成" : "待快照",
-                subtitle: model.portfolioSnapshotInsightSummary.headline,
-                icon: "chart.xyaxis.line",
-                accent: model.portfolioSnapshotInsightSummary.hasEnoughHistory ? AppPalette.positive : AppPalette.muted
-            )
+    private var dashboardSummary: EnhancementDashboardSummary {
+        EnhancementDashboardSummary.make(
+            report: model.monthlyReportSummary,
+            lastMonthlyReportExport: model.lastMonthlyReportExport,
+            cookieAvailable: model.cookieAvailable,
+            nativeConnectionAvailable: true,
+            watchSummary: model.managerWatchTimelineSummary,
+            importSession: model.activeImportPreviewSession,
+            canUndoLatestImport: model.canUndoLatestImport,
+            insightSummary: model.portfolioSnapshotInsightSummary,
+            snapshotCount: model.portfolioInsightSnapshots.count,
+            reminders: model.portfolioReminderSummary,
+            planSimulation: model.planSimulationSummary
+        )
+    }
+
+    private func dashboardHeader(_ summary: EnhancementDashboardSummary) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: AppPalette.spaceL) {
+                headerTitleBlock(summary)
+                Spacer(minLength: AppPalette.spaceL)
+                primaryActionButton(summary.primaryAction)
+            }
+
+            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+                headerTitleBlock(summary)
+                primaryActionButton(summary.primaryAction)
+            }
+        }
+        .padding(AppPalette.spaceXL)
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .panelStroke()
+        .sectionShadow()
+    }
+
+    private func headerTitleBlock(_ summary: EnhancementDashboardSummary) -> some View {
+        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("增强工作台")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppPalette.ink)
+                Text(summary.stateText)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(AppPalette.muted)
+            }
+
+            FlowLayout(spacing: AppPalette.spaceS) {
+                ForEach(summary.runtimeChips) { chip in
+                    runtimeChip(chip)
+                }
+            }
+        }
+    }
+
+    private func runtimeChip(_ chip: EnhancementRuntimeChip) -> some View {
+        let tint = tint(for: chip.severity)
+        return HStack(spacing: 5) {
+            Text(chip.title)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppPalette.muted)
+            Text(chip.value)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(tint)
+        }
+        .lineLimit(1)
+        .padding(.horizontal, AppPalette.spaceS)
+        .padding(.vertical, AppPalette.spaceXS + 1)
+        .background(tint.opacity(AppPalette.accentFill), in: Capsule())
+        .overlay(Capsule().stroke(tint.opacity(AppPalette.accentBorder), lineWidth: 1))
+    }
+
+    private func statusCardGrid(_ summary: EnhancementDashboardSummary) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: AppPalette.spaceM)], spacing: AppPalette.spaceM) {
+            ForEach(summary.statusCards) { card in
+                Button {
+                    model.selectedEnhancementTab = card.tab
+                } label: {
+                    enhancementStatusCard(card)
+                }
+                .buttonStyle(PressResponsiveButtonStyle())
+            }
+        }
+    }
+
+    private func enhancementStatusCard(_ card: EnhancementStatusCard) -> some View {
+        let tint = tint(for: card.severity)
+        let isSelected = model.selectedEnhancementTab == card.tab
+        return VStack(alignment: .leading, spacing: AppPalette.spaceS) {
+            HStack(alignment: .center, spacing: AppPalette.spaceS) {
+                Image(systemName: card.systemImage)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .accentIconStyle(tint: tint, size: 28)
+
+                Text(card.title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+
+                Text(card.nextAction)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+
+            Text(card.value)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(AppPalette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.68)
+
+            Text(card.detail)
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.muted)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
+        .padding(AppPalette.spaceM)
+        .interactiveSurface(
+            isSelected: isSelected,
+            tint: tint,
+            radius: AppPalette.panelRadius,
+            fill: AppPalette.card,
+            selectedFill: tint.opacity(0.14),
+            activeStrokeOpacity: 0.62
+        )
+    }
+
+    private func workbenchContent(_ summary: EnhancementDashboardSummary) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: AppPalette.spaceM) {
+                VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+                    tabPicker
+                    selectedWorkflowPanel
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                actionQueueRail(summary)
+                    .frame(width: 286)
+            }
+
+            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+                tabPicker
+                selectedWorkflowPanel
+                actionQueueRail(summary)
+            }
+        }
+    }
+
+    private var tabPicker: some View {
+        Picker("增强中心", selection: $model.selectedEnhancementTab) {
+            ForEach(EnhancementCenterTab.allCases) { tab in
+                Text(tab.rawValue).tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(3)
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                .stroke(AppPalette.line.opacity(0.32), lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var selectedWorkflowPanel: some View {
+        switch model.selectedEnhancementTab {
+        case .review:
+            reviewPanel
+        case .watch:
+            watchPanel
+        case .importPreview:
+            importPanel
+        case .insight:
+            insightPanel
+        }
+    }
+
+    private func actionQueueRail(_ summary: EnhancementDashboardSummary) -> some View {
+        SectionCard(title: "下一步", subtitle: "\(summary.actionQueue.count) 项待办", icon: "list.bullet.rectangle.portrait") {
+            if summary.actionQueue.isEmpty {
+                emptyState("暂无待办", detail: "本月复盘、巡检、导入和组合洞察都处于稳定状态。")
+            } else {
+                LazyVStack(alignment: .leading, spacing: AppPalette.spaceS) {
+                    ForEach(summary.actionQueue) { item in
+                        actionQueueRow(item)
+                    }
+                }
+            }
+        }
+    }
+
+    private func actionQueueRow(_ item: EnhancementActionItem) -> some View {
+        let tint = tint(for: item.severity)
+        return Button {
+            perform(item)
+        } label: {
+            HStack(alignment: .top, spacing: AppPalette.spaceS) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(tint)
+                    .frame(width: 3, height: 34)
+                    .padding(.top, 2)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                    Text(item.detail)
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                        .lineLimit(2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text(item.metric)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(tint)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
+            .padding(AppPalette.spaceS)
+            .interactiveSurface(tint: tint, radius: AppPalette.controlRadius, fill: AppPalette.cardStrong, lift: 0.5)
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
+    }
+
+    private func primaryActionButton(_ action: EnhancementPrimaryAction) -> some View {
+        Button {
+            perform(action)
+        } label: {
+            Label(action.title, systemImage: action.systemImage)
+                .font(.system(size: 13, weight: .semibold))
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .tint(tint(for: action.severity))
+    }
+
+    private func perform(_ action: EnhancementPrimaryAction) {
+        perform(kind: action.kind, targetTab: action.targetTab)
+    }
+
+    private func perform(_ item: EnhancementActionItem) {
+        perform(kind: item.kind, targetTab: item.targetTab)
+    }
+
+    private func perform(kind: EnhancementActionKind, targetTab: EnhancementCenterTab) {
+        model.selectedEnhancementTab = targetTab
+        switch kind {
+        case .selectTab:
+            break
+        case .runWatch:
+            model.runManagerWatchNow()
+        case .archiveReport:
+            model.archiveMonthlyReport()
+        case .confirmImport:
+            model.confirmActiveImportPreview()
+        case .undoImport:
+            model.undoLatestImport()
+        case .recordSnapshot:
+            model.recordPortfolioInsightSnapshotIfPossible()
         }
     }
 
@@ -392,6 +614,23 @@ struct EnhancementCenterView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+    }
+
+    private func tint(for severity: EnhancementPresentationSeverity) -> Color {
+        switch severity {
+        case .brand:
+            return AppPalette.brand
+        case .info:
+            return AppPalette.info
+        case .positive:
+            return AppPalette.positive
+        case .warning:
+            return AppPalette.warning
+        case .danger:
+            return AppPalette.danger
+        case .neutral:
+            return AppPalette.muted
+        }
     }
 
     private func tint(for tone: ManagerWatchTimelineTone) -> Color {
