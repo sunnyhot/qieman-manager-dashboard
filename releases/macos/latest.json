@@ -1,25 +1,25 @@
 {
-    "version": "2.8.2",
-    "tag": "v2.8.2",
+    "version": "2.8.3",
+    "tag": "v2.8.3",
     "asset": {
-        "name": "QiemanDashboard-2.8.2.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.2/QiemanDashboard-2.8.2.zip",
-        "size": 3678169,
+        "name": "QiemanDashboard-2.8.3.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.3/QiemanDashboard-2.8.3.zip",
+        "size": 3683669,
         "content_type": "application/zip",
-        "sha256": "4680f8262e39d143df5fa9c15b57795e590cdd3402dfa87ec6845e98cbad89ec"
+        "sha256": "da46dfc3a8b65d78c7bc6c07bf98038103d662b6e9d28ad25d84cd6a37788be8"
     },
-    "sha256": "4680f8262e39d143df5fa9c15b57795e590cdd3402dfa87ec6845e98cbad89ec",
-    "notes": "bump app version to 2.8.2\navoid redundant platform action scans\nbound native platform cache\nbucket native platform holding actions\nscan platform holdings without source sort\nlazily build menu bar aggregates\nlimit menu bar visible entry work\nbound fetch lock maps\navoid duplicate menu bar fallback title work\nbound fund and platform caches\nuse quote official nav fallback\nskip unnecessary platform history preloads\ncache displayed platform action valuations\navoid duplicate menu bar market refresh\nlazily price platform action cards\ncover timeline refresh routing\nskip forum fetch on platform refresh\nskip platform fetch on forum route\nbound derived dashboard caches\ncache platform monthly overview\ncache platform timeline presentation\ncache platform action presentation\ncache dashboard client auth material\ndedupe concurrent fund fetches\ncache repeated comment fetches\ncache fund history lookup tables\ncache priced platform holdings\nshare platform action presentation\ndedupe concurrent platform fetches\nreuse cached fund preload data\nshare personal asset browser presentation\nadd personal asset presentation model\nadd platform action presentation model\nreuse fresh section refresh data\nadd refresh decision helper\nadd swift performance p1 plan\nexpose swift telemetry in smoke runs\ninstrument python dashboard paths\nadd python telemetry utility\ninstrument swift hot paths\nadd swift telemetry utility\nadd performance baseline plan\nadd performance optimization design",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.8.2",
+    "sha256": "da46dfc3a8b65d78c7bc6c07bf98038103d662b6e9d28ad25d84cd6a37788be8",
+    "notes": "bump app version to 2.8.3\nshow live and estimated quotes in holding dropdowns",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v2.8.3",
     "published_at": "",
-    "tag_name": "v2.8.2",
-    "name": "QiemanDashboard v2.8.2",
-    "body": "bump app version to 2.8.2\navoid redundant platform action scans\nbound native platform cache\nbucket native platform holding actions\nscan platform holdings without source sort\nlazily build menu bar aggregates\nlimit menu bar visible entry work\nbound fetch lock maps\navoid duplicate menu bar fallback title work\nbound fund and platform caches\nuse quote official nav fallback\nskip unnecessary platform history preloads\ncache displayed platform action valuations\navoid duplicate menu bar market refresh\nlazily price platform action cards\ncover timeline refresh routing\nskip forum fetch on platform refresh\nskip platform fetch on forum route\nbound derived dashboard caches\ncache platform monthly overview\ncache platform timeline presentation\ncache platform action presentation\ncache dashboard client auth material\ndedupe concurrent fund fetches\ncache repeated comment fetches\ncache fund history lookup tables\ncache priced platform holdings\nshare platform action presentation\ndedupe concurrent platform fetches\nreuse cached fund preload data\nshare personal asset browser presentation\nadd personal asset presentation model\nadd platform action presentation model\nreuse fresh section refresh data\nadd refresh decision helper\nadd swift performance p1 plan\nexpose swift telemetry in smoke runs\ninstrument python dashboard paths\nadd python telemetry utility\ninstrument swift hot paths\nadd swift telemetry utility\nadd performance baseline plan\nadd performance optimization design",
+    "tag_name": "v2.8.3",
+    "name": "QiemanDashboard v2.8.3",
+    "body": "bump app version to 2.8.3\nshow live and estimated quotes in holding dropdowns",
     "assets": [
         {
-            "name": "QiemanDashboard-2.8.2.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.2/QiemanDashboard-2.8.2.zip",
-            "size": 3678169,
+            "name": "QiemanDashboard-2.8.3.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v2.8.3/QiemanDashboard-2.8.3.zip",
+            "size": 3683669,
             "content_type": "application/zip"
         }
     ]
