@@ -99,8 +99,8 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         }
 
         didFinishLaunching = true
-        if let model {
-            configure(model: model)
+        Task { @MainActor [weak self] in
+            self?.configure(model: QiemanAppModelHolder.shared)
         }
     }
 
@@ -583,7 +583,6 @@ struct QiemanDashboardApp: App {
     init() {
         let sharedModel = QiemanAppModelHolder.shared
         _model = StateObject(wrappedValue: sharedModel)
-        appDelegate.configure(model: sharedModel)
     }
 
     var body: some Scene {
