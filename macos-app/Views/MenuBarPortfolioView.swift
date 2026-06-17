@@ -284,6 +284,8 @@ private struct MenuBarHoldingRow: View {
     }
 
     var body: some View {
+        let quote = row.dropdownQuote
+
         HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(row.fundName)
@@ -298,14 +300,17 @@ private struct MenuBarHoldingRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .trailing, spacing: 1) {
-                Text(currencyOptional(row.marketValue, market: row.holding.detectedMarket))
+                Text(quote.price.map(decimalText) ?? "—")
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(AppPalette.ink)
                     .monospacedDigit()
-                Text("\(unitsText(row.holding.units)) 份")
+                    .lineLimit(1)
+                Text(quote.detailText)
                     .font(.system(size: 9))
                     .foregroundStyle(AppPalette.muted)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
             }
             .frame(width: 96, alignment: .trailing)
 

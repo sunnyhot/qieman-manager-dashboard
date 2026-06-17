@@ -662,19 +662,38 @@ extension SettingsSectionView {
     }
 
     private func menuBarHoldingIdentity(_ row: UserPortfolioValuationRow) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 6) {
-                Text(row.fundName)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(AppPalette.ink)
-                    .lineLimit(1)
-                if let marketLabel = row.holding.marketLabel {
-                    ToolbarBadge(title: marketLabel, tint: AppPalette.info)
+        let quote = row.dropdownQuote
+
+        return HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(row.fundName)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                    if let marketLabel = row.holding.marketLabel {
+                        ToolbarBadge(title: marketLabel, tint: AppPalette.info)
+                    }
                 }
+                Text(row.holding.normalizedFundCode)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(AppPalette.muted)
             }
-            Text(row.holding.normalizedFundCode)
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(AppPalette.muted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(quote.price.map(decimalText) ?? "—")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppPalette.ink)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                Text(quote.detailText)
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .frame(minWidth: 88, alignment: .trailing)
         }
     }
 

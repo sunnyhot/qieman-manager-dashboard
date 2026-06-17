@@ -1105,6 +1105,53 @@ struct UserPortfolioValuationRow: Hashable, Identifiable {
         priceSource ?? (officialNav != nil ? "最新净值" : nil)
     }
 
+    var dropdownQuote: UserPortfolioDisplayQuote {
+        dropdownQuote(marketDate: Self.currentMarketDateString())
+    }
+
+    func dropdownQuote(marketDate: String) -> UserPortfolioDisplayQuote {
+        if holding.assetType == .stock || holding.detectedFundMarket == .onExchange {
+            return UserPortfolioDisplayQuote(
+                label: "实时净值",
+                price: currentPrice,
+                time: priceTime
+            )
+        }
+
+        if let officialNav,
+           let officialNavDate,
+           officialNavDate.hasPrefix(marketDate) {
+            return UserPortfolioDisplayQuote(
+                label: "确认净值",
+                price: officialNav,
+                time: officialNavDate
+            )
+        }
+
+        if let estimatePrice {
+            return UserPortfolioDisplayQuote(
+                label: "预估净值",
+                price: estimatePrice,
+                time: estimatePriceTime
+            )
+        }
+
+        return UserPortfolioDisplayQuote(
+            label: officialNav == nil ? "预估净值" : "最新净值",
+            price: officialNav,
+            time: officialNavDate ?? priceTime
+        )
+    }
+
+    private static func currentMarketDateString() -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "Asia/Shanghai") ?? .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: Date())
+    }
+
     var estimatedMarketValue: Double? {
         guard let estimatePrice, holding.units > 0 else { return nil }
         return estimatePrice * holding.units
@@ -1133,6 +1180,21 @@ struct UserPortfolioValuationRow: Hashable, Identifiable {
             return nil
         }
         return marketValue - previousMarketValue
+    }
+}
+
+struct UserPortfolioDisplayQuote: Hashable {
+    let label: String
+    let price: Double?
+    let time: String?
+
+    var trimmedTime: String? {
+        let value = time?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return value.isEmpty ? nil : value
+    }
+
+    var detailText: String {
+        [label, trimmedTime].compactMap { $0 }.joined(separator: " · ")
     }
 }
 
