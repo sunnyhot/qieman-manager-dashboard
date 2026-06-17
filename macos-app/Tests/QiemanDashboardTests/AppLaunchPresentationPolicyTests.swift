@@ -24,4 +24,19 @@ final class AppLaunchPresentationPolicyTests: XCTestCase {
             "QIEMAN_INSTALL_NOTIFICATION_DELEGATE_AT_LAUNCH": "0"
         ]))
     }
+
+    func testLaunchFallbackShowsMainWindowWhenNoWindowWasRestored() {
+        XCTAssertTrue(AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
+            hasTrackedVisibleMainWindow: false,
+            hasVisibleMainWindow: false
+        ))
+        XCTAssertFalse(AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
+            hasTrackedVisibleMainWindow: true,
+            hasVisibleMainWindow: false
+        ))
+        XCTAssertFalse(AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
+            hasTrackedVisibleMainWindow: false,
+            hasVisibleMainWindow: true
+        ))
+    }
 }

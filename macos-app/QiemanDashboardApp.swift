@@ -21,6 +21,15 @@ enum AppRuntimeCapabilities {
     }
 }
 
+enum AppLaunchWindowPolicy {
+    static func shouldShowFallbackMainWindow(
+        hasTrackedVisibleMainWindow: Bool,
+        hasVisibleMainWindow: Bool
+    ) -> Bool {
+        !hasTrackedVisibleMainWindow && !hasVisibleMainWindow
+    }
+}
+
 final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private enum MenuBarRenderState: Equatable {
         case fallback(title: String)
@@ -39,6 +48,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     private var carouselTimer: Timer?
     private var lastEntryIDs: [String] = []
     private var lastMenuBarRenderState: MenuBarRenderState?
+    private var didFinishLaunching = false
     /// Retains a reference to the main window so it can be re-shown after closing.
     /// Set by both the SwiftUI WindowGroup (onAppear) and createMainWindow().
     fileprivate(set) var mainWindow: NSWindow?
@@ -87,9 +97,16 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         titlebarDoubleClickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
             self?.handleTitlebarDoubleClick(event) ?? event
         }
+
+        didFinishLaunching = true
+        if let model {
+            configure(model: model)
+        }
     }
 
     func configure(model: AppModel) {
+        self.model = model
+        guard didFinishLaunching else { return }
         guard !didConfigure else { return }
         didConfigure = true
         let telemetryStart = PerformanceTelemetry.start()
@@ -99,7 +116,6 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
                 startedAt: telemetryStart
             )
         }
-        self.model = model
         Task { @MainActor in
             model.appDelegate = self
         }
@@ -135,6 +151,20 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
                     }
                 }
                 .store(in: &self.cancellables)
+        }
+
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard let self else { return }
+            let hasTrackedVisibleMainWindow = self.mainWindow?.isVisible == true
+            let hasVisibleMainWindow = NSApplication.shared.windows.contains { window in
+                window.isVisible && window.canBecomeMain && !(window is NSPanel)
+            }
+            guard AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
+                hasTrackedVisibleMainWindow: hasTrackedVisibleMainWindow,
+                hasVisibleMainWindow: hasVisibleMainWindow
+            ) else { return }
+            self.showMainWindow()
         }
     }
 
@@ -540,10 +570,21 @@ extension QiemanApplicationDelegate: NSWindowDelegate {
     }
 }
 
+@MainActor
+private enum QiemanAppModelHolder {
+    static let shared = AppModel()
+}
+
 @main
 struct QiemanDashboardApp: App {
     @NSApplicationDelegateAdaptor(QiemanApplicationDelegate.self) private var appDelegate
-    @StateObject private var model = AppModel()
+    @StateObject private var model: AppModel
+
+    init() {
+        let sharedModel = QiemanAppModelHolder.shared
+        _model = StateObject(wrappedValue: sharedModel)
+        appDelegate.configure(model: sharedModel)
+    }
 
     var body: some Scene {
         WindowGroup {
