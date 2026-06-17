@@ -462,11 +462,71 @@ struct EnhancementCenterView: View {
 
     private var watchPanel: some View {
         SectionCard(title: "巡检", subtitle: model.managerWatchTimelineSummary.latestStatusText, icon: "bell.badge") {
+            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+                watchStatusStrip
+                watchFilterRow
+                watchTimelineList
+            }
+        }
+    }
+
+    private var watchStatusStrip: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+            compactFact(
+                "最新状态",
+                model.managerWatchTimelineSummary.latestStatusText,
+                tint: model.managerWatchTimelineSummary.failureCount > 0 ? AppPalette.warning : AppPalette.positive
+            )
+            compactFact(
+                "失败次数",
+                "\(model.managerWatchTimelineSummary.failureCount)",
+                tint: model.managerWatchTimelineSummary.failureCount > 0 ? AppPalette.warning : AppPalette.positive
+            )
+            compactFact("时间线", "\(model.managerWatchTimelineSummary.events.count) 条", tint: AppPalette.info)
+        }
+    }
+
+    private var watchFilterRow: some View {
+        FlowLayout(spacing: AppPalette.spaceS) {
+            ForEach(EnhancementWatchFilter.allCases) { filter in
+                Button {
+                    selectedWatchFilter = filter
+                } label: {
+                    Text(filter.rawValue)
+                        .font(.system(size: 11, weight: .semibold))
+                        .padding(.horizontal, AppPalette.spaceS)
+                        .padding(.vertical, AppPalette.spaceXS)
+                }
+                .buttonStyle(.plain)
+                .background(
+                    selectedWatchFilter == filter ? AppPalette.brand.opacity(0.14) : AppPalette.cardStrong,
+                    in: Capsule()
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            selectedWatchFilter == filter ? AppPalette.brand.opacity(0.55) : AppPalette.line.opacity(0.28),
+                            lineWidth: 1
+                        )
+                )
+                .foregroundStyle(selectedWatchFilter == filter ? AppPalette.brand : AppPalette.muted)
+            }
+        }
+    }
+
+    private var filteredWatchEvents: [ManagerWatchTimelineEvent] {
+        model.managerWatchTimelineSummary.events.filter { selectedWatchFilter.matches($0) }
+    }
+
+    private var watchTimelineList: some View {
+        Group {
             if model.managerWatchTimelineEvents.isEmpty {
                 emptyState("暂无巡检时间线", detail: "开启主理人提醒或点击立即巡检后，这里会记录命中、失败和重复通知抑制。")
+            } else if filteredWatchEvents.isEmpty {
+                emptyState("当前筛选无记录", detail: "切换到全部可以查看完整巡检时间线。")
             } else {
-                LazyVStack(alignment: .leading, spacing: 10) {
-                    ForEach(model.managerWatchTimelineSummary.events) { event in
+                LazyVStack(alignment: .leading, spacing: AppPalette.spaceS) {
+                    ForEach(filteredWatchEvents) { event in
                         timelineRow(event)
                     }
                 }
@@ -628,11 +688,52 @@ struct EnhancementCenterView: View {
 
     private var insightPanel: some View {
         SectionCard(title: "洞察", subtitle: model.portfolioSnapshotInsightSummary.headline, icon: "chart.xyaxis.line") {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], spacing: 10) {
-                ForEach(model.portfolioSnapshotInsightSummary.cards) { card in
-                    insightCard(card)
+            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+                insightReadinessStrip
+                if model.portfolioSnapshotInsightSummary.hasEnoughHistory {
+                    insightMetricMatrix
+                } else {
+                    insufficientInsightState
                 }
             }
+        }
+    }
+
+    private var insightReadinessStrip: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+            compactFact(
+                "快照数量",
+                "\(model.portfolioInsightSnapshots.count) 次",
+                tint: model.portfolioInsightSnapshots.count >= 2 ? AppPalette.positive : AppPalette.info
+            )
+            compactFact(
+                "洞察状态",
+                model.portfolioSnapshotInsightSummary.hasEnoughHistory ? "已生成" : "待快照",
+                tint: model.portfolioSnapshotInsightSummary.hasEnoughHistory ? AppPalette.positive : AppPalette.warning
+            )
+            compactFact("当前结论", model.portfolioSnapshotInsightSummary.headline, tint: AppPalette.info)
+        }
+    }
+
+    private var insightMetricMatrix: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+            ForEach(model.portfolioSnapshotInsightSummary.cards) { card in
+                insightCard(card)
+            }
+        }
+    }
+
+    private var insufficientInsightState: some View {
+        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+            emptyState("快照不足", detail: "至少需要两次组合快照才能生成变化洞察。当前已有 \(model.portfolioInsightSnapshots.count) 次。")
+            Button {
+                model.recordPortfolioInsightSnapshotIfPossible()
+            } label: {
+                Label("记录当前快照", systemImage: "camera.metering.center.weighted")
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(AppPalette.brand)
+            .disabled(model.personalAssetRows.isEmpty)
         }
     }
 
@@ -670,10 +771,10 @@ struct EnhancementCenterView: View {
 
     private func timelineRow(_ event: ManagerWatchTimelineEvent) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            Circle()
-                .fill(tint(for: event.tone))
-                .frame(width: 8, height: 8)
-                .padding(.top, 5)
+            Image(systemName: icon(for: event.kind))
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(tint(for: event.tone))
+                .accentIconStyle(tint: tint(for: event.tone), size: 28)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(event.title)
@@ -697,6 +798,25 @@ struct EnhancementCenterView: View {
         }
         .padding(10)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+    }
+
+    private func icon(for kind: ManagerWatchTimelineEventKind) -> String {
+        switch kind {
+        case .pollStarted:
+            return "play.circle"
+        case .forumHit:
+            return "text.bubble"
+        case .platformHit:
+            return "chart.bar.doc.horizontal"
+        case .duplicateSuppressed:
+            return "bell.slash"
+        case .noUpdates:
+            return "checkmark.circle"
+        case .failed:
+            return "exclamationmark.triangle"
+        case .recovered:
+            return "arrow.clockwise.circle"
+        }
     }
 
     private func importPreviewRows(_ session: ImportPreviewSession) -> some View {
@@ -739,21 +859,34 @@ struct EnhancementCenterView: View {
     }
 
     private func insightCard(_ card: PortfolioSnapshotInsightCard) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(card.title)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(AppPalette.muted)
+        VStack(alignment: .leading, spacing: AppPalette.spaceS) {
+            HStack {
+                Text(card.title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppPalette.muted)
+                Spacer(minLength: 0)
+                Circle()
+                    .fill(tint(for: card.tone))
+                    .frame(width: 8, height: 8)
+            }
             Text(card.metric)
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .monospacedDigit()
                 .foregroundStyle(tint(for: card.tone))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
             Text(card.detail)
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
                 .lineLimit(2)
         }
-        .frame(maxWidth: .infinity, minHeight: 94, alignment: .topLeading)
-        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 116, alignment: .topLeading)
+        .padding(AppPalette.spaceM)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(tint(for: card.tone).opacity(0.18), lineWidth: 1)
+        )
     }
 
     private func emptyState(_ title: String, detail: String) -> some View {
