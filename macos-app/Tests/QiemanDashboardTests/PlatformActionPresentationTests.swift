@@ -2,6 +2,17 @@ import XCTest
 @testable import QiemanDashboard
 
 final class PlatformActionPresentationTests: XCTestCase {
+    func testCountsUseProvidedValuesWhenBothSidesAreKnown() {
+        let actions = [
+            action(id: "sell-1", side: "sell", fundName: "债券基金", fundCode: "000001", title: "卖出债券"),
+            action(id: "sell-2", side: "sell", fundName: "红利低波", fundCode: "000922", title: "卖出红利")
+        ]
+
+        let counts = PlatformActionCounts.make(actions: actions, buyCount: 12, sellCount: 8)
+
+        XCTAssertEqual(counts, PlatformActionCounts(all: 2, buy: 12, sell: 8))
+    }
+
     func testPresentationFiltersBySideAndSearchAndPaginatesOnce() throws {
         let actions = [
             action(id: "buy-wide", side: "buy", fundName: "沪深300", fundCode: "000300", title: "买入宽基"),
