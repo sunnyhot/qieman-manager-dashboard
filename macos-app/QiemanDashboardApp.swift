@@ -30,6 +30,7 @@ enum AppLaunchWindowPolicy {
     }
 }
 
+@MainActor
 final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private enum MenuBarRenderState: Equatable {
         case fallback(title: String)
@@ -99,9 +100,9 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         }
 
         didFinishLaunching = true
-        Task { @MainActor [weak self] in
-            self?.configure(model: QiemanAppModelHolder.shared)
-        }
+        configure(model: QiemanAppModelHolder.shared)
+        showMainWindow()
+        NSApplication.shared.activate(ignoringOtherApps: true)
     }
 
     func configure(model: AppModel) {
