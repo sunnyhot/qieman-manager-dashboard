@@ -57,13 +57,14 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
             insight: readyInsight()
         )
 
-        XCTAssertEqual(summary.statusCards.map(\.tab), [.review, .watch, .importPreview, .insight])
+        XCTAssertEqual(summary.statusCards.map(\.tab), [.review, .watch, .importPreview, .insight, .trend])
         XCTAssertEqual(summary.statusCards.first { $0.tab == .review }?.value, "2026-06")
         XCTAssertEqual(summary.statusCards.first { $0.tab == .review }?.nextAction, "查看摘要")
         XCTAssertEqual(summary.statusCards.first { $0.tab == .watch }?.value, "巡检完成，无新增")
         XCTAssertEqual(summary.statusCards.first { $0.tab == .importPreview }?.value, "2 条待确认")
         XCTAssertEqual(summary.statusCards.first { $0.tab == .importPreview }?.detail, "新增 1 · 更新 1")
         XCTAssertEqual(summary.statusCards.first { $0.tab == .insight }?.value, "已生成")
+        XCTAssertEqual(summary.statusCards.first { $0.tab == .trend }?.value, "已生成")
     }
 
     func testActionQueueIncludesCrossCuttingItems() {
@@ -126,6 +127,62 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
         XCTAssertEqual(summary.actionQueue.first?.targetTab, .importPreview)
     }
 
+    func testTrendMissingProviderAddsActionQueueItem() {
+        let summary = makeDashboard(
+            trendStatus: EnhancementTrendStatus(
+                isProviderConfigured: false,
+                generationState: .idle,
+                lastGeneratedAt: nil,
+                headline: "尚未连接趋势分析模型",
+                externalSignalStatus: nil,
+                isStale: false
+            )
+        )
+
+        let item = summary.actionQueue.first { $0.id == "trend-provider" }
+        XCTAssertEqual(item?.title, "配置趋势模型")
+        XCTAssertEqual(item?.targetTab, .trend)
+        XCTAssertEqual(item?.kind, .selectTab)
+        XCTAssertEqual(summary.statusCards.first { $0.tab == .trend }?.value, "未配置")
+    }
+
+    func testTrendStaleStatusCanTriggerRegeneration() {
+        let summary = makeDashboard(
+            trendStatus: EnhancementTrendStatus(
+                isProviderConfigured: true,
+                generationState: .succeeded,
+                lastGeneratedAt: "2026-06-21 15:00:00",
+                headline: "趋势分析已过期",
+                externalSignalStatus: .stale,
+                isStale: true
+            )
+        )
+
+        let item = summary.actionQueue.first { $0.id == "trend-refresh" }
+        XCTAssertEqual(item?.title, "更新趋势分析")
+        XCTAssertEqual(item?.kind, .runTrendAnalysis)
+        XCTAssertEqual(summary.statusCards.first { $0.tab == .trend }?.value, "待更新")
+    }
+
+    func testTrendUnavailableExternalSignalIsSurfaced() {
+        let summary = makeDashboard(
+            trendStatus: EnhancementTrendStatus(
+                isProviderConfigured: true,
+                generationState: .succeeded,
+                lastGeneratedAt: "2026-06-22 15:00:00",
+                headline: "仅本地上下文",
+                externalSignalStatus: .unavailable,
+                isStale: false
+            )
+        )
+
+        let item = summary.actionQueue.first { $0.id == "trend-external-unavailable" }
+        XCTAssertEqual(item?.title, "外部信号不可用")
+        XCTAssertEqual(item?.targetTab, .trend)
+        XCTAssertEqual(summary.statusCards.first { $0.tab == .trend }?.value, "已生成")
+    }
+
+
     func testWatchFilterMatchesExpectedEventKinds() {
         let failed = event(kind: .failed, title: "巡检失败")
         let duplicate = event(kind: .duplicateSuppressed, title: "重复抑制")
@@ -179,6 +236,7 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
             cards: []
         ),
         snapshotCount: Int = 0,
+        trendStatus: EnhancementTrendStatus = .ready,
         reminders: PortfolioReminderSummary = PortfolioReminderSummary(headline: "暂无待处理提醒", actionCount: 0, items: []),
         planSimulation: PlanSimulationSummary = PlanSimulationSummary(
             headline: "暂无进行中计划",
@@ -202,6 +260,7 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
             canUndoLatestImport: canUndoLatestImport,
             insightSummary: insight,
             snapshotCount: snapshotCount,
+            trendStatus: trendStatus,
             reminders: reminders,
             planSimulation: planSimulation
         )

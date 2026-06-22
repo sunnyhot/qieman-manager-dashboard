@@ -58,6 +58,7 @@ struct EnhancementCenterView: View {
             canUndoLatestImport: model.canUndoLatestImport,
             insightSummary: model.portfolioSnapshotInsightSummary,
             snapshotCount: model.portfolioInsightSnapshots.count,
+            trendStatus: model.enhancementTrendStatus,
             reminders: model.portfolioReminderSummary,
             planSimulation: model.planSimulationSummary
         )
@@ -307,6 +308,10 @@ struct EnhancementCenterView: View {
             break
         case .runWatch:
             model.runManagerWatchNow()
+        case .runTrendAnalysis:
+            Task {
+                await model.generateTrendAnalysis(userInitiated: true)
+            }
         case .archiveReport:
             model.archiveMonthlyReport()
         case .confirmImport:

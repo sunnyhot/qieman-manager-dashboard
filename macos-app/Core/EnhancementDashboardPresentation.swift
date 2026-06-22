@@ -12,6 +12,7 @@ enum EnhancementPresentationSeverity: String, Hashable {
 enum EnhancementActionKind: String, Hashable {
     case selectTab
     case runWatch
+    case runTrendAnalysis
     case archiveReport
     case confirmImport
     case undoImport
@@ -104,6 +105,88 @@ struct EnhancementImportCounts: Hashable {
     }
 }
 
+struct EnhancementTrendStatus: Hashable {
+    let isProviderConfigured: Bool
+    let generationState: TrendGenerationState
+    let lastGeneratedAt: String?
+    let headline: String
+    let externalSignalStatus: TrendExternalSignalStatus?
+    let isStale: Bool
+
+    static let ready = EnhancementTrendStatus(
+        isProviderConfigured: true,
+        generationState: .succeeded,
+        lastGeneratedAt: "2026-06-22 10:00:00",
+        headline: "趋势分析已生成",
+        externalSignalStatus: .available,
+        isStale: false
+    )
+
+    var valueText: String {
+        if !isProviderConfigured {
+            return "未配置"
+        }
+        switch generationState {
+        case .generating:
+            return "生成中"
+        case .failed:
+            return "失败"
+        case .rejected:
+            return "已拦截"
+        case .idle, .succeeded:
+            if lastGeneratedAt == nil {
+                return "未生成"
+            }
+            return isStale ? "待更新" : "已生成"
+        }
+    }
+
+    var detailText: String {
+        var parts = [headline]
+        if let externalSignalStatus {
+            parts.append("外部信号 \(externalSignalStatus.rawValue)")
+        }
+        if let lastGeneratedAt {
+            parts.append(lastGeneratedAt)
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    var nextActionText: String {
+        if !isProviderConfigured {
+            return "配置模型"
+        }
+        if generationState == .generating {
+            return "等待完成"
+        }
+        if lastGeneratedAt == nil || isStale || generationState == .failed || generationState == .rejected {
+            return "重新分析"
+        }
+        return "查看趋势"
+    }
+
+    var severity: EnhancementPresentationSeverity {
+        if !isProviderConfigured {
+            return .warning
+        }
+        switch generationState {
+        case .generating:
+            return .info
+        case .failed:
+            return .danger
+        case .rejected:
+            return .warning
+        case .idle:
+            return lastGeneratedAt == nil ? .info : (isStale ? .warning : .positive)
+        case .succeeded:
+            if isStale {
+                return .warning
+            }
+            return externalSignalStatus == .unavailable ? .info : .positive
+        }
+    }
+}
+
 enum EnhancementWatchFilter: String, CaseIterable, Identifiable, Hashable {
     case all = "全部"
     case hit = "命中"
@@ -150,6 +233,7 @@ struct EnhancementDashboardSummary: Hashable {
         canUndoLatestImport: Bool,
         insightSummary: PortfolioSnapshotInsightSummary,
         snapshotCount: Int,
+        trendStatus: EnhancementTrendStatus,
         reminders: PortfolioReminderSummary,
         planSimulation: PlanSimulationSummary
     ) -> EnhancementDashboardSummary {
@@ -162,6 +246,7 @@ struct EnhancementDashboardSummary: Hashable {
             importCounts: importCounts,
             canUndoLatestImport: canUndoLatestImport,
             insightSummary: insightSummary,
+            trendStatus: trendStatus,
             reminders: reminders,
             planSimulation: planSimulation
         )
@@ -194,7 +279,8 @@ struct EnhancementDashboardSummary: Hashable {
                 importCounts: importCounts,
                 canUndoLatestImport: canUndoLatestImport,
                 insightSummary: insightSummary,
-                snapshotCount: snapshotCount
+                snapshotCount: snapshotCount,
+                trendStatus: trendStatus
             ),
             actionQueue: actionQueue,
             reportMetadata: reportMetadata,
@@ -267,7 +353,8 @@ struct EnhancementDashboardSummary: Hashable {
         importCounts: EnhancementImportCounts,
         canUndoLatestImport: Bool,
         insightSummary: PortfolioSnapshotInsightSummary,
-        snapshotCount: Int
+        snapshotCount: Int,
+        trendStatus: EnhancementTrendStatus
     ) -> [EnhancementStatusCard] {
         let importValue: String
         let importSeverity: EnhancementPresentationSeverity
@@ -326,6 +413,15 @@ struct EnhancementDashboardSummary: Hashable {
                 nextAction: insightSummary.hasEnoughHistory ? "查看洞察" : "生成快照",
                 systemImage: "chart.xyaxis.line",
                 severity: insightSummary.hasEnoughHistory ? .positive : .info
+            ),
+            EnhancementStatusCard(
+                tab: .trend,
+                title: "趋势分析",
+                value: trendStatus.valueText,
+                detail: trendStatus.detailText,
+                nextAction: trendStatus.nextActionText,
+                systemImage: "sparkles",
+                severity: trendStatus.severity
             )
         ]
     }
@@ -337,6 +433,7 @@ struct EnhancementDashboardSummary: Hashable {
         importCounts: EnhancementImportCounts,
         canUndoLatestImport: Bool,
         insightSummary: PortfolioSnapshotInsightSummary,
+        trendStatus: EnhancementTrendStatus,
         reminders: PortfolioReminderSummary,
         planSimulation: PlanSimulationSummary
     ) -> [EnhancementActionItem] {
@@ -422,6 +519,50 @@ struct EnhancementDashboardSummary: Hashable {
             ))
         }
 
+        if !trendStatus.isProviderConfigured {
+            items.append(EnhancementActionItem(
+                id: "trend-provider",
+                title: "配置趋势模型",
+                detail: "连接 OpenAI-compatible 模型后才能生成趋势分析",
+                metric: "模型",
+                targetTab: .trend,
+                kind: .selectTab,
+                severity: .warning
+            ))
+        } else if trendStatus.lastGeneratedAt == nil {
+            items.append(EnhancementActionItem(
+                id: "trend-generate",
+                title: "生成趋势分析",
+                detail: "结合持仓、平台动态和外部信号生成条件式趋势",
+                metric: "未生成",
+                targetTab: .trend,
+                kind: .runTrendAnalysis,
+                severity: .info
+            ))
+        } else if trendStatus.isStale || trendStatus.generationState == .failed || trendStatus.generationState == .rejected {
+            items.append(EnhancementActionItem(
+                id: "trend-refresh",
+                title: "更新趋势分析",
+                detail: trendStatus.headline,
+                metric: trendStatus.valueText,
+                targetTab: .trend,
+                kind: .runTrendAnalysis,
+                severity: trendStatus.generationState == .failed ? .warning : .info
+            ))
+        }
+
+        if trendStatus.externalSignalStatus == .unavailable, trendStatus.lastGeneratedAt != nil {
+            items.append(EnhancementActionItem(
+                id: "trend-external-unavailable",
+                title: "外部信号不可用",
+                detail: "当前报告只基于本地上下文，需留意数据边界",
+                metric: "本地",
+                targetTab: .trend,
+                kind: .selectTab,
+                severity: .info
+            ))
+        }
+
         items.append(contentsOf: reminders.items.prefix(3).map { reminder in
             EnhancementActionItem(
                 id: "reminder-\(reminder.kind)",
@@ -462,6 +603,9 @@ struct EnhancementDashboardSummary: Hashable {
         case .runWatch:
             title = "立即巡检"
             systemImage = "play.circle"
+        case .runTrendAnalysis:
+            title = item.title
+            systemImage = "wand.and.stars"
         case .archiveReport:
             title = "保存月报"
             systemImage = "archivebox"

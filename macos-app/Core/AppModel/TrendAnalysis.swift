@@ -1,6 +1,30 @@
 import Foundation
 
 extension AppModel {
+    var enhancementTrendStatus: EnhancementTrendStatus {
+        let generatedAt = lastTrendGeneratedAt ?? trendReport?.generatedAt
+        let currentDay = trendDayString(from: Self.timestampString())
+        let generatedDay = generatedAt.map { trendDayString(from: $0) }
+        let stale = generatedDay.map { $0 != currentDay } ?? false
+        let headline: String
+        if let report = trendReport {
+            headline = report.portfolio.headline
+        } else if !lastTrendError.isEmpty {
+            headline = lastTrendError
+        } else {
+            headline = trendSettings.provider.isConfigured ? "等待生成趋势分析" : "尚未连接趋势分析模型"
+        }
+
+        return EnhancementTrendStatus(
+            isProviderConfigured: trendSettings.provider.isConfigured,
+            generationState: trendGenerationState,
+            lastGeneratedAt: generatedAt,
+            headline: headline,
+            externalSignalStatus: trendReport?.externalSignalStatus,
+            isStale: stale
+        )
+    }
+
     func loadTrendAnalysisState() {
         if let trendAnalysisSettingsFileURL {
             do {
