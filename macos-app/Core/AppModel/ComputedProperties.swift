@@ -57,6 +57,14 @@ extension AppModel {
         dataDirectoryURL?.appendingPathComponent("portfolio-insight-snapshots.json", isDirectory: false)
     }
 
+    var trendAnalysisSettingsFileURL: URL? {
+        dataDirectoryURL?.appendingPathComponent("trend-analysis-settings.json", isDirectory: false)
+    }
+
+    var trendAnalysisReportFileURL: URL? {
+        dataDirectoryURL?.appendingPathComponent("trend-analysis-report.json", isDirectory: false)
+    }
+
     var hasLiveService: Bool {
         baseURL != nil
     }

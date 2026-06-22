@@ -226,6 +226,8 @@ struct EnhancementCenterView: View {
             importPanel
         case .insight:
             insightPanel
+        case .trend:
+            trendPanel
         }
     }
 
@@ -734,6 +736,91 @@ struct EnhancementCenterView: View {
             .buttonStyle(.borderedProminent)
             .tint(AppPalette.brand)
             .disabled(model.personalAssetRows.isEmpty)
+        }
+    }
+
+    private var trendPanel: some View {
+        SectionCard(title: "趋势", subtitle: trendPanelSubtitle, icon: "sparkles") {
+            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+                    compactFact(
+                        "模型配置",
+                        model.trendSettings.provider.isConfigured ? model.trendSettings.provider.model : "未配置",
+                        tint: model.trendSettings.provider.isConfigured ? AppPalette.positive : AppPalette.warning
+                    )
+                    compactFact("隐私模式", model.trendPrivacyMode.rawValue, tint: AppPalette.info)
+                    compactFact("最近生成", model.lastTrendGeneratedAt ?? "暂无", tint: model.trendReport == nil ? AppPalette.muted : AppPalette.brand)
+                    compactFact("状态", trendStateText, tint: trendStateTint)
+                }
+
+                HStack(spacing: AppPalette.spaceS) {
+                    Button {
+                        Task {
+                            await model.generateTrendAnalysis(userInitiated: true)
+                        }
+                    } label: {
+                        Label("立即分析", systemImage: "wand.and.stars")
+                    }
+                    .buttonStyle(PressResponsiveButtonStyle())
+                    .disabled(!model.trendSettings.provider.isConfigured || model.trendGenerationState == .generating)
+
+                    Button {
+                        model.detectLocalAIConfigurations()
+                    } label: {
+                        Label("检测本地配置", systemImage: "magnifyingglass")
+                    }
+                    .buttonStyle(PressResponsiveButtonStyle())
+                }
+
+                if let report = model.trendReport {
+                    emptyState(report.portfolio.headline, detail: report.portfolio.summary)
+                } else if model.trendSettings.provider.isConfigured {
+                    emptyState("等待生成", detail: "趋势分析会结合本地持仓、平台动态和模型可用的外部信号，输出条件式判断和反证条件。")
+                } else {
+                    emptyState("未连接模型", detail: "可先在设置中填入 OpenAI-compatible 地址、模型和 API Key，或点击检测本地配置。")
+                }
+
+                if !model.lastTrendError.isEmpty {
+                    emptyState("最近错误", detail: model.lastTrendError)
+                }
+            }
+        }
+    }
+
+    private var trendPanelSubtitle: String {
+        if let report = model.trendReport {
+            return "\(report.dataAsOf) · \(report.externalSignalStatus.rawValue)"
+        }
+        return model.trendSettings.provider.isConfigured ? "已配置模型，等待生成" : "需要配置 OpenAI-compatible 模型"
+    }
+
+    private var trendStateText: String {
+        switch model.trendGenerationState {
+        case .idle:
+            return "空闲"
+        case .generating:
+            return "生成中"
+        case .succeeded:
+            return "已完成"
+        case .failed:
+            return "失败"
+        case .rejected:
+            return "已拦截"
+        }
+    }
+
+    private var trendStateTint: Color {
+        switch model.trendGenerationState {
+        case .idle:
+            return AppPalette.muted
+        case .generating:
+            return AppPalette.info
+        case .succeeded:
+            return AppPalette.positive
+        case .failed:
+            return AppPalette.danger
+        case .rejected:
+            return AppPalette.warning
         }
     }
 

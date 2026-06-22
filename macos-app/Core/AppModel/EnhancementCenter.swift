@@ -18,6 +18,7 @@ extension AppModel {
         loadManagerWatchTimeline()
         loadImportUndoSnapshot()
         loadPortfolioInsightSnapshots()
+        loadTrendAnalysisState()
     }
 
     func loadMonthlyReportExportMetadata() {

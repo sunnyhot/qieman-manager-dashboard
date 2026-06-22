@@ -137,6 +137,13 @@ final class EnhancementState: ObservableObject {
     @Published var importUndoSnapshot: ImportUndoSnapshot?
     @Published var portfolioInsightSnapshots: [PortfolioInsightSnapshot] = []
     @Published var pendingOverwriteReportURL: URL?
+    @Published var trendReport: TrendAnalysisReport?
+    @Published var trendSettings: TrendAnalysisSettings = .default
+    @Published var trendGenerationState: TrendGenerationState = .idle
+    @Published var trendPrivacyMode: TrendPrivacyMode = .sanitized
+    @Published var trendLocalCandidates: [LocalAIConfigurationCandidate] = []
+    @Published var lastTrendGeneratedAt: String?
+    @Published var lastTrendError = ""
 }
 
 enum EnhancementCenterTab: String, CaseIterable, Identifiable {
@@ -144,6 +151,7 @@ enum EnhancementCenterTab: String, CaseIterable, Identifiable {
     case watch = "巡检"
     case importPreview = "导入"
     case insight = "洞察"
+    case trend = "趋势"
 
     var id: String { rawValue }
 }

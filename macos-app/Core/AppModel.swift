@@ -102,6 +102,7 @@ final class AppModel: ObservableObject {
     let importRecognizer = PersonalImportRecognizer()
     let notificationManager = LocalNotificationManager()
     let personalAssetAutomation = PersonalAssetAutomation()
+    var trendAIClient: any TrendAIClientProtocol = TrendAIClient()
     let portfolioAutoRefreshIntervalSeconds: UInt64 = 60
     let refreshThrottle = RefreshThrottle()
 
@@ -331,6 +332,41 @@ final class AppModel: ObservableObject {
     var pendingOverwriteReportURL: URL? {
         get { enhancementState.pendingOverwriteReportURL }
         set { enhancementState.pendingOverwriteReportURL = newValue }
+    }
+
+    var trendReport: TrendAnalysisReport? {
+        get { enhancementState.trendReport }
+        set { enhancementState.trendReport = newValue }
+    }
+
+    var trendSettings: TrendAnalysisSettings {
+        get { enhancementState.trendSettings }
+        set { enhancementState.trendSettings = newValue }
+    }
+
+    var trendGenerationState: TrendGenerationState {
+        get { enhancementState.trendGenerationState }
+        set { enhancementState.trendGenerationState = newValue }
+    }
+
+    var trendPrivacyMode: TrendPrivacyMode {
+        get { enhancementState.trendPrivacyMode }
+        set { enhancementState.trendPrivacyMode = newValue }
+    }
+
+    var trendLocalCandidates: [LocalAIConfigurationCandidate] {
+        get { enhancementState.trendLocalCandidates }
+        set { enhancementState.trendLocalCandidates = newValue }
+    }
+
+    var lastTrendGeneratedAt: String? {
+        get { enhancementState.lastTrendGeneratedAt }
+        set { enhancementState.lastTrendGeneratedAt = newValue }
+    }
+
+    var lastTrendError: String {
+        get { enhancementState.lastTrendError }
+        set { enhancementState.lastTrendError = newValue }
     }
 
     // MARK: Cache proxies (forwarding to portfolioState)
