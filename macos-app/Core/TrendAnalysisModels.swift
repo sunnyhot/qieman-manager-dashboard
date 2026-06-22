@@ -238,3 +238,61 @@ struct TrendAnalysisReport: Codable, Identifiable, Hashable {
     let warnings: [TrendWarning]
     let disclaimer: String
 }
+
+struct TrendAnalysisContext: Codable, Hashable {
+    let createdAt: String
+    let privacyMode: TrendPrivacyMode
+    let portfolio: TrendContextPortfolio
+    let assets: [TrendContextAsset]
+    let sectors: [TrendContextSector]
+    let platformSignals: [String]
+    let watchSummary: String
+    let insightHeadline: String
+
+    func debugJSONString() -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        guard let data = try? encoder.encode(self) else { return "" }
+        return String(data: data, encoding: .utf8) ?? ""
+    }
+}
+
+struct TrendContextPortfolio: Codable, Hashable {
+    let assetCount: Int
+    let holdingCount: Int
+    let activePlanCount: Int
+    let pendingAssetCount: Int
+    let totalMarketValue: Double?
+    let totalPendingCashAmount: Double?
+    let totalEstimatedNextPlanAmount: Double?
+    let totalEffectiveHoldingAmount: Double?
+}
+
+struct TrendContextAsset: Codable, Hashable {
+    let id: String
+    let name: String
+    let code: String?
+    let assetType: String
+    let sector: String
+    let statusText: String
+    let weightText: String?
+    let profitPct: Double?
+    let estimateChangePct: Double?
+    let pendingTradeCount: Int
+    let activePlanCount: Int
+    let pausedPlanCount: Int
+    let endedPlanCount: Int
+    let marketValue: Double?
+    let costValue: Double?
+    let profitAmount: Double?
+    let pendingCashAmount: Double?
+    let estimatedNextPlanAmount: Double?
+    let totalCumulativePlanAmount: Double?
+}
+
+struct TrendContextSector: Codable, Hashable {
+    let name: String
+    let assetCount: Int
+    let exposureText: String
+    let exposureAmount: Double?
+}
