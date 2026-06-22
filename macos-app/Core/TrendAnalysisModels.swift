@@ -144,7 +144,7 @@ struct LocalAIConfigurationCandidate: Identifiable, Codable, Hashable {
         compatibility == .openAICompatible
             && !(baseURL ?? "").isEmpty
             && !(model ?? "").isEmpty
-            && (apiKey != nil || apiKeySource != nil)
+            && !(apiKey ?? "").isEmpty
     }
 
     func importedSettings() -> TrendAIProviderSettings? {

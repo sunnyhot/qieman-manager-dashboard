@@ -70,7 +70,7 @@ struct LocalAIConfigurationDetector {
             let apiKey = envKey.flatMap { environment[$0] }
             let model = firstQuotedValue(named: "model", in: block.body) ?? globalModel ?? ""
             let isCompatible = baseURL.contains("/v1") || baseURL.contains("openai") || baseURL.contains("openrouter")
-            let hasImportableKey = apiKey != nil || envKey != nil
+            let hasImportableKey = apiKey?.isEmpty == false
             return LocalAIConfigurationCandidate(
                 id: "codex-\(block.name)",
                 providerName: "Codex \(block.name)",

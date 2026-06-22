@@ -48,6 +48,30 @@ final class LocalAIConfigurationDetectorTests: XCTestCase {
         XCTAssertEqual(candidate.maskedAPIKey, "sk-...cret")
     }
 
+    func testCodexConfigWithoutAvailableEnvSecretIsNotImportable() throws {
+        let home = try temporaryDirectory()
+        let codexDirectory = home.appendingPathComponent(".codex", isDirectory: true)
+        try FileManager.default.createDirectory(at: codexDirectory, withIntermediateDirectories: true)
+        try """
+        model = "openai/gpt-4.1"
+        [model_providers.openrouter]
+        base_url = "https://openrouter.ai/api/v1"
+        env_key = "OPENROUTER_API_KEY"
+        """.write(to: codexDirectory.appendingPathComponent("config.toml"), atomically: true, encoding: .utf8)
+
+        let detector = LocalAIConfigurationDetector(
+            homeDirectory: home,
+            environment: [:]
+        )
+
+        let candidates = detector.detect()
+
+        let candidate = try XCTUnwrap(candidates.first { $0.id == "codex-openrouter" })
+        XCTAssertFalse(candidate.canImport)
+        XCTAssertEqual(candidate.compatibility, .incomplete)
+        XCTAssertTrue(candidate.warning?.contains("OPENROUTER_API_KEY") == true)
+    }
+
     func testClaudeConfigIsDetectedButNotImportableForOpenAICompatibleClient() throws {
         let home = try temporaryDirectory()
         try "{}".write(to: home.appendingPathComponent(".claude.json"), atomically: true, encoding: .utf8)
