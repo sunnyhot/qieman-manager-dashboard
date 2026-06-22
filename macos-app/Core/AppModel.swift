@@ -537,6 +537,7 @@ final class AppModel: ObservableObject {
         }
 
         await applyPersonalAssetAutomation(updateNotice: false)
+        await runDailyTrendAnalysisIfNeeded()
         restartManagerWatchLoop(immediate: false)
         restartPersonalAssetAutomationLoop()
         restartPortfolioAutoRefreshLoop()

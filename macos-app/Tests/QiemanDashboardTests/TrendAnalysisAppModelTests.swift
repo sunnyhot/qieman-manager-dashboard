@@ -93,6 +93,31 @@ final class TrendAnalysisAppModelTests: XCTestCase {
         XCTAssertEqual(model.trendReport?.generatedAt, "2026-06-21 12:00:00")
         XCTAssertFalse(model.lastTrendError.isEmpty)
     }
+
+    func testDailyAutoAnalysisRunsOnlyOncePerDay() async {
+        let model = AppModel()
+        model.trendSettings = TrendAnalysisSettings(
+            provider: TrendAIProviderSettings(
+                providerName: "Test",
+                baseURL: "https://example.com/v1",
+                model: "test-model",
+                apiKey: "sk-test",
+                supportsOnlineSearch: true,
+                timeoutSeconds: 30
+            ),
+            defaultPrivacyMode: .sanitized,
+            dailyAutoAnalysisEnabled: true,
+            lastAutoAnalysisDay: nil
+        )
+        let client = CountingTrendAIClient()
+        model.trendAIClient = client
+
+        await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 09:00:00")
+        await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 15:00:00")
+
+        XCTAssertEqual(client.callCount, 1)
+        XCTAssertEqual(model.trendSettings.lastAutoAnalysisDay, "2026-06-22")
+    }
 }
 
 private struct FakeTrendAIClient: TrendAIClientProtocol {
@@ -100,5 +125,17 @@ private struct FakeTrendAIClient: TrendAIClientProtocol {
 
     func generateReport(prompt: TrendModelPrompt, settings: TrendAIProviderSettings) async throws -> TrendAnalysisReport {
         report
+    }
+}
+
+private final class CountingTrendAIClient: TrendAIClientProtocol {
+    var callCount = 0
+
+    func generateReport(prompt: TrendModelPrompt, settings: TrendAIProviderSettings) async throws -> TrendAnalysisReport {
+        callCount += 1
+        return .fixture(
+            generatedAt: "2026-06-22 09:00:00",
+            externalSignalStatus: .available
+        )
     }
 }
