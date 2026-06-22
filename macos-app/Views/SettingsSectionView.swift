@@ -6,6 +6,7 @@ import SwiftUI
 enum SettingsFocus: CaseIterable, Identifiable {
     case account
     case watch
+    case trend
     case menuBar
     case version
 
@@ -170,6 +171,22 @@ struct SettingsSectionView: View {
 
         Button {
             withAnimation(.easeInOut(duration: 0.16)) {
+                selectedSettingsFocus = .trend
+            }
+        } label: {
+            SettingsMetric(
+                title: "趋势",
+                value: model.enhancementTrendStatus.valueText,
+                detail: model.trendSettings.provider.isConfigured ? model.trendSettings.provider.model : "OpenAI-compatible 模型",
+                icon: "sparkles",
+                tint: model.enhancementTrendStatus.severity.settingsTint,
+                isSelected: selectedSettingsFocus == .trend
+            )
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
+
+        Button {
+            withAnimation(.easeInOut(duration: 0.16)) {
                 selectedSettingsFocus = .menuBar
             }
         } label: {
@@ -208,6 +225,8 @@ struct SettingsSectionView: View {
             accountPanel
         case .watch:
             watchPanel
+        case .trend:
+            trendSettingsPanel
         case .menuBar:
             menuBarPanel
         case .version:
