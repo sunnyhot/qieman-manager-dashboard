@@ -26,6 +26,11 @@ The first version should support:
 - Privacy mode switch:
   - default `脱敏摘要`;
   - optional `完整明细` after explicit user confirmation.
+- Local AI configuration discovery:
+  - detect common local AI/agent configuration candidates such as Codex, Claude/cc, and OpenAI-compatible environment/config values;
+  - show discovered candidates for user review;
+  - import only OpenAI-compatible provider settings automatically supported by this feature;
+  - never silently reuse another tool's API key or send portfolio data through it without explicit user confirmation.
 - Persistent latest report cache so the user can reopen the app and keep the last successful analysis.
 
 Out of scope for the first version:
@@ -97,6 +102,9 @@ The tab should feel consistent with the current enhancement center: compact, ope
 11. WHEN automatic analysis fails THEN the system SHALL add an enhancement-center action item instead of interrupting the user with a blocking alert.
 12. WHEN the report includes an action candidate THEN the system SHALL show trigger conditions, invalidating conditions, confidence, and the non-advice notice.
 13. IF the report contains unsupported absolute claims such as guaranteed returns or mandatory buy/sell wording THEN the system SHALL reject or downgrade the report and show a validation warning.
+14. WHEN the user asks the app to detect local AI configuration THEN the system SHALL scan only known safe local config locations and process environment variables, and SHALL present candidates without logging or exposing secret values.
+15. WHEN a discovered candidate is OpenAI-compatible THEN the system SHALL allow the user to import its base URL, model, provider label, and key reference or key value only after explicit confirmation.
+16. WHEN a discovered candidate is not OpenAI-compatible, such as a direct Anthropic/Claude-only configuration, THEN the system SHALL show it as detected but not directly usable for trend generation until a compatible endpoint/client is configured.
 
 ## Architecture
 
@@ -120,6 +128,12 @@ New Core components:
   - Validates required fields and rejects unsafe language or missing constraints.
 - `TrendAnalysisStore`
   - Saves and loads latest reports and generation metadata from the app data directory.
+- `LocalAIConfigurationDetector`
+  - Best-effort detector for existing local model/tool configuration.
+  - Reads candidate metadata from known locations such as `~/.codex/config.toml`, Claude/cc config files, and relevant process environment variables when available to the app process.
+  - Masks secret values and returns compatibility status instead of silently copying credentials.
+- `LocalAIConfigurationCandidate`
+  - Describes provider label, base URL, model, key source, compatibility, confidence, and import warning text.
 
 AppModel integration:
 
@@ -146,9 +160,18 @@ Settings integration:
   - online search capability toggle;
   - daily auto analysis toggle;
   - default privacy mode;
-  - timeout.
+  - timeout;
+  - `检测本机配置` action showing importable and non-importable local candidates.
 
 The API key must not be printed in logs or shown in plain text after entry. A future Keychain migration is allowed, but the first version must at minimum keep the key local and out of committed files.
+
+Local configuration import rules:
+
+- Import is user-initiated only.
+- Importable candidates must be OpenAI-compatible or explicitly marked compatible by the user.
+- Claude/cc direct Anthropic-style settings can be detected for awareness, but they are not used by the first-version OpenAI-compatible client unless they point to an OpenAI-compatible gateway.
+- Shell profile scraping is out of scope for the first version because a GUI macOS app cannot reliably inherit interactive-shell environment and because shell files can contain unrelated secrets.
+- The detector may read local config files, but it must not write to those files.
 
 ## Data Flow
 
@@ -310,6 +333,7 @@ Full-detail behavior:
 Logging:
 
 - Never log API keys.
+- Never display full API keys from detected local configuration; use masked labels such as `sk-...abcd`.
 - Never log full-detail payload by default.
 - Error messages should avoid embedding request bodies.
 
