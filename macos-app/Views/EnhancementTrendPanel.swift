@@ -8,6 +8,7 @@ extension EnhancementCenterView {
             VStack(alignment: .leading, spacing: AppPalette.spaceM) {
                 trendStatusStrip
                 trendActionBar
+                trendProgressLogView
 
                 if let report = model.trendReport {
                     trendReportView(report)
@@ -19,6 +20,32 @@ extension EnhancementCenterView {
 
                 if !model.lastTrendError.isEmpty {
                     trendEmptyState("最近错误", detail: model.lastTrendError)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var trendProgressLogView: some View {
+        if !model.trendProgressLogs.isEmpty {
+            trendBlock("分析过程", icon: "list.bullet.rectangle") {
+                VStack(spacing: AppPalette.spaceS) {
+                    ForEach(model.trendProgressLogs.suffix(10)) { item in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text(trendLogTime(item.timestamp))
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(AppPalette.info)
+                                .frame(width: 56, alignment: .leading)
+                            Text(item.message)
+                                .font(.system(size: 11))
+                                .foregroundStyle(AppPalette.muted)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(AppPalette.paper.opacity(0.62), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                    }
                 }
             }
         }
@@ -403,6 +430,12 @@ extension EnhancementCenterView {
             return "\(report.dataAsOf) · \(report.externalSignalStatus.displayText)"
         }
         return model.trendSettings.provider.isConfigured ? "已配置模型，等待生成" : "需要配置 OpenAI-compatible 模型"
+    }
+
+    private func trendLogTime(_ timestamp: String) -> String {
+        let trimmed = timestamp.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 16 else { return trimmed }
+        return String(trimmed.dropFirst(11).prefix(5))
     }
 
     private var trendStateText: String {

@@ -160,6 +160,11 @@ final class TrendAnalysisAppModelTests: XCTestCase {
         XCTAssertTrue(client.prompts[1].user.contains("分块 2/3"))
         XCTAssertTrue(client.prompts[2].user.contains("分块 3/3"))
         XCTAssertTrue(client.prompts[3].user.contains("分块报告"))
+        let logMessages = model.trendProgressLogs.map(\.message).joined(separator: "\n")
+        XCTAssertTrue(logMessages.contains("构建趋势上下文"))
+        XCTAssertTrue(logMessages.contains("分块模式"))
+        XCTAssertTrue(logMessages.contains("合成全组合报告"))
+        XCTAssertTrue(logMessages.contains("趋势分析完成"))
     }
 
     func testTrendConnectionCheckUpdatesSuccessState() async {

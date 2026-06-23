@@ -58,11 +58,11 @@ struct TrendAIClient: TrendAIClientProtocol {
             maxTokens: nil
         ).content
 
-        guard let reportData = content.data(using: .utf8) else {
+        guard let reportData = normalizedReportJSONData(from: content) else {
             throw TrendAIClientError.emptyContent(finishReason: nil, reasoningPreview: nil)
         }
         do {
-            return try decoder.decode(TrendAnalysisReport.self, from: reportData)
+            return try decodeReport(from: reportData)
         } catch {
             throw TrendAIClientError.invalidReportResponse(decodingSummary(error, data: reportData))
         }
@@ -179,6 +179,49 @@ struct TrendAIClient: TrendAIClientProtocol {
         return String(normalized.prefix(220))
     }
 
+    private func decodeReport(from data: Data) throws -> TrendAnalysisReport {
+        do {
+            return try decoder.decode(TrendAnalysisReport.self, from: data)
+        } catch {
+            let envelope = try decoder.decode(TrendReportEnvelope.self, from: data)
+            if let report = envelope.trendAnalysisReport ?? envelope.report {
+                return report
+            }
+            throw error
+        }
+    }
+
+    private func normalizedReportJSONData(from content: String) -> Data? {
+        let stripped = stripMarkdownCodeFence(content)
+        guard let jsonText = extractJSONObject(from: stripped) else {
+            return stripped.data(using: .utf8)
+        }
+        return jsonText.data(using: .utf8)
+    }
+
+    private func stripMarkdownCodeFence(_ content: String) -> String {
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasPrefix("```") else { return trimmed }
+        var lines = trimmed.components(separatedBy: .newlines)
+        guard !lines.isEmpty else { return trimmed }
+        lines.removeFirst()
+        if lines.last?.trimmingCharacters(in: .whitespacesAndNewlines) == "```" {
+            lines.removeLast()
+        }
+        return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func extractJSONObject(from content: String) -> String? {
+        guard
+            let start = content.firstIndex(of: "{"),
+            let end = content.lastIndex(of: "}"),
+            start <= end
+        else {
+            return nil
+        }
+        return String(content[start...end])
+    }
+
     private static func describe(_ error: DecodingError) -> String {
         switch error {
         case .keyNotFound(let key, let context):
@@ -254,4 +297,9 @@ private struct TrendProviderError: Decodable {
     let message: String?
     let type: String?
     let code: String?
+}
+
+private struct TrendReportEnvelope: Decodable {
+    let trendAnalysisReport: TrendAnalysisReport?
+    let report: TrendAnalysisReport?
 }

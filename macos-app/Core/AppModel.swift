@@ -379,6 +379,11 @@ final class AppModel: ObservableObject {
         set { enhancementState.lastTrendConnectionMessage = newValue }
     }
 
+    var trendProgressLogs: [TrendProgressLog] {
+        get { enhancementState.trendProgressLogs }
+        set { enhancementState.trendProgressLogs = newValue }
+    }
+
     // MARK: Cache proxies (forwarding to portfolioState)
 
     var _cachedAssetRows: [PersonalAssetAggregateRow]? {

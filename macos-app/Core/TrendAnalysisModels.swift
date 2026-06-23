@@ -28,6 +28,18 @@ struct TrendConnectionCheckResult: Codable, Hashable {
     let preview: String
 }
 
+struct TrendProgressLog: Identifiable, Hashable {
+    let id: UUID
+    let timestamp: String
+    let message: String
+
+    init(id: UUID = UUID(), timestamp: String, message: String) {
+        self.id = id
+        self.timestamp = timestamp
+        self.message = message
+    }
+}
+
 enum TrendExternalSignalStatus: String, Codable, Hashable {
     case available
     case unavailable

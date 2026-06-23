@@ -64,6 +64,60 @@ final class TrendAIClientTests: XCTestCase {
         XCTAssertEqual(decoded.externalSignalStatus, .available)
     }
 
+    func testClientDecodesReportWrappedInMarkdownFenceAndEnvelope() async throws {
+        let report = TrendAnalysisReport.fixture(
+            generatedAt: "2026-06-22 12:00:00",
+            externalSignalStatus: .available
+        )
+        let reportData = try JSONEncoder().encode(report)
+        let reportContent = try XCTUnwrap(String(data: reportData, encoding: .utf8))
+        let wrappedContent = """
+        ```json
+        {
+          "trendAnalysisReport": \(reportContent)
+        }
+        ```
+        """
+        let responseData = try JSONSerialization.data(withJSONObject: [
+            "choices": [
+                [
+                    "message": [
+                        "content": wrappedContent
+                    ]
+                ]
+            ]
+        ])
+
+        MockTrendURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, responseData)
+        }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockTrendURLProtocol.self]
+        let client = TrendAIClient(session: URLSession(configuration: configuration))
+
+        let decoded = try await client.generateReport(
+            prompt: TrendModelPrompt(system: "system prompt", user: "user prompt"),
+            settings: TrendAIProviderSettings(
+                providerName: "Test",
+                baseURL: "https://api.example.com/v1",
+                model: "test-model",
+                apiKey: "sk-test",
+                supportsOnlineSearch: true,
+                timeoutSeconds: 15
+            )
+        )
+
+        XCTAssertEqual(decoded.generatedAt, "2026-06-22 12:00:00")
+        XCTAssertEqual(decoded.externalSignalStatus, .available)
+    }
+
     func testConnectionCheckSendsMinimalPromptAndReturnsPreview() async throws {
         let responseData = try JSONSerialization.data(withJSONObject: [
             "choices": [

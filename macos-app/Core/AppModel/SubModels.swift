@@ -146,6 +146,7 @@ final class EnhancementState: ObservableObject {
     @Published var lastTrendGeneratedAt: String?
     @Published var lastTrendError = ""
     @Published var lastTrendConnectionMessage = ""
+    @Published var trendProgressLogs: [TrendProgressLog] = []
 }
 
 enum EnhancementCenterTab: String, CaseIterable, Identifiable {

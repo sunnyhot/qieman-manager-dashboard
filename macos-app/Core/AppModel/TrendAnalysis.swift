@@ -117,6 +117,8 @@ extension AppModel {
         let generatedAt = createdAt ?? Self.timestampString()
         trendGenerationState = .generating
         lastTrendError = ""
+        trendProgressLogs = []
+        appendTrendProgress("开始趋势分析：\(trendSettings.provider.model)")
         trendSettings.defaultPrivacyMode = trendPrivacyMode
 
         let context = TrendAnalysisContextBuilder().build(
@@ -128,13 +130,16 @@ extension AppModel {
             privacyMode: trendPrivacyMode,
             createdAt: generatedAt
         )
+        appendTrendProgress("构建趋势上下文：\(context.assets.count) 个标的，\(context.sectors.count) 个板块")
 
         do {
             let report = try await generateTrendReport(context: context, settings: trendSettings)
+            appendTrendProgress("校验模型报告")
             let validation = TrendAnalysisValidator().validate(report)
             guard validation.isValid else {
                 trendGenerationState = .rejected
                 lastTrendError = validation.messages.joined(separator: "\n")
+                appendTrendProgress("趋势分析被拦截：报告未通过安全校验")
                 return
             }
 
@@ -146,9 +151,11 @@ extension AppModel {
             }
             saveTrendAnalysisReport(report)
             saveTrendAnalysisSettings()
+            appendTrendProgress("趋势分析完成")
         } catch {
             trendGenerationState = .failed
             lastTrendError = error.localizedDescription
+            appendTrendProgress("趋势分析失败：\(error.localizedDescription)")
         }
     }
 
@@ -176,13 +183,20 @@ extension AppModel {
         let promptBuilder = TrendPromptBuilder()
         let chunker = TrendAnalysisChunker()
         guard chunker.shouldChunk(context) else {
+            appendTrendProgress("单次分析：\(context.assets.count) 个标的")
             let prompt = promptBuilder.build(context: context, settings: settings)
-            return try await trendAIClient.generateReport(prompt: prompt, settings: settings.provider)
+            let report = try await trendAIClient.generateReport(prompt: prompt, settings: settings.provider)
+            appendTrendProgress("单次分析完成")
+            return report
         }
 
         let chunks = chunker.chunks(from: context)
+        appendTrendProgress("分块模式：按板块拆为 \(chunks.count) 个请求")
         var chunkReports: [TrendAnalysisReport] = []
         for (offset, chunkContext) in chunks.enumerated() {
+            let sectorText = chunkContext.sectors.map(\.name).joined(separator: "、")
+            let targetText = sectorText.isEmpty ? "未分类板块" : sectorText
+            appendTrendProgress("分析分块 \(offset + 1)/\(chunks.count)：\(targetText) · \(chunkContext.assets.count) 个标的")
             let prompt = promptBuilder.buildChunk(
                 context: chunkContext,
                 chunkIndex: offset + 1,
@@ -194,8 +208,10 @@ extension AppModel {
                 settings: settings.provider
             )
             chunkReports.append(chunkReport)
+            appendTrendProgress("分块 \(offset + 1)/\(chunks.count) 完成：\(targetText)")
         }
 
+        appendTrendProgress("合成全组合报告")
         let synthesisPrompt = promptBuilder.buildSynthesis(
             context: chunker.synthesisContext(from: context),
             chunkReports: chunkReports,
@@ -205,5 +221,13 @@ extension AppModel {
             prompt: synthesisPrompt,
             settings: settings.provider
         )
+    }
+
+    private func appendTrendProgress(_ message: String) {
+        let entry = TrendProgressLog(timestamp: Self.timestampString(), message: message)
+        trendProgressLogs.append(entry)
+        if trendProgressLogs.count > 50 {
+            trendProgressLogs.removeFirst(trendProgressLogs.count - 50)
+        }
     }
 }
