@@ -128,10 +128,9 @@ extension AppModel {
             privacyMode: trendPrivacyMode,
             createdAt: generatedAt
         )
-        let prompt = TrendPromptBuilder().build(context: context, settings: trendSettings)
 
         do {
-            let report = try await trendAIClient.generateReport(prompt: prompt, settings: trendSettings.provider)
+            let report = try await generateTrendReport(context: context, settings: trendSettings)
             let validation = TrendAnalysisValidator().validate(report)
             guard validation.isValid else {
                 trendGenerationState = .rejected
@@ -168,5 +167,43 @@ extension AppModel {
         let trimmed = timestamp.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 10 else { return trimmed }
         return String(trimmed.prefix(10))
+    }
+
+    private func generateTrendReport(
+        context: TrendAnalysisContext,
+        settings: TrendAnalysisSettings
+    ) async throws -> TrendAnalysisReport {
+        let promptBuilder = TrendPromptBuilder()
+        let chunker = TrendAnalysisChunker()
+        guard chunker.shouldChunk(context) else {
+            let prompt = promptBuilder.build(context: context, settings: settings)
+            return try await trendAIClient.generateReport(prompt: prompt, settings: settings.provider)
+        }
+
+        let chunks = chunker.chunks(from: context)
+        var chunkReports: [TrendAnalysisReport] = []
+        for (offset, chunkContext) in chunks.enumerated() {
+            let prompt = promptBuilder.buildChunk(
+                context: chunkContext,
+                chunkIndex: offset + 1,
+                chunkCount: chunks.count,
+                settings: settings
+            )
+            let chunkReport = try await trendAIClient.generateReport(
+                prompt: prompt,
+                settings: settings.provider
+            )
+            chunkReports.append(chunkReport)
+        }
+
+        let synthesisPrompt = promptBuilder.buildSynthesis(
+            context: chunker.synthesisContext(from: context),
+            chunkReports: chunkReports,
+            settings: settings
+        )
+        return try await trendAIClient.generateReport(
+            prompt: synthesisPrompt,
+            settings: settings.provider
+        )
     }
 }
