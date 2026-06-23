@@ -3,7 +3,37 @@ import XCTest
 
 final class TrendPromptBuilderTests: XCTestCase {
     func testPromptRequiresStructuredSafeJSONOutput() {
-        let context = TrendAnalysisContext(
+        let context = makeTrendPromptContext()
+
+        let prompt = TrendPromptBuilder().build(
+            context: context,
+            settings: TrendAnalysisSettings.default
+        )
+
+        XCTAssertTrue(prompt.system.contains("Return valid JSON only"))
+        XCTAssertTrue(prompt.system.contains("Do not guarantee returns"))
+        XCTAssertTrue(prompt.system.contains("Do not use mandatory buy/sell language"))
+        XCTAssertTrue(prompt.system.contains("counterSignals"))
+        XCTAssertTrue(prompt.user.contains("\"privacyMode\":\"脱敏摘要\""))
+    }
+
+    func testChunkPromptRequiresSectorFirstAnalysis() {
+        let context = makeTrendPromptContext()
+
+        let prompt = TrendPromptBuilder().buildChunk(
+            context: context,
+            chunkIndex: 1,
+            chunkCount: 3,
+            settings: TrendAnalysisSettings.default
+        )
+
+        XCTAssertTrue(prompt.system.contains("先判断板块趋势"))
+        XCTAssertTrue(prompt.system.contains("板块内关键资产"))
+        XCTAssertTrue(prompt.user.contains("分块 1/3"))
+    }
+
+    private func makeTrendPromptContext() -> TrendAnalysisContext {
+        TrendAnalysisContext(
             createdAt: "2026-06-22 12:00:00",
             privacyMode: .sanitized,
             portfolio: TrendContextPortfolio(
@@ -22,16 +52,5 @@ final class TrendPromptBuilderTests: XCTestCase {
             watchSummary: "暂无",
             insightHeadline: "等待组合快照"
         )
-
-        let prompt = TrendPromptBuilder().build(
-            context: context,
-            settings: TrendAnalysisSettings.default
-        )
-
-        XCTAssertTrue(prompt.system.contains("Return valid JSON only"))
-        XCTAssertTrue(prompt.system.contains("Do not guarantee returns"))
-        XCTAssertTrue(prompt.system.contains("Do not use mandatory buy/sell language"))
-        XCTAssertTrue(prompt.system.contains("counterSignals"))
-        XCTAssertTrue(prompt.user.contains("\"privacyMode\":\"脱敏摘要\""))
     }
 }

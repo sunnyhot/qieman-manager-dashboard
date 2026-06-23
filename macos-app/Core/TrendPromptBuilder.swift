@@ -30,13 +30,15 @@ struct TrendPromptBuilder {
         let system = """
         \(baseSystemPrompt(settings: settings))
         This is a partial chunk analysis, not the final portfolio report.
+        先判断板块趋势，再分析板块内关键资产，最后给出本板块的条件式行动候选。
+        Treat sectors in this chunk as the primary analysis unit.
         Analyze only assets included in this chunk.
-        Keep keyAssets and actions limited to this chunk's assets.
+        Keep keyAssets and actions limited to this chunk's assets and 板块内关键资产.
         Do not output final whole-portfolio conclusions; leave whole-portfolio synthesis to the final merge step.
         """
 
         let user = """
-        分块 \(chunkIndex)/\(chunkCount)：分析以下且慢组合的部分资产上下文。请返回一个合法 TrendAnalysisReport JSON 对象，作为后续合成的局部报告。
+        分块 \(chunkIndex)/\(chunkCount)：分析以下且慢组合的板块上下文。请先判断板块趋势，再筛选板块内关键资产，返回一个合法 TrendAnalysisReport JSON 对象，作为后续合成的局部报告。
 
         Context JSON:
         \(contextJSON)

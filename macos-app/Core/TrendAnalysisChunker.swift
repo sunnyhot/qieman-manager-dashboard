@@ -22,13 +22,15 @@ struct TrendAnalysisChunker {
     func chunks(from context: TrendAnalysisContext) -> [TrendAnalysisContext] {
         guard shouldChunk(context) else { return [context] }
 
-        return stride(from: 0, to: context.assets.count, by: chunkSize).map { startIndex in
-            let endIndex = min(startIndex + chunkSize, context.assets.count)
-            let assets = Array(context.assets[startIndex..<endIndex])
-            return context.replacingAssets(
-                assets,
-                sectors: sectors(for: assets, originalSectors: context.sectors)
-            )
+        return sectorAssetGroups(from: context).flatMap { group in
+            stride(from: 0, to: group.assets.count, by: chunkSize).map { startIndex in
+                let endIndex = min(startIndex + chunkSize, group.assets.count)
+                let assets = Array(group.assets[startIndex..<endIndex])
+                return context.replacingAssets(
+                    assets,
+                    sectors: sectors(for: assets, originalSectors: context.sectors)
+                )
+            }
         }
     }
 
@@ -51,6 +53,34 @@ struct TrendAnalysisChunker {
             )
         }
     }
+
+    private func sectorAssetGroups(from context: TrendAnalysisContext) -> [TrendSectorAssetGroup] {
+        let groupedAssets = Dictionary(grouping: context.assets, by: \.sector)
+        var usedSectorNames: Set<String> = []
+        var groups: [TrendSectorAssetGroup] = []
+
+        for sector in context.sectors {
+            guard let assets = groupedAssets[sector.name], !assets.isEmpty else { continue }
+            groups.append(TrendSectorAssetGroup(name: sector.name, assets: assets))
+            usedSectorNames.insert(sector.name)
+        }
+
+        let fallbackGroups = groupedAssets
+            .filter { !usedSectorNames.contains($0.key) }
+            .map { TrendSectorAssetGroup(name: $0.key, assets: $0.value) }
+            .sorted { lhs, rhs in
+                if lhs.assets.count == rhs.assets.count {
+                    return lhs.name < rhs.name
+                }
+                return lhs.assets.count > rhs.assets.count
+            }
+        return groups + fallbackGroups
+    }
+}
+
+private struct TrendSectorAssetGroup {
+    let name: String
+    let assets: [TrendContextAsset]
 }
 
 private extension TrendAnalysisContext {
