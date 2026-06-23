@@ -118,6 +118,125 @@ final class TrendAIClientTests: XCTestCase {
         XCTAssertEqual(decoded.externalSignalStatus, .available)
     }
 
+    func testClientDecodesReportWhenModelOmitsDisplayIDs() async throws {
+        let reportContent = """
+        {
+          "generatedAt": "2026-06-22 12:00:00",
+          "dataAsOf": "2026-06-22 09:58:00",
+          "privacyMode": "脱敏摘要",
+          "externalSignalStatus": "available",
+          "portfolio": {
+            "headline": "组合偏中性",
+            "riskLevel": "medium",
+            "summary": "仓位集中度可控。"
+          },
+          "horizons": [
+            {
+              "horizon": "short",
+              "direction": "neutral",
+              "confidence": 0.62,
+              "rationale": "短期缺少明确突破信号。",
+              "counterSignals": ["成交量放大后可能改变短期判断"]
+            }
+          ],
+          "sectors": [
+            {
+              "name": "A股",
+              "exposureText": "35%",
+              "direction": "neutral",
+              "confidence": {"score": 60, "label": "中"},
+              "rationale": "震荡观察。",
+              "evidenceIDs": [],
+              "counterSignals": []
+            }
+          ],
+          "keyAssets": [
+            {
+              "name": "沪深300ETF",
+              "code": "510300",
+              "sector": "A股",
+              "impactText": "核心宽基暴露。",
+              "horizons": [],
+              "rationale": "跟随大盘。",
+              "counterSignals": []
+            }
+          ],
+          "actions": [
+            {
+              "kind": "watch",
+              "title": "观察A股量能",
+              "detail": "等待突破确认。",
+              "targetName": "A股",
+              "confidence": {"score": 60, "label": "中"},
+              "triggerConditions": ["放量突破"],
+              "invalidatingConditions": ["缩量回落"]
+            }
+          ],
+          "evidence": [
+            {
+              "sourceName": "本地上下文",
+              "title": "持仓摘要",
+              "url": null,
+              "publishedAt": null,
+              "retrievedAt": "2026-06-22 09:58:00",
+              "summary": "来自本地组合。"
+            }
+          ],
+          "warnings": [
+            {
+              "title": "仅供研究",
+              "detail": "不是投资建议。"
+            }
+          ],
+          "disclaimer": "非投资建议，仅供个人研究参考。"
+        }
+        """
+        let responseData = try JSONSerialization.data(withJSONObject: [
+            "choices": [
+                [
+                    "message": [
+                        "content": reportContent
+                    ]
+                ]
+            ]
+        ])
+
+        MockTrendURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, responseData)
+        }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockTrendURLProtocol.self]
+        let client = TrendAIClient(session: URLSession(configuration: configuration))
+
+        let decoded = try await client.generateReport(
+            prompt: TrendModelPrompt(system: "system prompt", user: "user prompt"),
+            settings: TrendAIProviderSettings(
+                providerName: "Test",
+                baseURL: "https://api.example.com/v1",
+                model: "test-model",
+                apiKey: "sk-test",
+                supportsOnlineSearch: true,
+                timeoutSeconds: 15
+            )
+        )
+
+        XCTAssertEqual(decoded.generatedAt, "2026-06-22 12:00:00")
+        XCTAssertEqual(decoded.horizons.first?.confidence.score, 62)
+        XCTAssertFalse(decoded.id.uuidString.isEmpty)
+        XCTAssertEqual(decoded.sectors.first?.id, "A股")
+        XCTAssertEqual(decoded.keyAssets.first?.id, "510300")
+        XCTAssertEqual(decoded.actions.first?.id, "watch-观察A股量能")
+        XCTAssertEqual(decoded.evidence.first?.id, "本地上下文-持仓摘要")
+        XCTAssertEqual(decoded.warnings.first?.id, "仅供研究")
+    }
+
     func testConnectionCheckSendsMinimalPromptAndReturnsPreview() async throws {
         let responseData = try JSONSerialization.data(withJSONObject: [
             "choices": [

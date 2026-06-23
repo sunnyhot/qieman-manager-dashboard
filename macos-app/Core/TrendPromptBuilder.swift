@@ -93,6 +93,75 @@ struct TrendPromptBuilder {
         Use conditional Chinese wording such as 可考虑, 关注, 等待确认, 若...则....
         Do not use 必须买入, 必须卖出, 保证上涨, 保证收益, or 一定上涨.
         Required field names include portfolio, horizons, sectors, keyAssets, actions, evidence, warnings, disclaimer, counterSignals.
+        Do not add fields outside this schema. Do not output totalMarketValue, totalCostValue, totalProfit, assetCount, or top-level confidence in the report.
+        Use this exact JSON shape. id fields may be omitted, but all other keys must be present:
+        {
+          "generatedAt": "YYYY-MM-DD HH:mm:ss",
+          "dataAsOf": "YYYY-MM-DD HH:mm:ss",
+          "privacyMode": "脱敏摘要 or 完整明细",
+          "externalSignalStatus": "available|unavailable|partial|stale",
+          "portfolio": {
+            "headline": "一句话组合判断",
+            "riskLevel": "low|medium|high|unknown",
+            "summary": "组合级解释"
+          },
+          "horizons": [
+            {
+              "horizon": "short|medium|long",
+              "direction": "bullish|neutralPositive|neutral|neutralNegative|bearish|uncertain",
+              "confidence": {"score": 0, "label": "低|中|高"},
+              "rationale": "判断依据",
+              "counterSignals": ["反证条件"]
+            }
+          ],
+          "sectors": [
+            {
+              "name": "板块名称",
+              "exposureText": "占比或暴露描述",
+              "direction": "bullish|neutralPositive|neutral|neutralNegative|bearish|uncertain",
+              "confidence": {"score": 0, "label": "低|中|高"},
+              "rationale": "板块判断",
+              "evidenceIDs": [],
+              "counterSignals": []
+            }
+          ],
+          "keyAssets": [
+            {
+              "name": "标的名称",
+              "code": "代码或 null",
+              "sector": "板块",
+              "impactText": "对组合影响",
+              "horizons": [],
+              "rationale": "标的判断",
+              "counterSignals": []
+            }
+          ],
+          "actions": [
+            {
+              "kind": "watch|waitForConfirmation|observeInBatches|pausePlan|considerIncrease|considerReduce|rebalanceReview",
+              "title": "动作标题",
+              "detail": "条件式动作说明",
+              "targetName": "对象或 null",
+              "confidence": {"score": 0, "label": "低|中|高"},
+              "triggerConditions": [],
+              "invalidatingConditions": []
+            }
+          ],
+          "evidence": [
+            {
+              "sourceName": "来源名称",
+              "title": "证据标题",
+              "url": "URL 或 null",
+              "publishedAt": "发布时间或 null",
+              "retrievedAt": "YYYY-MM-DD HH:mm:ss",
+              "summary": "证据摘要"
+            }
+          ],
+          "warnings": [
+            {"title": "边界提示", "detail": "提示详情"}
+          ],
+          "disclaimer": "非投资建议，仅供个人研究参考。"
+        }
         """
     }
 

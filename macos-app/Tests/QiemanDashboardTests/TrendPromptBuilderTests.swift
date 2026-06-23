@@ -14,6 +14,10 @@ final class TrendPromptBuilderTests: XCTestCase {
         XCTAssertTrue(prompt.system.contains("Do not guarantee returns"))
         XCTAssertTrue(prompt.system.contains("Do not use mandatory buy/sell language"))
         XCTAssertTrue(prompt.system.contains("counterSignals"))
+        XCTAssertTrue(prompt.system.contains("Do not add fields outside this schema"))
+        XCTAssertTrue(prompt.system.contains("\"headline\""))
+        XCTAssertTrue(prompt.system.contains("\"riskLevel\""))
+        XCTAssertTrue(prompt.system.contains("\"externalSignalStatus\""))
         XCTAssertTrue(prompt.user.contains("\"privacyMode\":\"脱敏摘要\""))
     }
 
