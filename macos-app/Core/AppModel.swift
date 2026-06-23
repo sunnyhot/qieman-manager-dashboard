@@ -349,6 +349,11 @@ final class AppModel: ObservableObject {
         set { enhancementState.trendGenerationState = newValue }
     }
 
+    var trendConnectionState: TrendConnectionState {
+        get { enhancementState.trendConnectionState }
+        set { enhancementState.trendConnectionState = newValue }
+    }
+
     var trendPrivacyMode: TrendPrivacyMode {
         get { enhancementState.trendPrivacyMode }
         set { enhancementState.trendPrivacyMode = newValue }
@@ -367,6 +372,11 @@ final class AppModel: ObservableObject {
     var lastTrendError: String {
         get { enhancementState.lastTrendError }
         set { enhancementState.lastTrendError = newValue }
+    }
+
+    var lastTrendConnectionMessage: String {
+        get { enhancementState.lastTrendConnectionMessage }
+        set { enhancementState.lastTrendConnectionMessage = newValue }
     }
 
     // MARK: Cache proxies (forwarding to portfolioState)

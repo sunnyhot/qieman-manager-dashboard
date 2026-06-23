@@ -108,7 +108,7 @@ final class LocalAIConfigurationDetectorTests: XCTestCase {
         let candidate = try XCTUnwrap(candidates.first { $0.id == "claude-zhipu-openai-compatible" })
         XCTAssertTrue(candidate.canImport)
         XCTAssertEqual(candidate.compatibility, .openAICompatible)
-        XCTAssertEqual(candidate.baseURL, "https://open.bigmodel.cn/api/paas/v4")
+        XCTAssertEqual(candidate.baseURL, "https://open.bigmodel.cn/api/coding/paas/v4")
         XCTAssertEqual(candidate.model, "glm-5.1")
         XCTAssertEqual(candidate.apiKeySource, "ANTHROPIC_API_KEY")
         XCTAssertTrue(candidate.warning?.contains("智谱") == true)
@@ -137,7 +137,7 @@ final class LocalAIConfigurationDetectorTests: XCTestCase {
 
         let candidate = try XCTUnwrap(candidates.first { $0.id == "claude-zhipu-openai-compatible" })
         XCTAssertTrue(candidate.canImport)
-        XCTAssertEqual(candidate.baseURL, "https://open.bigmodel.cn/api/paas/v4")
+        XCTAssertEqual(candidate.baseURL, "https://open.bigmodel.cn/api/coding/paas/v4")
         XCTAssertEqual(candidate.model, "GLM-5.2")
         XCTAssertEqual(candidate.apiKey, "zhipu-auth-secret")
         XCTAssertEqual(candidate.apiKeySource, "ANTHROPIC_AUTH_TOKEN")

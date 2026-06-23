@@ -64,6 +64,89 @@ final class TrendAIClientTests: XCTestCase {
         XCTAssertEqual(decoded.externalSignalStatus, .available)
     }
 
+    func testConnectionCheckSendsMinimalPromptAndReturnsPreview() async throws {
+        let responseData = try JSONSerialization.data(withJSONObject: [
+            "choices": [
+                [
+                    "message": [
+                        "content": "OK"
+                    ]
+                ]
+            ]
+        ])
+
+        MockTrendURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/chat/completions")
+
+            let body = try Self.requestBodyData(request)
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(json["model"] as? String, "test-model")
+            XCTAssertEqual(json["max_tokens"] as? Int, 16)
+            let messages = try XCTUnwrap(json["messages"] as? [[String: String]])
+            XCTAssertEqual(messages.map { $0["role"] }, ["system", "user"])
+            XCTAssertEqual(messages.last?["content"], "ping")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, responseData)
+        }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockTrendURLProtocol.self]
+        let client = TrendAIClient(session: URLSession(configuration: configuration))
+
+        let result = try await client.checkConnection(settings: TrendAIProviderSettings(
+            providerName: "Test",
+            baseURL: "https://api.example.com/v1",
+            model: "test-model",
+            apiKey: "sk-test",
+            supportsOnlineSearch: true,
+            timeoutSeconds: 15
+        ))
+
+        XCTAssertEqual(result.preview, "OK")
+        XCTAssertEqual(result.endpoint, "https://api.example.com/v1/chat/completions")
+    }
+
+    func testMissingChoicesResponseUsesActionableError() async throws {
+        let responseData = try JSONSerialization.data(withJSONObject: [
+            "id": "not-chat-completion"
+        ])
+
+        MockTrendURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, responseData)
+        }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockTrendURLProtocol.self]
+        let client = TrendAIClient(session: URLSession(configuration: configuration))
+
+        do {
+            _ = try await client.checkConnection(settings: TrendAIProviderSettings(
+                providerName: "Test",
+                baseURL: "https://api.example.com/v1",
+                model: "test-model",
+                apiKey: "sk-test",
+                supportsOnlineSearch: true,
+                timeoutSeconds: 15
+            ))
+            XCTFail("Expected OpenAI-compatible response format error")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("OpenAI-compatible"))
+            XCTAssertTrue(error.localizedDescription.contains("choices"))
+        }
+    }
+
     private static func requestBodyData(_ request: URLRequest) throws -> Data {
         if let httpBody = request.httpBody {
             return httpBody

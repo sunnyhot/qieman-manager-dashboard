@@ -2,24 +2,32 @@ import Foundation
 
 protocol TrendAIClientProtocol {
     func generateReport(prompt: TrendModelPrompt, settings: TrendAIProviderSettings) async throws -> TrendAnalysisReport
+    func checkConnection(settings: TrendAIProviderSettings) async throws -> TrendConnectionCheckResult
 }
 
 enum TrendAIClientError: LocalizedError {
     case invalidBaseURL
-    case requestFailed(Int?)
+    case requestFailed(Int?, String?)
     case emptyContent
+    case invalidOpenAICompatibleResponse(String)
+    case invalidReportResponse(String)
 
     var errorDescription: String? {
         switch self {
         case .invalidBaseURL:
             return "趋势分析模型地址无效。"
-        case .requestFailed(let statusCode):
+        case .requestFailed(let statusCode, let detail):
+            let suffix = detail.map { " \($0)" } ?? ""
             if let statusCode {
-                return "趋势分析模型请求失败：HTTP \(statusCode)。"
+                return "趋势分析模型请求失败：HTTP \(statusCode)。\(suffix)"
             }
-            return "趋势分析模型请求失败。"
+            return "趋势分析模型请求失败。\(suffix)"
         case .emptyContent:
             return "趋势分析模型没有返回可解析内容。"
+        case .invalidOpenAICompatibleResponse(let detail):
+            return "模型接口返回格式不符合 OpenAI-compatible chat/completions：\(detail)"
+        case .invalidReportResponse(let detail):
+            return "模型已连通，但趋势分析 JSON 不完整或格式不对：\(detail)"
         }
     }
 }
@@ -33,6 +41,50 @@ struct TrendAIClient: TrendAIClientProtocol {
     }
 
     func generateReport(prompt: TrendModelPrompt, settings: TrendAIProviderSettings) async throws -> TrendAnalysisReport {
+        let content = try await chatCompletionContent(
+            settings: settings,
+            messages: [
+                TrendChatMessage(role: "system", content: prompt.system),
+                TrendChatMessage(role: "user", content: prompt.user)
+            ],
+            temperature: 0.2,
+            maxTokens: nil
+        ).content
+
+        guard let reportData = content.data(using: .utf8) else {
+            throw TrendAIClientError.emptyContent
+        }
+        do {
+            return try decoder.decode(TrendAnalysisReport.self, from: reportData)
+        } catch {
+            throw TrendAIClientError.invalidReportResponse(decodingSummary(error, data: reportData))
+        }
+    }
+
+    func checkConnection(settings: TrendAIProviderSettings) async throws -> TrendConnectionCheckResult {
+        let result = try await chatCompletionContent(
+            settings: settings,
+            messages: [
+                TrendChatMessage(role: "system", content: "你是连通性检测器。只回复 OK。"),
+                TrendChatMessage(role: "user", content: "ping")
+            ],
+            temperature: 0,
+            maxTokens: 16
+        )
+
+        return TrendConnectionCheckResult(
+            endpoint: result.endpoint.absoluteString,
+            model: settings.model,
+            preview: String(result.content.prefix(120))
+        )
+    }
+
+    private func chatCompletionContent(
+        settings: TrendAIProviderSettings,
+        messages: [TrendChatMessage],
+        temperature: Double,
+        maxTokens: Int?
+    ) async throws -> (content: String, endpoint: URL) {
         let url = try chatCompletionsURL(baseURL: settings.baseURL)
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -41,27 +93,30 @@ struct TrendAIClient: TrendAIClientProtocol {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(TrendChatCompletionRequest(
             model: settings.model,
-            messages: [
-                TrendChatMessage(role: "system", content: prompt.system),
-                TrendChatMessage(role: "user", content: prompt.user)
-            ],
-            temperature: 0.2
+            messages: messages,
+            temperature: temperature,
+            maxTokens: maxTokens
         ))
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
-            throw TrendAIClientError.requestFailed(nil)
+            throw TrendAIClientError.requestFailed(nil, nil)
         }
         guard (200..<300).contains(http.statusCode) else {
-            throw TrendAIClientError.requestFailed(http.statusCode)
+            throw TrendAIClientError.requestFailed(http.statusCode, providerErrorMessage(from: data))
         }
 
-        let completion = try decoder.decode(TrendChatCompletionResponse.self, from: data)
-        guard let content = completion.choices.first?.message.content,
-              let reportData = content.data(using: .utf8) else {
+        let completion: TrendChatCompletionResponse
+        do {
+            completion = try decoder.decode(TrendChatCompletionResponse.self, from: data)
+        } catch {
+            throw TrendAIClientError.invalidOpenAICompatibleResponse(decodingSummary(error, data: data))
+        }
+
+        guard let content = completion.choices.first?.message.content, !content.isEmpty else {
             throw TrendAIClientError.emptyContent
         }
-        return try decoder.decode(TrendAnalysisReport.self, from: reportData)
+        return (content, url)
     }
 
     private func chatCompletionsURL(baseURL: String) throws -> URL {
@@ -71,12 +126,74 @@ struct TrendAIClient: TrendAIClientProtocol {
         }
         return url
     }
+
+    private func providerErrorMessage(from data: Data) -> String? {
+        if let envelope = try? decoder.decode(TrendProviderErrorEnvelope.self, from: data) {
+            let parts = [envelope.error.code, envelope.error.type, envelope.error.message]
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            if !parts.isEmpty {
+                return parts.joined(separator: " · ")
+            }
+        }
+        return responseSnippet(data)
+    }
+
+    private func decodingSummary(_ error: Error, data: Data) -> String {
+        var parts: [String] = []
+        if let decodingError = error as? DecodingError {
+            parts.append(Self.describe(decodingError))
+        } else {
+            parts.append(error.localizedDescription)
+        }
+        if let snippet = responseSnippet(data) {
+            parts.append("返回片段：\(snippet)")
+        }
+        return parts.joined(separator: " ")
+    }
+
+    private func responseSnippet(_ data: Data) -> String? {
+        guard let text = String(data: data, encoding: .utf8) else { return nil }
+        let normalized = text
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return nil }
+        return String(normalized.prefix(220))
+    }
+
+    private static func describe(_ error: DecodingError) -> String {
+        switch error {
+        case .keyNotFound(let key, let context):
+            return "缺少字段 \(key.stringValue)\(codingPathSuffix(context.codingPath))。"
+        case .valueNotFound(_, let context):
+            return "缺少必要值\(codingPathSuffix(context.codingPath))。"
+        case .typeMismatch(_, let context):
+            return "字段类型不匹配\(codingPathSuffix(context.codingPath))。"
+        case .dataCorrupted(let context):
+            return context.debugDescription
+        @unknown default:
+            return error.localizedDescription
+        }
+    }
+
+    private static func codingPathSuffix(_ path: [CodingKey]) -> String {
+        guard !path.isEmpty else { return "" }
+        return "（路径：\(path.map(\.stringValue).joined(separator: "."))）"
+    }
 }
 
 private struct TrendChatCompletionRequest: Encodable {
     let model: String
     let messages: [TrendChatMessage]
     let temperature: Double
+    let maxTokens: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case model
+        case messages
+        case temperature
+        case maxTokens = "max_tokens"
+    }
 }
 
 private struct TrendChatMessage: Codable {
@@ -90,4 +207,14 @@ private struct TrendChatCompletionResponse: Decodable {
 
 private struct TrendChatChoice: Decodable {
     let message: TrendChatMessage
+}
+
+private struct TrendProviderErrorEnvelope: Decodable {
+    let error: TrendProviderError
+}
+
+private struct TrendProviderError: Decodable {
+    let message: String?
+    let type: String?
+    let code: String?
 }

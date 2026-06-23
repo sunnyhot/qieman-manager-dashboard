@@ -140,10 +140,12 @@ final class EnhancementState: ObservableObject {
     @Published var trendReport: TrendAnalysisReport?
     @Published var trendSettings: TrendAnalysisSettings = .default
     @Published var trendGenerationState: TrendGenerationState = .idle
+    @Published var trendConnectionState: TrendConnectionState = .idle
     @Published var trendPrivacyMode: TrendPrivacyMode = .sanitized
     @Published var trendLocalCandidates: [LocalAIConfigurationCandidate] = []
     @Published var lastTrendGeneratedAt: String?
     @Published var lastTrendError = ""
+    @Published var lastTrendConnectionMessage = ""
 }
 
 enum EnhancementCenterTab: String, CaseIterable, Identifiable {

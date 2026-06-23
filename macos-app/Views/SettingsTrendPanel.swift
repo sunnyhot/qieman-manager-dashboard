@@ -65,6 +65,17 @@ extension SettingsSectionView {
                         Label("检测本地配置", systemImage: "magnifyingglass")
                     }
                     .buttonStyle(.bordered)
+
+                    Button {
+                        Task { await model.checkTrendAIConnection() }
+                    } label: {
+                        Label(
+                            model.trendConnectionState == .checking ? "检测中" : "检测连通性",
+                            systemImage: model.trendConnectionState == .checking ? "hourglass" : "antenna.radiowaves.left.and.right"
+                        )
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!model.trendSettings.provider.isConfigured || model.trendConnectionState == .checking)
                 }
 
                 if !model.trendLocalCandidates.isEmpty {
@@ -72,7 +83,12 @@ extension SettingsSectionView {
                     localTrendCandidates
                 }
 
-                if !model.lastTrendError.isEmpty {
+                if !model.lastTrendConnectionMessage.isEmpty {
+                    ToastBar(text: model.lastTrendConnectionMessage, tint: trendConnectionTint)
+                        .padding(.top, 12)
+                }
+
+                if !model.lastTrendError.isEmpty && model.lastTrendError != model.lastTrendConnectionMessage {
                     ToastBar(text: model.lastTrendError, tint: AppPalette.warning)
                         .padding(.top, 12)
                 }
@@ -238,6 +254,19 @@ extension SettingsSectionView {
             get: { model.trendSettings.dailyAutoAnalysisEnabled },
             set: { model.trendSettings.dailyAutoAnalysisEnabled = $0 }
         )
+    }
+
+    private var trendConnectionTint: Color {
+        switch model.trendConnectionState {
+        case .idle:
+            return AppPalette.muted
+        case .checking:
+            return AppPalette.info
+        case .succeeded:
+            return AppPalette.positive
+        case .failed:
+            return AppPalette.warning
+        }
     }
 
     private var trendControlBackground: Color {

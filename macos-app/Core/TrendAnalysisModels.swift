@@ -15,6 +15,19 @@ enum TrendGenerationState: String, Codable, Hashable {
     case rejected
 }
 
+enum TrendConnectionState: String, Codable, Hashable {
+    case idle
+    case checking
+    case succeeded
+    case failed
+}
+
+struct TrendConnectionCheckResult: Codable, Hashable {
+    let endpoint: String
+    let model: String
+    let preview: String
+}
+
 enum TrendExternalSignalStatus: String, Codable, Hashable {
     case available
     case unavailable

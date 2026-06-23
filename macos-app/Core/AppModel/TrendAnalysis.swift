@@ -83,6 +83,30 @@ extension AppModel {
         saveTrendAnalysisSettings()
     }
 
+    func checkTrendAIConnection() async {
+        guard trendSettings.provider.isConfigured else {
+            trendConnectionState = .failed
+            lastTrendConnectionMessage = "趋势分析模型配置不完整，请先填写 Base URL、模型和 API Key。"
+            return
+        }
+
+        trendConnectionState = .checking
+        lastTrendConnectionMessage = "正在检测 \(trendSettings.provider.model)..."
+        lastTrendError = ""
+
+        do {
+            let result = try await trendAIClient.checkConnection(settings: trendSettings.provider)
+            trendConnectionState = .succeeded
+            let preview = result.preview.trimmingCharacters(in: .whitespacesAndNewlines)
+            let suffix = preview.isEmpty ? "" : " 返回：\(preview)"
+            lastTrendConnectionMessage = "连通正常：\(result.model) · \(result.endpoint)。\(suffix)"
+        } catch {
+            trendConnectionState = .failed
+            lastTrendConnectionMessage = error.localizedDescription
+            lastTrendError = error.localizedDescription
+        }
+    }
+
     func generateTrendAnalysis(userInitiated: Bool, createdAt: String? = nil) async {
         guard trendSettings.provider.isConfigured else {
             trendGenerationState = .failed

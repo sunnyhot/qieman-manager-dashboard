@@ -131,7 +131,7 @@ struct LocalAIConfigurationDetector {
             id: "claude-zhipu-openai-compatible",
             providerName: "Claude/cc 智谱 GLM",
             sourceDescription: hasClaudeConfig ? "Claude local config · mapped to OpenAI-compatible" : "Process environment: ANTHROPIC_* · mapped",
-            baseURL: "https://open.bigmodel.cn/api/paas/v4",
+            baseURL: "https://open.bigmodel.cn/api/coding/paas/v4",
             model: model,
             apiKey: apiKey.value.isEmpty ? nil : apiKey.value,
             apiKeySource: apiKey.source,

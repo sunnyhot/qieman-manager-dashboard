@@ -118,13 +118,68 @@ final class TrendAnalysisAppModelTests: XCTestCase {
         XCTAssertEqual(client.callCount, 1)
         XCTAssertEqual(model.trendSettings.lastAutoAnalysisDay, "2026-06-22")
     }
+
+    func testTrendConnectionCheckUpdatesSuccessState() async {
+        let model = AppModel()
+        model.trendSettings = TrendAnalysisSettings(
+            provider: TrendAIProviderSettings(
+                providerName: "Test",
+                baseURL: "https://example.com/v1",
+                model: "test-model",
+                apiKey: "sk-test",
+                supportsOnlineSearch: true,
+                timeoutSeconds: 30
+            ),
+            defaultPrivacyMode: .sanitized,
+            dailyAutoAnalysisEnabled: false,
+            lastAutoAnalysisDay: nil
+        )
+        model.trendAIClient = FakeTrendAIClient(
+            report: .fixture(
+                generatedAt: "2026-06-22 12:00:00",
+                externalSignalStatus: .available
+            ),
+            connectionResult: TrendConnectionCheckResult(
+                endpoint: "https://example.com/v1/chat/completions",
+                model: "test-model",
+                preview: "OK"
+            )
+        )
+
+        await model.checkTrendAIConnection()
+
+        XCTAssertEqual(model.trendConnectionState, .succeeded)
+        XCTAssertTrue(model.lastTrendConnectionMessage.contains("连通正常"))
+        XCTAssertEqual(model.lastTrendError, "")
+    }
+
+    func testTrendConnectionCheckFailsWhenProviderIsIncomplete() async {
+        let model = AppModel()
+
+        await model.checkTrendAIConnection()
+
+        XCTAssertEqual(model.trendConnectionState, .failed)
+        XCTAssertTrue(model.lastTrendConnectionMessage.contains("配置不完整"))
+    }
 }
 
 private struct FakeTrendAIClient: TrendAIClientProtocol {
-    let report: TrendAnalysisReport
+    var report: TrendAnalysisReport = .fixture(
+        generatedAt: "2026-06-22 12:00:00",
+        externalSignalStatus: .available
+    )
+    var connectionResult = TrendConnectionCheckResult(
+        endpoint: "https://example.com/v1/chat/completions",
+        model: "test-model",
+        preview: "OK"
+    )
 
     func generateReport(prompt: TrendModelPrompt, settings: TrendAIProviderSettings) async throws -> TrendAnalysisReport {
         report
+    }
+
+    func checkConnection(settings: TrendAIProviderSettings) async throws -> TrendConnectionCheckResult {
+        connectionResult
     }
 }
 
@@ -136,6 +191,14 @@ private final class CountingTrendAIClient: TrendAIClientProtocol {
         return .fixture(
             generatedAt: "2026-06-22 09:00:00",
             externalSignalStatus: .available
+        )
+    }
+
+    func checkConnection(settings: TrendAIProviderSettings) async throws -> TrendConnectionCheckResult {
+        TrendConnectionCheckResult(
+            endpoint: "https://example.com/v1/chat/completions",
+            model: settings.model,
+            preview: "OK"
         )
     }
 }
