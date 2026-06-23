@@ -8,7 +8,7 @@ protocol TrendAIClientProtocol {
 enum TrendAIClientError: LocalizedError {
     case invalidBaseURL
     case requestFailed(Int?, String?)
-    case emptyContent
+    case emptyContent(finishReason: String?, reasoningPreview: String?)
     case invalidOpenAICompatibleResponse(String)
     case invalidReportResponse(String)
 
@@ -22,8 +22,12 @@ enum TrendAIClientError: LocalizedError {
                 return "趋势分析模型请求失败：HTTP \(statusCode)。\(suffix)"
             }
             return "趋势分析模型请求失败。\(suffix)"
-        case .emptyContent:
-            return "趋势分析模型没有返回可解析内容。"
+        case .emptyContent(let finishReason, let reasoningPreview):
+            let finishText = finishReason.map { "finish_reason=\($0)" } ?? "finish_reason 为空"
+            if let reasoningPreview, !reasoningPreview.isEmpty {
+                return "趋势分析模型只返回了 reasoning_content，没有返回 content（\(finishText)）。通常是 max_tokens 太小或模型先输出思考内容；已保留返回片段：\(reasoningPreview)"
+            }
+            return "趋势分析模型没有返回可解析内容（\(finishText)）。"
         case .invalidOpenAICompatibleResponse(let detail):
             return "模型接口返回格式不符合 OpenAI-compatible chat/completions：\(detail)"
         case .invalidReportResponse(let detail):
@@ -52,7 +56,7 @@ struct TrendAIClient: TrendAIClientProtocol {
         ).content
 
         guard let reportData = content.data(using: .utf8) else {
-            throw TrendAIClientError.emptyContent
+            throw TrendAIClientError.emptyContent(finishReason: nil, reasoningPreview: nil)
         }
         do {
             return try decoder.decode(TrendAnalysisReport.self, from: reportData)
@@ -69,7 +73,7 @@ struct TrendAIClient: TrendAIClientProtocol {
                 TrendChatMessage(role: "user", content: "ping")
             ],
             temperature: 0,
-            maxTokens: 16
+            maxTokens: 128
         )
 
         return TrendConnectionCheckResult(
@@ -113,10 +117,15 @@ struct TrendAIClient: TrendAIClientProtocol {
             throw TrendAIClientError.invalidOpenAICompatibleResponse(decodingSummary(error, data: data))
         }
 
-        guard let content = completion.choices.first?.message.content, !content.isEmpty else {
-            throw TrendAIClientError.emptyContent
+        let firstChoice = completion.choices.first
+        let message = firstChoice?.message
+        if let content = message?.content, !content.isEmpty {
+            return (content, url)
         }
-        return (content, url)
+        throw TrendAIClientError.emptyContent(
+            finishReason: firstChoice?.finishReason,
+            reasoningPreview: message?.reasoningContent.map { String($0.prefix(140)) }
+        )
     }
 
     private func chatCompletionsURL(baseURL: String) throws -> URL {
@@ -198,7 +207,20 @@ private struct TrendChatCompletionRequest: Encodable {
 
 private struct TrendChatMessage: Codable {
     let role: String?
-    let content: String
+    let content: String?
+    let reasoningContent: String?
+
+    init(role: String?, content: String, reasoningContent: String? = nil) {
+        self.role = role
+        self.content = content
+        self.reasoningContent = reasoningContent
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case role
+        case content
+        case reasoningContent = "reasoning_content"
+    }
 }
 
 private struct TrendChatCompletionResponse: Decodable {
@@ -207,6 +229,12 @@ private struct TrendChatCompletionResponse: Decodable {
 
 private struct TrendChatChoice: Decodable {
     let message: TrendChatMessage
+    let finishReason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case message
+        case finishReason = "finish_reason"
+    }
 }
 
 private struct TrendProviderErrorEnvelope: Decodable {

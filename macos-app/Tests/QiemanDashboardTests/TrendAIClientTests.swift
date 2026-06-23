@@ -81,7 +81,7 @@ final class TrendAIClientTests: XCTestCase {
             let body = try Self.requestBodyData(request)
             let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
             XCTAssertEqual(json["model"] as? String, "test-model")
-            XCTAssertEqual(json["max_tokens"] as? Int, 16)
+            XCTAssertEqual(json["max_tokens"] as? Int, 128)
             let messages = try XCTUnwrap(json["messages"] as? [[String: String]])
             XCTAssertEqual(messages.map { $0["role"] }, ["system", "user"])
             XCTAssertEqual(messages.last?["content"], "ping")
@@ -144,6 +144,51 @@ final class TrendAIClientTests: XCTestCase {
         } catch {
             XCTAssertTrue(error.localizedDescription.contains("OpenAI-compatible"))
             XCTAssertTrue(error.localizedDescription.contains("choices"))
+        }
+    }
+
+    func testReasoningOnlyLengthResponseUsesActionableError() async throws {
+        let responseData = try JSONSerialization.data(withJSONObject: [
+            "choices": [
+                [
+                    "finish_reason": "length",
+                    "message": [
+                        "role": "assistant",
+                        "content": "",
+                        "reasoning_content": "1. 分析请求"
+                    ]
+                ]
+            ]
+        ])
+
+        MockTrendURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, responseData)
+        }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockTrendURLProtocol.self]
+        let client = TrendAIClient(session: URLSession(configuration: configuration))
+
+        do {
+            _ = try await client.checkConnection(settings: TrendAIProviderSettings(
+                providerName: "Test",
+                baseURL: "https://api.example.com/v1",
+                model: "test-model",
+                apiKey: "sk-test",
+                supportsOnlineSearch: true,
+                timeoutSeconds: 15
+            ))
+            XCTFail("Expected reasoning-only empty content error")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("reasoning_content"))
+            XCTAssertTrue(error.localizedDescription.contains("max_tokens"))
+            XCTAssertTrue(error.localizedDescription.contains("length"))
         }
     }
 
