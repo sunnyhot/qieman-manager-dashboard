@@ -37,16 +37,7 @@ extension SettingsSectionView {
                     trendField("服务名称", text: trendProviderNameBinding, placeholder: "OpenAI-compatible")
                     trendField("Base URL", text: trendBaseURLBinding, placeholder: "https://api.openai.com/v1")
                     trendField("模型", text: trendModelBinding, placeholder: "gpt-4.1")
-                    SecureField("API Key", text: trendAPIKeyBinding)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 12))
-                        .padding(.horizontal, 10)
-                        .frame(height: 34)
-                        .background(trendControlBackground, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                                .stroke(AppPalette.hairline.opacity(0.32), lineWidth: 1)
-                        )
+                    trendSecureField("API Key", text: trendAPIKeyBinding, placeholder: "sk-...")
                     SettingsToggleRow(
                         title: "模型支持联网检索",
                         detail: "开启后 prompt 会要求引用最新新闻/数据来源",
@@ -157,28 +148,44 @@ extension SettingsSectionView {
     }
 
     private func trendField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
-        TextField(placeholder, text: text)
-            .textFieldStyle(.plain)
-            .font(.system(size: 12))
-            .padding(.horizontal, 10)
-            .frame(height: 34)
-            .background(trendControlBackground, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-            .overlay(
-                HStack {
-                    Text(label)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(AppPalette.muted)
-                        .padding(.leading, 10)
-                    Spacer()
-                }
-                .allowsHitTesting(false)
-            )
-            .padding(.top, 14)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                    .stroke(AppPalette.hairline.opacity(0.32), lineWidth: 1)
-                    .padding(.top, 14)
-            )
+        trendLabeledControl(label) {
+            TextField(placeholder, text: text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+                .padding(.horizontal, 10)
+                .frame(height: 34)
+                .background(trendControlBackground, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .overlay(trendInputBorder)
+        }
+    }
+
+    private func trendSecureField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+        trendLabeledControl(label) {
+            SecureField(placeholder, text: text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+                .padding(.horizontal, 10)
+                .frame(height: 34)
+                .background(trendControlBackground, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .overlay(trendInputBorder)
+        }
+    }
+
+    private func trendLabeledControl<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppPalette.muted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var trendInputBorder: some View {
+        RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+            .stroke(AppPalette.hairline.opacity(0.32), lineWidth: 1)
     }
 
     private var trendProviderNameBinding: Binding<String> {
