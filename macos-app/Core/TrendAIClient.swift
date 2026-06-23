@@ -73,7 +73,7 @@ struct TrendAIClient: TrendAIClientProtocol {
                 TrendChatMessage(role: "user", content: "ping")
             ],
             temperature: 0,
-            maxTokens: 128
+            maxTokens: 1024
         )
 
         return TrendConnectionCheckResult(

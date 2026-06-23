@@ -81,7 +81,7 @@ final class TrendAIClientTests: XCTestCase {
             let body = try Self.requestBodyData(request)
             let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
             XCTAssertEqual(json["model"] as? String, "test-model")
-            XCTAssertEqual(json["max_tokens"] as? Int, 128)
+            XCTAssertEqual(json["max_tokens"] as? Int, 1024)
             let messages = try XCTUnwrap(json["messages"] as? [[String: String]])
             XCTAssertEqual(messages.map { $0["role"] }, ["system", "user"])
             XCTAssertEqual(messages.last?["content"], "ping")
