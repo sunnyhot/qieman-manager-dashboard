@@ -90,6 +90,30 @@ final class LocalAIConfigurationDetectorTests: XCTestCase {
         XCTAssertTrue(candidate.warning?.contains("OpenAI-compatible") == true)
     }
 
+    func testZhipuClaudeConfigMapsToOpenAICompatibleEndpoint() throws {
+        let home = try temporaryDirectory()
+        try "{}".write(to: home.appendingPathComponent(".claude.json"), atomically: true, encoding: .utf8)
+
+        let detector = LocalAIConfigurationDetector(
+            homeDirectory: home,
+            environment: [
+                "ANTHROPIC_BASE_URL": "https://open.bigmodel.cn/api/anthropic",
+                "ANTHROPIC_MODEL": "glm-5.1",
+                "ANTHROPIC_API_KEY": "sk-zhipu-secret"
+            ]
+        )
+
+        let candidates = detector.detect()
+
+        let candidate = try XCTUnwrap(candidates.first { $0.id == "claude-zhipu-openai-compatible" })
+        XCTAssertTrue(candidate.canImport)
+        XCTAssertEqual(candidate.compatibility, .openAICompatible)
+        XCTAssertEqual(candidate.baseURL, "https://open.bigmodel.cn/api/paas/v4")
+        XCTAssertEqual(candidate.model, "glm-5.1")
+        XCTAssertEqual(candidate.apiKeySource, "ANTHROPIC_API_KEY")
+        XCTAssertTrue(candidate.warning?.contains("智谱") == true)
+    }
+
     func testDetectorReturnsStableOrderByConfidence() throws {
         let detector = LocalAIConfigurationDetector(
             homeDirectory: try temporaryDirectory(),

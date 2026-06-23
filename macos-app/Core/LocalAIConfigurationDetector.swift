@@ -91,6 +91,9 @@ struct LocalAIConfigurationDetector {
         let claudeDirectory = homeDirectory.appendingPathComponent(".claude", isDirectory: true)
         let hasClaudeConfig = fileManager.fileExists(atPath: claudeJSON.path) || fileManager.fileExists(atPath: claudeDirectory.path)
         guard hasClaudeConfig || environment["ANTHROPIC_API_KEY"] != nil else { return nil }
+        if let zhipuCandidate = zhipuOpenAICompatibleCandidate(hasClaudeConfig: hasClaudeConfig) {
+            return zhipuCandidate
+        }
         return LocalAIConfigurationCandidate(
             id: "claude-direct",
             providerName: "Claude/cc direct",
@@ -102,6 +105,33 @@ struct LocalAIConfigurationDetector {
             compatibility: .needsCompatibleEndpoint,
             confidence: 50,
             warning: "检测到 Claude/cc 配置；首版趋势分析只直接支持 OpenAI-compatible endpoint。"
+        )
+    }
+
+    private func zhipuOpenAICompatibleCandidate(hasClaudeConfig: Bool) -> LocalAIConfigurationCandidate? {
+        guard
+            let baseURL = environment["ANTHROPIC_BASE_URL"],
+            baseURL.normalizedURLPath.contains("open.bigmodel.cn/api/anthropic")
+        else {
+            return nil
+        }
+
+        let apiKey = environment["ANTHROPIC_API_KEY"] ?? ""
+        let model = environment["ANTHROPIC_MODEL"] ?? ""
+        let canMap = !apiKey.isEmpty && !model.isEmpty
+        return LocalAIConfigurationCandidate(
+            id: "claude-zhipu-openai-compatible",
+            providerName: "Claude/cc 智谱 GLM",
+            sourceDescription: hasClaudeConfig ? "Claude local config · mapped to OpenAI-compatible" : "Process environment: ANTHROPIC_* · mapped",
+            baseURL: "https://open.bigmodel.cn/api/paas/v4",
+            model: model,
+            apiKey: apiKey.isEmpty ? nil : apiKey,
+            apiKeySource: "ANTHROPIC_API_KEY",
+            compatibility: canMap ? .openAICompatible : .incomplete,
+            confidence: canMap ? 88 : 55,
+            warning: canMap
+                ? "检测到智谱 Claude/cc 配置，已映射为 OpenAI-compatible endpoint 导入。"
+                : "检测到智谱 Claude/cc 配置，但缺少 ANTHROPIC_API_KEY 或 ANTHROPIC_MODEL。"
         )
     }
 
@@ -154,6 +184,12 @@ struct LocalAIConfigurationDetector {
             return nil
         }
         return String(line[valueRange]).trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+    }
+}
+
+private extension String {
+    var normalizedURLPath: String {
+        trimmingCharacters(in: CharacterSet(charactersIn: "/")).lowercased()
     }
 }
 
