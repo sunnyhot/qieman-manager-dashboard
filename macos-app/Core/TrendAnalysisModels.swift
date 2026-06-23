@@ -86,13 +86,15 @@ struct TrendAIProviderSettings: Codable, Hashable {
     var supportsOnlineSearch: Bool
     var timeoutSeconds: Double
 
+    static let defaultGenerationTimeoutSeconds: Double = 300
+
     static let empty = TrendAIProviderSettings(
         providerName: "",
         baseURL: "",
         model: "",
         apiKey: "",
         supportsOnlineSearch: false,
-        timeoutSeconds: 60
+        timeoutSeconds: defaultGenerationTimeoutSeconds
     )
 
     var isConfigured: Bool {
@@ -103,6 +105,13 @@ struct TrendAIProviderSettings: Codable, Hashable {
 
     var redactedAPIKey: String {
         Self.mask(apiKey)
+    }
+
+    var upgradedForTrendGeneration: TrendAIProviderSettings {
+        guard isConfigured, timeoutSeconds < Self.defaultGenerationTimeoutSeconds else { return self }
+        var upgraded = self
+        upgraded.timeoutSeconds = Self.defaultGenerationTimeoutSeconds
+        return upgraded
     }
 
     static func mask(_ value: String) -> String {
@@ -168,7 +177,7 @@ struct LocalAIConfigurationCandidate: Identifiable, Codable, Hashable {
             model: model,
             apiKey: apiKey ?? "",
             supportsOnlineSearch: true,
-            timeoutSeconds: 60
+            timeoutSeconds: TrendAIProviderSettings.defaultGenerationTimeoutSeconds
         )
     }
 }

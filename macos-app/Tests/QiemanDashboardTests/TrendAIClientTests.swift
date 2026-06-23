@@ -192,6 +192,34 @@ final class TrendAIClientTests: XCTestCase {
         }
     }
 
+    func testTimedOutRequestUsesChineseActionableError() async throws {
+        MockTrendURLProtocol.requestHandler = { _ in
+            throw URLError(.timedOut)
+        }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockTrendURLProtocol.self]
+        let client = TrendAIClient(session: URLSession(configuration: configuration))
+
+        do {
+            _ = try await client.generateReport(
+                prompt: TrendModelPrompt(system: "system prompt", user: "user prompt"),
+                settings: TrendAIProviderSettings(
+                    providerName: "Test",
+                    baseURL: "https://api.example.com/v1",
+                    model: "test-model",
+                    apiKey: "sk-test",
+                    supportsOnlineSearch: true,
+                    timeoutSeconds: 15
+                )
+            )
+            XCTFail("Expected timed out error")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("请求超时"))
+            XCTAssertTrue(error.localizedDescription.contains("15"))
+        }
+    }
+
     private static func requestBodyData(_ request: URLRequest) throws -> Data {
         if let httpBody = request.httpBody {
             return httpBody

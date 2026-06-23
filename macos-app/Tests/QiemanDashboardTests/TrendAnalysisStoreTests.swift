@@ -34,7 +34,39 @@ final class TrendAnalysisStoreTests: XCTestCase {
         try TrendAnalysisSettingsStore().save(settings, to: url)
         let loaded = try TrendAnalysisSettingsStore().load(from: url)
 
-        XCTAssertEqual(loaded, settings)
+        XCTAssertEqual(loaded.provider.providerName, settings.provider.providerName)
+        XCTAssertEqual(loaded.provider.baseURL, settings.provider.baseURL)
+        XCTAssertEqual(loaded.provider.model, settings.provider.model)
+        XCTAssertEqual(loaded.provider.apiKey, settings.provider.apiKey)
+        XCTAssertEqual(loaded.provider.supportsOnlineSearch, settings.provider.supportsOnlineSearch)
+        XCTAssertEqual(loaded.provider.timeoutSeconds, TrendAIProviderSettings.defaultGenerationTimeoutSeconds)
+        XCTAssertEqual(loaded.defaultPrivacyMode, settings.defaultPrivacyMode)
+        XCTAssertEqual(loaded.dailyAutoAnalysisEnabled, settings.dailyAutoAnalysisEnabled)
+        XCTAssertEqual(loaded.lastAutoAnalysisDay, settings.lastAutoAnalysisDay)
+    }
+
+    func testSettingsStoreUpgradesLegacyShortProviderTimeout() throws {
+        let directory = try temporaryDirectory()
+        let url = directory.appendingPathComponent("trend-settings.json")
+        try """
+        {
+          "dailyAutoAnalysisEnabled": false,
+          "defaultPrivacyMode": "完整明细",
+          "lastAutoAnalysisDay": null,
+          "provider": {
+            "apiKey": "sk-test-value",
+            "baseURL": "https://open.bigmodel.cn/api/coding/paas/v4",
+            "model": "glm-5.2",
+            "providerName": "智谱",
+            "supportsOnlineSearch": true,
+            "timeoutSeconds": 60
+          }
+        }
+        """.write(to: url, atomically: true, encoding: .utf8)
+
+        let loaded = try TrendAnalysisSettingsStore().load(from: url)
+
+        XCTAssertEqual(loaded.provider.timeoutSeconds, TrendAIProviderSettings.defaultGenerationTimeoutSeconds)
     }
 
     func testReportStoreKeepsLatestSuccessfulReport() throws {

@@ -8,6 +8,7 @@ protocol TrendAIClientProtocol {
 enum TrendAIClientError: LocalizedError {
     case invalidBaseURL
     case requestFailed(Int?, String?)
+    case timedOut(Double)
     case emptyContent(finishReason: String?, reasoningPreview: String?)
     case invalidOpenAICompatibleResponse(String)
     case invalidReportResponse(String)
@@ -22,6 +23,8 @@ enum TrendAIClientError: LocalizedError {
                 return "趋势分析模型请求失败：HTTP \(statusCode)。\(suffix)"
             }
             return "趋势分析模型请求失败。\(suffix)"
+        case .timedOut(let seconds):
+            return "趋势分析模型请求超时：\(Int(seconds)) 秒内未返回。GLM-5.2 正式分析会先推理再输出，建议稍后重试或减少明细范围。"
         case .emptyContent(let finishReason, let reasoningPreview):
             let finishText = finishReason.map { "finish_reason=\($0)" } ?? "finish_reason 为空"
             if let reasoningPreview, !reasoningPreview.isEmpty {
@@ -102,7 +105,13 @@ struct TrendAIClient: TrendAIClientProtocol {
             maxTokens: maxTokens
         ))
 
-        let (data, response) = try await session.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let error as URLError where error.code == .timedOut {
+            throw TrendAIClientError.timedOut(settings.timeoutSeconds)
+        }
         guard let http = response as? HTTPURLResponse else {
             throw TrendAIClientError.requestFailed(nil, nil)
         }
