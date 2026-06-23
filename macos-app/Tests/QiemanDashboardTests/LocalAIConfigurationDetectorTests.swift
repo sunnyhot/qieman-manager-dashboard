@@ -114,6 +114,35 @@ final class LocalAIConfigurationDetectorTests: XCTestCase {
         XCTAssertTrue(candidate.warning?.contains("智谱") == true)
     }
 
+    func testZhipuClaudeSettingsJSONAuthTokenMapsToOpenAICompatibleEndpoint() throws {
+        let home = try temporaryDirectory()
+        let claudeDirectory = home.appendingPathComponent(".claude", isDirectory: true)
+        try FileManager.default.createDirectory(at: claudeDirectory, withIntermediateDirectories: true)
+        try """
+        {
+          "env": {
+            "ANTHROPIC_BASE_URL": "https://open.bigmodel.cn/api/anthropic",
+            "ANTHROPIC_AUTH_TOKEN": "zhipu-auth-secret",
+            "ANTHROPIC_MODEL": "GLM-5.2"
+          }
+        }
+        """.write(to: claudeDirectory.appendingPathComponent("settings.json"), atomically: true, encoding: .utf8)
+
+        let detector = LocalAIConfigurationDetector(
+            homeDirectory: home,
+            environment: [:]
+        )
+
+        let candidates = detector.detect()
+
+        let candidate = try XCTUnwrap(candidates.first { $0.id == "claude-zhipu-openai-compatible" })
+        XCTAssertTrue(candidate.canImport)
+        XCTAssertEqual(candidate.baseURL, "https://open.bigmodel.cn/api/paas/v4")
+        XCTAssertEqual(candidate.model, "GLM-5.2")
+        XCTAssertEqual(candidate.apiKey, "zhipu-auth-secret")
+        XCTAssertEqual(candidate.apiKeySource, "ANTHROPIC_AUTH_TOKEN")
+    }
+
     func testDetectorReturnsStableOrderByConfidence() throws {
         let detector = LocalAIConfigurationDetector(
             homeDirectory: try temporaryDirectory(),
