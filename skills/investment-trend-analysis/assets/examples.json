@@ -1,0 +1,33 @@
+[
+  {
+    "generatedAt": "2026-06-24 10:00:00",
+    "dataAsOf": "2026-06-24 10:00:00",
+    "privacyMode": "脱敏摘要",
+    "externalSignalStatus": "partial",
+    "portfolio": {
+      "headline": "组合中性偏积极",
+      "riskLevel": "medium",
+      "summary": "组合需要继续观察科技与红利暴露的分化。"
+    },
+    "horizons": [
+      {
+        "horizon": "short",
+        "direction": "neutral",
+        "confidence": {
+          "score": 62,
+          "label": "中"
+        },
+        "rationale": "短期信号未形成一致方向。",
+        "counterSignals": [
+          "若成交量放大并突破压力位，短期判断需要上修。"
+        ]
+      }
+    ],
+    "sectors": [],
+    "keyAssets": [],
+    "actions": [],
+    "evidence": [],
+    "warnings": [],
+    "disclaimer": "非投资建议，仅供个人研究参考。"
+  }
+]

@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "generatedAt",
+    "dataAsOf",
+    "privacyMode",
+    "externalSignalStatus",
+    "portfolio",
+    "horizons",
+    "sectors",
+    "keyAssets",
+    "actions",
+    "evidence",
+    "warnings",
+    "disclaimer"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "type": "string"
+    },
+    "dataAsOf": {
+      "type": "string"
+    },
+    "privacyMode": {
+      "enum": ["脱敏摘要", "完整明细"]
+    },
+    "externalSignalStatus": {
+      "enum": ["available", "unavailable", "partial", "stale"]
+    },
+    "portfolio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["headline", "riskLevel", "summary"],
+      "properties": {
+        "headline": { "type": "string" },
+        "riskLevel": { "enum": ["low", "medium", "high", "unknown"] },
+        "summary": { "type": "string" }
+      }
+    },
+    "horizons": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/horizon" }
+    },
+    "sectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["name", "direction", "confidence", "rationale", "counterSignals"],
+        "properties": {
+          "name": { "type": "string" },
+          "exposureText": { "type": "string" },
+          "direction": { "$ref": "#/$defs/direction" },
+          "confidence": { "$ref": "#/$defs/confidence" },
+          "rationale": { "type": "string" },
+          "counterSignals": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "keyAssets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["id", "kind", "title", "detail", "confidence", "triggerConditions", "invalidatingConditions"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": {
+            "enum": ["watch", "waitForConfirmation", "observeInBatches", "pausePlan", "considerIncrease", "considerReduce", "rebalanceReview"]
+          },
+          "title": { "type": "string" },
+          "detail": { "type": "string" },
+          "targetName": {
+            "type": ["string", "null"]
+          },
+          "confidence": { "$ref": "#/$defs/confidence" },
+          "triggerConditions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "invalidatingConditions": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "disclaimer": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "direction": {
+      "enum": ["bullish", "neutralPositive", "neutral", "neutralNegative", "bearish", "uncertain"]
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "label"],
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "horizon": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["horizon", "direction", "confidence", "rationale", "counterSignals"],
+      "properties": {
+        "horizon": {
+          "enum": ["short", "medium", "long"]
+        },
+        "direction": { "$ref": "#/$defs/direction" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "rationale": { "type": "string" },
+        "counterSignals": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
