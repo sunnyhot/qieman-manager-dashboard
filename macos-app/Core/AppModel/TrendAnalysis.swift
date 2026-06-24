@@ -46,7 +46,6 @@ extension AppModel {
         }
 
         detectTrendAgents()
-        detectLocalAIConfigurations()
     }
 
     func saveTrendAnalysisSettings() {
@@ -67,30 +66,8 @@ extension AppModel {
         }
     }
 
-    func detectLocalAIConfigurations() {
-        trendLocalCandidates = LocalAIConfigurationDetector().detect()
-    }
-
     func detectTrendAgents() {
         trendAgentCandidates = trendAgentDetector.detect()
-    }
-
-    func importTrendProvider(_ candidate: LocalAIConfigurationCandidate) {
-        guard let imported = candidate.importedSettings() else {
-            lastTrendError = candidate.warning ?? "当前配置不能直接导入趋势分析模型。"
-            return
-        }
-
-        trendSettings.provider = imported
-        if trendPrivacyMode != trendSettings.defaultPrivacyMode {
-            trendSettings.defaultPrivacyMode = trendPrivacyMode
-        }
-        lastTrendError = ""
-        saveTrendAnalysisSettings()
-    }
-
-    func checkTrendAIConnection() async {
-        await checkTrendAgentConnection()
     }
 
     func checkTrendAgentConnection() async {

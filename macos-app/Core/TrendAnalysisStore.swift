@@ -15,9 +15,7 @@ struct TrendAnalysisSettingsStore {
             return .default
         }
         let data = try Data(contentsOf: fileURL)
-        var settings = try decoder.decode(TrendAnalysisSettings.self, from: data)
-        settings.provider = settings.provider.upgradedForTrendGeneration
-        return settings
+        return try decoder.decode(TrendAnalysisSettings.self, from: data)
     }
 
     func save(_ settings: TrendAnalysisSettings, to fileURL: URL) throws {

@@ -22,12 +22,6 @@ enum TrendConnectionState: String, Codable, Hashable {
     case failed
 }
 
-struct TrendConnectionCheckResult: Codable, Hashable {
-    let endpoint: String
-    let model: String
-    let preview: String
-}
-
 struct TrendProgressLog: Identifiable, Hashable {
     let id: UUID
     let timestamp: String
@@ -132,59 +126,14 @@ struct TrendConfidence: Codable, Hashable {
     }
 }
 
-struct TrendAIProviderSettings: Codable, Hashable {
-    var providerName: String
-    var baseURL: String
-    var model: String
-    var apiKey: String
-    var supportsOnlineSearch: Bool
-    var timeoutSeconds: Double
-
-    static let defaultGenerationTimeoutSeconds: Double = 300
-
-    static let empty = TrendAIProviderSettings(
-        providerName: "",
-        baseURL: "",
-        model: "",
-        apiKey: "",
-        supportsOnlineSearch: false,
-        timeoutSeconds: defaultGenerationTimeoutSeconds
-    )
-
-    var isConfigured: Bool {
-        !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    var redactedAPIKey: String {
-        Self.mask(apiKey)
-    }
-
-    var upgradedForTrendGeneration: TrendAIProviderSettings {
-        guard isConfigured, timeoutSeconds < Self.defaultGenerationTimeoutSeconds else { return self }
-        var upgraded = self
-        upgraded.timeoutSeconds = Self.defaultGenerationTimeoutSeconds
-        return upgraded
-    }
-
-    static func mask(_ value: String) -> String {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count > 8 else { return trimmed.isEmpty ? "" : "...." }
-        return "\(trimmed.prefix(3))...\(trimmed.suffix(4))"
-    }
-}
-
 struct TrendAnalysisSettings: Codable, Hashable {
     var agent: TrendAgentSettings
-    var provider: TrendAIProviderSettings
     var defaultPrivacyMode: TrendPrivacyMode
     var dailyAutoAnalysisEnabled: Bool
     var lastAutoAnalysisDay: String?
 
     static let `default` = TrendAnalysisSettings(
         agent: .default,
-        provider: .empty,
         defaultPrivacyMode: .sanitized,
         dailyAutoAnalysisEnabled: false,
         lastAutoAnalysisDay: nil
@@ -197,34 +146,6 @@ struct TrendAnalysisSettings: Codable, Hashable {
         lastAutoAnalysisDay: String?
     ) {
         self.agent = agent
-        self.provider = .empty
-        self.defaultPrivacyMode = defaultPrivacyMode
-        self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
-        self.lastAutoAnalysisDay = lastAutoAnalysisDay
-    }
-
-    init(
-        provider: TrendAIProviderSettings,
-        defaultPrivacyMode: TrendPrivacyMode,
-        dailyAutoAnalysisEnabled: Bool,
-        lastAutoAnalysisDay: String?
-    ) {
-        self.agent = .default
-        self.provider = provider
-        self.defaultPrivacyMode = defaultPrivacyMode
-        self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
-        self.lastAutoAnalysisDay = lastAutoAnalysisDay
-    }
-
-    init(
-        agent: TrendAgentSettings,
-        provider: TrendAIProviderSettings,
-        defaultPrivacyMode: TrendPrivacyMode,
-        dailyAutoAnalysisEnabled: Bool,
-        lastAutoAnalysisDay: String?
-    ) {
-        self.agent = agent
-        self.provider = provider
         self.defaultPrivacyMode = defaultPrivacyMode
         self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
         self.lastAutoAnalysisDay = lastAutoAnalysisDay
@@ -233,7 +154,6 @@ struct TrendAnalysisSettings: Codable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         agent = try container.decodeIfPresent(TrendAgentSettings.self, forKey: .agent) ?? .default
-        provider = try container.decodeIfPresent(TrendAIProviderSettings.self, forKey: .provider) ?? .empty
         defaultPrivacyMode = try container.decodeIfPresent(TrendPrivacyMode.self, forKey: .defaultPrivacyMode) ?? .sanitized
         dailyAutoAnalysisEnabled = try container.decodeIfPresent(Bool.self, forKey: .dailyAutoAnalysisEnabled) ?? false
         lastAutoAnalysisDay = try container.decodeIfPresent(String.self, forKey: .lastAutoAnalysisDay)
@@ -241,7 +161,6 @@ struct TrendAnalysisSettings: Codable, Hashable {
 
     private enum CodingKeys: String, CodingKey {
         case agent
-        case provider
         case defaultPrivacyMode
         case dailyAutoAnalysisEnabled
         case lastAutoAnalysisDay
@@ -249,49 +168,6 @@ struct TrendAnalysisSettings: Codable, Hashable {
 
     func hasAutoAnalyzed(on day: String) -> Bool {
         lastAutoAnalysisDay == day
-    }
-}
-
-enum LocalAIConfigurationCompatibility: String, Codable, Hashable {
-    case openAICompatible
-    case needsCompatibleEndpoint
-    case incomplete
-}
-
-struct LocalAIConfigurationCandidate: Identifiable, Codable, Hashable {
-    let id: String
-    let providerName: String
-    let sourceDescription: String
-    let baseURL: String?
-    let model: String?
-    let apiKey: String?
-    let apiKeySource: String?
-    let compatibility: LocalAIConfigurationCompatibility
-    let confidence: Int
-    let warning: String?
-
-    var maskedAPIKey: String {
-        guard let apiKey else { return "" }
-        return TrendAIProviderSettings.mask(apiKey)
-    }
-
-    var canImport: Bool {
-        compatibility == .openAICompatible
-            && !(baseURL ?? "").isEmpty
-            && !(model ?? "").isEmpty
-            && !(apiKey ?? "").isEmpty
-    }
-
-    func importedSettings() -> TrendAIProviderSettings? {
-        guard canImport, let baseURL, let model else { return nil }
-        return TrendAIProviderSettings(
-            providerName: providerName,
-            baseURL: baseURL,
-            model: model,
-            apiKey: apiKey ?? "",
-            supportsOnlineSearch: true,
-            timeoutSeconds: TrendAIProviderSettings.defaultGenerationTimeoutSeconds
-        )
     }
 }
 

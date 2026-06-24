@@ -3,28 +3,6 @@ import XCTest
 
 @MainActor
 final class TrendAnalysisAppModelTests: XCTestCase {
-    func testImportingLocalCandidateUpdatesSettings() {
-        let model = AppModel()
-        let candidate = LocalAIConfigurationCandidate(
-            id: "env-openai",
-            providerName: "OpenAI-compatible environment",
-            sourceDescription: "Process environment",
-            baseURL: "https://api.openai.com/v1",
-            model: "gpt-4.1",
-            apiKey: "sk-test",
-            apiKeySource: "OPENAI_API_KEY",
-            compatibility: .openAICompatible,
-            confidence: 95,
-            warning: nil
-        )
-
-        model.importTrendProvider(candidate)
-
-        XCTAssertEqual(model.trendSettings.provider.baseURL, "https://api.openai.com/v1")
-        XCTAssertEqual(model.trendSettings.provider.model, "gpt-4.1")
-        XCTAssertEqual(model.trendSettings.provider.apiKey, "sk-test")
-    }
-
     func testSuccessfulGenerationStoresReport() async {
         let model = AppModel()
         model.trendSettings = makeAgentSettings()

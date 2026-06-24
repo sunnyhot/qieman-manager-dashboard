@@ -102,7 +102,6 @@ final class AppModel: ObservableObject {
     let importRecognizer = PersonalImportRecognizer()
     let notificationManager = LocalNotificationManager()
     let personalAssetAutomation = PersonalAssetAutomation()
-    var trendAIClient: any TrendAIClientProtocol = TrendAIClient()
     var trendAgentRunner: any TrendAgentRunnerProtocol = TrendAgentRunner()
     var trendAgentDetector = TrendAgentDetector()
     var trendProgressHeartbeatIntervalNanoseconds: UInt64 = 15_000_000_000
@@ -360,11 +359,6 @@ final class AppModel: ObservableObject {
     var trendPrivacyMode: TrendPrivacyMode {
         get { enhancementState.trendPrivacyMode }
         set { enhancementState.trendPrivacyMode = newValue }
-    }
-
-    var trendLocalCandidates: [LocalAIConfigurationCandidate] {
-        get { enhancementState.trendLocalCandidates }
-        set { enhancementState.trendLocalCandidates = newValue }
     }
 
     var trendAgentCandidates: [TrendAgentCandidate] {

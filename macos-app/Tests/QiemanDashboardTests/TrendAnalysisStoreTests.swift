@@ -52,7 +52,6 @@ final class TrendAnalysisStoreTests: XCTestCase {
           "defaultPrivacyMode": "完整明细",
           "lastAutoAnalysisDay": "2026-06-22",
           "provider": {
-            "apiKey": "sk-test-value",
             "baseURL": "https://open.bigmodel.cn/api/coding/paas/v4",
             "model": "glm-5.2",
             "providerName": "智谱",
