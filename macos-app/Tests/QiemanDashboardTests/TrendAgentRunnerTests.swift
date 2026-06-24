@@ -73,6 +73,71 @@ final class TrendAgentRunnerTests: XCTestCase {
         XCTAssertEqual(result.commandPath, executable.path)
     }
 
+    func testClaudeRunnerReadsPromptFromStandardInputAndExtractsResultJSON() async throws {
+        let executable = try makeExecutable(
+            body: """
+            #!/usr/bin/env bash
+            stdin="$(cat)"
+            if [ "$stdin" != "prompt" ]; then
+              exit 0
+            fi
+            cat <<'JSON'
+            {"type":"result","subtype":"success","is_error":false,"result":"{\\"generatedAt\\":\\"2026-06-24 10:00:00\\",\\"dataAsOf\\":\\"2026-06-24 10:00:00\\",\\"privacyMode\\":\\"脱敏摘要\\",\\"externalSignalStatus\\":\\"partial\\",\\"portfolio\\":{\\"headline\\":\\"Claude JSON\\",\\"riskLevel\\":\\"medium\\",\\"summary\\":\\"测试摘要\\"},\\"horizons\\":[{\\"horizon\\":\\"short\\",\\"direction\\":\\"neutral\\",\\"confidence\\":{\\"score\\":60,\\"label\\":\\"中\\"},\\"rationale\\":\\"测试判断\\",\\"counterSignals\\":[\\"测试反证\\"]}],\\"sectors\\":[],\\"keyAssets\\":[],\\"actions\\":[],\\"evidence\\":[],\\"warnings\\":[],\\"disclaimer\\":\\"非投资建议，仅供个人研究参考。\\"}","session_id":"test"}
+            JSON
+            """
+        )
+        let packet = try makePacket()
+        let settings = TrendAgentSettings(
+            kind: .claudeCLI,
+            commandPath: "",
+            model: "",
+            profile: "",
+            timeoutSeconds: 5,
+            customCommandTemplate: ""
+        )
+
+        let result = try await TrendAgentRunner(processClient: TrendAgentProcessClient()).generateReport(
+            packet: packet,
+            settings: settings,
+            candidates: [makeClaudeCandidate(path: executable.path)]
+        )
+        let report = try JSONDecoder().decode(TrendAnalysisReport.self, from: Data(result.reportJSON.utf8))
+
+        XCTAssertEqual(report.portfolio.headline, "Claude JSON")
+    }
+
+    func testClaudeRunnerSurfacesWrapperAPIError() async throws {
+        let executable = try makeExecutable(
+            body: """
+            #!/usr/bin/env bash
+            cat >/dev/null
+            cat <<'JSON'
+            {"type":"result","subtype":"success","is_error":true,"api_error_status":529,"result":"API Error: 529 overloaded","session_id":"test"}
+            JSON
+            """
+        )
+        let packet = try makePacket()
+        let settings = TrendAgentSettings(
+            kind: .claudeCLI,
+            commandPath: "",
+            model: "",
+            profile: "",
+            timeoutSeconds: 5,
+            customCommandTemplate: ""
+        )
+
+        do {
+            _ = try await TrendAgentRunner(processClient: TrendAgentProcessClient()).generateReport(
+                packet: packet,
+                settings: settings,
+                candidates: [makeClaudeCandidate(path: executable.path)]
+            )
+            XCTFail("Expected Claude wrapper error")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("API Error: 529 overloaded"))
+        }
+    }
+
     func testAutomaticRunnerFailsWhenNoCandidatesAreRunnable() async {
         let packet = try! makePacket()
         let settings = TrendAgentSettings.default
@@ -121,6 +186,20 @@ final class TrendAgentRunnerTests: XCTestCase {
             schemaURL: schemaURL,
             outputURL: outputURL,
             logURL: logURL
+        )
+    }
+
+    private func makeClaudeCandidate(path: String) -> TrendAgentCandidate {
+        TrendAgentCandidate(
+            id: "claude",
+            kind: .claudeCLI,
+            displayName: "Claude CLI",
+            commandPath: path,
+            version: nil,
+            isInstalled: true,
+            isExecutable: true,
+            capabilities: [.nonInteractive, .jsonSchema],
+            warning: nil
         )
     }
 }

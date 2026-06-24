@@ -74,6 +74,8 @@ struct TrendAgentRunner: TrendAgentRunnerProtocol {
         let outputText: String
         if fileManager.fileExists(atPath: packet.outputURL.path) {
             outputText = try String(contentsOf: packet.outputURL)
+        } else if command.kind == .claudeCLI {
+            outputText = try decodeClaudePrintOutput(result.stdout)
         } else {
             outputText = result.stdout
         }
@@ -133,12 +135,11 @@ struct TrendAgentRunner: TrendAgentRunnerProtocol {
         if !settings.model.isEmpty {
             arguments.append(contentsOf: ["--model", settings.model])
         }
-        arguments.append(try String(contentsOf: packet.promptURL))
         return try await processClient.run(
             executableURL: URL(fileURLWithPath: command),
             arguments: arguments,
             currentDirectoryURL: packet.runDirectory,
-            standardInput: nil,
+            standardInput: try String(contentsOf: packet.promptURL),
             timeoutSeconds: settings.timeoutSeconds
         )
     }
@@ -198,5 +199,39 @@ struct TrendAgentRunner: TrendAgentRunnerProtocol {
             .replacingOccurrences(of: "{{runDir}}", with: packet.runDirectory.path)
             .split(separator: " ")
             .map(String.init)
+    }
+
+    private func decodeClaudePrintOutput(_ output: String) throws -> String {
+        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw TrendAgentRunnerError.emptyOutput }
+        let data = Data(trimmed.utf8)
+        guard let response = try? JSONDecoder().decode(ClaudePrintResponse.self, from: data) else {
+            return trimmed
+        }
+
+        if response.isError == true {
+            let detail = response.result?.trimmingCharacters(in: .whitespacesAndNewlines)
+                ?? response.error?.trimmingCharacters(in: .whitespacesAndNewlines)
+                ?? "Claude CLI returned an error."
+            throw TrendAgentRunnerError.commandFailed(detail)
+        }
+
+        guard let result = response.result?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !result.isEmpty else {
+            throw TrendAgentRunnerError.emptyOutput
+        }
+        return result
+    }
+}
+
+private struct ClaudePrintResponse: Decodable {
+    let result: String?
+    let error: String?
+    let isError: Bool?
+
+    private enum CodingKeys: String, CodingKey {
+        case result
+        case error
+        case isError = "is_error"
     }
 }
