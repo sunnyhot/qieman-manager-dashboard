@@ -88,6 +88,9 @@ struct TrendPromptBuilder {
         Do not invent sources.
         Do not guarantee returns.
         Do not use mandatory buy/sell language.
+        Do not perform exhaustive online searches for every asset; use broad market, sector, policy, and clearly material asset-level signals only.
+        Keep keyAssets, actions, and evidence concise: prefer at most 5 keyAssets, 5 actions, and 6 evidence items in a final report, and at most 3 of each in chunk reports.
+        If keyAssets.horizons is not empty, each item must use the same horizon object shape as top-level horizons: horizon, direction, confidence, rationale, and counterSignals.
         Always include counterSignals, confidence, dataAsOf, generatedAt, evidence, warnings, and disclaimer.
         Every action candidate must include triggerConditions and invalidatingConditions.
         Use conditional Chinese wording such as 可考虑, 关注, 等待确认, 若...则....

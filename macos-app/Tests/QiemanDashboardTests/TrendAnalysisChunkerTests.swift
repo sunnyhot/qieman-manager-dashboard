@@ -9,12 +9,22 @@ final class TrendAnalysisChunkerTests: XCTestCase {
         let chunks = chunker.chunks(from: context)
 
         XCTAssertTrue(chunker.shouldChunk(context))
-        XCTAssertEqual(chunks.map(\.assets.count), [20, 20, 11])
+        XCTAssertEqual(chunks.map(\.assets.count), [10, 10, 10, 10, 10, 1])
         XCTAssertEqual(chunks[0].assets.first?.id, "asset-0")
-        XCTAssertEqual(chunks[1].assets.first?.id, "asset-20")
-        XCTAssertEqual(chunks[2].assets.first?.id, "asset-40")
+        XCTAssertEqual(chunks[1].assets.first?.id, "asset-10")
+        XCTAssertEqual(chunks[2].assets.first?.id, "asset-20")
         XCTAssertEqual(chunks[0].portfolio.assetCount, 51)
-        XCTAssertEqual(chunks[0].sectors.first?.assetCount, 20)
+        XCTAssertEqual(chunks[0].sectors.first?.assetCount, 10)
+    }
+
+    func testTwentySixAssetContextSplitsBeforeProviderTimeoutRisk() {
+        let context = makeContext(assetCount: 26)
+        let chunker = TrendAnalysisChunker()
+
+        let chunks = chunker.chunks(from: context)
+
+        XCTAssertTrue(chunker.shouldChunk(context))
+        XCTAssertEqual(chunks.map(\.assets.count), [10, 10, 6])
     }
 
     func testLargeContextSplitsBySectorBeforeAssetCount() {
@@ -27,11 +37,11 @@ final class TrendAnalysisChunkerTests: XCTestCase {
 
         let chunks = chunker.chunks(from: context)
 
-        XCTAssertEqual(chunks.map { $0.sectors.map(\.name) }, [["A股"], ["美股"], ["场内基金"]])
-        XCTAssertEqual(chunks.map(\.assets.count), [16, 14, 12])
+        XCTAssertEqual(chunks.map { $0.sectors.map(\.name) }, [["A股"], ["A股"], ["美股"], ["美股"], ["场内基金"], ["场内基金"]])
+        XCTAssertEqual(chunks.map(\.assets.count), [10, 6, 10, 4, 10, 2])
         XCTAssertEqual(Set(chunks[0].assets.map(\.sector)), ["A股"])
-        XCTAssertEqual(Set(chunks[1].assets.map(\.sector)), ["美股"])
-        XCTAssertEqual(Set(chunks[2].assets.map(\.sector)), ["场内基金"])
+        XCTAssertEqual(Set(chunks[2].assets.map(\.sector)), ["美股"])
+        XCTAssertEqual(Set(chunks[4].assets.map(\.sector)), ["场内基金"])
     }
 
     func testOversizedSectorKeepsSectorThenSplitsWithinIt() {
@@ -43,22 +53,22 @@ final class TrendAnalysisChunkerTests: XCTestCase {
 
         let chunks = chunker.chunks(from: context)
 
-        XCTAssertEqual(chunks.map { $0.sectors.map(\.name) }, [["A股"], ["A股"], ["A股"], ["美股"]])
-        XCTAssertEqual(chunks.map(\.assets.count), [20, 20, 2, 6])
-        guard chunks.count == 4 else { return }
-        XCTAssertEqual(Set(chunks[2].assets.map(\.sector)), ["A股"])
-        XCTAssertEqual(Set(chunks[3].assets.map(\.sector)), ["美股"])
+        XCTAssertEqual(chunks.map { $0.sectors.map(\.name) }, [["A股"], ["A股"], ["A股"], ["A股"], ["A股"], ["美股"]])
+        XCTAssertEqual(chunks.map(\.assets.count), [10, 10, 10, 10, 2, 6])
+        guard chunks.count == 6 else { return }
+        XCTAssertEqual(Set(chunks[4].assets.map(\.sector)), ["A股"])
+        XCTAssertEqual(Set(chunks[5].assets.map(\.sector)), ["美股"])
     }
 
     func testSmallContextKeepsSingleRequestShape() {
-        let context = makeContext(assetCount: 35)
+        let context = makeContext(assetCount: 18)
         let chunker = TrendAnalysisChunker()
 
         let chunks = chunker.chunks(from: context)
 
         XCTAssertFalse(chunker.shouldChunk(context))
         XCTAssertEqual(chunks.count, 1)
-        XCTAssertEqual(chunks.first?.assets.count, 35)
+        XCTAssertEqual(chunks.first?.assets.count, 18)
     }
 
     func testSynthesisContextDropsAssetDetailsButKeepsPortfolioSummary() {

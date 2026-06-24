@@ -237,6 +237,91 @@ final class TrendAIClientTests: XCTestCase {
         XCTAssertEqual(decoded.warnings.first?.id, "仅供研究")
     }
 
+    func testClientDecodesNestedAssetHorizonsWhenOptionalDetailsOmitted() async throws {
+        let reportContent = """
+        {
+          "generatedAt": "2026-06-23 21:19:29",
+          "dataAsOf": "2026-06-23 21:19:29",
+          "privacyMode": "脱敏摘要",
+          "externalSignalStatus": "stale",
+          "portfolio": {
+            "headline": "消费板块深度抱雾组合",
+            "riskLevel": "medium",
+            "summary": "海外权益与科技创新提供正向对冲。"
+          },
+          "horizons": [
+            {
+              "horizon": "short",
+              "direction": "neutral",
+              "confidence": {"score": 55, "label": "中"},
+              "rationale": "短期等待政策和成交确认。",
+              "counterSignals": ["若成交量继续萎缩则偏弱"]
+            }
+          ],
+          "sectors": [],
+          "keyAssets": [
+            {
+              "name": "沪深300ETF",
+              "code": "510300",
+              "sector": "A股",
+              "impactText": "核心宽基暴露。",
+              "horizons": [
+                {
+                  "horizon": "short",
+                  "direction": "neutral",
+                  "confidence": {"score": 55, "label": "中"}
+                }
+              ],
+              "rationale": "跟随大盘。",
+              "counterSignals": []
+            }
+          ],
+          "actions": [],
+          "evidence": [],
+          "warnings": [],
+          "disclaimer": "非投资建议，仅供个人研究参考。"
+        }
+        """
+        let responseData = try JSONSerialization.data(withJSONObject: [
+            "choices": [
+                [
+                    "message": [
+                        "content": reportContent
+                    ]
+                ]
+            ]
+        ])
+
+        MockTrendURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, responseData)
+        }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockTrendURLProtocol.self]
+        let client = TrendAIClient(session: URLSession(configuration: configuration))
+
+        let decoded = try await client.generateReport(
+            prompt: TrendModelPrompt(system: "system prompt", user: "user prompt"),
+            settings: TrendAIProviderSettings(
+                providerName: "Test",
+                baseURL: "https://api.example.com/v1",
+                model: "test-model",
+                apiKey: "sk-test",
+                supportsOnlineSearch: true,
+                timeoutSeconds: 15
+            )
+        )
+
+        XCTAssertEqual(decoded.keyAssets.first?.horizons.first?.counterSignals, [])
+        XCTAssertEqual(decoded.keyAssets.first?.horizons.first?.rationale, "")
+    }
+
     func testConnectionCheckSendsMinimalPromptAndReturnsPreview() async throws {
         let responseData = try JSONSerialization.data(withJSONObject: [
             "choices": [

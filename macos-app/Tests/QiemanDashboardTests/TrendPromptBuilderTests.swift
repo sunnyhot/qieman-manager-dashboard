@@ -18,6 +18,9 @@ final class TrendPromptBuilderTests: XCTestCase {
         XCTAssertTrue(prompt.system.contains("\"headline\""))
         XCTAssertTrue(prompt.system.contains("\"riskLevel\""))
         XCTAssertTrue(prompt.system.contains("\"externalSignalStatus\""))
+        XCTAssertTrue(prompt.system.contains("Do not perform exhaustive online searches for every asset"))
+        XCTAssertTrue(prompt.system.contains("Keep keyAssets, actions, and evidence concise"))
+        XCTAssertTrue(prompt.system.contains("keyAssets.horizons"))
         XCTAssertTrue(prompt.user.contains("\"privacyMode\":\"脱敏摘要\""))
     }
 

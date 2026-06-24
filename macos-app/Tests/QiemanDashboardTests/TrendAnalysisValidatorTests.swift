@@ -46,6 +46,25 @@ final class TrendAnalysisValidatorTests: XCTestCase {
         XCTAssertTrue(result.messages.contains { $0.contains("trigger") || $0.contains("触发") })
     }
 
+    func testRejectsTopLevelHorizonWithoutRationale() {
+        let report = TrendAnalysisReport
+            .fixture(generatedAt: "2026-06-22 12:00:00", externalSignalStatus: .available)
+            .replacingHorizons([
+                TrendHorizonView(
+                    horizon: .short,
+                    direction: .neutral,
+                    confidence: TrendConfidence(score: 60, label: "中"),
+                    rationale: "",
+                    counterSignals: []
+                )
+            ])
+
+        let result = TrendAnalysisValidator().validate(report)
+
+        XCTAssertFalse(result.isValid)
+        XCTAssertTrue(result.messages.contains { $0.contains("判断依据") || $0.contains("rationale") })
+    }
+
     func testAcceptsFixtureReport() {
         let report = TrendAnalysisReport.fixture(
             generatedAt: "2026-06-22 12:00:00",
@@ -56,5 +75,25 @@ final class TrendAnalysisValidatorTests: XCTestCase {
 
         XCTAssertTrue(result.isValid)
         XCTAssertTrue(result.messages.isEmpty)
+    }
+}
+
+private extension TrendAnalysisReport {
+    func replacingHorizons(_ horizons: [TrendHorizonView]) -> TrendAnalysisReport {
+        TrendAnalysisReport(
+            id: id,
+            generatedAt: generatedAt,
+            dataAsOf: dataAsOf,
+            privacyMode: privacyMode,
+            externalSignalStatus: externalSignalStatus,
+            portfolio: portfolio,
+            horizons: horizons,
+            sectors: sectors,
+            keyAssets: keyAssets,
+            actions: actions,
+            evidence: evidence,
+            warnings: warnings,
+            disclaimer: disclaimer
+        )
     }
 }

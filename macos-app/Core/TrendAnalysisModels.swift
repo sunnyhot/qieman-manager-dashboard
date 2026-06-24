@@ -248,6 +248,37 @@ struct TrendHorizonView: Codable, Hashable {
     let confidence: TrendConfidence
     let rationale: String
     let counterSignals: [String]
+
+    init(
+        horizon: TrendHorizon,
+        direction: TrendDirection,
+        confidence: TrendConfidence,
+        rationale: String,
+        counterSignals: [String]
+    ) {
+        self.horizon = horizon
+        self.direction = direction
+        self.confidence = confidence
+        self.rationale = rationale
+        self.counterSignals = counterSignals
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        horizon = try container.decode(TrendHorizon.self, forKey: .horizon)
+        direction = try container.decode(TrendDirection.self, forKey: .direction)
+        confidence = try container.decode(TrendConfidence.self, forKey: .confidence)
+        rationale = try container.decodeIfPresent(String.self, forKey: .rationale) ?? ""
+        counterSignals = try container.decodeIfPresent([String].self, forKey: .counterSignals) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case horizon
+        case direction
+        case confidence
+        case rationale
+        case counterSignals
+    }
 }
 
 struct TrendSectorView: Codable, Identifiable, Hashable {

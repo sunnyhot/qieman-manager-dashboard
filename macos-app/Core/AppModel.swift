@@ -103,6 +103,7 @@ final class AppModel: ObservableObject {
     let notificationManager = LocalNotificationManager()
     let personalAssetAutomation = PersonalAssetAutomation()
     var trendAIClient: any TrendAIClientProtocol = TrendAIClient()
+    var trendProgressHeartbeatIntervalNanoseconds: UInt64 = 15_000_000_000
     let portfolioAutoRefreshIntervalSeconds: UInt64 = 60
     let refreshThrottle = RefreshThrottle()
 

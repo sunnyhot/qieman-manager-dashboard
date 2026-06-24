@@ -23,6 +23,9 @@ struct TrendAnalysisValidator {
         if report.horizons.isEmpty {
             messages.append("缺少短中长期趋势。")
         }
+        for horizon in report.horizons where horizon.rationale.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            messages.append("短中长期趋势缺少 rationale/判断依据：\(horizon.horizon.rawValue)")
+        }
         if report.disclaimer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             messages.append("缺少非投资建议声明。")
         }

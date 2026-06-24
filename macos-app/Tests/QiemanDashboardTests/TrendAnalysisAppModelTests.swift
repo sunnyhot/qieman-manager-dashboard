@@ -154,17 +154,62 @@ final class TrendAnalysisAppModelTests: XCTestCase {
         await model.generateTrendAnalysis(userInitiated: true, createdAt: "2026-06-22 12:00:00")
 
         XCTAssertEqual(model.trendGenerationState, .succeeded)
-        XCTAssertEqual(client.callCount, 4)
-        guard client.prompts.count == 4 else { return }
-        XCTAssertTrue(client.prompts[0].user.contains("分块 1/3"))
-        XCTAssertTrue(client.prompts[1].user.contains("分块 2/3"))
-        XCTAssertTrue(client.prompts[2].user.contains("分块 3/3"))
-        XCTAssertTrue(client.prompts[3].user.contains("分块报告"))
+        XCTAssertEqual(client.callCount, 6)
+        guard client.prompts.count == 6 else { return }
+        XCTAssertTrue(client.prompts[0].user.contains("分块 1/5"))
+        XCTAssertTrue(client.prompts[1].user.contains("分块 2/5"))
+        XCTAssertTrue(client.prompts[2].user.contains("分块 3/5"))
+        XCTAssertTrue(client.prompts[3].user.contains("分块 4/5"))
+        XCTAssertTrue(client.prompts[4].user.contains("分块 5/5"))
+        XCTAssertTrue(client.prompts[5].user.contains("分块报告"))
         let logMessages = model.trendProgressLogs.map(\.message).joined(separator: "\n")
         XCTAssertTrue(logMessages.contains("构建趋势上下文"))
         XCTAssertTrue(logMessages.contains("分块模式"))
         XCTAssertTrue(logMessages.contains("合成全组合报告"))
         XCTAssertTrue(logMessages.contains("趋势分析完成"))
+    }
+
+    func testSlowTrendGenerationEmitsWaitingHeartbeatBeforeCompletion() async {
+        let model = AppModel()
+        model.trendProgressHeartbeatIntervalNanoseconds = 20_000_000
+        model.trendSettings = TrendAnalysisSettings(
+            provider: TrendAIProviderSettings(
+                providerName: "Test",
+                baseURL: "https://example.com/v1",
+                model: "test-model",
+                apiKey: "sk-test",
+                supportsOnlineSearch: true,
+                timeoutSeconds: 30
+            ),
+            defaultPrivacyMode: .sanitized,
+            dailyAutoAnalysisEnabled: false,
+            lastAutoAnalysisDay: nil
+        )
+        model.personalAssetRows = [
+            trendAggregateRow(
+                code: "510300",
+                name: "沪深300ETF",
+                marketValue: 10_000,
+                costValue: 9_500,
+                profitAmount: 500,
+                profitPct: 5.26,
+                estimateChangePct: 0.2
+            )
+        ]
+        model.trendAIClient = SlowTrendAIClient(delayNanoseconds: 90_000_000)
+
+        let generationTask = Task {
+            await model.generateTrendAnalysis(userInitiated: true, createdAt: "2026-06-22 12:00:00")
+        }
+        try? await Task.sleep(nanoseconds: 55_000_000)
+
+        let inFlightMessages = model.trendProgressLogs.map(\.message).joined(separator: "\n")
+        XCTAssertEqual(model.trendGenerationState, .generating)
+        XCTAssertTrue(inFlightMessages.contains("发送模型请求"))
+        XCTAssertTrue(inFlightMessages.contains("等待模型返回"))
+
+        await generationTask.value
+        XCTAssertEqual(model.trendGenerationState, .succeeded)
     }
 
     func testTrendConnectionCheckUpdatesSuccessState() async {
@@ -240,6 +285,26 @@ private final class CountingTrendAIClient: TrendAIClientProtocol {
         prompts.append(prompt)
         return .fixture(
             generatedAt: "2026-06-22 09:00:00",
+            externalSignalStatus: .available
+        )
+    }
+
+    func checkConnection(settings: TrendAIProviderSettings) async throws -> TrendConnectionCheckResult {
+        TrendConnectionCheckResult(
+            endpoint: "https://example.com/v1/chat/completions",
+            model: settings.model,
+            preview: "OK"
+        )
+    }
+}
+
+private struct SlowTrendAIClient: TrendAIClientProtocol {
+    let delayNanoseconds: UInt64
+
+    func generateReport(prompt: TrendModelPrompt, settings: TrendAIProviderSettings) async throws -> TrendAnalysisReport {
+        try? await Task.sleep(nanoseconds: delayNanoseconds)
+        return .fixture(
+            generatedAt: "2026-06-22 12:00:00",
             externalSignalStatus: .available
         )
     }

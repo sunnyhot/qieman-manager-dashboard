@@ -119,6 +119,7 @@ extension AppModel {
         lastTrendError = ""
         trendProgressLogs = []
         appendTrendProgress("开始趋势分析：\(trendSettings.provider.model)")
+        appendTrendProgress("准备参数：\(trendPrivacyMode.rawValue) · \(trendSettings.provider.supportsOnlineSearch ? "允许外部信号" : "仅本地上下文") · 超时 \(trendTimeoutText(trendSettings.provider))")
         trendSettings.defaultPrivacyMode = trendPrivacyMode
 
         let context = TrendAnalysisContextBuilder().build(
@@ -149,6 +150,7 @@ extension AppModel {
             if !userInitiated {
                 trendSettings.lastAutoAnalysisDay = trendDayString(from: generatedAt)
             }
+            appendTrendProgress("保存趋势报告")
             saveTrendAnalysisReport(report)
             saveTrendAnalysisSettings()
             appendTrendProgress("趋势分析完成")
@@ -184,8 +186,13 @@ extension AppModel {
         let chunker = TrendAnalysisChunker()
         guard chunker.shouldChunk(context) else {
             appendTrendProgress("单次分析：\(context.assets.count) 个标的")
+            appendTrendProgress("生成提示词：单次分析 · \(context.privacyMode.rawValue)")
             let prompt = promptBuilder.build(context: context, settings: settings)
-            let report = try await trendAIClient.generateReport(prompt: prompt, settings: settings.provider)
+            let report = try await requestTrendReport(
+                prompt: prompt,
+                settings: settings.provider,
+                phase: "单次分析"
+            )
             appendTrendProgress("单次分析完成")
             return report
         }
@@ -197,30 +204,61 @@ extension AppModel {
             let sectorText = chunkContext.sectors.map(\.name).joined(separator: "、")
             let targetText = sectorText.isEmpty ? "未分类板块" : sectorText
             appendTrendProgress("分析分块 \(offset + 1)/\(chunks.count)：\(targetText) · \(chunkContext.assets.count) 个标的")
+            appendTrendProgress("生成提示词：分块 \(offset + 1)/\(chunks.count) · \(chunkContext.privacyMode.rawValue)")
             let prompt = promptBuilder.buildChunk(
                 context: chunkContext,
                 chunkIndex: offset + 1,
                 chunkCount: chunks.count,
                 settings: settings
             )
-            let chunkReport = try await trendAIClient.generateReport(
+            let chunkReport = try await requestTrendReport(
                 prompt: prompt,
-                settings: settings.provider
+                settings: settings.provider,
+                phase: "分块 \(offset + 1)/\(chunks.count)"
             )
             chunkReports.append(chunkReport)
             appendTrendProgress("分块 \(offset + 1)/\(chunks.count) 完成：\(targetText)")
         }
 
         appendTrendProgress("合成全组合报告")
+        appendTrendProgress("生成提示词：合成全组合报告")
         let synthesisPrompt = promptBuilder.buildSynthesis(
             context: chunker.synthesisContext(from: context),
             chunkReports: chunkReports,
             settings: settings
         )
-        return try await trendAIClient.generateReport(
+        return try await requestTrendReport(
             prompt: synthesisPrompt,
-            settings: settings.provider
+            settings: settings.provider,
+            phase: "合成全组合报告"
         )
+    }
+
+    private func requestTrendReport(
+        prompt: TrendModelPrompt,
+        settings: TrendAIProviderSettings,
+        phase: String
+    ) async throws -> TrendAnalysisReport {
+        appendTrendProgress("发送模型请求：\(phase) · \(settings.model) · 超时 \(trendTimeoutText(settings))")
+        let heartbeatTask = startTrendProgressHeartbeat(phase: phase)
+        defer { heartbeatTask.cancel() }
+        let report = try await trendAIClient.generateReport(prompt: prompt, settings: settings)
+        appendTrendProgress("收到模型报告：\(phase)，准备解析与校验")
+        return report
+    }
+
+    private func startTrendProgressHeartbeat(phase: String) -> Task<Void, Never> {
+        let interval = trendProgressHeartbeatIntervalNanoseconds
+        guard interval > 0 else { return Task {} }
+        return Task { [weak self] in
+            var elapsed = interval
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: interval)
+                guard !Task.isCancelled else { break }
+                self?.appendTrendProgress("等待模型返回：\(phase) 已等待 \(Self.trendElapsedText(elapsed))")
+                elapsed += interval
+            }
+        }
     }
 
     private func appendTrendProgress(_ message: String) {
@@ -229,5 +267,22 @@ extension AppModel {
         if trendProgressLogs.count > 50 {
             trendProgressLogs.removeFirst(trendProgressLogs.count - 50)
         }
+    }
+
+    private func trendTimeoutText(_ settings: TrendAIProviderSettings) -> String {
+        "\(Int(settings.timeoutSeconds.rounded())) 秒"
+    }
+
+    private static func trendElapsedText(_ nanoseconds: UInt64) -> String {
+        let seconds = max(1, Int((nanoseconds + 999_999_999) / 1_000_000_000))
+        if seconds < 60 {
+            return "\(seconds)s"
+        }
+        let minutes = seconds / 60
+        let remainder = seconds % 60
+        if remainder == 0 {
+            return "\(minutes)m"
+        }
+        return "\(minutes)m\(remainder)s"
     }
 }

@@ -1,8 +1,8 @@
 import Foundation
 
 struct TrendAnalysisChunker {
-    static let defaultChunkingThreshold = 35
-    static let defaultChunkSize = 20
+    static let defaultChunkingThreshold = 18
+    static let defaultChunkSize = 10
 
     let chunkingThreshold: Int
     let chunkSize: Int
