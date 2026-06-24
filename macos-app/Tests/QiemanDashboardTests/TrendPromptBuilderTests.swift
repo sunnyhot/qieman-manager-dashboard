@@ -21,6 +21,7 @@ final class TrendPromptBuilderTests: XCTestCase {
         XCTAssertTrue(prompt.system.contains("Do not perform exhaustive online searches for every asset"))
         XCTAssertTrue(prompt.system.contains("Keep keyAssets, actions, and evidence concise"))
         XCTAssertTrue(prompt.system.contains("keyAssets.horizons"))
+        XCTAssertTrue(prompt.system.contains("Read skill/instructions.md, skill/domain-rules.md, and skill/output-contract.md before writing output"))
         XCTAssertTrue(prompt.user.contains("\"privacyMode\":\"脱敏摘要\""))
     }
 

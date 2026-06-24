@@ -85,6 +85,7 @@ struct TrendPromptBuilder {
         return """
         Return valid JSON only.
         Use the TrendAnalysisReport schema exactly.
+        Read skill/instructions.md, skill/domain-rules.md, and skill/output-contract.md before writing output.
         Separate facts, model judgment, and action candidates.
         \(searchInstruction)
         Do not invent sources.
@@ -99,7 +100,7 @@ struct TrendPromptBuilder {
         Do not use 必须买入, 必须卖出, 保证上涨, 保证收益, or 一定上涨.
         Required field names include portfolio, horizons, sectors, keyAssets, actions, evidence, warnings, disclaimer, counterSignals.
         Do not add fields outside this schema. Do not output totalMarketValue, totalCostValue, totalProfit, assetCount, or top-level confidence in the report.
-        Use this exact JSON shape. id fields may be omitted, but all other keys must be present:
+        Use this exact JSON shape. Keep id fields as stable strings when included, and keep all non-id keys present:
         {
           "generatedAt": "YYYY-MM-DD HH:mm:ss",
           "dataAsOf": "YYYY-MM-DD HH:mm:ss",
