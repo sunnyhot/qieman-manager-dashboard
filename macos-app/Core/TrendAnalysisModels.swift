@@ -176,17 +176,76 @@ struct TrendAIProviderSettings: Codable, Hashable {
 }
 
 struct TrendAnalysisSettings: Codable, Hashable {
+    var agent: TrendAgentSettings
     var provider: TrendAIProviderSettings
     var defaultPrivacyMode: TrendPrivacyMode
     var dailyAutoAnalysisEnabled: Bool
     var lastAutoAnalysisDay: String?
 
     static let `default` = TrendAnalysisSettings(
+        agent: .default,
         provider: .empty,
         defaultPrivacyMode: .sanitized,
         dailyAutoAnalysisEnabled: false,
         lastAutoAnalysisDay: nil
     )
+
+    init(
+        agent: TrendAgentSettings,
+        defaultPrivacyMode: TrendPrivacyMode,
+        dailyAutoAnalysisEnabled: Bool,
+        lastAutoAnalysisDay: String?
+    ) {
+        self.agent = agent
+        self.provider = .empty
+        self.defaultPrivacyMode = defaultPrivacyMode
+        self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
+        self.lastAutoAnalysisDay = lastAutoAnalysisDay
+    }
+
+    init(
+        provider: TrendAIProviderSettings,
+        defaultPrivacyMode: TrendPrivacyMode,
+        dailyAutoAnalysisEnabled: Bool,
+        lastAutoAnalysisDay: String?
+    ) {
+        self.agent = .default
+        self.provider = provider
+        self.defaultPrivacyMode = defaultPrivacyMode
+        self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
+        self.lastAutoAnalysisDay = lastAutoAnalysisDay
+    }
+
+    init(
+        agent: TrendAgentSettings,
+        provider: TrendAIProviderSettings,
+        defaultPrivacyMode: TrendPrivacyMode,
+        dailyAutoAnalysisEnabled: Bool,
+        lastAutoAnalysisDay: String?
+    ) {
+        self.agent = agent
+        self.provider = provider
+        self.defaultPrivacyMode = defaultPrivacyMode
+        self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
+        self.lastAutoAnalysisDay = lastAutoAnalysisDay
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        agent = try container.decodeIfPresent(TrendAgentSettings.self, forKey: .agent) ?? .default
+        provider = try container.decodeIfPresent(TrendAIProviderSettings.self, forKey: .provider) ?? .empty
+        defaultPrivacyMode = try container.decodeIfPresent(TrendPrivacyMode.self, forKey: .defaultPrivacyMode) ?? .sanitized
+        dailyAutoAnalysisEnabled = try container.decodeIfPresent(Bool.self, forKey: .dailyAutoAnalysisEnabled) ?? false
+        lastAutoAnalysisDay = try container.decodeIfPresent(String.self, forKey: .lastAutoAnalysisDay)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case agent
+        case provider
+        case defaultPrivacyMode
+        case dailyAutoAnalysisEnabled
+        case lastAutoAnalysisDay
+    }
 
     func hasAutoAnalyzed(on day: String) -> Bool {
         lastAutoAnalysisDay == day
