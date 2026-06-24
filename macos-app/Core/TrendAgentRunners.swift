@@ -65,9 +65,9 @@ struct TrendAgentRunner: TrendAgentRunnerProtocol {
         }
 
         guard result.exitCode == 0 else {
-            let detail = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ? result.stdout
-                : result.stderr
+            let detail = command.kind == .claudeCLI
+                ? claudeFailureDetail(stdout: result.stdout, stderr: result.stderr)
+                : defaultFailureDetail(stdout: result.stdout, stderr: result.stderr)
             throw TrendAgentRunnerError.commandFailed(detail.trimmingCharacters(in: .whitespacesAndNewlines))
         }
 
@@ -210,9 +210,7 @@ struct TrendAgentRunner: TrendAgentRunnerProtocol {
         }
 
         if response.isError == true {
-            let detail = response.result?.trimmingCharacters(in: .whitespacesAndNewlines)
-                ?? response.error?.trimmingCharacters(in: .whitespacesAndNewlines)
-                ?? "Claude CLI returned an error."
+            let detail = response.failureDescription
             throw TrendAgentRunnerError.commandFailed(detail)
         }
 
@@ -222,16 +220,45 @@ struct TrendAgentRunner: TrendAgentRunnerProtocol {
         }
         return result
     }
+
+    private func defaultFailureDetail(stdout: String, stderr: String) -> String {
+        let trimmedStderr = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedStderr.isEmpty ? stdout : trimmedStderr
+    }
+
+    private func claudeFailureDetail(stdout: String, stderr: String) -> String {
+        for output in [stdout, stderr] {
+            let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            if let response = try? JSONDecoder().decode(ClaudePrintResponse.self, from: Data(trimmed.utf8)),
+               response.isError == true {
+                return response.failureDescription
+            }
+        }
+        return defaultFailureDetail(stdout: stdout, stderr: stderr)
+    }
 }
 
 private struct ClaudePrintResponse: Decodable {
     let result: String?
     let error: String?
     let isError: Bool?
+    let apiErrorStatus: Int?
 
     private enum CodingKeys: String, CodingKey {
         case result
         case error
         case isError = "is_error"
+        case apiErrorStatus = "api_error_status"
+    }
+
+    var failureDescription: String {
+        let detail = result?.trimmingCharacters(in: .whitespacesAndNewlines)
+            ?? error?.trimmingCharacters(in: .whitespacesAndNewlines)
+            ?? "Claude CLI returned an error."
+        if apiErrorStatus == 529 || detail.contains("API Error: 529") {
+            return "Claude CLI 服务繁忙（529）：模型当前访问量过大，请稍后重试，或切换到 Codex CLI、OpenClaw、Hermes 等其他 Agent。"
+        }
+        return detail
     }
 }

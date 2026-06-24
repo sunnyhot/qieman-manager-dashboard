@@ -134,7 +134,43 @@ final class TrendAgentRunnerTests: XCTestCase {
             )
             XCTFail("Expected Claude wrapper error")
         } catch {
-            XCTAssertTrue(error.localizedDescription.contains("API Error: 529 overloaded"))
+            XCTAssertTrue(error.localizedDescription.contains("Claude CLI 服务繁忙（529）"))
+            XCTAssertTrue(error.localizedDescription.contains("切换到 Codex CLI"))
+        }
+    }
+
+    func testClaudeRunnerSummarizesNonZeroJSONOverloadError() async throws {
+        let executable = try makeExecutable(
+            body: """
+            #!/usr/bin/env bash
+            cat >/dev/null
+            cat <<'JSON'
+            {"type":"result","subtype":"success","is_error":true,"api_error_status":529,"result":"API Error: 529 [1305] 该模型当前访问量过大，请您稍后再试","session_id":"test"}
+            JSON
+            exit 1
+            """
+        )
+        let packet = try makePacket()
+        let settings = TrendAgentSettings(
+            kind: .claudeCLI,
+            commandPath: "",
+            model: "",
+            profile: "",
+            timeoutSeconds: 5,
+            customCommandTemplate: ""
+        )
+
+        do {
+            _ = try await TrendAgentRunner(processClient: TrendAgentProcessClient()).generateReport(
+                packet: packet,
+                settings: settings,
+                candidates: [makeClaudeCandidate(path: executable.path)]
+            )
+            XCTFail("Expected Claude overload error")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("Claude CLI 服务繁忙（529）"))
+            XCTAssertTrue(error.localizedDescription.contains("稍后重试"))
+            XCTAssertFalse(error.localizedDescription.contains(#""type":"result""#))
         }
     }
 
