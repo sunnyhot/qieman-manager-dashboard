@@ -177,7 +177,7 @@ struct SettingsSectionView: View {
             SettingsMetric(
                 title: "趋势",
                 value: model.enhancementTrendStatus.valueText,
-                detail: model.trendSettings.provider.isConfigured ? model.trendSettings.provider.model : "OpenAI-compatible 模型",
+                detail: model.trendSettings.agent.kind.displayName,
                 icon: "sparkles",
                 tint: model.enhancementTrendStatus.severity.settingsTint,
                 isSelected: selectedSettingsFocus == .trend

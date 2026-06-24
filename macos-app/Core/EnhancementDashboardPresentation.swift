@@ -154,7 +154,7 @@ struct EnhancementTrendStatus: Hashable {
 
     var nextActionText: String {
         if !isProviderConfigured {
-            return "配置模型"
+            return "配置 Agent"
         }
         if generationState == .generating {
             return "等待完成"
@@ -522,9 +522,9 @@ struct EnhancementDashboardSummary: Hashable {
         if !trendStatus.isProviderConfigured {
             items.append(EnhancementActionItem(
                 id: "trend-provider",
-                title: "配置趋势模型",
-                detail: "连接 OpenAI-compatible 模型后才能生成趋势分析",
-                metric: "模型",
+                title: "配置趋势分析 Agent",
+                detail: "选择 Claude CLI、Codex CLI 或自定义本地 Agent 后才能生成趋势分析",
+                metric: "Agent",
                 targetTab: .trend,
                 kind: .selectTab,
                 severity: .warning

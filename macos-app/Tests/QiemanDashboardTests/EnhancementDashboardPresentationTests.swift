@@ -127,20 +127,21 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
         XCTAssertEqual(summary.actionQueue.first?.targetTab, .importPreview)
     }
 
-    func testTrendMissingProviderAddsActionQueueItem() {
+    func testTrendMissingAgentAddsActionQueueItem() {
         let summary = makeDashboard(
             trendStatus: EnhancementTrendStatus(
                 isProviderConfigured: false,
                 generationState: .idle,
                 lastGeneratedAt: nil,
-                headline: "尚未连接趋势分析模型",
+                headline: "尚未配置本地 Agent",
                 externalSignalStatus: nil,
                 isStale: false
             )
         )
 
         let item = summary.actionQueue.first { $0.id == "trend-provider" }
-        XCTAssertEqual(item?.title, "配置趋势模型")
+        XCTAssertEqual(item?.title, "配置趋势分析 Agent")
+        XCTAssertTrue(item?.detail.contains("Claude CLI") == true)
         XCTAssertEqual(item?.targetTab, .trend)
         XCTAssertEqual(item?.kind, .selectTab)
         XCTAssertEqual(summary.statusCards.first { $0.tab == .trend }?.value, "未配置")

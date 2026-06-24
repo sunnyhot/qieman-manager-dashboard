@@ -12,10 +12,10 @@ extension EnhancementCenterView {
 
                 if let report = model.trendReport {
                     trendReportView(report)
-                } else if model.trendSettings.provider.isConfigured {
+                } else if model.trendSettings.agent.isRunnable(with: model.trendAgentCandidates) {
                     trendEmptyState("等待生成", detail: "趋势分析会结合本地持仓、平台动态和模型可用的外部信号，输出条件式判断和反证条件。")
                 } else {
-                    trendEmptyState("未连接模型", detail: "先在设置中填入 OpenAI-compatible 地址、模型和 API Key，或检测本地配置后导入。")
+                    trendEmptyState("未配置 Agent", detail: "先在设置中选择 Claude CLI、Codex CLI 或自定义本地 Agent。")
                 }
 
                 if !model.lastTrendError.isEmpty {
@@ -54,9 +54,9 @@ extension EnhancementCenterView {
     private var trendStatusStrip: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
             trendFact(
-                "模型配置",
-                value: model.trendSettings.provider.isConfigured ? model.trendSettings.provider.model : "未配置",
-                tint: model.trendSettings.provider.isConfigured ? AppPalette.positive : AppPalette.warning
+                "Agent",
+                value: model.trendSettings.agent.isRunnable(with: model.trendAgentCandidates) ? model.trendSettings.agent.kind.displayName : "未配置",
+                tint: model.trendSettings.agent.isRunnable(with: model.trendAgentCandidates) ? AppPalette.positive : AppPalette.warning
             )
             trendFact("隐私模式", value: model.trendPrivacyMode.rawValue, tint: AppPalette.info)
             trendFact("最近生成", value: model.lastTrendGeneratedAt ?? "暂无", tint: model.trendReport == nil ? AppPalette.muted : AppPalette.brand)
@@ -95,12 +95,12 @@ extension EnhancementCenterView {
             }
             .buttonStyle(.borderedProminent)
             .tint(AppPalette.brand)
-            .disabled(!model.trendSettings.provider.isConfigured || model.trendGenerationState == .generating)
+            .disabled(!model.trendSettings.agent.isRunnable(with: model.trendAgentCandidates) || model.trendGenerationState == .generating)
 
             Button {
-                model.detectLocalAIConfigurations()
+                model.detectTrendAgents()
             } label: {
-                Label("检测配置", systemImage: "magnifyingglass")
+                Label("检测 Agent", systemImage: "magnifyingglass")
             }
             .buttonStyle(.bordered)
         }
@@ -429,7 +429,7 @@ extension EnhancementCenterView {
         if let report = model.trendReport {
             return "\(report.dataAsOf) · \(report.externalSignalStatus.displayText)"
         }
-        return model.trendSettings.provider.isConfigured ? "已配置模型，等待生成" : "需要配置 OpenAI-compatible 模型"
+        return model.trendSettings.agent.isRunnable(with: model.trendAgentCandidates) ? "已配置 Agent，等待生成" : "需要配置本地 Agent"
     }
 
     private func trendLogTime(_ timestamp: String) -> String {

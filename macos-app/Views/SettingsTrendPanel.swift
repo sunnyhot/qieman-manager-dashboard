@@ -4,7 +4,7 @@ import SwiftUI
 
 extension SettingsSectionView {
     var trendSettingsPanel: some View {
-        SettingsPanel(title: "趋势分析", subtitle: "连接本地或云端 OpenAI-compatible 模型", icon: "sparkles") {
+        SettingsPanel(title: "趋势分析", subtitle: "选择本地 Agent 生成趋势分析", icon: "sparkles") {
             VStack(alignment: .leading, spacing: 0) {
                 SettingsRow(
                     title: "当前状态",
@@ -18,7 +18,7 @@ extension SettingsSectionView {
 
                 SettingsToggleRow(
                     title: "每日自动分析",
-                    detail: "每天首次启动且模型已配置时自动更新一次",
+                    detail: "每天首次启动且本地 Agent 可用时自动更新一次",
                     icon: "clock.badge.checkmark",
                     tint: model.trendSettings.dailyAutoAnalysisEnabled ? AppPalette.positive : AppPalette.muted,
                     isOn: trendAutoAnalysisBinding
@@ -34,16 +34,21 @@ extension SettingsSectionView {
                     }
                     .pickerStyle(.segmented)
 
-                    trendField("服务名称", text: trendProviderNameBinding, placeholder: "OpenAI-compatible")
-                    trendField("Base URL", text: trendBaseURLBinding, placeholder: "https://api.openai.com/v1")
-                    trendField("模型", text: trendModelBinding, placeholder: "gpt-4.1")
-                    trendSecureField("API Key", text: trendAPIKeyBinding, placeholder: "sk-...")
-                    SettingsToggleRow(
-                        title: "模型支持联网检索",
-                        detail: "开启后 prompt 会要求引用最新新闻/数据来源",
-                        icon: "network",
-                        tint: model.trendSettings.provider.supportsOnlineSearch ? AppPalette.info : AppPalette.muted,
-                        isOn: trendOnlineSearchBinding
+                    Picker("默认 Agent", selection: trendAgentKindBinding) {
+                        ForEach(TrendAgentKind.allCases) { kind in
+                            Text(kind.displayName).tag(kind)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    trendField("自定义命令路径", text: trendAgentCommandPathBinding, placeholder: "/opt/homebrew/bin/claude")
+                    trendField("模型/参数", text: trendAgentModelBinding, placeholder: "sonnet / opus / 留空")
+                    trendField("配置 Profile", text: trendAgentProfileBinding, placeholder: "可选")
+                    trendField("超时秒数", text: trendAgentTimeoutBinding, placeholder: "300")
+                    trendField(
+                        "自定义命令模板",
+                        text: trendAgentTemplateBinding,
+                        placeholder: "{{command}} {{promptFile}} {{schemaFile}} {{outputFile}} {{runDir}}"
                     )
                 }
                 .padding(.vertical, 13)
@@ -60,14 +65,14 @@ extension SettingsSectionView {
                     .tint(AppPalette.brand)
 
                     Button {
-                        model.detectLocalAIConfigurations()
+                        model.detectTrendAgents()
                     } label: {
-                        Label("检测本地配置", systemImage: "magnifyingglass")
+                        Label("检测 Agent", systemImage: "magnifyingglass")
                     }
                     .buttonStyle(.bordered)
 
                     Button {
-                        Task { await model.checkTrendAIConnection() }
+                        Task { await model.checkTrendAgentConnection() }
                     } label: {
                         Label(
                             model.trendConnectionState == .checking ? "检测中" : "检测连通性",
@@ -75,10 +80,10 @@ extension SettingsSectionView {
                         )
                     }
                     .buttonStyle(.bordered)
-                    .disabled(!model.trendSettings.provider.isConfigured || model.trendConnectionState == .checking)
+                    .disabled(!model.trendSettings.agent.isRunnable(with: model.trendAgentCandidates) || model.trendConnectionState == .checking)
                 }
 
-                if !model.trendLocalCandidates.isEmpty {
+                if !model.trendAgentCandidates.isEmpty {
                     SettingsDivider()
                     localTrendCandidates
                 }
@@ -101,26 +106,26 @@ extension SettingsSectionView {
             Text("检测结果")
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(AppPalette.ink)
-            ForEach(model.trendLocalCandidates) { candidate in
+            ForEach(model.trendAgentCandidates) { candidate in
                 trendCandidateRow(candidate)
             }
         }
         .padding(.vertical, 13)
     }
 
-    private func trendCandidateRow(_ candidate: LocalAIConfigurationCandidate) -> some View {
+    private func trendCandidateRow(_ candidate: TrendAgentCandidate) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: candidate.canImport ? "checkmark.seal" : "exclamationmark.triangle")
+            Image(systemName: candidate.isRunnable ? "checkmark.seal" : "exclamationmark.triangle")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(candidate.canImport ? AppPalette.positive : AppPalette.warning)
+                .foregroundStyle(candidate.isRunnable ? AppPalette.positive : AppPalette.warning)
                 .frame(width: 28, height: 28)
-                .background((candidate.canImport ? AppPalette.positive : AppPalette.warning).opacity(AppPalette.accentOnFill), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .background((candidate.isRunnable ? AppPalette.positive : AppPalette.warning).opacity(AppPalette.accentOnFill), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(candidate.providerName)
+                Text(candidate.displayName)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
-                Text(candidate.sourceDescription)
+                Text(candidate.commandPath)
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
                     .lineLimit(1)
@@ -141,12 +146,14 @@ extension SettingsSectionView {
             Spacer(minLength: 8)
 
             Button {
-                model.importTrendProvider(candidate)
+                model.trendSettings.agent.kind = candidate.kind
+                model.trendSettings.agent.commandPath = candidate.commandPath
+                model.saveTrendAnalysisSettings()
             } label: {
-                Label("导入", systemImage: "square.and.arrow.down")
+                Label("使用", systemImage: "checkmark.circle")
             }
             .buttonStyle(.bordered)
-            .disabled(!candidate.canImport)
+            .disabled(!candidate.isRunnable)
         }
         .padding(11)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
@@ -156,28 +163,16 @@ extension SettingsSectionView {
         )
     }
 
-    private func candidateSummary(_ candidate: LocalAIConfigurationCandidate) -> String {
-        let base = candidate.baseURL ?? "缺 Base URL"
-        let modelName = candidate.model ?? "缺模型"
-        let key = candidate.maskedAPIKey.isEmpty ? (candidate.apiKeySource ?? "缺 API Key") : candidate.maskedAPIKey
-        return "\(base) · \(modelName) · \(key)"
+    private func candidateSummary(_ candidate: TrendAgentCandidate) -> String {
+        let state = candidate.isRunnable ? "可用" : (candidate.isInstalled ? "不可执行" : "未安装")
+        let capabilities = candidate.capabilities.map(\.rawValue).joined(separator: " / ")
+        guard !capabilities.isEmpty else { return state }
+        return "\(state) · \(capabilities)"
     }
 
     private func trendField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
         trendLabeledControl(label) {
             TextField(placeholder, text: text)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-                .padding(.horizontal, 10)
-                .frame(height: 34)
-                .background(trendControlBackground, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-                .overlay(trendInputBorder)
-        }
-    }
-
-    private func trendSecureField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
-        trendLabeledControl(label) {
-            SecureField(placeholder, text: text)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
                 .padding(.horizontal, 10)
@@ -204,38 +199,51 @@ extension SettingsSectionView {
             .stroke(AppPalette.hairline.opacity(0.32), lineWidth: 1)
     }
 
-    private var trendProviderNameBinding: Binding<String> {
+    private var trendAgentKindBinding: Binding<TrendAgentKind> {
         Binding(
-            get: { model.trendSettings.provider.providerName },
-            set: { model.trendSettings.provider.providerName = $0 }
+            get: { model.trendSettings.agent.kind },
+            set: { model.trendSettings.agent.kind = $0 }
         )
     }
 
-    private var trendBaseURLBinding: Binding<String> {
+    private var trendAgentCommandPathBinding: Binding<String> {
         Binding(
-            get: { model.trendSettings.provider.baseURL },
-            set: { model.trendSettings.provider.baseURL = $0 }
+            get: { model.trendSettings.agent.commandPath },
+            set: { model.trendSettings.agent.commandPath = $0 }
         )
     }
 
-    private var trendModelBinding: Binding<String> {
+    private var trendAgentModelBinding: Binding<String> {
         Binding(
-            get: { model.trendSettings.provider.model },
-            set: { model.trendSettings.provider.model = $0 }
+            get: { model.trendSettings.agent.model },
+            set: { model.trendSettings.agent.model = $0 }
         )
     }
 
-    private var trendAPIKeyBinding: Binding<String> {
+    private var trendAgentProfileBinding: Binding<String> {
         Binding(
-            get: { model.trendSettings.provider.apiKey },
-            set: { model.trendSettings.provider.apiKey = $0 }
+            get: { model.trendSettings.agent.profile },
+            set: { model.trendSettings.agent.profile = $0 }
         )
     }
 
-    private var trendOnlineSearchBinding: Binding<Bool> {
+    private var trendAgentTimeoutBinding: Binding<String> {
         Binding(
-            get: { model.trendSettings.provider.supportsOnlineSearch },
-            set: { model.trendSettings.provider.supportsOnlineSearch = $0 }
+            get: {
+                String(Int(model.trendSettings.agent.timeoutSeconds.rounded()))
+            },
+            set: { rawValue in
+                if let timeout = Double(rawValue), timeout > 0 {
+                    model.trendSettings.agent.timeoutSeconds = timeout
+                }
+            }
+        )
+    }
+
+    private var trendAgentTemplateBinding: Binding<String> {
+        Binding(
+            get: { model.trendSettings.agent.customCommandTemplate },
+            set: { model.trendSettings.agent.customCommandTemplate = $0 }
         )
     }
 
