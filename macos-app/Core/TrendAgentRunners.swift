@@ -32,3 +32,171 @@ enum TrendAgentRunnerError: LocalizedError {
         }
     }
 }
+
+struct TrendAgentRunner: TrendAgentRunnerProtocol {
+    let processClient: TrendAgentProcessClient
+    private let fileManager: FileManager
+
+    init(
+        processClient: TrendAgentProcessClient = TrendAgentProcessClient(),
+        fileManager: FileManager = .default
+    ) {
+        self.processClient = processClient
+        self.fileManager = fileManager
+    }
+
+    func generateReport(
+        packet: TrendRunPacket,
+        settings: TrendAgentSettings,
+        candidates: [TrendAgentCandidate]
+    ) async throws -> TrendAgentRunResult {
+        let start = Date()
+        let command = try resolvedCommand(settings: settings, candidates: candidates)
+        let result: TrendAgentProcessResult
+        switch command.kind {
+        case .claudeCLI:
+            result = try await runClaude(command: command.path, packet: packet, settings: settings)
+        case .codexCLI:
+            result = try await runCodex(command: command.path, packet: packet, settings: settings)
+        case .custom, .openClaw, .hermes:
+            result = try await runExternal(command: command.path, packet: packet, settings: settings)
+        case .automatic:
+            throw TrendAgentRunnerError.noRunnableAgent
+        }
+
+        guard result.exitCode == 0 else {
+            let detail = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? result.stdout
+                : result.stderr
+            throw TrendAgentRunnerError.commandFailed(detail.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+
+        let outputText: String
+        if fileManager.fileExists(atPath: packet.outputURL.path) {
+            outputText = try String(contentsOf: packet.outputURL)
+        } else {
+            outputText = result.stdout
+        }
+        let trimmed = outputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw TrendAgentRunnerError.emptyOutput
+        }
+
+        return TrendAgentRunResult(
+            reportJSON: trimmed,
+            agentName: command.kind.displayName,
+            commandPath: command.path,
+            durationSeconds: Date().timeIntervalSince(start)
+        )
+    }
+
+    func check(
+        settings: TrendAgentSettings,
+        candidates: [TrendAgentCandidate]
+    ) async throws -> TrendAgentCheckResult {
+        let command = try resolvedCommand(settings: settings, candidates: candidates)
+        return TrendAgentCheckResult(
+            agentName: command.kind.displayName,
+            commandPath: command.path,
+            preview: "可执行"
+        )
+    }
+
+    private func resolvedCommand(
+        settings: TrendAgentSettings,
+        candidates: [TrendAgentCandidate]
+    ) throws -> (kind: TrendAgentKind, path: String) {
+        if settings.kind == .custom {
+            let path = settings.commandPath.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !path.isEmpty else { throw TrendAgentRunnerError.noRunnableAgent }
+            return (.custom, path)
+        }
+        guard let candidate = settings.resolvedCandidate(from: candidates) else {
+            throw TrendAgentRunnerError.noRunnableAgent
+        }
+        return (candidate.kind, candidate.commandPath)
+    }
+
+    private func runClaude(
+        command: String,
+        packet: TrendRunPacket,
+        settings: TrendAgentSettings
+    ) async throws -> TrendAgentProcessResult {
+        var arguments = [
+            "-p",
+            "--output-format", "json",
+            "--json-schema", try String(contentsOf: packet.schemaURL),
+            "--no-session-persistence",
+            "--tools", "",
+            "--add-dir", packet.runDirectory.path
+        ]
+        if !settings.model.isEmpty {
+            arguments.append(contentsOf: ["--model", settings.model])
+        }
+        arguments.append(try String(contentsOf: packet.promptURL))
+        return try await processClient.run(
+            executableURL: URL(fileURLWithPath: command),
+            arguments: arguments,
+            currentDirectoryURL: packet.runDirectory,
+            standardInput: nil,
+            timeoutSeconds: settings.timeoutSeconds
+        )
+    }
+
+    private func runCodex(
+        command: String,
+        packet: TrendRunPacket,
+        settings: TrendAgentSettings
+    ) async throws -> TrendAgentProcessResult {
+        var arguments = [
+            "exec",
+            "--ephemeral",
+            "--sandbox", "read-only",
+            "--ask-for-approval", "never",
+            "--cd", packet.runDirectory.path,
+            "--output-schema", packet.schemaURL.path,
+            "--output-last-message", packet.outputURL.path,
+            "-"
+        ]
+        if !settings.model.isEmpty {
+            arguments.insert(contentsOf: ["--model", settings.model], at: 1)
+        }
+        return try await processClient.run(
+            executableURL: URL(fileURLWithPath: command),
+            arguments: arguments,
+            currentDirectoryURL: packet.runDirectory,
+            standardInput: try String(contentsOf: packet.promptURL),
+            timeoutSeconds: settings.timeoutSeconds
+        )
+    }
+
+    private func runExternal(
+        command: String,
+        packet: TrendRunPacket,
+        settings: TrendAgentSettings
+    ) async throws -> TrendAgentProcessResult {
+        let template = settings.customCommandTemplate.isEmpty
+            ? "{{command}} {{promptFile}} {{schemaFile}} {{outputFile}} {{runDir}}"
+            : settings.customCommandTemplate
+        let parts = expand(template: template, command: command, packet: packet)
+        guard let executable = parts.first else { throw TrendAgentRunnerError.noRunnableAgent }
+        return try await processClient.run(
+            executableURL: URL(fileURLWithPath: executable),
+            arguments: Array(parts.dropFirst()),
+            currentDirectoryURL: packet.runDirectory,
+            standardInput: nil,
+            timeoutSeconds: settings.timeoutSeconds
+        )
+    }
+
+    private func expand(template: String, command: String, packet: TrendRunPacket) -> [String] {
+        template
+            .replacingOccurrences(of: "{{command}}", with: command)
+            .replacingOccurrences(of: "{{promptFile}}", with: packet.promptURL.path)
+            .replacingOccurrences(of: "{{schemaFile}}", with: packet.schemaURL.path)
+            .replacingOccurrences(of: "{{outputFile}}", with: packet.outputURL.path)
+            .replacingOccurrences(of: "{{runDir}}", with: packet.runDirectory.path)
+            .split(separator: " ")
+            .map(String.init)
+    }
+}
