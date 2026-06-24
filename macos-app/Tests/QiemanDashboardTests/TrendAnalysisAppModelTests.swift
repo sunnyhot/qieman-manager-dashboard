@@ -27,24 +27,12 @@ final class TrendAnalysisAppModelTests: XCTestCase {
 
     func testSuccessfulGenerationStoresReport() async {
         let model = AppModel()
-        model.trendSettings = TrendAnalysisSettings(
-            provider: TrendAIProviderSettings(
-                providerName: "Test",
-                baseURL: "https://example.com/v1",
-                model: "test-model",
-                apiKey: "sk-test",
-                supportsOnlineSearch: true,
-                timeoutSeconds: 30
-            ),
-            defaultPrivacyMode: .sanitized,
-            dailyAutoAnalysisEnabled: false,
-            lastAutoAnalysisDay: nil
-        )
-        model.trendAIClient = FakeTrendAIClient(
-            report: .fixture(
+        model.trendSettings = makeAgentSettings()
+        model.trendAgentRunner = FakeTrendAgentRunner(
+            reportJSON: TrendAnalysisReport.fixture(
                 generatedAt: "2026-06-22 12:00:00",
                 externalSignalStatus: .available
-            )
+            ).jsonString()
         )
 
         await model.generateTrendAnalysis(userInitiated: true, createdAt: "2026-06-22 12:00:00")
@@ -60,19 +48,7 @@ final class TrendAnalysisAppModelTests: XCTestCase {
             externalSignalStatus: .available
         )
         model.trendReport = previous
-        model.trendSettings = TrendAnalysisSettings(
-            provider: TrendAIProviderSettings(
-                providerName: "Test",
-                baseURL: "https://example.com/v1",
-                model: "test-model",
-                apiKey: "sk-test",
-                supportsOnlineSearch: true,
-                timeoutSeconds: 30
-            ),
-            defaultPrivacyMode: .sanitized,
-            dailyAutoAnalysisEnabled: false,
-            lastAutoAnalysisDay: nil
-        )
+        model.trendSettings = makeAgentSettings()
         let invalid = previous.replacingActions([
             TrendActionCandidate(
                 id: "bad",
@@ -85,7 +61,7 @@ final class TrendAnalysisAppModelTests: XCTestCase {
                 invalidatingConditions: ["任意反证"]
             )
         ])
-        model.trendAIClient = FakeTrendAIClient(report: invalid)
+        model.trendAgentRunner = FakeTrendAgentRunner(reportJSON: invalid.jsonString())
 
         await model.generateTrendAnalysis(userInitiated: true, createdAt: "2026-06-22 12:00:00")
 
@@ -96,44 +72,20 @@ final class TrendAnalysisAppModelTests: XCTestCase {
 
     func testDailyAutoAnalysisRunsOnlyOncePerDay() async {
         let model = AppModel()
-        model.trendSettings = TrendAnalysisSettings(
-            provider: TrendAIProviderSettings(
-                providerName: "Test",
-                baseURL: "https://example.com/v1",
-                model: "test-model",
-                apiKey: "sk-test",
-                supportsOnlineSearch: true,
-                timeoutSeconds: 30
-            ),
-            defaultPrivacyMode: .sanitized,
-            dailyAutoAnalysisEnabled: true,
-            lastAutoAnalysisDay: nil
-        )
-        let client = CountingTrendAIClient()
-        model.trendAIClient = client
+        model.trendSettings = makeAgentSettings(dailyAutoAnalysisEnabled: true)
+        let runner = CountingTrendAgentRunner()
+        model.trendAgentRunner = runner
 
         await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 09:00:00")
         await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 15:00:00")
 
-        XCTAssertEqual(client.callCount, 1)
+        XCTAssertEqual(runner.callCount, 1)
         XCTAssertEqual(model.trendSettings.lastAutoAnalysisDay, "2026-06-22")
     }
 
-    func testLargePortfolioGenerationUsesChunkRequestsThenSynthesis() async {
+    func testLargePortfolioGenerationUsesSingleAgentPacket() async {
         let model = AppModel()
-        model.trendSettings = TrendAnalysisSettings(
-            provider: TrendAIProviderSettings(
-                providerName: "Test",
-                baseURL: "https://example.com/v1",
-                model: "test-model",
-                apiKey: "sk-test",
-                supportsOnlineSearch: true,
-                timeoutSeconds: 300
-            ),
-            defaultPrivacyMode: .sanitized,
-            dailyAutoAnalysisEnabled: false,
-            lastAutoAnalysisDay: nil
-        )
+        model.trendSettings = makeAgentSettings()
         var rows: [PersonalAssetAggregateRow] = []
         for index in 0..<41 {
             let row = trendAggregateRow(
@@ -148,43 +100,23 @@ final class TrendAnalysisAppModelTests: XCTestCase {
             rows.append(row)
         }
         model.personalAssetRows = rows
-        let client = CountingTrendAIClient()
-        model.trendAIClient = client
+        let runner = CountingTrendAgentRunner()
+        model.trendAgentRunner = runner
 
         await model.generateTrendAnalysis(userInitiated: true, createdAt: "2026-06-22 12:00:00")
 
         XCTAssertEqual(model.trendGenerationState, .succeeded)
-        XCTAssertEqual(client.callCount, 6)
-        guard client.prompts.count == 6 else { return }
-        XCTAssertTrue(client.prompts[0].user.contains("分块 1/5"))
-        XCTAssertTrue(client.prompts[1].user.contains("分块 2/5"))
-        XCTAssertTrue(client.prompts[2].user.contains("分块 3/5"))
-        XCTAssertTrue(client.prompts[3].user.contains("分块 4/5"))
-        XCTAssertTrue(client.prompts[4].user.contains("分块 5/5"))
-        XCTAssertTrue(client.prompts[5].user.contains("分块报告"))
+        XCTAssertEqual(runner.callCount, 1)
         let logMessages = model.trendProgressLogs.map(\.message).joined(separator: "\n")
         XCTAssertTrue(logMessages.contains("构建趋势上下文"))
-        XCTAssertTrue(logMessages.contains("分块模式"))
-        XCTAssertTrue(logMessages.contains("合成全组合报告"))
+        XCTAssertTrue(logMessages.contains("启动本地 Agent"))
         XCTAssertTrue(logMessages.contains("趋势分析完成"))
     }
 
     func testSlowTrendGenerationEmitsWaitingHeartbeatBeforeCompletion() async {
         let model = AppModel()
         model.trendProgressHeartbeatIntervalNanoseconds = 20_000_000
-        model.trendSettings = TrendAnalysisSettings(
-            provider: TrendAIProviderSettings(
-                providerName: "Test",
-                baseURL: "https://example.com/v1",
-                model: "test-model",
-                apiKey: "sk-test",
-                supportsOnlineSearch: true,
-                timeoutSeconds: 30
-            ),
-            defaultPrivacyMode: .sanitized,
-            dailyAutoAnalysisEnabled: false,
-            lastAutoAnalysisDay: nil
-        )
+        model.trendSettings = makeAgentSettings()
         model.personalAssetRows = [
             trendAggregateRow(
                 code: "510300",
@@ -196,7 +128,7 @@ final class TrendAnalysisAppModelTests: XCTestCase {
                 estimateChangePct: 0.2
             )
         ]
-        model.trendAIClient = SlowTrendAIClient(delayNanoseconds: 90_000_000)
+        model.trendAgentRunner = SlowTrendAgentRunner(delayNanoseconds: 90_000_000)
 
         let generationTask = Task {
             await model.generateTrendAnalysis(userInitiated: true, createdAt: "2026-06-22 12:00:00")
@@ -205,8 +137,8 @@ final class TrendAnalysisAppModelTests: XCTestCase {
 
         let inFlightMessages = model.trendProgressLogs.map(\.message).joined(separator: "\n")
         XCTAssertEqual(model.trendGenerationState, .generating)
-        XCTAssertTrue(inFlightMessages.contains("发送模型请求"))
-        XCTAssertTrue(inFlightMessages.contains("等待模型返回"))
+        XCTAssertTrue(inFlightMessages.contains("启动本地 Agent"))
+        XCTAssertTrue(inFlightMessages.contains("等待 Agent 返回"))
 
         await generationTask.value
         XCTAssertEqual(model.trendGenerationState, .succeeded)
@@ -214,107 +146,144 @@ final class TrendAnalysisAppModelTests: XCTestCase {
 
     func testTrendConnectionCheckUpdatesSuccessState() async {
         let model = AppModel()
-        model.trendSettings = TrendAnalysisSettings(
-            provider: TrendAIProviderSettings(
-                providerName: "Test",
-                baseURL: "https://example.com/v1",
-                model: "test-model",
-                apiKey: "sk-test",
-                supportsOnlineSearch: true,
-                timeoutSeconds: 30
-            ),
-            defaultPrivacyMode: .sanitized,
-            dailyAutoAnalysisEnabled: false,
-            lastAutoAnalysisDay: nil
-        )
-        model.trendAIClient = FakeTrendAIClient(
-            report: .fixture(
-                generatedAt: "2026-06-22 12:00:00",
-                externalSignalStatus: .available
-            ),
-            connectionResult: TrendConnectionCheckResult(
-                endpoint: "https://example.com/v1/chat/completions",
-                model: "test-model",
+        model.trendSettings = makeAgentSettings()
+        model.trendAgentRunner = FakeTrendAgentRunner(
+            checkResult: TrendAgentCheckResult(
+                agentName: "Fake",
+                commandPath: "/tmp/fake-agent",
                 preview: "OK"
             )
         )
 
-        await model.checkTrendAIConnection()
+        await model.checkTrendAgentConnection()
 
         XCTAssertEqual(model.trendConnectionState, .succeeded)
-        XCTAssertTrue(model.lastTrendConnectionMessage.contains("连通正常"))
+        XCTAssertTrue(model.lastTrendConnectionMessage.contains("Agent 可用"))
         XCTAssertEqual(model.lastTrendError, "")
     }
 
-    func testTrendConnectionCheckFailsWhenProviderIsIncomplete() async {
+    func testTrendConnectionCheckFailsWhenAgentIsUnavailable() async {
         let model = AppModel()
 
-        await model.checkTrendAIConnection()
+        await model.checkTrendAgentConnection()
 
         XCTAssertEqual(model.trendConnectionState, .failed)
-        XCTAssertTrue(model.lastTrendConnectionMessage.contains("配置不完整"))
+        XCTAssertTrue(model.lastTrendConnectionMessage.contains("未找到可运行"))
     }
 }
 
-private struct FakeTrendAIClient: TrendAIClientProtocol {
-    var report: TrendAnalysisReport = .fixture(
+private func makeAgentSettings(dailyAutoAnalysisEnabled: Bool = false) -> TrendAnalysisSettings {
+    TrendAnalysisSettings(
+        agent: TrendAgentSettings(
+            kind: .custom,
+            commandPath: "/tmp/fake-agent",
+            model: "",
+            profile: "",
+            timeoutSeconds: 30,
+            customCommandTemplate: ""
+        ),
+        defaultPrivacyMode: .sanitized,
+        dailyAutoAnalysisEnabled: dailyAutoAnalysisEnabled,
+        lastAutoAnalysisDay: nil
+    )
+}
+
+private struct FakeTrendAgentRunner: TrendAgentRunnerProtocol {
+    var reportJSON: String = TrendAnalysisReport.fixture(
         generatedAt: "2026-06-22 12:00:00",
         externalSignalStatus: .available
-    )
-    var connectionResult = TrendConnectionCheckResult(
-        endpoint: "https://example.com/v1/chat/completions",
-        model: "test-model",
+    ).jsonString()
+    var checkResult = TrendAgentCheckResult(
+        agentName: "Fake",
+        commandPath: "/tmp/fake-agent",
         preview: "OK"
     )
 
-    func generateReport(prompt: TrendModelPrompt, settings: TrendAIProviderSettings) async throws -> TrendAnalysisReport {
-        report
+    func generateReport(
+        packet: TrendRunPacket,
+        settings: TrendAgentSettings,
+        candidates: [TrendAgentCandidate]
+    ) async throws -> TrendAgentRunResult {
+        TrendAgentRunResult(
+            reportJSON: reportJSON,
+            agentName: "Fake",
+            commandPath: "/tmp/fake-agent",
+            durationSeconds: 0.1
+        )
     }
 
-    func checkConnection(settings: TrendAIProviderSettings) async throws -> TrendConnectionCheckResult {
-        connectionResult
+    func check(
+        settings: TrendAgentSettings,
+        candidates: [TrendAgentCandidate]
+    ) async throws -> TrendAgentCheckResult {
+        checkResult
     }
 }
 
-private final class CountingTrendAIClient: TrendAIClientProtocol {
+private final class CountingTrendAgentRunner: TrendAgentRunnerProtocol {
     var callCount = 0
-    var prompts: [TrendModelPrompt] = []
+    var packets: [TrendRunPacket] = []
 
-    func generateReport(prompt: TrendModelPrompt, settings: TrendAIProviderSettings) async throws -> TrendAnalysisReport {
+    func generateReport(
+        packet: TrendRunPacket,
+        settings: TrendAgentSettings,
+        candidates: [TrendAgentCandidate]
+    ) async throws -> TrendAgentRunResult {
         callCount += 1
-        prompts.append(prompt)
-        return .fixture(
-            generatedAt: "2026-06-22 09:00:00",
-            externalSignalStatus: .available
+        packets.append(packet)
+        return TrendAgentRunResult(
+            reportJSON: TrendAnalysisReport.fixture(
+                generatedAt: "2026-06-22 09:00:00",
+                externalSignalStatus: .available
+            ).jsonString(),
+            agentName: "Counting",
+            commandPath: "/tmp/fake-agent",
+            durationSeconds: 0.1
         )
     }
 
-    func checkConnection(settings: TrendAIProviderSettings) async throws -> TrendConnectionCheckResult {
-        TrendConnectionCheckResult(
-            endpoint: "https://example.com/v1/chat/completions",
-            model: settings.model,
-            preview: "OK"
-        )
+    func check(
+        settings: TrendAgentSettings,
+        candidates: [TrendAgentCandidate]
+    ) async throws -> TrendAgentCheckResult {
+        TrendAgentCheckResult(agentName: "Counting", commandPath: "/tmp/fake-agent", preview: "OK")
     }
 }
 
-private struct SlowTrendAIClient: TrendAIClientProtocol {
+private struct SlowTrendAgentRunner: TrendAgentRunnerProtocol {
     let delayNanoseconds: UInt64
 
-    func generateReport(prompt: TrendModelPrompt, settings: TrendAIProviderSettings) async throws -> TrendAnalysisReport {
+    func generateReport(
+        packet: TrendRunPacket,
+        settings: TrendAgentSettings,
+        candidates: [TrendAgentCandidate]
+    ) async throws -> TrendAgentRunResult {
         try? await Task.sleep(nanoseconds: delayNanoseconds)
-        return .fixture(
-            generatedAt: "2026-06-22 12:00:00",
-            externalSignalStatus: .available
+        return TrendAgentRunResult(
+            reportJSON: TrendAnalysisReport.fixture(
+                generatedAt: "2026-06-22 12:00:00",
+                externalSignalStatus: .available
+            ).jsonString(),
+            agentName: "Slow",
+            commandPath: "/tmp/fake-agent",
+            durationSeconds: 0.09
         )
     }
 
-    func checkConnection(settings: TrendAIProviderSettings) async throws -> TrendConnectionCheckResult {
-        TrendConnectionCheckResult(
-            endpoint: "https://example.com/v1/chat/completions",
-            model: settings.model,
-            preview: "OK"
-        )
+    func check(
+        settings: TrendAgentSettings,
+        candidates: [TrendAgentCandidate]
+    ) async throws -> TrendAgentCheckResult {
+        TrendAgentCheckResult(agentName: "Slow", commandPath: "/tmp/fake-agent", preview: "OK")
+    }
+}
+
+private extension TrendAnalysisReport {
+    func jsonString() -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try! encoder.encode(self)
+        return String(data: data, encoding: .utf8)!
     }
 }
 

@@ -76,9 +76,11 @@ struct TrendPromptBuilder {
     }
 
     private func baseSystemPrompt(settings: TrendAnalysisSettings) -> String {
-        let searchInstruction = settings.provider.supportsOnlineSearch
-            ? "Use current online information when available and cite every external source."
-            : "The selected provider is marked as not supporting online search; mark externalSignalStatus as unavailable unless evidence is already present in context."
+        let searchInstruction = """
+        If the selected local agent has reliable external-signal access, include it with evidence.
+        If not, set externalSignalStatus to partial or unavailable instead of inventing sources.
+        Selected local agent: \(settings.agent.kind.displayName).
+        """
 
         return """
         Return valid JSON only.

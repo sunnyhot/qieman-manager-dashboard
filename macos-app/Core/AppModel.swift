@@ -103,6 +103,8 @@ final class AppModel: ObservableObject {
     let notificationManager = LocalNotificationManager()
     let personalAssetAutomation = PersonalAssetAutomation()
     var trendAIClient: any TrendAIClientProtocol = TrendAIClient()
+    var trendAgentRunner: any TrendAgentRunnerProtocol = TrendAgentRunner()
+    var trendAgentDetector = TrendAgentDetector()
     var trendProgressHeartbeatIntervalNanoseconds: UInt64 = 15_000_000_000
     let portfolioAutoRefreshIntervalSeconds: UInt64 = 60
     let refreshThrottle = RefreshThrottle()
@@ -363,6 +365,11 @@ final class AppModel: ObservableObject {
     var trendLocalCandidates: [LocalAIConfigurationCandidate] {
         get { enhancementState.trendLocalCandidates }
         set { enhancementState.trendLocalCandidates = newValue }
+    }
+
+    var trendAgentCandidates: [TrendAgentCandidate] {
+        get { enhancementState.trendAgentCandidates }
+        set { enhancementState.trendAgentCandidates = newValue }
     }
 
     var lastTrendGeneratedAt: String? {
