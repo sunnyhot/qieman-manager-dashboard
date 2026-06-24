@@ -106,6 +106,21 @@ cp "$ROOT_DIR/README.md" "$PAYLOAD_DIR/"
 cp -R "$ROOT_DIR/scripts" "$PAYLOAD_DIR/"
 cp -R "$ROOT_DIR/skills" "$PAYLOAD_DIR/"
 
+TREND_SKILL_DIR="$PAYLOAD_DIR/skills/investment-trend-analysis"
+REQUIRED_TREND_SKILL_FILES=(
+  "SKILL.md"
+  "references/domain-rules.md"
+  "references/output-contract.md"
+  "assets/trend-report.schema.json"
+  "assets/examples.json"
+)
+for required_file in "${REQUIRED_TREND_SKILL_FILES[@]}"; do
+  if [ ! -f "$TREND_SKILL_DIR/$required_file" ]; then
+    echo "❌ 验证失败: 趋势分析 skill 文件缺失 ($TREND_SKILL_DIR/$required_file)"
+    exit 1
+  fi
+done
+
 cat > "$PAYLOAD_DIR/APP_BUNDLE_README.txt" <<'TXT'
 This app bundle contains a copy of the Python project files.
 
@@ -117,6 +132,7 @@ Put your login cookie here if needed:
 TXT
 
 echo "[6/8] 进行 Bundle 签名"
+xattr -cr "$APP_DIR" 2>/dev/null || true
 codesign --force --deep --sign "$SIGN_IDENTITY" --timestamp=none "$APP_DIR"
 
 echo "[7/8] 验证签名与可执行性"
