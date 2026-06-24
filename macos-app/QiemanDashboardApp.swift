@@ -22,6 +22,8 @@ enum AppRuntimeCapabilities {
 }
 
 enum AppLaunchWindowPolicy {
+    static let shouldCreateImmediateManualWindowOnLaunch = false
+
     static func shouldShowFallbackMainWindow(
         hasTrackedVisibleMainWindow: Bool,
         hasVisibleMainWindow: Bool
@@ -102,7 +104,9 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
 
         didFinishLaunching = true
         configure(model: QiemanAppModelHolder.shared)
-        showMainWindow()
+        if AppLaunchWindowPolicy.shouldCreateImmediateManualWindowOnLaunch {
+            showMainWindow()
+        }
         NSApplication.shared.activate(ignoringOtherApps: true)
     }
 

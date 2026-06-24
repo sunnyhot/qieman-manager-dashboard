@@ -39,4 +39,8 @@ final class AppLaunchPresentationPolicyTests: XCTestCase {
             hasVisibleMainWindow: true
         ))
     }
+
+    func testDidFinishLaunchingWaitsForSwiftUIWindowBeforeFallbackCreation() {
+        XCTAssertFalse(AppLaunchWindowPolicy.shouldCreateImmediateManualWindowOnLaunch)
+    }
 }
