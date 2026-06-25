@@ -1,25 +1,25 @@
 {
-    "version": "3.0.0",
-    "tag": "v3.0.0",
+    "version": "3.0.1",
+    "tag": "v3.0.1",
     "asset": {
-        "name": "QiemanDashboard-3.0.0.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.0/QiemanDashboard-3.0.0.zip",
-        "size": 4016690,
+        "name": "QiemanDashboard-3.0.1.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.1/QiemanDashboard-3.0.1.zip",
+        "size": 4042289,
         "content_type": "application/zip",
-        "sha256": "1255175699913e8abfe0439e0e56410dd0cd88b7624e7a4a25cfc01667a57044"
+        "sha256": "b4cdd53b6bb37e5bb8a39a1dd15884d382ebae04a682a0475ce3289563b6c0df"
     },
-    "sha256": "1255175699913e8abfe0439e0e56410dd0cd88b7624e7a4a25cfc01667a57044",
-    "notes": "finalize v3 trend workbench\nmodernize sidebar tab effects\nrefresh shared ui interaction surfaces\nadd ui effects design tokens\nderive trend dashboard summary\nplan ui effects modernization\ndesign ui effects modernization\ndesign ai trend summary surfaces\nsummarize claude agent overload errors\nstrengthen investment trend skill\navoid duplicate launch window\nunwrap claude trend agent output\nverify bundled trend skill pack\nremove direct trend model client\nswitch trend settings to local agents\ngenerate trends with local agents\nrun trend analysis through local agents\nadd trend agent process runner\ncreate trend agent run workspace\ndetect local trend agents\nadd trend agent settings\nharden trend generation reliability\nplan agent-based trend analysis\ndesign agent-based trend analysis\ntolerate trend report display id omissions\nshow trend analysis progress logs\nanalyze trend chunks by sector\nchunk large trend analysis requests\nextend trend generation timeout\nraise trend connectivity token budget\nallow reasoning models to pass trend connectivity check\nadd trend ai connectivity check\nload zhipu cc token from claude settings\nimport zhipu cc trend configuration\nprevent trend settings field overlap\navoid importing unavailable trend api keys\nrun daily trend analysis on launch\nadd trend analysis report panel\nadd trend analysis settings panel\nsurface trend analysis status\nwire trend analysis state\nadd openai compatible trend client\nconstrain trend model output\nbuild privacy-aware trend context\ndetect local ai provider settings\nadd trend analysis domain store\nplan trend analysis workbench\nadd local ai config discovery to trend design\ndesign trend analysis workbench",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.0",
+    "sha256": "b4cdd53b6bb37e5bb8a39a1dd15884d382ebae04a682a0475ce3289563b6c0df",
+    "notes": "优化趋势分析面板并修复主窗口复用",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.1",
     "published_at": "",
-    "tag_name": "v3.0.0",
-    "name": "QiemanDashboard v3.0.0",
-    "body": "finalize v3 trend workbench\nmodernize sidebar tab effects\nrefresh shared ui interaction surfaces\nadd ui effects design tokens\nderive trend dashboard summary\nplan ui effects modernization\ndesign ui effects modernization\ndesign ai trend summary surfaces\nsummarize claude agent overload errors\nstrengthen investment trend skill\navoid duplicate launch window\nunwrap claude trend agent output\nverify bundled trend skill pack\nremove direct trend model client\nswitch trend settings to local agents\ngenerate trends with local agents\nrun trend analysis through local agents\nadd trend agent process runner\ncreate trend agent run workspace\ndetect local trend agents\nadd trend agent settings\nharden trend generation reliability\nplan agent-based trend analysis\ndesign agent-based trend analysis\ntolerate trend report display id omissions\nshow trend analysis progress logs\nanalyze trend chunks by sector\nchunk large trend analysis requests\nextend trend generation timeout\nraise trend connectivity token budget\nallow reasoning models to pass trend connectivity check\nadd trend ai connectivity check\nload zhipu cc token from claude settings\nimport zhipu cc trend configuration\nprevent trend settings field overlap\navoid importing unavailable trend api keys\nrun daily trend analysis on launch\nadd trend analysis report panel\nadd trend analysis settings panel\nsurface trend analysis status\nwire trend analysis state\nadd openai compatible trend client\nconstrain trend model output\nbuild privacy-aware trend context\ndetect local ai provider settings\nadd trend analysis domain store\nplan trend analysis workbench\nadd local ai config discovery to trend design\ndesign trend analysis workbench",
+    "tag_name": "v3.0.1",
+    "name": "QiemanDashboard v3.0.1",
+    "body": "优化趋势分析面板并修复主窗口复用",
     "assets": [
         {
-            "name": "QiemanDashboard-3.0.0.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.0/QiemanDashboard-3.0.0.zip",
-            "size": 4016690,
+            "name": "QiemanDashboard-3.0.1.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.1/QiemanDashboard-3.0.1.zip",
+            "size": 4042289,
             "content_type": "application/zip"
         }
     ]
