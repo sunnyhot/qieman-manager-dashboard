@@ -46,6 +46,35 @@ enum AppPalette {
         Color.clear.shadow(color: .black.opacity(opacity), radius: radius, x: 0, y: y)
     }
 
+    // MARK: - Motion / Interaction Tokens
+
+    static let motionFastDuration: Double = 0.12
+    static let motionStandardDuration: Double = 0.18
+    static let motionSectionDuration: Double = 0.20
+
+    static var motionFast: Animation {
+        .easeOut(duration: motionFastDuration)
+    }
+
+    static var motionStandard: Animation {
+        .easeOut(duration: motionStandardDuration)
+    }
+
+    static var motionSection: Animation {
+        .easeInOut(duration: motionSectionDuration)
+    }
+
+    static var motionSpring: Animation {
+        .interactiveSpring(response: 0.24, dampingFraction: 0.86, blendDuration: 0.08)
+    }
+
+    static let hoverLift: CGFloat = 1.2
+    static let selectionStrokeOpacity: Double = 0.76
+    static let selectionGlowOpacity: Double = 0.16
+    static let selectionGlowRadius: CGFloat = 12
+    static let selectionRailWidth: CGFloat = 3
+    static let sidebarRowRadius: CGFloat = 9
+
     // MARK: - Border / Stroke Opacity Presets
 
     static let borderLight: Double = 0.32
@@ -73,6 +102,9 @@ enum AppPalette {
     /// Electric blue brand accent
     static let brand = adaptive(light: rgb(0.16, 0.40, 0.88), dark: rgb(0.31, 0.55, 1.00))
     static let brandSoft = adaptive(light: rgb(0.88, 0.93, 1.00), dark: rgb(0.10, 0.15, 0.28))
+    static let selectionFill = brandSoft
+    static let selectionStroke = brand
+    static let selectionGlow = brand
     /// Deep navy background
     static let surface = adaptive(light: rgb(0.94, 0.96, 0.99), dark: rgb(0.04, 0.05, 0.09))
     static let surfaceVariant = adaptive(light: rgb(0.87, 0.91, 0.96), dark: rgb(0.05, 0.07, 0.12))
