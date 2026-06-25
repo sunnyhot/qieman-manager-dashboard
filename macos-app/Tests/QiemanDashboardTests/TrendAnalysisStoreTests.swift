@@ -2,29 +2,29 @@ import XCTest
 @testable import QiemanDashboard
 
 final class TrendAnalysisStoreTests: XCTestCase {
-    func testSettingsStoreReturnsDefaultAgentWhenFileIsMissing() throws {
+    func testSettingsStoreReturnsEmptyProviderWhenFileIsMissing() throws {
         let directory = try temporaryDirectory()
         let url = directory.appendingPathComponent("trend-settings.json")
 
         let settings = try TrendAnalysisSettingsStore().load(from: url)
 
-        XCTAssertEqual(settings.agent.kind, .automatic)
-        XCTAssertEqual(settings.agent.timeoutSeconds, 300)
+        XCTAssertFalse(settings.provider.isConfigured)
+        XCTAssertEqual(settings.provider.timeoutSeconds, 300)
         XCTAssertEqual(settings.defaultPrivacyMode, .sanitized)
         XCTAssertFalse(settings.dailyAutoAnalysisEnabled)
     }
 
-    func testSettingsStoreSavesAndLoadsAgentSettings() throws {
+    func testSettingsStoreSavesAndLoadsProviderSettings() throws {
         let directory = try temporaryDirectory()
         let url = directory.appendingPathComponent("trend-settings.json")
         let settings = TrendAnalysisSettings(
-            agent: TrendAgentSettings(
-                kind: .claudeCLI,
-                commandPath: "/Users/test/.local/bin/claude",
-                model: "sonnet",
-                profile: "",
-                timeoutSeconds: 180,
-                customCommandTemplate: ""
+            provider: TrendAIProviderSettings(
+                providerName: "智谱",
+                baseURL: "https://open.bigmodel.cn/api/coding/paas/v4",
+                model: "glm-5.2",
+                apiKey: "sk-test-secret",
+                supportsOnlineSearch: true,
+                timeoutSeconds: 180
             ),
             defaultPrivacyMode: .fullDetail,
             dailyAutoAnalysisEnabled: true,
@@ -34,16 +34,18 @@ final class TrendAnalysisStoreTests: XCTestCase {
         try TrendAnalysisSettingsStore().save(settings, to: url)
         let loaded = try TrendAnalysisSettingsStore().load(from: url)
 
-        XCTAssertEqual(loaded.agent.kind, .claudeCLI)
-        XCTAssertEqual(loaded.agent.commandPath, "/Users/test/.local/bin/claude")
-        XCTAssertEqual(loaded.agent.model, "sonnet")
-        XCTAssertEqual(loaded.agent.timeoutSeconds, 180)
+        XCTAssertEqual(loaded.provider.providerName, "智谱")
+        XCTAssertEqual(loaded.provider.baseURL, "https://open.bigmodel.cn/api/coding/paas/v4")
+        XCTAssertEqual(loaded.provider.model, "glm-5.2")
+        XCTAssertEqual(loaded.provider.apiKey, "sk-test-secret")
+        XCTAssertTrue(loaded.provider.supportsOnlineSearch)
+        XCTAssertEqual(loaded.provider.timeoutSeconds, 180)
         XCTAssertEqual(loaded.defaultPrivacyMode, settings.defaultPrivacyMode)
         XCTAssertEqual(loaded.dailyAutoAnalysisEnabled, settings.dailyAutoAnalysisEnabled)
         XCTAssertEqual(loaded.lastAutoAnalysisDay, settings.lastAutoAnalysisDay)
     }
 
-    func testSettingsStoreMigratesLegacyProviderSettingsToAutomaticAgent() throws {
+    func testSettingsStoreKeepsLegacyProviderSettings() throws {
         let directory = try temporaryDirectory()
         let url = directory.appendingPathComponent("trend-settings.json")
         try """
@@ -63,8 +65,11 @@ final class TrendAnalysisStoreTests: XCTestCase {
 
         let loaded = try TrendAnalysisSettingsStore().load(from: url)
 
-        XCTAssertEqual(loaded.agent.kind, .automatic)
-        XCTAssertEqual(loaded.agent.timeoutSeconds, 300)
+        XCTAssertEqual(loaded.provider.baseURL, "https://open.bigmodel.cn/api/coding/paas/v4")
+        XCTAssertEqual(loaded.provider.model, "glm-5.2")
+        XCTAssertEqual(loaded.provider.providerName, "智谱")
+        XCTAssertTrue(loaded.provider.supportsOnlineSearch)
+        XCTAssertEqual(loaded.provider.timeoutSeconds, 60)
         XCTAssertEqual(loaded.defaultPrivacyMode, .fullDetail)
         XCTAssertTrue(loaded.dailyAutoAnalysisEnabled)
         XCTAssertEqual(loaded.lastAutoAnalysisDay, "2026-06-22")
@@ -87,7 +92,7 @@ final class TrendAnalysisStoreTests: XCTestCase {
 
     func testSameDayAutoAnalysisUsesStoredLocalDay() {
         let settings = TrendAnalysisSettings(
-            agent: .default,
+            provider: .empty,
             defaultPrivacyMode: .sanitized,
             dailyAutoAnalysisEnabled: true,
             lastAutoAnalysisDay: "2026-06-22"

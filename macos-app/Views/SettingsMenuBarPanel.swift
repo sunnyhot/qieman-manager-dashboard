@@ -494,7 +494,9 @@ extension SettingsSectionView {
 
     private func menuBarPreviewStrip(entries: [MenuBarTickerEntry], appearance: MenuBarTickerAppearance) -> some View {
         let width = appearance.widthMode == .manual ? CGFloat(appearance.manualWidth) : nil
-        let spacing = appearance.spacingMode == .manual ? CGFloat(appearance.manualSpacing) : (appearance.layoutMode == .horizontal ? max(8, CGFloat(appearance.fontSize) * 1.05) : 0)
+        let spacing = appearance.spacingMode == .manual
+            ? CGFloat(appearance.manualSpacing)
+            : MenuBarTickerLayoutMetrics.automaticStatusSpacing(for: appearance)
 
         @ViewBuilder func entryItem(_ entry: MenuBarTickerEntry) -> some View {
             HStack(spacing: 6) {
@@ -526,8 +528,8 @@ extension SettingsSectionView {
         }
 
         return content
-            .padding(.horizontal, 9)
-            .padding(.vertical, 7)
+            .padding(.horizontal, MenuBarTickerLayoutMetrics.previewHorizontalPadding)
+            .padding(.vertical, MenuBarTickerLayoutMetrics.previewVerticalPadding)
             .frame(width: width, alignment: .leading)
             .background(Color(nsColor: .windowBackgroundColor).opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
             .overlay(

@@ -11,12 +11,10 @@ enum EnhancementPresentationSeverity: String, Hashable {
 
 enum EnhancementActionKind: String, Hashable {
     case selectTab
-    case runWatch
     case runTrendAnalysis
     case archiveReport
     case confirmImport
     case undoImport
-    case recordSnapshot
 }
 
 struct EnhancementPrimaryAction: Hashable {
@@ -154,7 +152,7 @@ struct EnhancementTrendStatus: Hashable {
 
     var nextActionText: String {
         if !isProviderConfigured {
-            return "配置 Agent"
+            return "配置模型"
         }
         if generationState == .generating {
             return "等待完成"
@@ -251,9 +249,9 @@ struct EnhancementDashboardSummary: Hashable {
             planSimulation: planSimulation
         )
         let primaryAction = actionQueue.first.map(primaryAction(from:)) ?? EnhancementPrimaryAction(
-            title: "查看洞察",
-            systemImage: "chart.xyaxis.line",
-            targetTab: .insight,
+            title: "查看趋势",
+            systemImage: "sparkles",
+            targetTab: .trend,
             kind: .selectTab,
             severity: .brand
         )
@@ -335,12 +333,6 @@ struct EnhancementDashboardSummary: Hashable {
                 title: "快照",
                 value: "\(snapshotCount) 次",
                 severity: snapshotCount >= 2 ? .positive : .info
-            ),
-            EnhancementRuntimeChip(
-                id: "watch",
-                title: "巡检",
-                value: watchSummary.events.first?.occurredAt.formatted(date: .numeric, time: .shortened) ?? "暂无",
-                severity: watchSummary.failureCount > 0 ? .warning : .info
             )
         ]
     }
@@ -356,27 +348,6 @@ struct EnhancementDashboardSummary: Hashable {
         snapshotCount: Int,
         trendStatus: EnhancementTrendStatus
     ) -> [EnhancementStatusCard] {
-        let importValue: String
-        let importSeverity: EnhancementPresentationSeverity
-        let importNextAction: String
-        if importCounts.hasBlockedRows {
-            importValue = "\(importCounts.blocked) 条阻塞"
-            importSeverity = .danger
-            importNextAction = "处理阻塞"
-        } else if let importSession {
-            importValue = "\(importSession.rows.count) 条待确认"
-            importSeverity = importSession.canConfirm ? .warning : .neutral
-            importNextAction = importSession.canConfirm ? "确认写入" : "查看预览"
-        } else if canUndoLatestImport {
-            importValue = "可撤销"
-            importSeverity = .warning
-            importNextAction = "检查撤销"
-        } else {
-            importValue = "安全"
-            importSeverity = .positive
-            importNextAction = "生成预览"
-        }
-
         return [
             EnhancementStatusCard(
                 tab: .review,
@@ -386,33 +357,6 @@ struct EnhancementDashboardSummary: Hashable {
                 nextAction: reportMetadata.isArchivedForCurrentMonth ? "查看摘要" : "保存归档",
                 systemImage: "doc.text",
                 severity: reportMetadata.isArchivedForCurrentMonth ? .positive : .brand
-            ),
-            EnhancementStatusCard(
-                tab: .watch,
-                title: "巡检",
-                value: watchSummary.latestStatusText,
-                detail: "\(watchSummary.events.count) 条记录 · 失败 \(watchSummary.failureCount)",
-                nextAction: watchSummary.failureCount > 0 ? "查看失败" : "查看时间线",
-                systemImage: "bell.badge",
-                severity: watchSummary.failureCount > 0 ? .warning : .positive
-            ),
-            EnhancementStatusCard(
-                tab: .importPreview,
-                title: "导入安全",
-                value: importValue,
-                detail: importCounts.summaryText,
-                nextAction: importNextAction,
-                systemImage: "arrow.triangle.2.circlepath",
-                severity: importSeverity
-            ),
-            EnhancementStatusCard(
-                tab: .insight,
-                title: "组合洞察",
-                value: insightSummary.hasEnoughHistory ? "已生成" : "待快照",
-                detail: "\(snapshotCount) 次快照 · \(insightSummary.headline)",
-                nextAction: insightSummary.hasEnoughHistory ? "查看洞察" : "生成快照",
-                systemImage: "chart.xyaxis.line",
-                severity: insightSummary.hasEnoughHistory ? .positive : .info
             ),
             EnhancementStatusCard(
                 tab: .trend,
@@ -439,62 +383,6 @@ struct EnhancementDashboardSummary: Hashable {
     ) -> [EnhancementActionItem] {
         var items: [EnhancementActionItem] = []
 
-        if importCounts.hasBlockedRows {
-            items.append(EnhancementActionItem(
-                id: "import-blocked",
-                title: "处理导入阻塞",
-                detail: "\(importCounts.blocked) 条记录阻止写入",
-                metric: "\(importCounts.blocked)",
-                targetTab: .importPreview,
-                kind: .selectTab,
-                severity: .danger
-            ))
-        } else if let importSession, importSession.canConfirm {
-            items.append(EnhancementActionItem(
-                id: "import-confirm",
-                title: "确认导入预览",
-                detail: "\(importSession.rows.count) 条变更等待写入",
-                metric: "\(importSession.rows.count)",
-                targetTab: .importPreview,
-                kind: .confirmImport,
-                severity: .warning
-            ))
-        }
-
-        if canUndoLatestImport {
-            items.append(EnhancementActionItem(
-                id: "import-undo",
-                title: "可撤销上次导入",
-                detail: "本地数据仍匹配撤销快照",
-                metric: "可撤销",
-                targetTab: .importPreview,
-                kind: .undoImport,
-                severity: .warning
-            ))
-        }
-
-        if watchSummary.events.first?.kind == .failed {
-            items.append(EnhancementActionItem(
-                id: "watch-failed",
-                title: "巡检失败",
-                detail: watchSummary.events.first?.errorMessage ?? watchSummary.events.first?.detail ?? "查看失败原因",
-                metric: "\(watchSummary.failureCount)",
-                targetTab: .watch,
-                kind: .selectTab,
-                severity: .warning
-            ))
-        } else if watchSummary.events.isEmpty {
-            items.append(EnhancementActionItem(
-                id: "watch-empty",
-                title: "尚无巡检记录",
-                detail: "运行一次手动巡检建立状态线",
-                metric: "0",
-                targetTab: .watch,
-                kind: .runWatch,
-                severity: .info
-            ))
-        }
-
         if !reportMetadata.isArchivedForCurrentMonth {
             items.append(EnhancementActionItem(
                 id: "report-archive",
@@ -507,24 +395,12 @@ struct EnhancementDashboardSummary: Hashable {
             ))
         }
 
-        if !insightSummary.hasEnoughHistory {
-            items.append(EnhancementActionItem(
-                id: "insight-snapshot",
-                title: "洞察需要快照",
-                detail: insightSummary.headline,
-                metric: "缺数据",
-                targetTab: .insight,
-                kind: .recordSnapshot,
-                severity: .info
-            ))
-        }
-
         if !trendStatus.isProviderConfigured {
             items.append(EnhancementActionItem(
                 id: "trend-provider",
-                title: "配置趋势分析 Agent",
-                detail: "选择 Claude CLI、Codex CLI 或自定义本地 Agent 后才能生成趋势分析",
-                metric: "Agent",
+                title: "配置趋势分析模型",
+                detail: "填写 OpenAI-compatible 模型地址、模型名称和 API Key 后才能生成趋势分析",
+                metric: "模型",
                 targetTab: .trend,
                 kind: .selectTab,
                 severity: .warning
@@ -569,7 +445,7 @@ struct EnhancementDashboardSummary: Hashable {
                 title: reminder.title,
                 detail: reminder.detail,
                 metric: reminder.metric,
-                targetTab: .insight,
+                targetTab: .review,
                 kind: .selectTab,
                 severity: reminder.urgency == .high ? .warning : .info
             )
@@ -581,7 +457,7 @@ struct EnhancementDashboardSummary: Hashable {
                 title: "下次计划",
                 detail: "\(planSimulation.activeAssetCount) 个标的有进行中计划",
                 metric: planSimulation.totalPerExecutionText,
-                targetTab: .insight,
+                targetTab: .review,
                 kind: .selectTab,
                 severity: .info
             ))
@@ -600,18 +476,12 @@ struct EnhancementDashboardSummary: Hashable {
         case .undoImport:
             title = item.title
             systemImage = "arrow.uturn.backward"
-        case .runWatch:
-            title = "立即巡检"
-            systemImage = "play.circle"
         case .runTrendAnalysis:
             title = item.title
             systemImage = "wand.and.stars"
         case .archiveReport:
             title = "保存月报"
             systemImage = "archivebox"
-        case .recordSnapshot:
-            title = "生成快照"
-            systemImage = "camera.metering.center.weighted"
         case .selectTab:
             title = item.title
             systemImage = "arrow.right.circle"

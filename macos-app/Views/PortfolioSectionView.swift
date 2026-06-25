@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 // MARK: - Personal Portfolio
@@ -9,7 +8,6 @@ struct PortfolioSectionView: View {
     @State private var editingPendingTrade: PersonalPendingTrade?
     @State private var deletingPendingTrade: PersonalPendingTrade?
     @State private var isPresentingAddInvestmentPlan = false
-    @State private var didCopyMonthlyReport = false
 
     private var totalProfitAmount: Double? {
         model.userPortfolioSnapshot?.totalProfitAmount
@@ -23,60 +21,35 @@ struct PortfolioSectionView: View {
         AppPalette.marketTint(for: totalProfitAmount)
     }
 
-    var body: some View {
-        let dailyChange = model.userPortfolioSnapshot?.dailyChangeSummary
-        let dailyChangeTint = AppPalette.marketTint(for: dailyChange?.amount)
+    private var portfolioSummaryWideColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 180), spacing: 12, alignment: .top), count: 6)
+    }
 
+    private var portfolioSummaryMediumColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 180), spacing: 12, alignment: .top), count: 3)
+    }
+
+    private var portfolioSummaryCompactColumns: [GridItem] {
+        [GridItem(.flexible(minimum: 180), spacing: 12, alignment: .top)]
+    }
+
+    var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
-                    MetricCard(
-                        title: "总持仓",
-                        value: model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? "—",
-                        subtitle: model.personalAssetSummary.map {
-                            "已持有 \(currencyText($0.totalMarketValue)) + 待确认 \(currencyText($0.totalPendingCashAmount)) + 下次计划 \(currencyText($0.totalEstimatedNextPlanAmount))"
-                        } ?? "自动聚合你的已持有、买入中和计划档案",
-                        icon: "yensign.circle",
-                        accent: AppPalette.brand
-                    )
-                    MetricCard(
-                        title: "总收益",
-                        value: signedCurrencyText(totalProfitAmount),
-                        subtitle: "收益率 \(percentOptional(totalProfitPct))",
-                        icon: "plusminus.circle",
-                        accent: totalProfitTint,
-                        valueTint: totalProfitTint
-                    )
-                    MetricCard(
-                        title: "今日涨跌",
-                        value: signedCurrencyText(dailyChange?.amount),
-                        subtitle: "今日涨跌率 \(percentOptional(dailyChange?.pct))",
-                        icon: "waveform.path.ecg",
-                        accent: dailyChangeTint,
-                        valueTint: dailyChangeTint
-                    )
-                    MetricCard(
-                        title: "待确认金额",
-                        value: model.personalAssetSummary.map { currencyText($0.totalPendingCashAmount) } ?? "—",
-                        subtitle: model.pendingTradeSummary.map { "\($0.actionCount) 笔交易进行中" } ?? "暂无待确认交易",
-                        icon: "clock.badge.exclamationmark",
-                        accent: AppPalette.warning
-                    )
-                    MetricCard(
-                        title: "计划档案",
-                        value: model.investmentPlanSummary.map { "\($0.activePlanCount) / \($0.pausedPlanCount) / \($0.endedPlanCount)" } ?? "—",
-                        subtitle: model.investmentPlanSummary.map { "进行中 / 暂停 / 终止 · 共 \($0.planCount)" } ?? "支持完整计划档案",
-                        icon: "calendar.badge.clock",
-                        accent: AppPalette.info
-                    )
-                    MetricCard(
-                        title: "覆盖标的",
-                        value: model.personalAssetSummary.map { "\($0.fundCount)" } ?? "0",
-                        subtitle: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "支持手动、图片和表格导入",
-                        icon: "square.grid.3x2",
-                        accent: AppPalette.accentWarm
-                    )
+                ViewThatFits(in: .horizontal) {
+                    LazyVGrid(columns: portfolioSummaryWideColumns, alignment: .leading, spacing: 12) {
+                        portfolioSummaryMetricCards
+                    }
+
+                    LazyVGrid(columns: portfolioSummaryMediumColumns, alignment: .leading, spacing: 12) {
+                        portfolioSummaryMetricCards
+                    }
+
+                    LazyVGrid(columns: portfolioSummaryCompactColumns, alignment: .leading, spacing: 12) {
+                        portfolioSummaryMetricCards
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 10) {
@@ -91,11 +64,6 @@ struct PortfolioSectionView: View {
 
                 PortfolioDiagnosticsPanel(summary: model.portfolioDiagnosticsSummary)
                 ProfitAttributionPanel(summary: model.profitAttributionSummary)
-                PortfolioReminderPanel(summary: model.portfolioReminderSummary)
-                PlanSimulationPanel(summary: model.planSimulationSummary)
-                MonthlyReportPanel(summary: model.monthlyReportSummary, didCopy: didCopyMonthlyReport) {
-                    copyMonthlyReport(model.monthlyReportSummary)
-                }
 
                 SectionCard(title: "资产全貌总表", subtitle: "把「已持有 + 待确认 + 计划档案」聚合到同一行", icon: "tablecells", trailing: {
                     Spacer()
@@ -120,7 +88,7 @@ struct PortfolioSectionView: View {
                             .padding(12)
                             .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
                     } else {
-                        PersonalAssetBrowser(rows: model.personalAssetRows)
+                        PersonalAssetBrowser(rows: model.personalAssetRows, trendReport: model.trendReport)
                     }
                 }
 
@@ -265,6 +233,59 @@ struct PortfolioSectionView: View {
     }
 
     @ViewBuilder
+    private var portfolioSummaryMetricCards: some View {
+        let dailyChange = model.userPortfolioSnapshot?.dailyChangeSummary
+        let dailyChangeTint = AppPalette.marketTint(for: dailyChange?.amount)
+
+        MetricCard(
+            title: "总持仓",
+            value: model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? "—",
+            subtitle: model.personalAssetSummary.map {
+                "已持有 \(currencyText($0.totalMarketValue)) + 待确认 \(currencyText($0.totalPendingCashAmount)) + 下次计划 \(currencyText($0.totalEstimatedNextPlanAmount))"
+            } ?? "自动聚合你的已持有、买入中和计划档案",
+            icon: "yensign.circle",
+            accent: AppPalette.brand
+        )
+        MetricCard(
+            title: "总收益",
+            value: signedCurrencyText(totalProfitAmount),
+            subtitle: "收益率 \(percentOptional(totalProfitPct))",
+            icon: "plusminus.circle",
+            accent: totalProfitTint,
+            valueTint: totalProfitTint
+        )
+        MetricCard(
+            title: "今日涨跌",
+            value: signedCurrencyText(dailyChange?.amount),
+            subtitle: "今日涨跌率 \(percentOptional(dailyChange?.pct))",
+            icon: "waveform.path.ecg",
+            accent: dailyChangeTint,
+            valueTint: dailyChangeTint
+        )
+        MetricCard(
+            title: "待确认金额",
+            value: model.personalAssetSummary.map { currencyText($0.totalPendingCashAmount) } ?? "—",
+            subtitle: model.pendingTradeSummary.map { "\($0.actionCount) 笔交易进行中" } ?? "暂无待确认交易",
+            icon: "clock.badge.exclamationmark",
+            accent: AppPalette.warning
+        )
+        MetricCard(
+            title: "计划档案",
+            value: model.investmentPlanSummary.map { "\($0.activePlanCount) / \($0.pausedPlanCount) / \($0.endedPlanCount)" } ?? "—",
+            subtitle: model.investmentPlanSummary.map { "进行中 / 暂停 / 终止 · 共 \($0.planCount)" } ?? "支持完整计划档案",
+            icon: "calendar.badge.clock",
+            accent: AppPalette.info
+        )
+        MetricCard(
+            title: "覆盖标的",
+            value: model.personalAssetSummary.map { "\($0.fundCount)" } ?? "0",
+            subtitle: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "支持手动、图片和表格导入",
+            icon: "square.grid.3x2",
+            accent: AppPalette.accentWarm
+        )
+    }
+
+    @ViewBuilder
     private var statusLineContent: some View {
         Text(model.portfolioAutoRefreshStatusText)
         if let latestTime = model.pendingTradeSummary?.latestTime {
@@ -293,14 +314,6 @@ struct PortfolioSectionView: View {
     private var deletePendingConfirmationMessage: String {
         guard let deletingPendingTrade else { return "" }
         return "会从本地保存的数据中删除 \(deletingPendingTrade.displayTitle) 的这条买入中记录。"
-    }
-
-    private func copyMonthlyReport(_ report: MonthlyReportSummary) {
-        model.copyMonthlyReportToPasteboard(report)
-        didCopyMonthlyReport = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            didCopyMonthlyReport = false
-        }
     }
 }
 
@@ -335,6 +348,18 @@ private extension PortfolioDiagnosticLevel {
 struct PortfolioDiagnosticsPanel: View {
     let summary: PortfolioDiagnosticsSummary
 
+    private func portfolioDiagnosticWideColumns(count: Int) -> [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 168), spacing: 10, alignment: .top), count: max(1, min(5, count)))
+    }
+
+    private func portfolioDiagnosticMediumColumns(count: Int) -> [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 168), spacing: 10, alignment: .top), count: max(1, min(3, count)))
+    }
+
+    private var portfolioDiagnosticCompactColumns: [GridItem] {
+        [GridItem(.flexible(minimum: 168), spacing: 10, alignment: .top)]
+    }
+
     var body: some View {
         SectionCard(title: "组合诊断", subtitle: summary.headline, icon: "stethoscope") {
             VStack(alignment: .leading, spacing: 12) {
@@ -349,11 +374,26 @@ struct PortfolioDiagnosticsPanel: View {
                     Spacer(minLength: 0)
                 }
 
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 168), spacing: 10)], spacing: 10) {
-                    ForEach(summary.items) { item in
-                        PortfolioDiagnosticTile(item: item)
+                ViewThatFits(in: .horizontal) {
+                    LazyVGrid(columns: portfolioDiagnosticWideColumns(count: summary.items.count), alignment: .leading, spacing: 10) {
+                        ForEach(summary.items) { item in
+                            PortfolioDiagnosticTile(item: item)
+                        }
+                    }
+
+                    LazyVGrid(columns: portfolioDiagnosticMediumColumns(count: summary.items.count), alignment: .leading, spacing: 10) {
+                        ForEach(summary.items) { item in
+                            PortfolioDiagnosticTile(item: item)
+                        }
+                    }
+
+                    LazyVGrid(columns: portfolioDiagnosticCompactColumns, alignment: .leading, spacing: 10) {
+                        ForEach(summary.items) { item in
+                            PortfolioDiagnosticTile(item: item)
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -567,262 +607,5 @@ struct ProfitAttributionEntryRow: View {
             activeStrokeOpacity: 0.40,
             lift: 0.6
         )
-    }
-}
-
-private extension PortfolioReminderUrgency {
-    var color: Color {
-        switch self {
-        case .high:
-            return AppPalette.danger
-        case .medium:
-            return AppPalette.warning
-        case .low:
-            return AppPalette.info
-        }
-    }
-
-    var label: String {
-        switch self {
-        case .high:
-            return "处理"
-        case .medium:
-            return "留意"
-        case .low:
-            return "记录"
-        }
-    }
-}
-
-private extension PortfolioReminderKind {
-    var iconName: String {
-        switch self {
-        case .pendingTrade:
-            return "clock.badge.exclamationmark"
-        case .investmentPlan:
-            return "calendar.badge.clock"
-        case .concentration:
-            return "scope"
-        case .dailyMovement:
-            return "waveform.path.ecg"
-        case .quoteCoverage:
-            return "dot.radiowaves.left.and.right"
-        }
-    }
-}
-
-struct PortfolioReminderPanel: View {
-    let summary: PortfolioReminderSummary
-
-    var body: some View {
-        SectionCard(title: "提醒通知", subtitle: summary.headline, icon: "bell.badge") {
-            if summary.items.isEmpty {
-                HStack(spacing: 10) {
-                    Image(systemName: "checkmark.circle")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(AppPalette.positive)
-                        .accentIconStyle(tint: AppPalette.positive, size: 28)
-                    Text("暂无待处理提醒")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(AppPalette.muted)
-                    Spacer()
-                }
-                .padding(12)
-                .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-            } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 192), spacing: 10)], spacing: 10) {
-                    ForEach(summary.items) { item in
-                        PortfolioReminderTile(item: item)
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct PortfolioReminderTile: View {
-    let item: PortfolioReminderItem
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(spacing: 8) {
-                Image(systemName: item.kind.iconName)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(item.urgency.color)
-                    .frame(width: 28, height: 28)
-                    .background(item.urgency.color.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.title)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(AppPalette.ink)
-                        .lineLimit(1)
-                    Text(item.urgency.label)
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(item.urgency.color)
-                }
-
-                Spacer(minLength: 0)
-
-                Text(item.metric)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(item.urgency.color)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.70)
-            }
-
-            Text(item.detail)
-                .font(.system(size: 10))
-                .foregroundStyle(AppPalette.muted)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, minHeight: 86, alignment: .leading)
-        .padding(12)
-        .interactiveSurface(
-            tint: item.urgency.color,
-            fill: AppPalette.cardStrong.opacity(0.66),
-            hoverFill: AppPalette.cardHover,
-            strokeOpacity: 0.18,
-            activeStrokeOpacity: 0.38,
-            lift: 0.8
-        )
-    }
-}
-
-struct PlanSimulationPanel: View {
-    let summary: PlanSimulationSummary
-
-    var body: some View {
-        SectionCard(title: "计划模拟", subtitle: summary.headline, icon: "wand.and.stars") {
-            VStack(alignment: .leading, spacing: 12) {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 136), spacing: 10)], spacing: 10) {
-                    ProfitAttributionMetric(title: "单次计划", value: summary.totalPerExecutionText, tint: AppPalette.info)
-                    ProfitAttributionMetric(title: "未来 \(summary.executionCount) 次", value: summary.projectedAmountText, tint: AppPalette.brand)
-                    ProfitAttributionMetric(title: "进行中计划", value: "\(summary.activePlanCount)", tint: AppPalette.positive)
-                    ProfitAttributionMetric(title: "覆盖标的", value: "\(summary.activeAssetCount)", tint: AppPalette.info)
-                }
-
-                if summary.items.isEmpty {
-                    Text("暂无进行中计划")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(AppPalette.muted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-                } else {
-                    VStack(spacing: 8) {
-                        ForEach(summary.items.prefix(5)) { item in
-                            PlanSimulationItemRow(item: item)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct PlanSimulationItemRow: View {
-    let item: PlanSimulationItem
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            Image(systemName: "calendar.badge.clock")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(AppPalette.info)
-                .frame(width: 30, height: 30)
-                .background(AppPalette.info.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(item.title)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(AppPalette.ink)
-                        .lineLimit(1)
-                    ToolbarBadge(title: item.codeText, tint: AppPalette.info)
-                }
-                Text("\(item.activePlanCount) 条计划 · 下次 \(item.nextExecutionDateText) · 当前占用 \(item.currentExposureText)")
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(item.projectedAmountText)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(AppPalette.brand)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-                Text("单次 \(item.perExecutionText)")
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(AppPalette.info)
-                    .monospacedDigit()
-                    .lineLimit(1)
-            }
-            .frame(width: 126, alignment: .trailing)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .interactiveSurface(
-            tint: AppPalette.info,
-            radius: AppPalette.controlRadius,
-            fill: AppPalette.cardStrong.opacity(0.56),
-            hoverFill: AppPalette.cardHover,
-            strokeOpacity: 0.26,
-            activeStrokeOpacity: 0.40,
-            lift: 0.6
-        )
-    }
-}
-
-struct MonthlyReportPanel: View {
-    let summary: MonthlyReportSummary
-    let didCopy: Bool
-    let onCopy: () -> Void
-
-    private var lineCountText: String {
-        "\(summary.markdown.split(separator: "\n", omittingEmptySubsequences: false).count) 行"
-    }
-
-    var body: some View {
-        SectionCard(title: "月报导出", subtitle: summary.title, icon: "doc.text", trailing: {
-            Spacer()
-            Button(action: onCopy) {
-                Label(didCopy ? "已复制" : "复制月报", systemImage: didCopy ? "checkmark.circle" : "doc.on.doc")
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(didCopy ? AppPalette.positive : AppPalette.brand)
-            .controlSize(.small)
-        }) {
-            VStack(alignment: .leading, spacing: 12) {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 136), spacing: 10)], spacing: 10) {
-                    ProfitAttributionMetric(title: "报告月份", value: summary.monthText, tint: AppPalette.brand)
-                    ProfitAttributionMetric(title: "生成时间", value: summary.generatedAt, tint: AppPalette.info)
-                    ProfitAttributionMetric(title: "Markdown", value: lineCountText, tint: AppPalette.positive)
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(summary.title)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(AppPalette.ink)
-                    Text(summary.markdown)
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(AppPalette.muted)
-                        .lineLimit(8)
-                        .textSelection(.enabled)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(AppPalette.cardStrong.opacity(0.62), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                        .stroke(AppPalette.line.opacity(0.28), lineWidth: 1)
-                )
-            }
-        }
     }
 }

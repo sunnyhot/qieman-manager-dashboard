@@ -26,11 +26,13 @@ struct TrendProgressLog: Identifiable, Hashable {
     let id: UUID
     let timestamp: String
     let message: String
+    let detail: String?
 
-    init(id: UUID = UUID(), timestamp: String, message: String) {
+    init(id: UUID = UUID(), timestamp: String, message: String, detail: String? = nil) {
         self.id = id
         self.timestamp = timestamp
         self.message = message
+        self.detail = detail
     }
 }
 
@@ -126,14 +128,95 @@ struct TrendConfidence: Codable, Hashable {
     }
 }
 
+struct TrendAIProviderSettings: Codable, Hashable {
+    var providerName: String
+    var baseURL: String
+    var model: String
+    var apiKey: String
+    var supportsOnlineSearch: Bool
+    var timeoutSeconds: Double
+
+    static let defaultGenerationTimeoutSeconds: Double = 300
+
+    static let empty = TrendAIProviderSettings(
+        providerName: "",
+        baseURL: "",
+        model: "",
+        apiKey: "",
+        supportsOnlineSearch: false,
+        timeoutSeconds: defaultGenerationTimeoutSeconds
+    )
+
+    var isConfigured: Bool {
+        !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var redactedAPIKey: String {
+        Self.mask(apiKey)
+    }
+
+    var upgradedForTrendGeneration: TrendAIProviderSettings {
+        guard isConfigured, timeoutSeconds < Self.defaultGenerationTimeoutSeconds else { return self }
+        var upgraded = self
+        upgraded.timeoutSeconds = Self.defaultGenerationTimeoutSeconds
+        return upgraded
+    }
+
+    static func mask(_ value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 8 else { return trimmed.isEmpty ? "" : "...." }
+        return "\(trimmed.prefix(3))...\(trimmed.suffix(4))"
+    }
+
+    init(
+        providerName: String,
+        baseURL: String,
+        model: String,
+        apiKey: String,
+        supportsOnlineSearch: Bool,
+        timeoutSeconds: Double
+    ) {
+        self.providerName = providerName
+        self.baseURL = baseURL
+        self.model = model
+        self.apiKey = apiKey
+        self.supportsOnlineSearch = supportsOnlineSearch
+        self.timeoutSeconds = timeoutSeconds
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        providerName = try container.decodeIfPresent(String.self, forKey: .providerName) ?? ""
+        baseURL = try container.decodeIfPresent(String.self, forKey: .baseURL) ?? ""
+        model = try container.decodeIfPresent(String.self, forKey: .model) ?? ""
+        apiKey = try container.decodeIfPresent(String.self, forKey: .apiKey) ?? ""
+        supportsOnlineSearch = try container.decodeIfPresent(Bool.self, forKey: .supportsOnlineSearch) ?? false
+        timeoutSeconds = try container.decodeIfPresent(Double.self, forKey: .timeoutSeconds)
+            ?? Self.defaultGenerationTimeoutSeconds
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case providerName
+        case baseURL
+        case model
+        case apiKey
+        case supportsOnlineSearch
+        case timeoutSeconds
+    }
+}
+
 struct TrendAnalysisSettings: Codable, Hashable {
     var agent: TrendAgentSettings
+    var provider: TrendAIProviderSettings
     var defaultPrivacyMode: TrendPrivacyMode
     var dailyAutoAnalysisEnabled: Bool
     var lastAutoAnalysisDay: String?
 
     static let `default` = TrendAnalysisSettings(
         agent: .default,
+        provider: .empty,
         defaultPrivacyMode: .sanitized,
         dailyAutoAnalysisEnabled: false,
         lastAutoAnalysisDay: nil
@@ -146,6 +229,34 @@ struct TrendAnalysisSettings: Codable, Hashable {
         lastAutoAnalysisDay: String?
     ) {
         self.agent = agent
+        self.provider = .empty
+        self.defaultPrivacyMode = defaultPrivacyMode
+        self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
+        self.lastAutoAnalysisDay = lastAutoAnalysisDay
+    }
+
+    init(
+        provider: TrendAIProviderSettings,
+        defaultPrivacyMode: TrendPrivacyMode,
+        dailyAutoAnalysisEnabled: Bool,
+        lastAutoAnalysisDay: String?
+    ) {
+        self.agent = .default
+        self.provider = provider
+        self.defaultPrivacyMode = defaultPrivacyMode
+        self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
+        self.lastAutoAnalysisDay = lastAutoAnalysisDay
+    }
+
+    init(
+        agent: TrendAgentSettings,
+        provider: TrendAIProviderSettings,
+        defaultPrivacyMode: TrendPrivacyMode,
+        dailyAutoAnalysisEnabled: Bool,
+        lastAutoAnalysisDay: String?
+    ) {
+        self.agent = agent
+        self.provider = provider
         self.defaultPrivacyMode = defaultPrivacyMode
         self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
         self.lastAutoAnalysisDay = lastAutoAnalysisDay
@@ -154,6 +265,7 @@ struct TrendAnalysisSettings: Codable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         agent = try container.decodeIfPresent(TrendAgentSettings.self, forKey: .agent) ?? .default
+        provider = try container.decodeIfPresent(TrendAIProviderSettings.self, forKey: .provider) ?? .empty
         defaultPrivacyMode = try container.decodeIfPresent(TrendPrivacyMode.self, forKey: .defaultPrivacyMode) ?? .sanitized
         dailyAutoAnalysisEnabled = try container.decodeIfPresent(Bool.self, forKey: .dailyAutoAnalysisEnabled) ?? false
         lastAutoAnalysisDay = try container.decodeIfPresent(String.self, forKey: .lastAutoAnalysisDay)
@@ -161,6 +273,7 @@ struct TrendAnalysisSettings: Codable, Hashable {
 
     private enum CodingKeys: String, CodingKey {
         case agent
+        case provider
         case defaultPrivacyMode
         case dailyAutoAnalysisEnabled
         case lastAutoAnalysisDay

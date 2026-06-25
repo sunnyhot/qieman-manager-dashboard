@@ -151,4 +151,70 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertTrue(summary.primaryAction.isDisabled)
         XCTAssertEqual(summary.detail, "等待模型返回：模型分析 已等待 1m")
     }
+
+    func testOverviewSourceRendersAITrendSummaryPanel() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Views/OverviewSectionView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("AITrendSummaryPanel("))
+        XCTAssertTrue(source.contains("summary: model.trendDashboardSummary"))
+        XCTAssertTrue(source.contains("model.selectedEnhancementTab = .trend"))
+        XCTAssertTrue(source.contains("await model.generateTrendAnalysis(userInitiated: true)"))
+    }
+
+    func testOverviewSourceMergesSummaryIntoTodayBrief() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Views/OverviewSectionView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("summaryItems: overviewBriefSummaryItems"))
+        XCTAssertTrue(source.contains("TodayBriefSummaryCard("))
+        XCTAssertFalse(source.contains("OverviewHeroCard()"))
+        XCTAssertFalse(source.contains("struct OverviewHeroCard"))
+        XCTAssertFalse(source.contains("今日看板"))
+        XCTAssertFalse(source.contains("总览摘要"))
+    }
+
+    func testOverviewSourceUsesFullWidthGridsAndDropsAssetOverview() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Views/OverviewSectionView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertFalse(source.contains("SectionCard(title: \"资产总览\""))
+        XCTAssertFalse(source.contains("OverviewAssetTypeSummary"))
+        XCTAssertFalse(source.contains("assetTypeSummary"))
+        XCTAssertTrue(source.contains("todayBriefWideColumns"))
+        XCTAssertTrue(source.contains("trendHorizonWideColumns"))
+        XCTAssertTrue(source.contains("trendSectorWideColumns"))
+        XCTAssertTrue(source.contains(".lineLimit(4)"))
+        XCTAssertTrue(source.contains(".lineLimit(3)"))
+    }
+
+    func testOverviewSourceDropsManagerActivityAndFreshnessPanels() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Views/OverviewSectionView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertFalse(source.contains("DashboardInsightPanel("))
+        XCTAssertFalse(source.contains("struct DashboardInsightPanel"))
+        XCTAssertFalse(source.contains("ManagerActivityPanel"))
+        XCTAssertFalse(source.contains("FreshnessStatusPanel"))
+        XCTAssertFalse(source.contains("openManagerActivity"))
+        XCTAssertFalse(source.contains("openFreshness"))
+        XCTAssertFalse(source.contains("主理人动态"))
+        XCTAssertFalse(source.contains("数据状态"))
+    }
 }

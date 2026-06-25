@@ -19,9 +19,13 @@ final class TrendPromptBuilderTests: XCTestCase {
         XCTAssertTrue(prompt.system.contains("\"riskLevel\""))
         XCTAssertTrue(prompt.system.contains("\"externalSignalStatus\""))
         XCTAssertTrue(prompt.system.contains("Do not perform exhaustive online searches for every asset"))
-        XCTAssertTrue(prompt.system.contains("Keep keyAssets, actions, and evidence concise"))
+        XCTAssertTrue(prompt.system.contains("Keep actions and evidence concise"))
+        XCTAssertTrue(prompt.system.contains("keyAssets should cover every submitted asset"))
+        XCTAssertTrue(prompt.system.contains("MUST include one keyAssets item for every Context JSON asset"))
+        XCTAssertTrue(prompt.system.contains("buy/hold/sell execution guidance"))
         XCTAssertTrue(prompt.system.contains("keyAssets.horizons"))
-        XCTAssertTrue(prompt.system.contains("Read skill/instructions.md, skill/domain-rules.md, and skill/output-contract.md before writing output"))
+        XCTAssertTrue(prompt.system.contains("Follow the embedded Qieman investment trend analysis skill rules"))
+        XCTAssertTrue(prompt.system.contains("configured without online search"))
         XCTAssertTrue(prompt.user.contains("\"privacyMode\":\"脱敏摘要\""))
     }
 
@@ -36,7 +40,8 @@ final class TrendPromptBuilderTests: XCTestCase {
         )
 
         XCTAssertTrue(prompt.system.contains("先判断板块趋势"))
-        XCTAssertTrue(prompt.system.contains("板块内关键资产"))
+        XCTAssertTrue(prompt.system.contains("Include every asset in this chunk in keyAssets"))
+        XCTAssertTrue(prompt.user.contains("逐个覆盖本分块资产"))
         XCTAssertTrue(prompt.user.contains("分块 1/3"))
     }
 

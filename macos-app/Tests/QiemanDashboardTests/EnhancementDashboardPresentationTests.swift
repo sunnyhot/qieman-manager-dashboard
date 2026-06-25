@@ -2,7 +2,12 @@ import XCTest
 @testable import QiemanDashboard
 
 final class EnhancementDashboardPresentationTests: XCTestCase {
-    func testPrimaryActionPrioritizesBlockedImportPreview() {
+    func testWorkbenchTabsExcludeImportPreview() {
+        XCTAssertEqual(EnhancementCenterTab.workbenchTabs, [.review, .trend])
+        XCTAssertFalse(EnhancementCenterTab.importPreview.isVisibleInWorkbench)
+    }
+
+    func testImportPreviewDoesNotDriveWorkbenchPrimaryAction() {
         let summary = makeDashboard(
             importSession: ImportPreviewSession(
                 target: .holdings,
@@ -22,15 +27,20 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
             watchEvents: [
                 event(kind: .failed, title: "巡检失败")
             ],
-            lastMonthlyReportExport: nil,
+            lastMonthlyReportExport: MonthlyReportExportMetadata(
+                monthText: "2026-06",
+                filePath: "/tmp/2026-06-portfolio-report.md",
+                exportedAt: "2026-06-17 10:30:00"
+            ),
             insight: insufficientInsight()
         )
 
-        XCTAssertEqual(summary.primaryAction.title, "处理导入阻塞")
-        XCTAssertEqual(summary.primaryAction.targetTab, .importPreview)
+        XCTAssertEqual(summary.primaryAction.title, "查看趋势")
+        XCTAssertEqual(summary.primaryAction.targetTab, .trend)
         XCTAssertEqual(summary.primaryAction.kind, .selectTab)
-        XCTAssertEqual(summary.primaryAction.severity, .danger)
-        XCTAssertEqual(summary.stateText, "2026-06 · 需要处理 · 4 项待办")
+        XCTAssertFalse(summary.statusCards.contains { $0.tab == .importPreview })
+        XCTAssertFalse(summary.actionQueue.contains { $0.targetTab == .importPreview })
+        XCTAssertEqual(summary.stateText, "2026-06 · 组合健康 · 0 项待办")
     }
 
     func testStatusCardsMapTabsToValuesAndNextActions() {
@@ -57,13 +67,10 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
             insight: readyInsight()
         )
 
-        XCTAssertEqual(summary.statusCards.map(\.tab), [.review, .watch, .importPreview, .insight, .trend])
+        XCTAssertEqual(summary.statusCards.map(\.tab), [.review, .trend])
+        XCTAssertEqual(summary.statusCards.map(\.title), ["本月复盘", "趋势分析"])
         XCTAssertEqual(summary.statusCards.first { $0.tab == .review }?.value, "2026-06")
         XCTAssertEqual(summary.statusCards.first { $0.tab == .review }?.nextAction, "查看摘要")
-        XCTAssertEqual(summary.statusCards.first { $0.tab == .watch }?.value, "巡检完成，无新增")
-        XCTAssertEqual(summary.statusCards.first { $0.tab == .importPreview }?.value, "2 条待确认")
-        XCTAssertEqual(summary.statusCards.first { $0.tab == .importPreview }?.detail, "新增 1 · 更新 1")
-        XCTAssertEqual(summary.statusCards.first { $0.tab == .insight }?.value, "已生成")
         XCTAssertEqual(summary.statusCards.first { $0.tab == .trend }?.value, "已生成")
     }
 
@@ -115,33 +122,29 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
         XCTAssertEqual(
             summary.actionQueue.map(\.title),
             [
-                "确认导入预览",
-                "可撤销上次导入",
-                "巡检失败",
                 "月报未归档",
-                "洞察需要快照",
                 "待确认交易",
                 "下次计划"
             ]
         )
-        XCTAssertEqual(summary.actionQueue.first?.targetTab, .importPreview)
+        XCTAssertFalse(summary.actionQueue.contains { $0.targetTab == .importPreview || $0.targetTab == .watch || $0.targetTab == .insight })
     }
 
-    func testTrendMissingAgentAddsActionQueueItem() {
+    func testTrendMissingModelAddsActionQueueItem() {
         let summary = makeDashboard(
             trendStatus: EnhancementTrendStatus(
                 isProviderConfigured: false,
                 generationState: .idle,
                 lastGeneratedAt: nil,
-                headline: "尚未配置本地 Agent",
+                headline: "尚未配置趋势分析模型",
                 externalSignalStatus: nil,
                 isStale: false
             )
         )
 
         let item = summary.actionQueue.first { $0.id == "trend-provider" }
-        XCTAssertEqual(item?.title, "配置趋势分析 Agent")
-        XCTAssertTrue(item?.detail.contains("Claude CLI") == true)
+        XCTAssertEqual(item?.title, "配置趋势分析模型")
+        XCTAssertTrue(item?.detail.contains("OpenAI-compatible") == true)
         XCTAssertEqual(item?.targetTab, .trend)
         XCTAssertEqual(item?.kind, .selectTab)
         XCTAssertEqual(summary.statusCards.first { $0.tab == .trend }?.value, "未配置")

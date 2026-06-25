@@ -74,7 +74,7 @@ struct MenuBarTickerAppearance: Codable, Hashable {
         customTextColorHex: "#1F292E",
         fontSize: 9,
         isBold: false,
-        layoutMode: .horizontal,
+        layoutMode: .vertical,
         spacingMode: .automatic,
         manualSpacing: 10,
         widthMode: .automatic,
@@ -91,7 +91,7 @@ struct MenuBarTickerAppearance: Codable, Hashable {
         customTextColorHex: String = "#1F292E",
         fontSize: Double = 9,
         isBold: Bool = false,
-        layoutMode: MenuBarTickerLayoutMode = .horizontal,
+        layoutMode: MenuBarTickerLayoutMode = .vertical,
         spacingMode: MenuBarTickerDimensionMode = .automatic,
         manualSpacing: Double = 10,
         widthMode: MenuBarTickerDimensionMode = .automatic,
@@ -114,7 +114,7 @@ struct MenuBarTickerAppearance: Codable, Hashable {
         customTextColorHex = try c.decodeIfPresent(String.self, forKey: .customTextColorHex) ?? "#1F292E"
         fontSize = try c.decodeIfPresent(Double.self, forKey: .fontSize) ?? 9
         isBold = try c.decodeIfPresent(Bool.self, forKey: .isBold) ?? false
-        layoutMode = try c.decodeIfPresent(MenuBarTickerLayoutMode.self, forKey: .layoutMode) ?? .horizontal
+        layoutMode = try c.decodeIfPresent(MenuBarTickerLayoutMode.self, forKey: .layoutMode) ?? Self.default.layoutMode
         spacingMode = try c.decodeIfPresent(MenuBarTickerDimensionMode.self, forKey: .spacingMode) ?? .automatic
         manualSpacing = try c.decodeIfPresent(Double.self, forKey: .manualSpacing) ?? 10
         widthMode = try c.decodeIfPresent(MenuBarTickerDimensionMode.self, forKey: .widthMode) ?? .automatic
@@ -126,6 +126,11 @@ struct MenuBarTickerAppearance: Codable, Hashable {
         copy.fontSize = min(max(copy.fontSize, Self.minFontSize), Self.maxFontSize)
         copy.manualSpacing = min(max(copy.manualSpacing, Self.minManualSpacing), Self.maxManualSpacing)
         copy.manualWidth = min(max(copy.manualWidth, Self.minManualWidth), Self.maxManualWidth)
+        if copy.layoutMode == .vertical,
+           copy.widthMode == .manual,
+           copy.manualWidth == Self.default.manualWidth {
+            copy.widthMode = .automatic
+        }
         if MenuBarTickerAppearance.nsColor(hex: copy.customTextColorHex) == nil {
             copy.customTextColorHex = Self.default.customTextColorHex
         }
@@ -173,6 +178,39 @@ struct MenuBarTickerAppearance: Codable, Hashable {
     }
 }
 
+enum MenuBarTickerLayoutMetrics {
+    static let previewHorizontalPadding: CGFloat = 6
+    static let previewVerticalPadding: CGFloat = 5
+
+    private static let horizontalStatusHorizontalPadding: CGFloat = 3
+    private static let verticalStatusHorizontalPadding: CGFloat = 1
+
+    static func statusHorizontalPadding(for appearance: MenuBarTickerAppearance) -> CGFloat {
+        appearance.layoutMode == .vertical ? verticalStatusHorizontalPadding : horizontalStatusHorizontalPadding
+    }
+
+    static func automaticStatusSpacing(for appearance: MenuBarTickerAppearance) -> CGFloat {
+        appearance.layoutMode == .horizontal ? max(8, CGFloat(appearance.fontSize) * 1.05) : 0
+    }
+
+    static func statusImageWidth(measurements: [CGFloat], appearance: MenuBarTickerAppearance) -> CGFloat {
+        let padding = statusHorizontalPadding(for: appearance)
+        let measuredWidth: CGFloat
+        switch appearance.layoutMode {
+        case .horizontal:
+            let spacing = appearance.spacingMode == .manual
+                ? CGFloat(appearance.manualSpacing)
+                : automaticStatusSpacing(for: appearance)
+            measuredWidth = measurements.reduce(0, +)
+                + CGFloat(max(0, measurements.count - 1)) * spacing
+                + padding * 2
+        case .vertical:
+            measuredWidth = (measurements.max() ?? 0) + padding * 2
+        }
+        return ceil(appearance.widthMode == .manual ? CGFloat(appearance.manualWidth) : measuredWidth)
+    }
+}
+
 struct MenuBarTickerSettings: Codable, Hashable {
     var isEnabled: Bool
     var maxVisibleItems: Int
@@ -181,6 +219,7 @@ struct MenuBarTickerSettings: Codable, Hashable {
     var carouselIntervalSeconds: Double
 
     static let storageKey = "qieman.dashboard.menuBarTickerSettings.v1"
+    static let verticalLayoutMigrationKey = "qieman.dashboard.menuBarTickerSettings.v1.verticalLayoutMigrated"
     static let maxVisibleItemsLimit = 2
     static let minCarouselInterval: Double = 2
     static let maxCarouselInterval: Double = 30
@@ -247,7 +286,17 @@ struct MenuBarTickerSettings: Codable, Hashable {
               let decoded = try? JSONDecoder().decode(MenuBarTickerSettings.self, from: data) else {
             return .default
         }
-        return decoded.normalized()
+        var loaded = decoded.normalized()
+        if !UserDefaults.standard.bool(forKey: verticalLayoutMigrationKey) {
+            if loaded.appearance.layoutMode == .horizontal {
+                loaded.appearance.layoutMode = .vertical
+                if let data = try? JSONEncoder().encode(loaded.normalized()) {
+                    UserDefaults.standard.set(data, forKey: Self.storageKey)
+                }
+            }
+            UserDefaults.standard.set(true, forKey: verticalLayoutMigrationKey)
+        }
+        return loaded.normalized()
     }
 
     func save() {

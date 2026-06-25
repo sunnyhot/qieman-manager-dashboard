@@ -12,10 +12,10 @@ extension EnhancementCenterView {
 
                 if let report = model.trendReport {
                     trendReportView(report)
-                } else if model.trendSettings.agent.isRunnable(with: model.trendAgentCandidates) {
+                } else if model.trendSettings.provider.isConfigured {
                     trendEmptyState("等待生成", detail: "趋势分析会结合本地持仓、平台动态和模型可用的外部信号，输出条件式判断和反证条件。")
                 } else {
-                    trendEmptyState("未配置 Agent", detail: "先在设置中选择 Claude CLI、Codex CLI 或自定义本地 Agent。")
+                    trendEmptyState("未配置模型", detail: "先在设置中填写模型地址、模型名称和 API Key。")
                 }
 
                 if !model.lastTrendError.isEmpty {
@@ -30,33 +30,62 @@ extension EnhancementCenterView {
         if !model.trendProgressLogs.isEmpty {
             trendBlock("分析过程", icon: "list.bullet.rectangle") {
                 VStack(spacing: AppPalette.spaceS) {
-                    ForEach(model.trendProgressLogs.suffix(10)) { item in
-                        HStack(alignment: .top, spacing: 8) {
-                            Text(trendLogTime(item.timestamp))
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                .foregroundStyle(AppPalette.info)
-                                .frame(width: 56, alignment: .leading)
-                            Text(item.message)
-                                .font(.system(size: 11))
-                                .foregroundStyle(AppPalette.muted)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(AppPalette.paper.opacity(0.62), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                    ForEach(model.trendProgressLogs.suffix(16)) { item in
+                        trendProgressRow(item)
                     }
                 }
             }
         }
     }
 
+    @ViewBuilder
+    private func trendProgressRow(_ item: TrendProgressLog) -> some View {
+        let detail = item.detail?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let detail, !detail.isEmpty {
+            DisclosureGroup {
+                Text(detail)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(AppPalette.muted)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 7)
+            } label: {
+                trendProgressRowHeader(item)
+            }
+            .font(.system(size: 11))
+            .tint(AppPalette.info)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(AppPalette.paper.opacity(0.68), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        } else {
+            trendProgressRowHeader(item)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(AppPalette.paper.opacity(0.62), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        }
+    }
+
+    private func trendProgressRowHeader(_ item: TrendProgressLog) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(trendLogTime(item.timestamp))
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(AppPalette.info)
+                .frame(width: 56, alignment: .leading)
+            Text(item.message)
+                .font(.system(size: 11, weight: item.detail == nil ? .regular : .semibold))
+                .foregroundStyle(item.detail == nil ? AppPalette.muted : AppPalette.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+    }
+
     private var trendStatusStrip: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
             trendFact(
-                "Agent",
-                value: model.trendSettings.agent.isRunnable(with: model.trendAgentCandidates) ? model.trendSettings.agent.kind.displayName : "未配置",
-                tint: model.trendSettings.agent.isRunnable(with: model.trendAgentCandidates) ? AppPalette.positive : AppPalette.warning
+                "模型",
+                value: model.trendSettings.provider.isConfigured ? model.trendSettings.provider.model : "未配置",
+                tint: model.trendSettings.provider.isConfigured ? AppPalette.positive : AppPalette.warning
             )
             trendFact("隐私模式", value: model.trendPrivacyMode.rawValue, tint: AppPalette.info)
             trendFact("最近生成", value: model.lastTrendGeneratedAt ?? "暂无", tint: model.trendReport == nil ? AppPalette.muted : AppPalette.brand)
@@ -95,14 +124,17 @@ extension EnhancementCenterView {
             }
             .buttonStyle(.borderedProminent)
             .tint(AppPalette.brand)
-            .disabled(!model.trendSettings.agent.isRunnable(with: model.trendAgentCandidates) || model.trendGenerationState == .generating)
+            .disabled(!model.trendSettings.provider.isConfigured || model.trendGenerationState == .generating)
 
             Button {
-                model.detectTrendAgents()
+                Task {
+                    await model.checkTrendAIConnection()
+                }
             } label: {
-                Label("检测 Agent", systemImage: "magnifyingglass")
+                Label("检测模型", systemImage: "antenna.radiowaves.left.and.right")
             }
             .buttonStyle(.bordered)
+            .disabled(!model.trendSettings.provider.isConfigured || model.trendConnectionState == .checking)
         }
     }
 
@@ -429,7 +461,7 @@ extension EnhancementCenterView {
         if let report = model.trendReport {
             return "\(report.dataAsOf) · \(report.externalSignalStatus.displayText)"
         }
-        return model.trendSettings.agent.isRunnable(with: model.trendAgentCandidates) ? "已配置 Agent，等待生成" : "需要配置本地 Agent"
+        return model.trendSettings.provider.isConfigured ? "已配置模型，等待生成" : "需要配置趋势分析模型"
     }
 
     private func trendLogTime(_ timestamp: String) -> String {

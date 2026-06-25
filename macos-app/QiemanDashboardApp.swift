@@ -332,10 +332,14 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         let lineHeight = ceil(font.ascender - font.descender + font.leading)
         let texts = entries.map(\.compactText)
         let measurements = texts.map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }
-        let itemSpacing = appearance.spacingMode == .manual ? CGFloat(appearance.manualSpacing) : max(8, CGFloat(appearance.fontSize) * 1.05)
-        let horizontalPadding: CGFloat = 3
-        let measuredWidth = measurements.reduce(0, +) + CGFloat(max(0, texts.count - 1)) * itemSpacing + horizontalPadding * 2
-        let width = ceil(appearance.widthMode == .manual ? CGFloat(appearance.manualWidth) : measuredWidth)
+        let itemSpacing = appearance.spacingMode == .manual
+            ? CGFloat(appearance.manualSpacing)
+            : MenuBarTickerLayoutMetrics.automaticStatusSpacing(for: appearance)
+        let horizontalPadding = MenuBarTickerLayoutMetrics.statusHorizontalPadding(for: appearance)
+        let width = MenuBarTickerLayoutMetrics.statusImageWidth(
+            measurements: measurements,
+            appearance: appearance
+        )
 
         let image = NSImage(size: NSSize(width: width, height: barHeight))
         image.lockFocusFlipped(true)
@@ -369,10 +373,11 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         let lineHeight = ceil(font.ascender - font.descender + font.leading)
         let texts = entries.map(\.compactText)
         let measurements = texts.map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }
-        let maxWidth = measurements.max() ?? 0
-        let horizontalPadding: CGFloat = 3
-        let measuredWidth = maxWidth + horizontalPadding * 2
-        let width = ceil(appearance.widthMode == .manual ? CGFloat(appearance.manualWidth) : measuredWidth)
+        let horizontalPadding = MenuBarTickerLayoutMetrics.statusHorizontalPadding(for: appearance)
+        let width = MenuBarTickerLayoutMetrics.statusImageWidth(
+            measurements: measurements,
+            appearance: appearance
+        )
         let lineSpacing = appearance.spacingMode == .manual ? CGFloat(appearance.manualSpacing) : 0
 
         let image = NSImage(size: NSSize(width: width, height: barHeight))

@@ -142,7 +142,6 @@ final class EnhancementState: ObservableObject {
     @Published var trendGenerationState: TrendGenerationState = .idle
     @Published var trendConnectionState: TrendConnectionState = .idle
     @Published var trendPrivacyMode: TrendPrivacyMode = .sanitized
-    @Published var trendAgentCandidates: [TrendAgentCandidate] = []
     @Published var lastTrendGeneratedAt: String?
     @Published var lastTrendError = ""
     @Published var lastTrendConnectionMessage = ""
@@ -157,4 +156,10 @@ enum EnhancementCenterTab: String, CaseIterable, Identifiable {
     case trend = "趋势"
 
     var id: String { rawValue }
+
+    static let workbenchTabs: [EnhancementCenterTab] = [.review, .trend]
+
+    var isVisibleInWorkbench: Bool {
+        Self.workbenchTabs.contains(self)
+    }
 }

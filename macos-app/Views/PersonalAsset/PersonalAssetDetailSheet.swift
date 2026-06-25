@@ -23,6 +23,7 @@ struct PersonalAssetDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let row: PersonalAssetAggregateRow
+    var trendSummary: TrendAssetTagSummary?
 
     private var summary: PersonalAssetDetailSummary {
         PersonalAssetDetailSummary.make(row: row)
@@ -50,6 +51,9 @@ struct PersonalAssetDetailSheet: View {
                         }
                     }
 
+                    if let trendSummary {
+                        trendAnalysisSection(trendSummary)
+                    }
                     attentionSection(summary.attentionItems)
                     priceSection
                     sourceSection
@@ -201,6 +205,206 @@ struct PersonalAssetDetailSheet: View {
         }
     }
 
+    private func trendAnalysisSection(_ summary: TrendAssetTagSummary) -> some View {
+        detailSection(title: "AI 观点", icon: "sparkles") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill((summary.primaryDirection?.assetTagTone ?? .brand).color)
+                        .frame(width: 3, height: 42)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(trendPrimaryText(summary))
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle((summary.primaryDirection?.assetTagTone ?? .brand).color)
+                            .lineLimit(1)
+                        Text(summary.impactText)
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppPalette.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("数据 \(summary.dataAsOf)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppPalette.muted)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(12)
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], alignment: .leading, spacing: 8) {
+                    ForEach(summary.tags) { tag in
+                        trendTagChip(tag)
+                    }
+                }
+
+                trendTradePlanCard(summary.tradePlan)
+
+                if !summary.horizons.isEmpty {
+                    VStack(spacing: 8) {
+                        ForEach(summary.horizons, id: \.horizon) { horizon in
+                            trendHorizonRow(horizon)
+                        }
+                    }
+                }
+
+                if !summary.rationale.isEmpty {
+                    trendTextBlock(title: "判断依据", text: summary.rationale, tint: AppPalette.info)
+                }
+
+                if !summary.counterSignals.isEmpty {
+                    trendListBlock(title: "反证条件", items: Array(summary.counterSignals.prefix(4)), tint: AppPalette.warning)
+                }
+
+                if !summary.relatedActions.isEmpty {
+                    trendListBlock(
+                        title: "行动候选",
+                        items: summary.relatedActions.prefix(3).map { "\($0.kind.assetTagText)：\($0.title)" },
+                        tint: AppPalette.brand
+                    )
+                }
+            }
+        }
+    }
+
+    private func trendTagChip(_ tag: TrendAssetInlineTag) -> some View {
+        HStack(spacing: 4) {
+            Text(tag.dimension)
+                .foregroundStyle(AppPalette.muted)
+            Text(tag.text)
+                .foregroundStyle(tag.tone.color)
+        }
+        .font(.system(size: 10, weight: .semibold))
+        .lineLimit(1)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(tag.tone.color.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
+                .stroke(tag.tone.color.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private func trendTradePlanCard(_ plan: TrendAssetTradePlan) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Label(plan.label, systemImage: "arrow.left.arrow.right.circle.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(plan.tone.color)
+                Text(plan.method)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                Spacer(minLength: 8)
+                Text(plan.source)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(AppPalette.muted)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
+            }
+
+            Text(plan.detail)
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(alignment: .top, spacing: 10) {
+                trendTradePlanList(title: "触发", items: plan.triggerConditions, tint: plan.tone.color)
+                trendTradePlanList(title: "反证", items: plan.invalidatingConditions, tint: AppPalette.warning)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(plan.tone.color.opacity(0.07), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(plan.tone.color.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private func trendTradePlanList(title: String, items: [String], tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(tint)
+            ForEach(Array(items.prefix(3)), id: \.self) { item in
+                Text(item)
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func trendHorizonRow(_ horizon: TrendHorizonView) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Text(horizon.horizon.assetTagText)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(horizon.direction.assetTagTone.color)
+                .frame(width: 34, alignment: .leading)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(horizon.direction.assetTagText)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(horizon.direction.assetTagTone.color)
+                    Text("\(horizon.confidence.label)信心")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                Text(horizon.rationale)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(10)
+        .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+    }
+
+    private func trendTextBlock(title: String, text: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(tint)
+            Text(text)
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(tint.opacity(0.06), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+    }
+
+    private func trendListBlock(title: String, items: [String], tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(tint)
+            ForEach(items, id: \.self) { item in
+                HStack(alignment: .top, spacing: 6) {
+                    Circle()
+                        .fill(tint)
+                        .frame(width: 4, height: 4)
+                        .padding(.top, 5)
+                    Text(item)
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(tint.opacity(0.06), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+    }
+
+    private func trendPrimaryText(_ summary: TrendAssetTagSummary) -> String {
+        guard let direction = summary.primaryDirection else { return summary.tradePlan.label }
+        return "\(summary.tradePlan.label) · \(direction.assetTagText) · \(summary.primaryConfidence.label)信心"
+    }
+
     private var priceSection: some View {
         detailSection(title: "价格与收益", icon: "chart.xyaxis.line") {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 116), spacing: 10)], spacing: 10) {
@@ -263,5 +467,24 @@ struct PersonalAssetDetailSheet: View {
         .padding(14)
         .background(AppPalette.card.opacity(0.82), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .panelStroke(opacity: 0.36)
+    }
+}
+
+private extension TrendAssetTagTone {
+    var color: Color {
+        switch self {
+        case .brand:
+            return AppPalette.brand
+        case .positive:
+            return AppPalette.positive
+        case .info:
+            return AppPalette.info
+        case .warning:
+            return AppPalette.warning
+        case .danger:
+            return AppPalette.danger
+        case .muted:
+            return AppPalette.muted
+        }
     }
 }

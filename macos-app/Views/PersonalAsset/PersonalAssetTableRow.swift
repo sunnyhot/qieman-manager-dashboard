@@ -12,6 +12,8 @@ struct PersonalAssetTableRow: View {
     var fifthWidth: CGFloat = 150
     var sixthWidth: CGFloat = 190
     var actionWidth: CGFloat = 128
+    var labelWidth: CGFloat = 260
+    var trendSummary: TrendAssetTagSummary?
     var isSelectedForComparison = false
     var isComparisonToggleDisabled = false
     var onToggleComparison: (() -> Void)?
@@ -63,6 +65,10 @@ struct PersonalAssetTableRow: View {
                 }
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
+                if let trendSummary {
+                    trendSignalBlock(trendSummary)
+                        .padding(.top, 2)
+                }
                 // In compact mode, show shares inline under the name
                 if isCompact {
                     Text("\(unitsColumnValue) 份")
@@ -70,7 +76,7 @@ struct PersonalAssetTableRow: View {
                         .foregroundStyle(AppPalette.muted)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(width: labelWidth, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(row.marketValue.map { currencyText($0, market: row.detectedMarket) } ?? "—")
@@ -244,6 +250,7 @@ struct PersonalAssetTableRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .interactiveSurface(
             isSelected: isSelectedForComparison,
             tint: isSelectedForComparison ? AppPalette.brand : AppPalette.info,
@@ -283,6 +290,54 @@ struct PersonalAssetTableRow: View {
         .sheet(isPresented: $isPresentingPlanManager) {
             PersonalInvestmentPlanManagementSheet(row: row)
         }
+    }
+
+    private func trendSignalBlock(_ summary: TrendAssetTagSummary) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle((summary.primaryDirection?.assetTagTone ?? .brand).color)
+                Text(primaryTrendText(summary))
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle((summary.primaryDirection?.assetTagTone ?? .brand).color)
+                    .lineLimit(1)
+                Text(summary.impactText)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+
+            HStack(spacing: 5) {
+                ForEach(Array(summary.tags.prefix(isCompact ? 4 : 6))) { tag in
+                    trendTagChip(tag)
+                }
+            }
+        }
+    }
+
+    private func trendTagChip(_ tag: TrendAssetInlineTag) -> some View {
+        HStack(spacing: 3) {
+            Text(tag.dimension)
+                .foregroundStyle(AppPalette.muted)
+            Text(tag.text)
+                .foregroundStyle(tag.tone.color)
+        }
+        .font(.system(size: 9, weight: .semibold))
+        .lineLimit(1)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(tag.tone.color.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
+                .stroke(tag.tone.color.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private func primaryTrendText(_ summary: TrendAssetTagSummary) -> String {
+        guard let direction = summary.primaryDirection else { return summary.tradePlan.label }
+        return "\(summary.tradePlan.label) · \(direction.assetTagText) · \(summary.primaryConfidence.label)"
     }
 
     private var deleteConfirmationBinding: Binding<Bool> {
@@ -519,6 +574,25 @@ struct PersonalAssetTableRow: View {
             return "calendar"
         case .all:
             return "trash"
+        }
+    }
+}
+
+private extension TrendAssetTagTone {
+    var color: Color {
+        switch self {
+        case .brand:
+            return AppPalette.brand
+        case .positive:
+            return AppPalette.positive
+        case .info:
+            return AppPalette.info
+        case .warning:
+            return AppPalette.warning
+        case .danger:
+            return AppPalette.danger
+        case .muted:
+            return AppPalette.muted
         }
     }
 }

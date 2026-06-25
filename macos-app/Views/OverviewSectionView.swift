@@ -2,60 +2,13 @@ import SwiftUI
 
 // MARK: - Overview
 
-private struct OverviewAssetTypeSummaryStats {
-    let totalMarketValue: Double
-    let totalPending: Double
-    let totalProfit: Double
-    let totalChange: Double
-    let holdingCount: Int
-    let pendingCount: Int
-    let planCount: Int
-}
-
-private struct OverviewAssetTypeSummaryGroup: Identifiable {
+struct TodayBriefSummaryItem: Identifiable {
     let id: String
     let title: String
-    let rows: [PersonalAssetAggregateRow]
-    let stats: OverviewAssetTypeSummaryStats
+    let value: String
+    let detail: String
+    let icon: String
     let tint: Color
-
-    init(title: String, rows: [PersonalAssetAggregateRow], tint: Color) {
-        self.id = title
-        self.title = title
-        self.rows = rows
-        self.stats = Self.makeStats(rows: rows)
-        self.tint = tint
-    }
-
-    private static func makeStats(rows: [PersonalAssetAggregateRow]) -> OverviewAssetTypeSummaryStats {
-        var totalMarketValue = 0.0
-        var totalPending = 0.0
-        var totalProfit = 0.0
-        var totalChange = 0.0
-        var holdingCount = 0
-        var pendingCount = 0
-        var planCount = 0
-
-        for row in rows {
-            totalMarketValue += row.marketValue ?? 0
-            totalPending += row.pendingCashAmount
-            totalProfit += row.profitAmount ?? 0
-            totalChange += row.estimateChangeAmount ?? 0
-            if row.hasHolding { holdingCount += 1 }
-            if row.hasPending { pendingCount += 1 }
-            if row.activePlanCount > 0 { planCount += 1 }
-        }
-
-        return OverviewAssetTypeSummaryStats(
-            totalMarketValue: totalMarketValue,
-            totalPending: totalPending,
-            totalProfit: totalProfit,
-            totalChange: totalChange,
-            holdingCount: holdingCount,
-            pendingCount: pendingCount,
-            planCount: planCount
-        )
-    }
 }
 
 struct OverviewSectionView: View {
@@ -64,46 +17,16 @@ struct OverviewSectionView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
-                OverviewHeroCard()
-                TodayBriefPanel(items: model.todayBriefItems, action: openBrief)
-                DashboardInsightPanel(
-                    managerSummary: model.managerActivitySummary,
-                    freshnessSummary: model.dashboardFreshnessSummary,
-                    managerAction: openManagerActivity,
-                    freshnessAction: openFreshness
+                TodayBriefPanel(
+                    items: model.todayBriefItems,
+                    summaryItems: overviewBriefSummaryItems,
+                    action: openBrief,
+                    summaryAction: openPortfolio
                 )
-
-                ViewThatFits {
-                    LazyVGrid(columns: overviewMetricWideColumns, spacing: 12) {
-                        overviewJumpMetricCards
-                    }
-
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
-                        overviewJumpMetricCards
-                    }
-                }
-
-                SectionCard(title: "资产总览", subtitle: "按类型汇总已持有、待确认、定投计划", icon: "rectangle.grid.2x2") {
-                    if model.personalAssetRows.isEmpty {
-                        Text("还没有可展示的个人资产。去「我的持仓」里导入持仓、买入中或定投计划后，这里会自动聚合。")
-                            .font(.system(size: 12))
-                            .foregroundStyle(AppPalette.muted)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-                    } else {
-                        let groups = assetTypeSummaryGroups
-                        ViewThatFits(in: .horizontal) {
-                            HStack(alignment: .top, spacing: 12) {
-                                assetTypeSummaryCards(groups)
-                            }
-
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 12)], spacing: 12) {
-                                assetTypeSummaryCards(groups)
-                            }
-                        }
-                    }
-                }
+                AITrendSummaryPanel(
+                    summary: model.trendDashboardSummary,
+                    action: handleTrendDashboardAction
+                )
 
                 SectionCard(title: "最近调仓", subtitle: "原生卡片直接消费平台接口", icon: "arrow.left.arrow.right", trailing: {
                     Spacer()
@@ -187,6 +110,27 @@ struct OverviewSectionView: View {
         }
     }
 
+    private func handleTrendDashboardAction(_ action: TrendDashboardAction) {
+        guard !action.isDisabled else { return }
+        switch action.kind {
+        case .configure:
+            withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+                model.selectedSection = .settings
+            }
+        case .generate, .refresh:
+            Task {
+                await model.generateTrendAnalysis(userInitiated: true)
+            }
+        case .openReport:
+            withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+                model.selectedEnhancementTab = .trend
+                model.selectedSection = .enhancement
+            }
+        case .wait:
+            break
+        }
+    }
+
     private func openBrief(_ item: TodayBriefItem) {
         withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
             switch item.destination {
@@ -208,218 +152,43 @@ struct OverviewSectionView: View {
         }
     }
 
-    private func openManagerActivity(_ item: ManagerActivityItem) {
-        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
-            switch item.kind {
-            case .platformAction:
-                if let action = model.latestPlatformActions.first {
-                    model.selectPlatformAction(action.id)
-                }
-                model.selectedSection = .platform
-            case .forumRecord:
-                if let record = model.forumRecords.first {
-                    model.selectedPostID = record.id
-                }
-                model.selectedSection = .forum
-            case .watchStatus:
-                model.selectedSection = .settings
-            }
-        }
-    }
-
-    private func openFreshness(_ item: DashboardFreshnessItem) {
-        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
-            switch item.kind {
-            case .portfolio:
-                model.selectedSection = .portfolio
-            case .platform:
-                model.selectedSection = .platform
-            case .forum:
-                model.selectedSection = .forum
-            case .auth, .managerWatch, .system:
-                model.selectedSection = .settings
-            }
-        }
-    }
-
-    private var overviewMetricWideColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: 220), spacing: 12)]
-    }
-
-    @ViewBuilder
-    private var overviewJumpMetricCards: some View {
-        OverviewJumpMetricCard(
-            title: "总持仓",
-            value: model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? "—",
-            subtitle: model.personalAssetSummary.map {
-                "已持有 \(currencyText($0.totalMarketValue)) + 待确认 \(currencyText($0.totalPendingCashAmount)) + 下次计划 \(currencyText($0.totalEstimatedNextPlanAmount))"
-            } ?? "个人资产还未导入完整",
-            icon: "wallet.bifold",
-            accent: AppPalette.brand,
-            destination: "我的持仓"
-        ) {
-            openPortfolio()
-        }
-        .frame(minWidth: 220, maxWidth: .infinity)
-
-        OverviewJumpMetricCard(
-            title: "待确认买入",
-            value: model.personalAssetSummary.map { currencyText($0.totalPendingCashAmount) } ?? "—",
-            subtitle: model.pendingTradeSummary.map { "\($0.actionCount) 笔交易进行中" } ?? "暂无买入中",
-            icon: "clock.badge.exclamationmark",
-            accent: AppPalette.warning,
-            destination: "我的持仓"
-        ) {
-            openPortfolio()
-        }
-        .frame(minWidth: 220, maxWidth: .infinity)
-
-        OverviewJumpMetricCard(
-            title: "计划档案",
-            value: model.investmentPlanSummary.map { "\($0.activePlanCount) / \($0.pausedPlanCount) / \($0.endedPlanCount)" } ?? "—",
-            subtitle: model.investmentPlanSummary.map { "进行中 / 暂停 / 终止 · 共 \($0.planCount) 条" } ?? "还没有计划档案",
-            icon: "calendar.badge.clock",
-            accent: AppPalette.info,
-            destination: "我的持仓"
-        ) {
-            openPortfolio()
-        }
-        .frame(minWidth: 220, maxWidth: .infinity)
-
-        OverviewJumpMetricCard(
-            title: "覆盖标的",
-            value: model.personalAssetSummary.map { "\($0.fundCount)" } ?? "0",
-            subtitle: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "先导入你的个人资产",
-            icon: "square.grid.3x2",
-            accent: AppPalette.accentWarm,
-            destination: "我的持仓"
-        ) {
-            openPortfolio()
-        }
-        .frame(minWidth: 220, maxWidth: .infinity)
-    }
-
-    private var assetTypeSummaryGroups: [OverviewAssetTypeSummaryGroup] {
-        var offExchangeFundRows: [PersonalAssetAggregateRow] = []
-        var onExchangeFundRows: [PersonalAssetAggregateRow] = []
-        var stockRows: [PersonalAssetAggregateRow] = []
-
-        for row in model.personalAssetRows {
-            if row.assetType == .stock {
-                stockRows.append(row)
-            } else if row.isOnExchangeFund {
-                onExchangeFundRows.append(row)
-            } else if row.assetType == .fund {
-                offExchangeFundRows.append(row)
-            }
-        }
-
-        return [
-            OverviewAssetTypeSummaryGroup(
-                title: "场外基金",
-                rows: offExchangeFundRows,
+    private var overviewBriefSummaryItems: [TodayBriefSummaryItem] {
+        [
+            TodayBriefSummaryItem(
+                id: "total",
+                title: "总持仓",
+                value: model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? "—",
+                detail: model.personalAssetSummary.map {
+                    "已持有 \(currencyText($0.totalMarketValue)) + 待确认 \(currencyText($0.totalPendingCashAmount)) + 下次计划 \(currencyText($0.totalEstimatedNextPlanAmount))"
+                } ?? "个人资产还未导入完整",
+                icon: "wallet.bifold",
                 tint: AppPalette.brand
             ),
-            OverviewAssetTypeSummaryGroup(
-                title: "场内基金",
-                rows: onExchangeFundRows,
-                tint: AppPalette.accentWarm
+            TodayBriefSummaryItem(
+                id: "pending",
+                title: "待确认买入",
+                value: model.personalAssetSummary.map { currencyText($0.totalPendingCashAmount) } ?? "—",
+                detail: model.pendingTradeSummary.map { "\($0.actionCount) 笔交易进行中" } ?? "暂无买入中",
+                icon: "clock.badge.exclamationmark",
+                tint: AppPalette.warning
             ),
-            OverviewAssetTypeSummaryGroup(
-                title: "股票",
-                rows: stockRows,
+            TodayBriefSummaryItem(
+                id: "plans",
+                title: "计划档案",
+                value: model.investmentPlanSummary.map { "\($0.activePlanCount) / \($0.pausedPlanCount) / \($0.endedPlanCount)" } ?? "—",
+                detail: model.investmentPlanSummary.map { "进行中 / 暂停 / 终止 · 共 \($0.planCount) 条" } ?? "还没有计划档案",
+                icon: "calendar.badge.clock",
                 tint: AppPalette.info
+            ),
+            TodayBriefSummaryItem(
+                id: "coverage",
+                title: "覆盖标的",
+                value: model.personalAssetSummary.map { "\($0.fundCount)" } ?? "0",
+                detail: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "先导入你的个人资产",
+                icon: "square.grid.3x2",
+                tint: AppPalette.accentWarm
             )
-        ].filter { !$0.rows.isEmpty }
-    }
-
-    @ViewBuilder
-    private func assetTypeSummaryCards(_ groups: [OverviewAssetTypeSummaryGroup]) -> some View {
-        ForEach(groups) { group in
-            assetTypeSummaryCard(group)
-            .frame(minWidth: 260, maxWidth: .infinity)
-        }
-    }
-
-    @ViewBuilder
-    private func assetTypeSummaryCard(_ group: OverviewAssetTypeSummaryGroup) -> some View {
-        let stats = group.stats
-        Button { openPortfolio() } label: {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text(group.title)
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(AppPalette.ink)
-                    ToolbarBadge(title: "\(group.rows.count) 只", tint: group.tint)
-                    Spacer()
-                    Text(currencyText(stats.totalMarketValue))
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppPalette.ink)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                }
-
-                let profitTint = AppPalette.marketTint(for: stats.totalProfit)
-                let changeTint = AppPalette.marketTint(for: stats.totalChange)
-                HStack(spacing: 14) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("总收益")
-                            .font(.system(size: 10))
-                            .foregroundStyle(AppPalette.muted)
-                        Text(signedCurrencyText(stats.totalProfit))
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(profitTint)
-                            .monospacedDigit()
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.72)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("今日涨跌")
-                            .font(.system(size: 10))
-                            .foregroundStyle(AppPalette.muted)
-                        Text(signedCurrencyText(stats.totalChange))
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(changeTint)
-                            .monospacedDigit()
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.72)
-                    }
-                    if stats.totalPending > 0 {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("待确认")
-                                .font(.system(size: 10))
-                                .foregroundStyle(AppPalette.muted)
-                            Text(currencyText(stats.totalPending))
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundStyle(AppPalette.ink)
-                                .monospacedDigit()
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.72)
-                        }
-                    }
-                }
-
-                HStack(spacing: 10) {
-                    Text("持有 \(stats.holdingCount)")
-                    Text("待确认 \(stats.pendingCount)")
-                    Text("有计划 \(stats.planCount)")
-                }
-                .font(.system(size: 10))
-                .foregroundStyle(AppPalette.muted)
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .interactiveSurface(
-                tint: AppPalette.brand,
-                fill: AppPalette.card,
-                hoverFill: AppPalette.cardHover,
-                strokeOpacity: AppPalette.borderLight,
-                activeStrokeOpacity: 0.52,
-                lift: 0.8
-            )
-        }
-        .buttonStyle(PressResponsiveButtonStyle())
+        ]
     }
 
     private func openPlatform(_ action: PlatformActionPayload) {
@@ -462,7 +231,21 @@ private extension TodayBriefTone {
 
 struct TodayBriefPanel: View {
     let items: [TodayBriefItem]
+    let summaryItems: [TodayBriefSummaryItem]
     let action: (TodayBriefItem) -> Void
+    let summaryAction: () -> Void
+
+    private var todayBriefWideColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 220), spacing: 10, alignment: .top), count: 4)
+    }
+
+    private var todayBriefMediumColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 220), spacing: 10, alignment: .top), count: 2)
+    }
+
+    private var todayBriefCompactColumns: [GridItem] {
+        [GridItem(.flexible(minimum: 220), spacing: 10, alignment: .top)]
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -476,7 +259,7 @@ struct TodayBriefPanel: View {
                     Text("今日看点")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
-                    Text("优先级看板")
+                    Text("资产摘要 + 今日事项")
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -485,6 +268,29 @@ struct TodayBriefPanel: View {
                 Spacer(minLength: 8)
 
                 ToolbarBadge(title: items.isEmpty ? "暂无" : "\(items.count) 项", tint: items.isEmpty ? AppPalette.muted : AppPalette.brand)
+            }
+
+            if !summaryItems.isEmpty {
+                ViewThatFits(in: .horizontal) {
+                    LazyVGrid(columns: todayBriefWideColumns, alignment: .leading, spacing: 10) {
+                        ForEach(summaryItems) { item in
+                            TodayBriefSummaryCard(item: item, action: summaryAction)
+                        }
+                    }
+
+                    LazyVGrid(columns: todayBriefMediumColumns, alignment: .leading, spacing: 10) {
+                        ForEach(summaryItems) { item in
+                            TodayBriefSummaryCard(item: item, action: summaryAction)
+                        }
+                    }
+
+                    LazyVGrid(columns: todayBriefCompactColumns, alignment: .leading, spacing: 10) {
+                        ForEach(summaryItems) { item in
+                            TodayBriefSummaryCard(item: item, action: summaryAction)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             if items.isEmpty {
@@ -496,7 +302,7 @@ struct TodayBriefPanel: View {
                         Text("今天暂无需要处理的事项")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(AppPalette.ink)
-                        Text("持仓、计划和主理人动态刷新后会自动出现在这里")
+                        Text("持仓、计划和最新记录刷新后会自动出现在这里")
                             .font(.system(size: 10))
                             .foregroundStyle(AppPalette.muted)
                     }
@@ -506,19 +312,95 @@ struct TodayBriefPanel: View {
                 .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
                 .cardStroke(opacity: 0.28)
             } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 10)], spacing: 10) {
-                    ForEach(items) { item in
-                        TodayBriefItemButton(item: item) {
-                            action(item)
+                ViewThatFits(in: .horizontal) {
+                    LazyVGrid(columns: todayBriefWideColumns, alignment: .leading, spacing: 10) {
+                        ForEach(items) { item in
+                            TodayBriefItemButton(item: item) {
+                                action(item)
+                            }
+                        }
+                    }
+
+                    LazyVGrid(columns: todayBriefMediumColumns, alignment: .leading, spacing: 10) {
+                        ForEach(items) { item in
+                            TodayBriefItemButton(item: item) {
+                                action(item)
+                            }
+                        }
+                    }
+
+                    LazyVGrid(columns: todayBriefCompactColumns, alignment: .leading, spacing: 10) {
+                        ForEach(items) { item in
+                            TodayBriefItemButton(item: item) {
+                                action(item)
+                            }
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(14)
         .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .panelStroke()
         .sectionShadow()
+    }
+}
+
+struct TodayBriefSummaryCard: View {
+    let item: TodayBriefSummaryItem
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: item.icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(item.tint)
+                    .frame(width: 30, height: 30)
+                    .background(item.tint.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                            .stroke(item.tint.opacity(0.18), lineWidth: 1)
+                    )
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(item.title)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(AppPalette.muted)
+                        .lineLimit(1)
+                    Text(item.value)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppPalette.ink)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.70)
+                    Text(item.detail)
+                        .font(.system(size: 9))
+                        .foregroundStyle(AppPalette.muted)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.72)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(item.tint)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+            .interactiveSurface(
+                tint: item.tint,
+                fill: AppPalette.cardStrong.opacity(0.72),
+                hoverFill: AppPalette.cardHover,
+                strokeOpacity: 0.16,
+                activeStrokeOpacity: 0.36,
+                lift: 0.6
+            )
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .help("打开我的持仓")
     }
 }
 
@@ -548,7 +430,7 @@ struct TodayBriefItemButton: View {
                     Text(item.detail)
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
-                        .lineLimit(2)
+                        .lineLimit(3)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -578,416 +460,275 @@ struct TodayBriefItemButton: View {
             )
         }
         .buttonStyle(PressResponsiveButtonStyle())
+        .frame(maxWidth: .infinity, alignment: .leading)
         .help(item.title)
     }
 }
 
-private extension DashboardInsightTone {
-    var overviewTint: Color {
+struct AITrendSummaryPanel: View {
+    let summary: TrendDashboardSummary
+    let action: (TrendDashboardAction) -> Void
+
+    private func trendHorizonWideColumns(count: Int) -> [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 190), spacing: 10, alignment: .top), count: max(1, min(3, count)))
+    }
+
+    private func trendHorizonMediumColumns(count: Int) -> [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 190), spacing: 10, alignment: .top), count: max(1, min(2, count)))
+    }
+
+    private var trendHorizonCompactColumns: [GridItem] {
+        [GridItem(.flexible(minimum: 190), spacing: 10, alignment: .top)]
+    }
+
+    private func trendSectorWideColumns(count: Int) -> [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 220), spacing: 10, alignment: .top), count: max(1, min(4, count)))
+    }
+
+    private func trendSectorMediumColumns(count: Int) -> [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 220), spacing: 10, alignment: .top), count: max(1, min(2, count)))
+    }
+
+    private var trendSectorCompactColumns: [GridItem] {
+        [GridItem(.flexible(minimum: 220), spacing: 10, alignment: .top)]
+    }
+
+    var body: some View {
+        SectionCard(title: "AI 趋势摘要", subtitle: subtitle, icon: "sparkles", trailing: {
+            Spacer()
+            ToolbarBadge(title: summary.stateText, tint: summary.status.tint)
+            ToolbarBadge(title: summary.riskText, tint: summary.riskTone.color)
+        }) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(summary.riskTone.color)
+                        .frame(width: 3, height: 52)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(summary.headline)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(AppPalette.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(summary.detail)
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppPalette.muted)
+                            .lineLimit(4)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(12)
+                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+
+                if !summary.horizons.isEmpty {
+                    ViewThatFits(in: .horizontal) {
+                        LazyVGrid(columns: trendHorizonWideColumns(count: summary.horizons.count), alignment: .leading, spacing: 10) {
+                            ForEach(summary.horizons) { horizon in
+                                AITrendHorizonCard(item: horizon)
+                            }
+                        }
+
+                        LazyVGrid(columns: trendHorizonMediumColumns(count: summary.horizons.count), alignment: .leading, spacing: 10) {
+                            ForEach(summary.horizons) { horizon in
+                                AITrendHorizonCard(item: horizon)
+                            }
+                        }
+
+                        LazyVGrid(columns: trendHorizonCompactColumns, alignment: .leading, spacing: 10) {
+                            ForEach(summary.horizons) { horizon in
+                                AITrendHorizonCard(item: horizon)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if !summary.sectors.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("板块观点")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(AppPalette.ink)
+                        ViewThatFits(in: .horizontal) {
+                            LazyVGrid(columns: trendSectorWideColumns(count: summary.sectors.count), alignment: .leading, spacing: 10) {
+                                ForEach(summary.sectors) { sector in
+                                    AITrendSectorCard(item: sector)
+                                }
+                            }
+
+                            LazyVGrid(columns: trendSectorMediumColumns(count: summary.sectors.count), alignment: .leading, spacing: 10) {
+                                ForEach(summary.sectors) { sector in
+                                    AITrendSectorCard(item: sector)
+                                }
+                            }
+
+                            LazyVGrid(columns: trendSectorCompactColumns, alignment: .leading, spacing: 10) {
+                                ForEach(summary.sectors) { sector in
+                                    AITrendSectorCard(item: sector)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        trendActionButton(summary.primaryAction)
+                        if let secondaryAction = summary.secondaryAction {
+                            trendActionButton(secondaryAction)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        trendActionButton(summary.primaryAction)
+                        if let secondaryAction = summary.secondaryAction {
+                            trendActionButton(secondaryAction)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var subtitle: String {
+        let parts = [
+            summary.dataAsOf.map { "数据 \($0)" },
+            summary.externalSignalText,
+            summary.generatedAt.map { "生成 \($0)" }
+        ].compactMap { $0 }
+        return parts.isEmpty ? "组合级 AI 判断与条件式复核入口" : parts.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private func trendActionButton(_ item: TrendDashboardAction) -> some View {
+        if item.isPrimary {
+            Button {
+                action(item)
+            } label: {
+                Label(item.title, systemImage: item.systemImage)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(item.tone.color)
+            .controlSize(.small)
+            .disabled(item.isDisabled)
+        } else {
+            Button {
+                action(item)
+            } label: {
+                Label(item.title, systemImage: item.systemImage)
+            }
+            .buttonStyle(.bordered)
+            .tint(item.tone.color)
+            .controlSize(.small)
+            .disabled(item.isDisabled)
+        }
+    }
+}
+
+private struct AITrendHorizonCard: View {
+    let item: TrendDashboardHorizonItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(item.title)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+                Spacer(minLength: 4)
+                Text(item.directionText)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(item.tone.color)
+            }
+            Text(item.confidenceText)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(item.tone.color)
+            Text(item.rationale)
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.muted)
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(11)
+        .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
+        .background(AppPalette.paper.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(item.tone.color.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
+private struct AITrendSectorCard: View {
+    let item: TrendDashboardSectorItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(item.name)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+                    .lineLimit(2)
+                Spacer(minLength: 4)
+                Text(item.exposureText)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppPalette.info)
+                    .lineLimit(1)
+            }
+            HStack(spacing: 6) {
+                Text(item.directionText)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(item.tone.color)
+                Text(item.confidenceText)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(AppPalette.muted)
+            }
+            Text(item.rationale)
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.muted)
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(11)
+        .frame(maxWidth: .infinity, minHeight: 98, alignment: .leading)
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(item.tone.color.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
+private extension TrendDashboardStatus {
+    var tint: Color {
+        switch self {
+        case .unconfigured, .stale, .rejected:
+            return AppPalette.warning
+        case .empty, .generating:
+            return AppPalette.info
+        case .ready:
+            return AppPalette.positive
+        case .failed:
+            return AppPalette.danger
+        }
+    }
+}
+
+private extension TrendDashboardTone {
+    var color: Color {
         switch self {
         case .brand:
             return AppPalette.brand
+        case .positive:
+            return AppPalette.positive
         case .info:
             return AppPalette.info
         case .warning:
             return AppPalette.warning
-        case .error:
+        case .danger:
             return AppPalette.danger
-        case .positive:
-            return AppPalette.positive
         case .muted:
             return AppPalette.muted
         }
-    }
-}
-
-struct DashboardInsightPanel: View {
-    let managerSummary: ManagerActivitySummary
-    let freshnessSummary: DashboardFreshnessSummary
-    let managerAction: (ManagerActivityItem) -> Void
-    let freshnessAction: (DashboardFreshnessItem) -> Void
-
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: 12) {
-                ManagerActivityPanel(summary: managerSummary, action: managerAction)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                FreshnessStatusPanel(summary: freshnessSummary, action: freshnessAction)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-            }
-
-            VStack(alignment: .leading, spacing: 12) {
-                ManagerActivityPanel(summary: managerSummary, action: managerAction)
-                FreshnessStatusPanel(summary: freshnessSummary, action: freshnessAction)
-            }
-        }
-    }
-}
-
-struct ManagerActivityPanel: View {
-    let summary: ManagerActivitySummary
-    let action: (ManagerActivityItem) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            panelHeader(
-                title: "主理人动态",
-                subtitle: summary.title,
-                icon: "person.crop.circle.badge.clock",
-                badge: summary.items.isEmpty ? "暂无动态" : "\(summary.items.count) 项",
-                tint: AppPalette.brand
-            )
-
-            if summary.items.isEmpty {
-                emptyInsight(title: "暂无调仓或发言摘要", detail: summary.subtitle, icon: "text.bubble")
-            } else {
-                VStack(spacing: 8) {
-                    ForEach(summary.items) { item in
-                        Button {
-                            action(item)
-                        } label: {
-                            insightRow(
-                                icon: managerIcon(for: item.kind),
-                                title: item.title,
-                                detail: item.detail,
-                                metric: item.metric,
-                                tint: item.tone.overviewTint
-                            )
-                        }
-                        .buttonStyle(PressResponsiveButtonStyle())
-                    }
-                }
-            }
-        }
-        .padding(14)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
-        .panelStroke()
-        .sectionShadow()
-    }
-
-    private func managerIcon(for kind: ManagerActivityKind) -> String {
-        switch kind {
-        case .platformAction:
-            return "arrow.left.arrow.right"
-        case .forumRecord:
-            return "text.bubble"
-        case .watchStatus:
-            return "bell.and.waves.left.and.right"
-        }
-    }
-}
-
-struct FreshnessStatusPanel: View {
-    let summary: DashboardFreshnessSummary
-    let action: (DashboardFreshnessItem) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            panelHeader(
-                title: "数据状态",
-                subtitle: summary.headline,
-                icon: "dot.radiowaves.left.and.right",
-                badge: summary.headline,
-                tint: summary.headline == "数据状态正常" ? AppPalette.positive : AppPalette.warning
-            )
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
-                ForEach(Array(summary.items.prefix(6))) { item in
-                    Button {
-                        action(item)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 5) {
-                            HStack(spacing: 6) {
-                                Circle()
-                                    .fill(item.tone.overviewTint)
-                                    .frame(width: 7, height: 7)
-                                Text(item.title)
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundStyle(AppPalette.muted)
-                                    .lineLimit(1)
-                            }
-
-                            Text(item.status)
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundStyle(item.tone.overviewTint)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.75)
-                            Text(item.detail)
-                                .font(.system(size: 9))
-                                .foregroundStyle(AppPalette.muted)
-                                .lineLimit(2)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
-                        .padding(10)
-                        .interactiveSurface(
-                            tint: item.tone.overviewTint,
-                            fill: AppPalette.cardStrong.opacity(0.72),
-                            hoverFill: AppPalette.cardHover,
-                            strokeOpacity: 0.16,
-                            activeStrokeOpacity: 0.36,
-                            lift: 0.6
-                        )
-                    }
-                    .buttonStyle(PressResponsiveButtonStyle())
-                    .help(item.detail)
-                }
-            }
-        }
-        .padding(14)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
-        .panelStroke()
-        .sectionShadow()
-    }
-}
-
-private func panelHeader(title: String, subtitle: String, icon: String, badge: String, tint: Color) -> some View {
-    HStack(alignment: .top, spacing: 10) {
-        Image(systemName: icon)
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(tint)
-            .accentIconStyle(tint: tint, size: 24)
-
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(AppPalette.ink)
-            Text(subtitle)
-                .font(.system(size: 10))
-                .foregroundStyle(AppPalette.muted)
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-
-        ToolbarBadge(title: badge, tint: tint)
-    }
-}
-
-private func emptyInsight(title: String, detail: String, icon: String) -> some View {
-    HStack(spacing: 10) {
-        Image(systemName: icon)
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(AppPalette.muted)
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(AppPalette.ink)
-            Text(detail)
-                .font(.system(size: 10))
-                .foregroundStyle(AppPalette.muted)
-                .lineLimit(2)
-        }
-    }
-    .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
-    .padding(12)
-    .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-}
-
-private func insightRow(icon: String, title: String, detail: String, metric: String, tint: Color) -> some View {
-    HStack(alignment: .center, spacing: 10) {
-        Image(systemName: icon)
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(tint)
-            .frame(width: 30, height: 30)
-            .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(AppPalette.ink)
-                .lineLimit(1)
-            Text(detail.isEmpty ? "暂无附加信息" : detail)
-                .font(.system(size: 10))
-                .foregroundStyle(AppPalette.muted)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-
-        Text(metric)
-            .font(.system(size: 12, weight: .bold, design: .rounded))
-            .foregroundStyle(tint)
-            .monospacedDigit()
-            .lineLimit(1)
-            .minimumScaleFactor(0.72)
-    }
-    .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-    .padding(10)
-    .interactiveSurface(
-        tint: tint,
-        fill: AppPalette.cardStrong.opacity(0.72),
-        hoverFill: AppPalette.cardHover,
-        strokeOpacity: 0.16,
-        activeStrokeOpacity: 0.36,
-        lift: 0.6
-    )
-}
-
-struct OverviewJumpMetricCard: View {
-    let title: String
-    let value: String
-    let subtitle: String
-    let icon: String
-    let accent: Color
-    let destination: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            MetricCard(title: title, value: value, subtitle: subtitle, icon: icon, accent: accent)
-                .overlay(alignment: .topTrailing) {
-                    HStack(spacing: 4) {
-                        Text(destination)
-                        Image(systemName: "arrow.up.right")
-                    }
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(accent)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 5)
-                    .background(accent.opacity(0.10), in: Capsule())
-                    .padding(9)
-                }
-        }
-        .buttonStyle(PressResponsiveButtonStyle())
-        .help("打开\(destination)")
-    }
-}
-
-struct OverviewHeroCard: View {
-    @EnvironmentObject private var model: AppModel
-
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: 20) {
-                heroCopy
-                    .frame(minWidth: 320, maxWidth: .infinity, alignment: .leading)
-                heroSummaryCard(fixedWidth: 420)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: 14) {
-                heroCopy
-                heroSummaryCard(fixedWidth: nil)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(AppPalette.heroGradient, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.line.opacity(AppPalette.borderHeavy), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.06), radius: 10, y: 3)
-    }
-
-    private var heroCopy: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("今日看板")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(AppPalette.ink)
-                .minimumScaleFactor(0.72)
-                .lineLimit(1)
-            Text("今日收益 · 待确认交易 · 定投计划 · 主理人动态")
-                .font(.system(size: 13))
-                .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ToolbarBadge(title: model.cookieAvailable ? "已登录" : "未登录", tint: model.cookieAvailable ? AppPalette.positive : AppPalette.warning)
-                    ToolbarBadge(title: model.liveModeLabel, tint: AppPalette.brand)
-                    if model.hasPersonalPortfolio {
-                        ToolbarBadge(title: "资产聚合已启用", tint: AppPalette.info)
-                    }
-                }
-            }
-        }
-    }
-
-    private func heroSummaryCard(fixedWidth: CGFloat?) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("总览摘要")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(AppPalette.muted)
-                    Text(model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? (model.hasPersonalPortfolio ? "待刷新" : "未配置"))
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppPalette.ink)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.76)
-                }
-                Spacer(minLength: 8)
-                Button {
-                    model.selectedSection = .portfolio
-                } label: {
-                    Label("我的持仓", systemImage: "arrow.right")
-                        .font(.system(size: 12, weight: .semibold))
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(AppPalette.brand)
-                .controlSize(.small)
-            }
-
-            if let summary = model.personalAssetSummary {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 8) {
-                        heroSummaryMetric(title: "已持有", value: currencyText(summary.totalMarketValue), tint: AppPalette.brand)
-                        heroSummaryMetric(title: "待确认", value: currencyText(summary.totalPendingCashAmount), tint: AppPalette.warning)
-                        heroSummaryMetric(title: "下次计划", value: currencyText(summary.totalEstimatedNextPlanAmount), tint: AppPalette.info)
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        heroSummaryMetric(title: "已持有", value: currencyText(summary.totalMarketValue), tint: AppPalette.brand)
-                        heroSummaryMetric(title: "待确认", value: currencyText(summary.totalPendingCashAmount), tint: AppPalette.warning)
-                        heroSummaryMetric(title: "下次计划", value: currencyText(summary.totalEstimatedNextPlanAmount), tint: AppPalette.info)
-                    }
-                }
-            } else {
-                Text(
-                    model.investmentPlanSummary.map { "\($0.activePlanCount) 个进行中计划 · 下次 \($0.nextExecutionDate ?? "待定")" }
-                    ?? model.pendingTradeSummary.map { "待确认 \(currencyText($0.totalCashAmount)) · \($0.actionCount) 笔" }
-                    ?? model.userPortfolioSnapshot.map { "浮盈 \(currencyOptional($0.totalProfitAmount)) · \($0.holdingCount) 个标的" }
-                    ?? "去「我的持仓」里粘贴代码和份额"
-                )
-                    .font(.system(size: 12))
-                    .foregroundStyle(AppPalette.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(14)
-        .frame(minHeight: 120, alignment: .topLeading)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(width: fixedWidth, alignment: .leading)
-        .background(AppPalette.cardStrong.opacity(0.90), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.42), lineWidth: 1)
-        )
-    }
-
-    private func heroSummaryMetric(title: String, value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(AppPalette.muted)
-            Text(value)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(AppPalette.ink)
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
-        }
-        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(tint.opacity(0.16), lineWidth: 1)
-        )
     }
 }
 

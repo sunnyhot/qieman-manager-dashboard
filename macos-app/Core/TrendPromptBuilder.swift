@@ -30,15 +30,15 @@ struct TrendPromptBuilder {
         let system = """
         \(baseSystemPrompt(settings: settings))
         This is a partial chunk analysis, not the final portfolio report.
-        先判断板块趋势，再分析板块内关键资产，最后给出本板块的条件式行动候选。
+        先判断板块趋势，再逐个分析本分块内每个资产，最后给出本板块的重点条件式行动候选。
         Treat sectors in this chunk as the primary analysis unit.
         Analyze only assets included in this chunk.
-        Keep keyAssets and actions limited to this chunk's assets and 板块内关键资产.
+        Include every asset in this chunk in keyAssets. Keep actions limited to this chunk's重点动作; do not create one action per asset unless truly necessary.
         Do not output final whole-portfolio conclusions; leave whole-portfolio synthesis to the final merge step.
         """
 
         let user = """
-        分块 \(chunkIndex)/\(chunkCount)：分析以下且慢组合的板块上下文。请先判断板块趋势，再筛选板块内关键资产，返回一个合法 TrendAnalysisReport JSON 对象，作为后续合成的局部报告。
+        分块 \(chunkIndex)/\(chunkCount)：分析以下且慢组合的板块上下文。请先判断板块趋势，再逐个覆盖本分块资产，返回一个合法 TrendAnalysisReport JSON 对象，作为后续合成的局部报告。
 
         Context JSON:
         \(contextJSON)
@@ -63,6 +63,7 @@ struct TrendPromptBuilder {
         Deduplicate sectors, keyAssets, actions, evidence, and warnings.
         Use the aggregate portfolio context for counts and portfolio-level summaries.
         Do not introduce facts that are absent from the aggregate context or chunk reports.
+        The final keyAssets must still cover every asset from aggregateContext.assets; synthesize a concise asset-level entry from sector and chunk context when a partial report omitted one.
         """
 
         let user = """
@@ -76,27 +77,32 @@ struct TrendPromptBuilder {
     }
 
     private func baseSystemPrompt(settings: TrendAnalysisSettings) -> String {
-        let searchInstruction = """
-        If the selected local agent has reliable external-signal access, include it with evidence.
-        If not, set externalSignalStatus to partial or unavailable instead of inventing sources.
-        Selected local agent: \(settings.agent.kind.displayName).
-        """
+        let externalSignalInstruction = settings.provider.supportsOnlineSearch
+            ? "If the selected model has reliable external-signal access, include concise evidence. If access is partial, set externalSignalStatus to partial instead of inventing sources."
+            : "The selected model is configured without online search. Set externalSignalStatus to unavailable or partial, and do not invent external sources."
 
         return """
         Return valid JSON only.
         Use the TrendAnalysisReport schema exactly.
-        Read skill/instructions.md, skill/domain-rules.md, and skill/output-contract.md before writing output.
+        Follow the embedded Qieman investment trend analysis skill rules in this prompt.
+        Analyze Qieman portfolio data from a personal research perspective.
+        Focus on conditional trend judgment, portfolio risk boundaries, counter-signals, and watch/review actions.
         Separate facts, model judgment, and action candidates.
-        \(searchInstruction)
+        \(externalSignalInstruction)
+        Selected model: \(settings.provider.model).
         Do not invent sources.
         Do not guarantee returns.
         Do not use mandatory buy/sell language.
         Do not perform exhaustive online searches for every asset; use broad market, sector, policy, and clearly material asset-level signals only.
-        Keep keyAssets, actions, and evidence concise: prefer at most 5 keyAssets, 5 actions, and 6 evidence items in a final report, and at most 3 of each in chunk reports.
+        keyAssets should cover every submitted asset so the holding table can show item-level labels; MUST include one keyAssets item for every Context JSON asset, including low-importance holdings.
+        Every keyAsset impactText or rationale must include conditional buy/hold/sell execution guidance such as 分批买入, 持有观察, 暂停买入, 分批卖出, 再平衡复核, with trigger and counter-signal boundaries in horizons or counterSignals.
+        Keep actions and evidence concise: actions are portfolio-level重点动作 only, preferably at most 5 actions in a final report and at most 3 actions in chunk reports; do not omit keyAssets just to keep actions short.
+        Prefer one concise buy/hold/sell execution guidance per keyAsset over adding a separate action for every asset.
+        Keep evidence concise: prefer at most 6 evidence items in a final report and at most 3 evidence items in chunk reports.
         If keyAssets.horizons is not empty, each item must use the same horizon object shape as top-level horizons: horizon, direction, confidence, rationale, and counterSignals.
         Always include counterSignals, confidence, dataAsOf, generatedAt, evidence, warnings, and disclaimer.
         Every action candidate must include triggerConditions and invalidatingConditions.
-        Use conditional Chinese wording such as 可考虑, 关注, 等待确认, 若...则....
+        Use conditional Chinese wording such as 可考虑, 关注, 等信号再动, 等待触发条件, 若...则....
         Do not use 必须买入, 必须卖出, 保证上涨, 保证收益, or 一定上涨.
         Required field names include portfolio, horizons, sectors, keyAssets, actions, evidence, warnings, disclaimer, counterSignals.
         Do not add fields outside this schema. Do not output totalMarketValue, totalCostValue, totalProfit, assetCount, or top-level confidence in the report.

@@ -7,6 +7,7 @@ private struct PersonalAssetGroupStats {
 
 struct PersonalAssetBrowser: View {
     let rows: [PersonalAssetAggregateRow]
+    var trendReport: TrendAnalysisReport?
 
     private let comparisonMaxCount = 4
 
@@ -41,6 +42,7 @@ struct PersonalAssetBrowser: View {
             )
             return presentation
         }()
+        let trendTagIndex = TrendAssetTagIndex(report: trendReport)
 
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
@@ -99,6 +101,7 @@ struct PersonalAssetBrowser: View {
             } else {
                 PersonalAssetGroupedTable(
                     rows: presentation.visibleRows,
+                    trendTagIndex: trendTagIndex,
                     comparisonSelection: comparisonSelection,
                     comparisonMaxCount: comparisonMaxCount,
                     onToggleComparison: toggleComparison
@@ -108,7 +111,7 @@ struct PersonalAssetBrowser: View {
             }
         }
         .sheet(item: $selectedDetailRow) { row in
-            PersonalAssetDetailSheet(row: row)
+            PersonalAssetDetailSheet(row: row, trendSummary: trendTagIndex.summary(for: row))
         }
         .task(id: searchText) {
             try? await Task.sleep(nanoseconds: 150_000_000)
@@ -373,6 +376,7 @@ struct PersonalAssetGroupedTable: View {
     private let onExchangeFundStats: PersonalAssetGroupStats
     let stockRows: [PersonalAssetAggregateRow]
     private let stockStats: PersonalAssetGroupStats
+    let trendTagIndex: TrendAssetTagIndex
     let comparisonSelection: [String]
     let comparisonMaxCount: Int
     let onToggleComparison: (PersonalAssetAggregateRow) -> Void
@@ -380,6 +384,7 @@ struct PersonalAssetGroupedTable: View {
 
     init(
         rows: [PersonalAssetAggregateRow],
+        trendTagIndex: TrendAssetTagIndex = TrendAssetTagIndex(report: nil),
         comparisonSelection: [String] = [],
         comparisonMaxCount: Int = 4,
         onToggleComparison: @escaping (PersonalAssetAggregateRow) -> Void = { _ in },
@@ -405,6 +410,7 @@ struct PersonalAssetGroupedTable: View {
         self.onExchangeFundStats = Self.groupStats(rows: onExchangeFundRows)
         self.stockRows = stockRows
         self.stockStats = Self.groupStats(rows: stockRows)
+        self.trendTagIndex = trendTagIndex
         self.comparisonSelection = comparisonSelection
         self.comparisonMaxCount = comparisonMaxCount
         self.onToggleComparison = onToggleComparison
@@ -463,6 +469,7 @@ struct PersonalAssetGroupedTable: View {
             PersonalAssetTable(
                 rows: rows,
                 usesMarketTradeColumns: usesMarketTradeColumns,
+                trendTagIndex: trendTagIndex,
                 comparisonSelection: comparisonSelection,
                 comparisonMaxCount: comparisonMaxCount,
                 onToggleComparison: onToggleComparison,
@@ -487,13 +494,24 @@ struct PersonalAssetGroupedTable: View {
     }
 }
 
+private struct PersonalAssetTableWidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 struct PersonalAssetTable: View {
     let rows: [PersonalAssetAggregateRow]
     let usesMarketTradeColumns: Bool
+    let trendTagIndex: TrendAssetTagIndex
     let comparisonSelection: [String]
     let comparisonMaxCount: Int
     let onToggleComparison: (PersonalAssetAggregateRow) -> Void
     let onOpenDetail: (PersonalAssetAggregateRow) -> Void
+
+    @State private var availableWidth: CGFloat = Self.compactThreshold
 
     /// Compact threshold — below this width we switch to responsive column widths
     static let compactThreshold: CGFloat = 780
@@ -501,6 +519,7 @@ struct PersonalAssetTable: View {
     init(
         rows: [PersonalAssetAggregateRow],
         usesMarketTradeColumns: Bool = false,
+        trendTagIndex: TrendAssetTagIndex = TrendAssetTagIndex(report: nil),
         comparisonSelection: [String] = [],
         comparisonMaxCount: Int = 4,
         onToggleComparison: @escaping (PersonalAssetAggregateRow) -> Void = { _ in },
@@ -508,6 +527,7 @@ struct PersonalAssetTable: View {
     ) {
         self.rows = rows
         self.usesMarketTradeColumns = usesMarketTradeColumns
+        self.trendTagIndex = trendTagIndex
         self.comparisonSelection = comparisonSelection
         self.comparisonMaxCount = comparisonMaxCount
         self.onToggleComparison = onToggleComparison
@@ -515,19 +535,36 @@ struct PersonalAssetTable: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
-            let availableWidth = geo.size.width
-            let isCompact = availableWidth < Self.compactThreshold
+        let measuredWidth = max(availableWidth, 1)
+        let isCompact = measuredWidth < Self.compactThreshold
+
+        VStack(spacing: 0) {
+            widthProbe
 
             ScrollView(.horizontal, showsIndicators: isCompact) {
-                tableContent(availableWidth: availableWidth, isCompact: isCompact)
+                tableContent(availableWidth: measuredWidth, isCompact: isCompact)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(height: tableHeightEstimate)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var tableHeightEstimate: CGFloat {
-        CGFloat(rows.count) * 80 + 44
+    private var widthProbe: some View {
+        Color.clear
+            .frame(height: 0)
+            .frame(maxWidth: .infinity)
+            .background(
+                GeometryReader { geometry in
+                    Color.clear.preference(
+                        key: PersonalAssetTableWidthPreferenceKey.self,
+                        value: geometry.size.width
+                    )
+                }
+            )
+            .onPreferenceChange(PersonalAssetTableWidthPreferenceKey.self) { width in
+                guard width > 0, abs(width - availableWidth) > 0.5 else { return }
+                availableWidth = width
+            }
     }
 
     // MARK: - Column widths adapt to available space
@@ -560,7 +597,8 @@ struct PersonalAssetTable: View {
     private func tableContent(availableWidth: CGFloat, isCompact: Bool) -> some View {
         let colSpacing: CGFloat = isCompact ? 8 : 12
         let visibleColumnCount = isCompact ? 6 : 7
-        let totalFixedWidth = valuationColWidth(isCompact: isCompact)
+        let labelColMinWidth: CGFloat = isCompact ? 160 : 260
+        let fixedColumnsWidth = valuationColWidth(isCompact: isCompact)
             + (isCompact ? 0 : unitsColWidth(isCompact: isCompact))
             + priceColWidth(isCompact: isCompact)
             + fifthColWidth(isCompact: isCompact)
@@ -568,11 +606,14 @@ struct PersonalAssetTable: View {
             + actionColWidth(isCompact: isCompact)
             + colSpacing * CGFloat(visibleColumnCount - 1)
             + 24              // horizontal padding (12*2)
+        let minimumTableWidth = fixedColumnsWidth + labelColMinWidth
+        let tableWidth = max(availableWidth, minimumTableWidth)
+        let labelColWidth = max(labelColMinWidth, tableWidth - fixedColumnsWidth)
 
         VStack(spacing: 0) {
             HStack(spacing: colSpacing) {
                 Text("标的")
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(width: labelColWidth, alignment: .leading)
                 Text(isCompact ? "估值/收益" : "实时估值 / 收益")
                     .frame(width: valuationColWidth(isCompact: isCompact), alignment: .leading)
                 if !isCompact {
@@ -619,6 +660,8 @@ struct PersonalAssetTable: View {
                         fifthWidth: fifthColWidth(isCompact: isCompact),
                         sixthWidth: sixthColWidth(isCompact: isCompact),
                         actionWidth: actionColWidth(isCompact: isCompact),
+                        labelWidth: labelColWidth,
+                        trendSummary: trendTagIndex.summary(for: row),
                         isSelectedForComparison: isSelectedForComparison,
                         isComparisonToggleDisabled: !isSelectedForComparison && comparisonSelection.count >= comparisonMaxCount,
                         onToggleComparison: {
@@ -632,6 +675,6 @@ struct PersonalAssetTable: View {
             }
             .padding(.top, 10)
         }
-        .frame(minWidth: max(availableWidth, totalFixedWidth + 100))
+        .frame(width: tableWidth, alignment: .leading)
     }
 }

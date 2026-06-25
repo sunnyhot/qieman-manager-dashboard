@@ -6,23 +6,33 @@ extension AppModel {
         let currentDay = trendDayString(from: Self.timestampString())
         let generatedDay = generatedAt.map { trendDayString(from: $0) }
         let stale = generatedDay.map { $0 != currentDay } ?? false
-        let isAgentConfigured = trendSettings.agent.isRunnable(with: trendAgentCandidates)
+        let isProviderConfigured = trendSettings.provider.isConfigured
         let headline: String
         if let report = trendReport {
             headline = report.portfolio.headline
         } else if !lastTrendError.isEmpty {
             headline = lastTrendError
         } else {
-            headline = isAgentConfigured ? "等待生成趋势分析" : "尚未配置趋势分析 Agent"
+            headline = isProviderConfigured ? "等待生成趋势分析" : "尚未配置趋势分析模型"
         }
 
         return EnhancementTrendStatus(
-            isProviderConfigured: isAgentConfigured,
+            isProviderConfigured: isProviderConfigured,
             generationState: trendGenerationState,
             lastGeneratedAt: generatedAt,
             headline: headline,
             externalSignalStatus: trendReport?.externalSignalStatus,
             isStale: stale
+        )
+    }
+
+    var trendDashboardSummary: TrendDashboardSummary {
+        TrendDashboardSummary.make(
+            report: trendReport,
+            trendStatus: enhancementTrendStatus,
+            generationState: trendGenerationState,
+            lastError: lastTrendError,
+            progressLogs: trendProgressLogs
         )
     }
 
@@ -44,8 +54,6 @@ extension AppModel {
                 lastTrendError = error.localizedDescription
             }
         }
-
-        detectTrendAgents()
     }
 
     func saveTrendAnalysisSettings() {
@@ -66,30 +74,25 @@ extension AppModel {
         }
     }
 
-    func detectTrendAgents() {
-        trendAgentCandidates = trendAgentDetector.detect()
-    }
-
-    func checkTrendAgentConnection() async {
-        guard trendSettings.agent.isRunnable(with: trendAgentCandidates) else {
+    func checkTrendAIConnection() async {
+        guard trendSettings.provider.isConfigured else {
             trendConnectionState = .failed
-            lastTrendConnectionMessage = TrendAgentRunnerError.noRunnableAgent.localizedDescription
+            lastTrendConnectionMessage = TrendAIClientError.missingConfiguration.localizedDescription
+            lastTrendError = lastTrendConnectionMessage
             return
         }
 
+        saveTrendAnalysisSettings()
         trendConnectionState = .checking
-        lastTrendConnectionMessage = "正在检测 \(trendSettings.agent.kind.displayName)..."
+        lastTrendConnectionMessage = "正在检测 \(trendSettings.provider.model)..."
         lastTrendError = ""
 
         do {
-            let result = try await trendAgentRunner.check(
-                settings: trendSettings.agent,
-                candidates: trendAgentCandidates
-            )
+            let result = try await trendAIClient.checkConnection(settings: trendSettings.provider)
             trendConnectionState = .succeeded
             let preview = result.preview.trimmingCharacters(in: .whitespacesAndNewlines)
             let suffix = preview.isEmpty ? "" : " 返回：\(preview)"
-            lastTrendConnectionMessage = "Agent 可用：\(result.agentName) · \(result.commandPath)。\(suffix)"
+            lastTrendConnectionMessage = "模型可用：\(result.model) · \(result.endpoint)。\(suffix)"
         } catch {
             trendConnectionState = .failed
             lastTrendConnectionMessage = error.localizedDescription
@@ -98,9 +101,9 @@ extension AppModel {
     }
 
     func generateTrendAnalysis(userInitiated: Bool, createdAt: String? = nil) async {
-        guard trendSettings.agent.isRunnable(with: trendAgentCandidates) else {
+        guard trendSettings.provider.isConfigured else {
             trendGenerationState = .failed
-            lastTrendError = TrendAgentRunnerError.noRunnableAgent.localizedDescription
+            lastTrendError = TrendAIClientError.missingConfiguration.localizedDescription
             return
         }
 
@@ -108,8 +111,8 @@ extension AppModel {
         trendGenerationState = .generating
         lastTrendError = ""
         trendProgressLogs = []
-        appendTrendProgress("开始趋势分析：\(trendSettings.agent.kind.displayName)")
-        appendTrendProgress("准备参数：\(trendPrivacyMode.rawValue) · 本地 Agent · 超时 \(trendTimeoutText(trendSettings.agent))")
+        appendTrendProgress("开始趋势分析：\(trendSettings.provider.model)")
+        appendTrendProgress("准备参数：\(trendPrivacyMode.rawValue) · 直连模型 · 超时 \(trendTimeoutText(trendSettings.provider))")
         trendSettings.defaultPrivacyMode = trendPrivacyMode
 
         let context = TrendAnalysisContextBuilder().build(
@@ -122,6 +125,7 @@ extension AppModel {
             createdAt: generatedAt
         )
         appendTrendProgress("构建趋势上下文：\(context.assets.count) 个标的，\(context.sectors.count) 个板块")
+        appendTrendProgress("输入摘要", detail: trendContextSummary(context))
 
         do {
             let report = try await generateTrendReport(context: context, settings: trendSettings)
@@ -130,9 +134,11 @@ extension AppModel {
             guard validation.isValid else {
                 trendGenerationState = .rejected
                 lastTrendError = validation.messages.joined(separator: "\n")
+                appendTrendProgress("JSON 校验失败", detail: validation.messages.joined(separator: "\n"))
                 appendTrendProgress("趋势分析被拦截：报告未通过安全校验")
                 return
             }
+            appendTrendProgress("JSON 校验通过", detail: "报告结构完整，可展示；已检查短中长期、行动触发条件、反证条件和非投资建议声明。")
 
             trendReport = report
             lastTrendGeneratedAt = report.generatedAt
@@ -153,7 +159,7 @@ extension AppModel {
 
     func runDailyTrendAnalysisIfNeeded(createdAt: String? = nil) async {
         guard trendSettings.dailyAutoAnalysisEnabled else { return }
-        guard trendSettings.agent.isRunnable(with: trendAgentCandidates) else { return }
+        guard trendSettings.provider.isConfigured else { return }
 
         let generatedAt = createdAt ?? Self.timestampString()
         let day = trendDayString(from: generatedAt)
@@ -172,12 +178,12 @@ extension AppModel {
         context: TrendAnalysisContext,
         settings: TrendAnalysisSettings
     ) async throws -> TrendAnalysisReport {
-        appendTrendProgress("单次 Agent 分析：\(context.assets.count) 个标的，\(context.sectors.count) 个板块")
-        appendTrendProgress("生成提示词与运行数据包：\(context.privacyMode.rawValue)")
+        appendTrendProgress("单次模型分析：\(context.assets.count) 个标的，\(context.sectors.count) 个板块")
+        appendTrendProgress("生成趋势提示词：\(context.privacyMode.rawValue)")
         return try await requestTrendReport(
             context: context,
             settings: settings,
-            phase: "本地 Agent 分析"
+            phase: "模型分析"
         )
     }
 
@@ -187,21 +193,16 @@ extension AppModel {
         phase: String
     ) async throws -> TrendAnalysisReport {
         let prompt = TrendPromptBuilder().build(context: context, settings: settings)
-        let workspace = TrendRunWorkspace(
-            rootDirectory: trendRunRootURL(),
-            skillRoot: try trendSkillRootURL()
-        )
-        let packet = try workspace.prepare(context: context, prompt: prompt)
-        appendTrendProgress("启动本地 Agent：\(settings.agent.kind.displayName) · 超时 \(trendTimeoutText(settings.agent))")
+        appendTrendProgress("提示词摘要", detail: trendPromptSummary(prompt, context: context))
+        let provider = settings.provider.upgradedForTrendGeneration
+        appendTrendProgress("启动趋势模型：\(provider.model) · 超时 \(trendTimeoutText(provider))")
         let heartbeatTask = startTrendProgressHeartbeat(phase: phase)
         defer { heartbeatTask.cancel() }
-        let result = try await trendAgentRunner.generateReport(
-            packet: packet,
-            settings: settings.agent,
-            candidates: trendAgentCandidates
-        )
-        appendTrendProgress("收到 Agent 报告：\(result.agentName) · \(String(format: "%.1f", result.durationSeconds))s")
-        return try decodeTrendReportJSON(result.reportJSON)
+        let start = Date()
+        let report = try await trendAIClient.generateReport(prompt: prompt, settings: provider)
+        appendTrendProgress("收到模型报告：\(provider.model) · \(String(format: "%.1f", Date().timeIntervalSince(start)))s")
+        appendTrendProgress("模型输出摘要", detail: trendReportSummary(report, expectedAssetCount: context.assets.count))
+        return report
     }
 
     private func startTrendProgressHeartbeat(phase: String) -> Task<Void, Never> {
@@ -212,49 +213,57 @@ extension AppModel {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: interval)
                 guard !Task.isCancelled else { break }
-                self?.appendTrendProgress("等待 Agent 返回：\(phase) 已等待 \(Self.trendElapsedText(elapsed))")
+                self?.appendTrendProgress("等待模型返回：\(phase) 已等待 \(Self.trendElapsedText(elapsed))")
                 elapsed += interval
             }
         }
     }
 
-    private func appendTrendProgress(_ message: String) {
-        let entry = TrendProgressLog(timestamp: Self.timestampString(), message: message)
+    private func appendTrendProgress(_ message: String, detail: String? = nil) {
+        let entry = TrendProgressLog(timestamp: Self.timestampString(), message: message, detail: detail)
         trendProgressLogs.append(entry)
         if trendProgressLogs.count > 50 {
             trendProgressLogs.removeFirst(trendProgressLogs.count - 50)
         }
     }
 
-    private func trendTimeoutText(_ settings: TrendAgentSettings) -> String {
-        "\(Int(settings.timeoutSeconds.rounded())) 秒"
-    }
-
-    private func decodeTrendReportJSON(_ json: String) throws -> TrendAnalysisReport {
-        let data = Data(json.utf8)
-        return try JSONDecoder().decode(TrendAnalysisReport.self, from: data)
-    }
-
-    private func trendRunRootURL() -> URL {
-        let base = dataDirectoryURL ?? FileManager.default.temporaryDirectory
-        return base.appendingPathComponent("trend-runs", isDirectory: true)
-    }
-
-    private func trendSkillRootURL() throws -> URL {
-        let fileManager = FileManager.default
-        let env = ProcessInfo.processInfo.environment
-        let candidates: [URL?] = [
-            env["QIEMAN_PROJECT_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true).appendingPathComponent("skills/investment-trend-analysis", isDirectory: true) },
-            Bundle.main.resourceURL?.appendingPathComponent("project/skills/investment-trend-analysis", isDirectory: true),
-            URL(fileURLWithPath: fileManager.currentDirectoryPath, isDirectory: true).appendingPathComponent("skills/investment-trend-analysis", isDirectory: true),
-            URL(fileURLWithPath: fileManager.currentDirectoryPath, isDirectory: true).deletingLastPathComponent().appendingPathComponent("skills/investment-trend-analysis", isDirectory: true)
-        ]
-        for candidate in candidates.compactMap({ $0 }) {
-            if fileManager.fileExists(atPath: candidate.appendingPathComponent("SKILL.md").path) {
-                return candidate
+    private func trendContextSummary(_ context: TrendAnalysisContext) -> String {
+        let assetNames = context.assets.prefix(8).map { asset in
+            if let code = asset.code, !code.isEmpty {
+                return "\(asset.name)(\(code))"
             }
+            return asset.name
         }
-        throw TrendAgentRunnerError.commandFailed("趋势分析 skill 缺失：skills/investment-trend-analysis")
+        let sectorNames = context.sectors.prefix(8).map(\.name)
+        return [
+            "资产：\(context.assets.count) 个；示例：\(assetNames.isEmpty ? "暂无" : assetNames.joined(separator: "、"))\(context.assets.count > assetNames.count ? " 等" : "")",
+            "板块：\(context.sectors.count) 个；\(sectorNames.isEmpty ? "暂无" : sectorNames.joined(separator: "、"))",
+            "组合：持仓 \(context.portfolio.holdingCount)，计划 \(context.portfolio.activePlanCount)，待确认 \(context.portfolio.pendingAssetCount)",
+            "隐私：\(context.privacyMode.rawValue)；外部信号摘要：\(context.platformSignals.isEmpty ? "暂无" : "\(context.platformSignals.count) 条")"
+        ].joined(separator: "\n")
+    }
+
+    private func trendPromptSummary(_ prompt: TrendModelPrompt, context: TrendAnalysisContext) -> String {
+        [
+            "system：\(prompt.system.count) 字符；user：\(prompt.user.count) 字符",
+            "约束：返回合法 JSON；每个资产必须有 keyAssets；展示条件式买/持/卖；仅展示可核验分析轨迹",
+            "上下文：\(context.assets.count) 个资产、\(context.sectors.count) 个板块、\(context.platformSignals.count) 条平台信号"
+        ].joined(separator: "\n")
+    }
+
+    private func trendReportSummary(_ report: TrendAnalysisReport, expectedAssetCount: Int) -> String {
+        let coverageText = "\(report.keyAssets.count)/\(expectedAssetCount)"
+        let actionNames = report.actions.prefix(5).map { "\($0.kind.assetTagText)：\($0.title)" }
+        return [
+            "headline：\(report.portfolio.headline)",
+            "risk：\(report.portfolio.riskLevel.rawValue)；external：\(report.externalSignalStatus.rawValue)",
+            "keyAssets：\(coverageText)；sectors：\(report.sectors.count)；actions：\(report.actions.count)；evidence：\(report.evidence.count)",
+            "动作：\(actionNames.isEmpty ? "暂无" : actionNames.joined(separator: "；"))"
+        ].joined(separator: "\n")
+    }
+
+    private func trendTimeoutText(_ settings: TrendAIProviderSettings) -> String {
+        "\(Int(settings.timeoutSeconds.rounded())) 秒"
     }
 
     private static func trendElapsedText(_ nanoseconds: UInt64) -> String {
