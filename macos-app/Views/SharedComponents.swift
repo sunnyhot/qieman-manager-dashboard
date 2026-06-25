@@ -137,10 +137,10 @@ private struct PressResponsiveButtonLabel: View {
 
     var body: some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.965 : (isHovering ? 1.025 : 1))
+            .scaleEffect(configuration.isPressed ? 0.965 : (isHovering ? 1.018 : 1))
             .opacity(configuration.isPressed ? 0.84 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
-            .animation(.easeOut(duration: 0.16), value: isHovering)
+            .animation(AppPalette.motionFast, value: configuration.isPressed)
+            .animation(AppPalette.motionStandard, value: isHovering)
             .onHover { hovering in
                 isHovering = hovering
             }
@@ -164,9 +164,13 @@ struct InteractiveSurfaceModifier: ViewModifier {
         isSelected || isHovering
     }
 
+    private var effectiveLift: CGFloat {
+        isHovering ? lift : 0
+    }
+
     private var surfaceFill: Color {
         if isSelected {
-            return selectedFill ?? tint.opacity(0.13)
+            return selectedFill ?? AppPalette.selectionFill.opacity(0.72)
         }
         if isHovering {
             return hoverFill
@@ -174,25 +178,42 @@ struct InteractiveSurfaceModifier: ViewModifier {
         return fill
     }
 
+    private var surfaceStroke: Color {
+        if isSelected {
+            return tint.opacity(AppPalette.selectionStrokeOpacity)
+        }
+        if isHovering {
+            return tint.opacity(activeStrokeOpacity)
+        }
+        return AppPalette.line.opacity(strokeOpacity)
+    }
+
+    private var glowOpacity: Double {
+        if isSelected {
+            return AppPalette.selectionGlowOpacity
+        }
+        if isHovering {
+            return AppPalette.selectionGlowOpacity * 0.58
+        }
+        return 0
+    }
+
     func body(content: Content) -> some View {
         content
             .background(surfaceFill, in: RoundedRectangle(cornerRadius: radius))
             .overlay(
                 RoundedRectangle(cornerRadius: radius)
-                    .stroke(
-                        isActive ? tint.opacity(activeStrokeOpacity) : AppPalette.line.opacity(strokeOpacity),
-                        lineWidth: isSelected ? 1.2 : 1
-                    )
+                    .stroke(surfaceStroke, lineWidth: isActive ? 1.15 : 1)
             )
             .shadow(
-                color: isActive ? tint.opacity(0.10) : .clear,
-                radius: isActive ? 9 : 0,
+                color: tint.opacity(glowOpacity),
+                radius: isActive ? AppPalette.selectionGlowRadius : 0,
                 x: 0,
-                y: isActive ? 3 : 0
+                y: isActive ? 4 : 0
             )
-            .offset(y: isHovering ? -lift : 0)
-            .animation(.easeOut(duration: 0.16), value: isHovering)
-            .animation(.easeOut(duration: 0.16), value: isSelected)
+            .offset(y: -effectiveLift)
+            .animation(AppPalette.motionStandard, value: isHovering)
+            .animation(AppPalette.motionStandard, value: isSelected)
             .onHover { hovering in
                 isHovering = hovering
             }
