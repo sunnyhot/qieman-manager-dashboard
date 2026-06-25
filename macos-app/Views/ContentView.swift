@@ -60,16 +60,12 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(AppSection.allCases, selection: $model.selectedSection) { section in
-                Label(section.rawValue, systemImage: section.systemImage)
-                    .tag(section)
-            }
-            .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 200, ideal: 232)
-            .safeAreaInset(edge: .bottom) {
-                sidebarFooter
-            }
-            .modifier(SidebarFloatingCompatModifier())
+            sidebarNavigation
+                .navigationSplitViewColumnWidth(min: 200, ideal: 232)
+                .safeAreaInset(edge: .bottom) {
+                    sidebarFooter
+                }
+                .modifier(SidebarFloatingCompatModifier())
         } detail: {
             mainContent
                 .background(
@@ -116,6 +112,26 @@ struct ContentView: View {
         }
     }
 
+    private var sidebarNavigation: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: AppPalette.spaceXS + 2) {
+                ForEach(AppSection.allCases) { section in
+                    SidebarSectionButton(
+                        section: section,
+                        isSelected: model.selectedSection == section
+                    ) {
+                        withAnimation(AppPalette.motionSpring) {
+                            model.selectedSection = section
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, AppPalette.spaceM)
+            .padding(.vertical, AppPalette.spaceL)
+        }
+        .scrollIndicators(.hidden)
+    }
+
     // MARK: - Sidebar Footer
 
     private var sidebarFooter: some View {
@@ -157,6 +173,9 @@ struct ContentView: View {
             toolbar
             notifications
             detailPanel
+                .id(model.selectedSection)
+                .transition(.opacity.combined(with: .offset(y: 6)))
+                .animation(AppPalette.motionSection, value: model.selectedSection)
         }
     }
 
@@ -383,7 +402,7 @@ struct ContentView: View {
     private func queryModeChip(mode: QueryMode) -> some View {
         let isSelected = model.form.mode == mode
         return Button {
-            withAnimation(.interactiveSpring(response: 0.22, dampingFraction: 0.9)) {
+            withAnimation(AppPalette.motionSpring) {
                 model.form.mode = mode
             }
         } label: {
@@ -392,10 +411,16 @@ struct ContentView: View {
                 .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
                 .padding(.horizontal, AppPalette.spaceL)
                 .padding(.vertical, 10)
-                .background(isSelected ? AppPalette.brand : AppPalette.controlFill, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                        .stroke(isSelected ? AppPalette.brand.opacity(0.40) : AppPalette.line.opacity(AppPalette.borderMedium), lineWidth: 1)
+                .interactiveSurface(
+                    isSelected: isSelected,
+                    tint: AppPalette.brand,
+                    radius: AppPalette.controlRadius,
+                    fill: AppPalette.controlFill,
+                    hoverFill: AppPalette.cardHover,
+                    selectedFill: AppPalette.brand,
+                    strokeOpacity: AppPalette.strokeSubtle,
+                    activeStrokeOpacity: AppPalette.selectionStrokeOpacity,
+                    lift: 0.5
                 )
         }
         .buttonStyle(PressResponsiveButtonStyle())
@@ -488,6 +513,84 @@ struct ContentView: View {
         case .enhancement:
             EnhancementCenterView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+}
+
+private struct SidebarSectionButton: View {
+    let section: AppSection
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var isHovering = false
+
+    private var activeTint: Color {
+        isSelected ? AppPalette.brand : (isHovering ? AppPalette.ink : AppPalette.muted)
+    }
+
+    private var rowFill: Color {
+        if isSelected {
+            return AppPalette.selectionFill.opacity(0.78)
+        }
+        if isHovering {
+            return AppPalette.cardHover.opacity(0.72)
+        }
+        return .clear
+    }
+
+    private var strokeColor: Color {
+        isSelected
+            ? AppPalette.selectionStroke.opacity(AppPalette.selectionStrokeOpacity)
+            : AppPalette.line.opacity(isHovering ? AppPalette.borderMedium : 0)
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: AppPalette.spaceS) {
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(isSelected ? AppPalette.brand : .clear)
+                    .frame(width: AppPalette.selectionRailWidth, height: 24)
+
+                Image(systemName: section.systemImage)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(activeTint)
+                    .frame(width: 26, height: 26)
+                    .background(
+                        (isSelected ? AppPalette.brand.opacity(0.13) : activeTint.opacity(isHovering ? 0.08 : 0.05)),
+                        in: RoundedRectangle(cornerRadius: AppPalette.iconBoxRadius)
+                    )
+
+                Text(section.rawValue)
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected ? AppPalette.ink : activeTint)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, AppPalette.spaceS)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(rowFill, in: RoundedRectangle(cornerRadius: AppPalette.sidebarRowRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.sidebarRowRadius)
+                    .stroke(strokeColor, lineWidth: 1)
+            )
+            .shadow(
+                color: AppPalette.selectionGlow.opacity(isSelected ? AppPalette.selectionGlowOpacity : 0),
+                radius: isSelected ? AppPalette.selectionGlowRadius : 0,
+                x: 0,
+                y: isSelected ? 4 : 0
+            )
+            .offset(y: isHovering && !isSelected ? -AppPalette.hoverLift : 0)
+            .contentShape(RoundedRectangle(cornerRadius: AppPalette.sidebarRowRadius))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(section.rawValue)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .animation(AppPalette.motionStandard, value: isHovering)
+        .animation(AppPalette.motionSpring, value: isSelected)
+        .onHover { hovering in
+            isHovering = hovering
         }
     }
 }
