@@ -79,6 +79,38 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertEqual(summary.externalSignalText, "外部信号可用")
     }
 
+    func testGeneratedReportKeepsPortfolioSummaryReadableForWideOverview() {
+        let longDetail = "当前组合包含 26 只场外基金，总市值约 37.29 万元。组合在科技与海外资产上积累了丰厚的浮盈，消费与白酒板块短期承压但仍需结合计划节奏复核。"
+        let report = TrendAnalysisReport.fixture(
+            generatedAt: "2026-06-25 09:30:00",
+            externalSignalStatus: .available
+        )
+        .replacingPortfolio(
+            TrendPortfolioSummary(
+                headline: "组合整体盈利稳固，结构上呈现科技/海外领涨",
+                riskLevel: .medium,
+                summary: longDetail
+            )
+        )
+
+        let summary = TrendDashboardSummary.make(
+            report: report,
+            trendStatus: EnhancementTrendStatus(
+                isProviderConfigured: true,
+                generationState: .succeeded,
+                lastGeneratedAt: report.generatedAt,
+                headline: report.portfolio.headline,
+                externalSignalStatus: report.externalSignalStatus,
+                isStale: false
+            ),
+            generationState: .succeeded,
+            lastError: "",
+            progressLogs: []
+        )
+
+        XCTAssertEqual(summary.detail, longDetail)
+    }
+
     func testStaleReportMarksRefreshAsPrimaryAction() {
         let report = TrendAnalysisReport.fixture(
             generatedAt: "2026-06-24 09:30:00",
@@ -216,5 +248,41 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertFalse(source.contains("openFreshness"))
         XCTAssertFalse(source.contains("主理人动态"))
         XCTAssertFalse(source.contains("数据状态"))
+    }
+
+    func testTrendPanelSourceUsesRoomierReportLayoutAndCompactProgressLog() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Views/EnhancementTrendPanel.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("trendReportResponsiveLayout"))
+        XCTAssertTrue(source.contains("trendReportPrimaryColumn"))
+        XCTAssertTrue(source.contains("trendReportSidebarColumn"))
+        XCTAssertTrue(source.contains("trendProgressSummaryCard"))
+        XCTAssertTrue(source.contains("model.trendProgressLogs.suffix(6)"))
+        XCTAssertFalse(source.contains("model.trendProgressLogs.suffix(16)"))
+    }
+}
+
+private extension TrendAnalysisReport {
+    func replacingPortfolio(_ portfolio: TrendPortfolioSummary) -> TrendAnalysisReport {
+        TrendAnalysisReport(
+            id: id,
+            generatedAt: generatedAt,
+            dataAsOf: dataAsOf,
+            privacyMode: privacyMode,
+            externalSignalStatus: externalSignalStatus,
+            portfolio: portfolio,
+            horizons: horizons,
+            sectors: sectors,
+            keyAssets: keyAssets,
+            actions: actions,
+            evidence: evidence,
+            warnings: warnings,
+            disclaimer: disclaimer
+        )
     }
 }

@@ -29,13 +29,56 @@ extension EnhancementCenterView {
     private var trendProgressLogView: some View {
         if !model.trendProgressLogs.isEmpty {
             trendBlock("分析过程", icon: "list.bullet.rectangle") {
-                VStack(spacing: AppPalette.spaceS) {
-                    ForEach(model.trendProgressLogs.suffix(16)) { item in
-                        trendProgressRow(item)
-                    }
-                }
+                trendProgressSummaryCard
             }
         }
+    }
+
+    private var trendProgressSummaryCard: some View {
+        let latest = model.trendProgressLogs.last
+        return DisclosureGroup {
+            VStack(spacing: AppPalette.spaceS) {
+                ForEach(model.trendProgressLogs.suffix(6)) { item in
+                    trendProgressRow(item)
+                }
+            }
+            .padding(.top, AppPalette.spaceS)
+        } label: {
+            HStack(alignment: .center, spacing: AppPalette.spaceS) {
+                Image(systemName: model.trendGenerationState == .generating ? "clock.arrow.circlepath" : "checkmark.seal")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(trendStateTint)
+                    .frame(width: 26, height: 26)
+                    .background(trendStateTint.opacity(AppPalette.accentFill), in: RoundedRectangle(cornerRadius: AppPalette.iconBoxRadius))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(latest?.message ?? "暂无过程")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                    Text("\(model.trendProgressLogs.count) 条记录 · 最近 \(latest.map { trendLogTime($0.timestamp) } ?? "--")")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(AppPalette.muted)
+                }
+
+                Spacer(minLength: AppPalette.spaceS)
+
+                Text("最近 6 条")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(AppPalette.info)
+                    .padding(.horizontal, AppPalette.spaceS)
+                    .padding(.vertical, AppPalette.spaceXS)
+                    .background(AppPalette.info.opacity(AppPalette.accentFill), in: Capsule())
+            }
+        }
+        .font(.system(size: 11))
+        .tint(AppPalette.info)
+        .padding(AppPalette.spaceS)
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.hairline.opacity(AppPalette.borderFaint), lineWidth: 1)
+        )
     }
 
     @ViewBuilder
@@ -139,11 +182,38 @@ extension EnhancementCenterView {
     }
 
     private func trendReportView(_ report: TrendAnalysisReport) -> some View {
+        trendReportResponsiveLayout(report)
+    }
+
+    private func trendReportResponsiveLayout(_ report: TrendAnalysisReport) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: AppPalette.spaceL) {
+                trendReportPrimaryColumn(report)
+                    .frame(minWidth: 520, maxWidth: .infinity, alignment: .topLeading)
+                    .layoutPriority(1)
+
+                trendReportSidebarColumn(report)
+                    .frame(width: 360, alignment: .topLeading)
+            }
+
+            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+                trendReportPrimaryColumn(report)
+                trendReportSidebarColumn(report)
+            }
+        }
+    }
+
+    private func trendReportPrimaryColumn(_ report: TrendAnalysisReport) -> some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceM) {
             trendPortfolioHeader(report)
             trendHorizonGrid(report.horizons)
-            trendSectorGrid(report.sectors)
             trendAssetList(report.keyAssets)
+        }
+    }
+
+    private func trendReportSidebarColumn(_ report: TrendAnalysisReport) -> some View {
+        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+            trendSectorGrid(report.sectors)
             trendActionList(report.actions)
             trendEvidenceList(report.evidence)
             trendWarnings(report)
@@ -152,18 +222,17 @@ extension EnhancementCenterView {
 
     private func trendPortfolioHeader(_ report: TrendAnalysisReport) -> some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceS) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(report.portfolio.headline)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(AppPalette.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 8)
-                Text(report.portfolio.riskLevel.displayText)
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(report.portfolio.riskLevel.tint)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(report.portfolio.riskLevel.tint.opacity(AppPalette.accentOnFill), in: Capsule())
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: AppPalette.spaceS) {
+                    trendPortfolioHeadline(report)
+                    Spacer(minLength: AppPalette.spaceS)
+                    trendRiskBadge(report.portfolio.riskLevel)
+                }
+
+                VStack(alignment: .leading, spacing: AppPalette.spaceS) {
+                    trendPortfolioHeadline(report)
+                    trendRiskBadge(report.portfolio.riskLevel)
+                }
             }
 
             Text(report.portfolio.summary)
@@ -171,13 +240,13 @@ extension EnhancementCenterView {
                 .foregroundStyle(AppPalette.muted)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: AppPalette.spaceS) {
+            FlowLayout(spacing: AppPalette.spaceS) {
                 trendMiniPill("数据时点", report.dataAsOf, tint: AppPalette.info)
                 trendMiniPill("外部信号", report.externalSignalStatus.displayText, tint: report.externalSignalStatus.tint)
                 trendMiniPill("声明", report.disclaimer, tint: AppPalette.muted)
             }
         }
-        .padding(12)
+        .padding(14)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
@@ -185,9 +254,26 @@ extension EnhancementCenterView {
         )
     }
 
+    private func trendPortfolioHeadline(_ report: TrendAnalysisReport) -> some View {
+        Text(report.portfolio.headline)
+            .font(.system(size: 16, weight: .bold))
+            .foregroundStyle(AppPalette.ink)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func trendRiskBadge(_ riskLevel: TrendRiskLevel) -> some View {
+        Text(riskLevel.displayText)
+            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .foregroundStyle(riskLevel.tint)
+            .lineLimit(1)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(riskLevel.tint.opacity(AppPalette.accentOnFill), in: Capsule())
+    }
+
     private func trendHorizonGrid(_ horizons: [TrendHorizonView]) -> some View {
         trendBlock("周期判断", icon: "calendar") {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
                 ForEach(horizons, id: \.horizon) { horizon in
                     trendHorizonCard(horizon)
                 }
@@ -224,7 +310,7 @@ extension EnhancementCenterView {
 
     private func trendSectorGrid(_ sectors: [TrendSectorView]) -> some View {
         trendBlock("板块", icon: "square.grid.2x2") {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
                 ForEach(sectors) { sector in
                     VStack(alignment: .leading, spacing: 7) {
                         HStack {

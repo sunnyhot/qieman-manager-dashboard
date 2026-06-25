@@ -120,7 +120,7 @@ struct ContentView: View {
                         section: section,
                         isSelected: model.selectedSection == section
                     ) {
-                        withAnimation(AppPalette.motionSpring) {
+                        if model.selectedSection != section {
                             model.selectedSection = section
                         }
                     }
@@ -173,9 +173,6 @@ struct ContentView: View {
             toolbar
             notifications
             detailPanel
-                .id(model.selectedSection)
-                .transition(.opacity.combined(with: .offset(y: 6)))
-                .animation(AppPalette.motionSection, value: model.selectedSection)
         }
     }
 

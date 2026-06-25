@@ -26,14 +26,26 @@ enum AppLaunchWindowPolicy {
 
     static func shouldShowFallbackMainWindow(
         hasTrackedVisibleMainWindow: Bool,
-        hasVisibleMainWindow: Bool
+        hasReusableMainWindow: Bool
     ) -> Bool {
-        !hasTrackedVisibleMainWindow && !hasVisibleMainWindow
+        !hasTrackedVisibleMainWindow && !hasReusableMainWindow
+    }
+}
+
+enum AppMainWindowTrackingPolicy {
+    static func shouldDiscardPreviousTrackedWindow(
+        hasPreviousTrackedWindow: Bool,
+        isSameWindow: Bool,
+        previousWindowIsVisible: Bool
+    ) -> Bool {
+        hasPreviousTrackedWindow && !isSameWindow && previousWindowIsVisible
     }
 }
 
 @MainActor
 final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    private static let mainWindowIdentifier = NSUserInterfaceItemIdentifier("QiemanDashboard.mainWindow")
+
     private enum MenuBarRenderState: Equatable {
         case fallback(title: String)
         case ticker(entries: [MenuBarTickerEntry], appearance: MenuBarTickerAppearance, page: Int, totalPages: Int, barHeight: CGFloat)
@@ -163,12 +175,12 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
             try? await Task.sleep(nanoseconds: 500_000_000)
             guard let self else { return }
             let hasTrackedVisibleMainWindow = self.mainWindow?.isVisible == true
-            let hasVisibleMainWindow = NSApplication.shared.windows.contains { window in
-                window.isVisible && window.canBecomeMain && !(window is NSPanel)
+            let hasReusableMainWindow = NSApplication.shared.windows.contains { window in
+                self.isReusableMainWindow(window)
             }
             guard AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
                 hasTrackedVisibleMainWindow: hasTrackedVisibleMainWindow,
-                hasVisibleMainWindow: hasVisibleMainWindow
+                hasReusableMainWindow: hasReusableMainWindow
             ) else { return }
             self.showMainWindow()
         }
@@ -424,6 +436,23 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         }
     }
 
+    @MainActor func trackSwiftUISceneMainWindow(_ window: NSWindow) {
+        guard isReusableMainWindow(window) else { return }
+        configureMainWindowIdentity(window)
+
+        if let previous = mainWindow,
+           previous !== window,
+           AppMainWindowTrackingPolicy.shouldDiscardPreviousTrackedWindow(
+                hasPreviousTrackedWindow: true,
+                isSameWindow: false,
+                previousWindowIsVisible: previous.isVisible
+           ) {
+            discardDuplicateMainWindow(previous)
+        }
+
+        mainWindow = window
+    }
+
     @MainActor func createMainWindow() {
         guard let model else { return }
         let contentView = ContentView()
@@ -436,7 +465,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false)
         window.center()
-        window.title = "且慢主理人"
+        configureMainWindowIdentity(window)
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
 
@@ -473,20 +502,16 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     @MainActor func showMainWindow() {
         // 1. Re-show the tracked main window if it still exists.
         if let window = mainWindow {
-            if !window.isVisible {
+            if NSApplication.shared.windows.contains(where: { $0 === window }) {
                 window.makeKeyAndOrderFront(nil)
                 NSApplication.shared.activate(ignoringOtherApps: true)
+                return
             }
-            return
+            mainWindow = nil
         }
         // 2. Search for an existing SwiftUI WindowGroup window (may have been hidden
         //    by windowShouldClose but never tracked in mainWindow).
-        if let existing = NSApplication.shared.windows.first(where: {
-            $0.isVisible == false
-                && $0.canBecomeMain
-                && !($0 is NSPanel)
-                && $0.title == "且慢主理人"
-        }) {
+        if let existing = findReusableMainWindow() {
             mainWindow = existing
             existing.makeKeyAndOrderFront(nil)
             NSApplication.shared.activate(ignoringOtherApps: true)
@@ -548,6 +573,34 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         return event
     }
 
+    @MainActor private func configureMainWindowIdentity(_ window: NSWindow) {
+        window.identifier = Self.mainWindowIdentifier
+        window.title = "且慢主理人"
+        if let model {
+            window.appearance = model.appearance.nsAppearance
+        }
+    }
+
+    @MainActor private func findReusableMainWindow() -> NSWindow? {
+        NSApplication.shared.windows.first { window in
+            window.identifier == Self.mainWindowIdentifier && isReusableMainWindow(window)
+        } ?? NSApplication.shared.windows.first { window in
+            window.title == "且慢主理人" && isReusableMainWindow(window)
+        }
+    }
+
+    @MainActor private func isReusableMainWindow(_ window: NSWindow) -> Bool {
+        window.canBecomeMain && !(window is NSPanel) && !window.isSheet
+    }
+
+    @MainActor private func discardDuplicateMainWindow(_ window: NSWindow) {
+        window.orderOut(nil)
+        if window.delegate === self {
+            window.delegate = nil
+        }
+        window.close()
+    }
+
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         [.banner, .sound, .list]
     }
@@ -578,6 +631,34 @@ extension QiemanApplicationDelegate: NSWindowDelegate {
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         sender.orderOut(nil)
         return false
+    }
+}
+
+@MainActor
+private final class MainWindowTrackingNSView: NSView {
+    weak var appDelegate: QiemanApplicationDelegate?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard let window else { return }
+        appDelegate?.trackSwiftUISceneMainWindow(window)
+    }
+}
+
+private struct MainWindowSceneTracker: NSViewRepresentable {
+    let appDelegate: QiemanApplicationDelegate
+
+    @MainActor func makeNSView(context: Context) -> MainWindowTrackingNSView {
+        let view = MainWindowTrackingNSView(frame: .zero)
+        view.appDelegate = appDelegate
+        return view
+    }
+
+    @MainActor func updateNSView(_ view: MainWindowTrackingNSView, context: Context) {
+        view.appDelegate = appDelegate
+        if let window = view.window {
+            appDelegate.trackSwiftUISceneMainWindow(window)
+        }
     }
 }
 
@@ -614,13 +695,8 @@ struct QiemanDashboardApp: App {
                             (view as? NSHostingView<AnyView>)?.appearance = target
                         }
                     }
-                    // Track the SwiftUI WindowGroup window so that
-                    // showMainWindow() can re-show it instead of creating a
-                    // duplicate via createMainWindow().
-                    if let keyWin = NSApp.keyWindow ?? NSApplication.shared.windows.first(where: { $0.canBecomeMain && !($0 is NSPanel) }) {
-                        appDelegate.mainWindow = keyWin
-                    }
                 }
+                .background(MainWindowSceneTracker(appDelegate: appDelegate))
         }
         .windowStyle(.hiddenTitleBar)
         .commands {

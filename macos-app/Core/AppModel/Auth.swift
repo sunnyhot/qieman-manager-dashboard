@@ -258,6 +258,11 @@ extension AppModel {
         appDelegate?.closePopover()
         NSApplication.shared.activate(ignoringOtherApps: true)
 
+        if let appDelegate {
+            appDelegate.showMainWindow()
+            return
+        }
+
         if let window = NSApplication.shared.windows.first(where: { $0.isVisible && $0.canBecomeMain && !($0 is NSPanel) }) {
             window.makeKeyAndOrderFront(nil)
             return

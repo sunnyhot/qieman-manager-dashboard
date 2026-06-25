@@ -153,6 +153,7 @@ struct TrendDashboardSummary: Hashable {
             stateText: "已生成",
             fallbackHeadline: report.portfolio.headline,
             detail: report.portfolio.summary,
+            detailMaxLength: nil,
             primaryAction: action(.openReport, title: "查看完整报告", systemImage: "doc.text.magnifyingglass", tone: .brand),
             secondaryAction: action(.refresh, title: "重新分析", systemImage: "arrow.clockwise", tone: .info, isPrimary: false)
         )
@@ -190,16 +191,19 @@ struct TrendDashboardSummary: Hashable {
         stateText: String,
         fallbackHeadline: String,
         detail: String,
+        detailMaxLength: Int? = 48,
         primaryAction: TrendDashboardAction,
         secondaryAction: TrendDashboardAction?
     ) -> TrendDashboardSummary {
         let riskLevel = report?.portfolio.riskLevel
         let externalSignal = report?.externalSignalStatus
+        let fallbackDetail = report?.portfolio.summary ?? fallbackHeadline
+        let normalizedDetail = normalized(detail, fallback: fallbackDetail)
         return TrendDashboardSummary(
             status: status,
             stateText: stateText,
             headline: report?.portfolio.headline ?? fallbackHeadline,
-            detail: clipped(detail, fallback: report?.portfolio.summary ?? fallbackHeadline),
+            detail: detailMaxLength.map { clipped(normalizedDetail, fallback: fallbackDetail, maxLength: $0) } ?? normalizedDetail,
             riskLevel: riskLevel,
             riskText: riskLevel?.dashboardText ?? "风险未知",
             riskTone: riskLevel?.dashboardTone ?? .muted,
@@ -270,10 +274,14 @@ struct TrendDashboardSummary: Hashable {
     }
 
     private static func clipped(_ value: String, fallback: String, maxLength: Int = 48) -> String {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        let source = trimmed.isEmpty ? fallback : trimmed
+        let source = normalized(value, fallback: fallback)
         guard source.count > maxLength else { return source }
         return "\(source.prefix(maxLength - 1))..."
+    }
+
+    private static func normalized(_ value: String, fallback: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? fallback : trimmed
     }
 }
 

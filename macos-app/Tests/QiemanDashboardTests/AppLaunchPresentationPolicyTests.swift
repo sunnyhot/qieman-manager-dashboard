@@ -28,15 +28,40 @@ final class AppLaunchPresentationPolicyTests: XCTestCase {
     func testLaunchFallbackShowsMainWindowWhenNoWindowWasRestored() {
         XCTAssertTrue(AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
             hasTrackedVisibleMainWindow: false,
-            hasVisibleMainWindow: false
+            hasReusableMainWindow: false
         ))
         XCTAssertFalse(AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
             hasTrackedVisibleMainWindow: true,
-            hasVisibleMainWindow: false
+            hasReusableMainWindow: false
         ))
         XCTAssertFalse(AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
             hasTrackedVisibleMainWindow: false,
-            hasVisibleMainWindow: true
+            hasReusableMainWindow: true
+        ))
+    }
+
+    func testLaunchFallbackSkipsManualWindowWhenReusableMainWindowExists() {
+        XCTAssertFalse(AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
+            hasTrackedVisibleMainWindow: false,
+            hasReusableMainWindow: true
+        ))
+    }
+
+    func testSwiftUISceneWindowDeduplicatesDifferentVisibleTrackedWindow() {
+        XCTAssertTrue(AppMainWindowTrackingPolicy.shouldDiscardPreviousTrackedWindow(
+            hasPreviousTrackedWindow: true,
+            isSameWindow: false,
+            previousWindowIsVisible: true
+        ))
+        XCTAssertFalse(AppMainWindowTrackingPolicy.shouldDiscardPreviousTrackedWindow(
+            hasPreviousTrackedWindow: true,
+            isSameWindow: true,
+            previousWindowIsVisible: true
+        ))
+        XCTAssertFalse(AppMainWindowTrackingPolicy.shouldDiscardPreviousTrackedWindow(
+            hasPreviousTrackedWindow: false,
+            isSameWindow: false,
+            previousWindowIsVisible: false
         ))
     }
 
