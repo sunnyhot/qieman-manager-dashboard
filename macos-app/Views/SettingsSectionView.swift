@@ -21,6 +21,7 @@ struct SettingsSectionView: View {
     @State var isMenuBarFundMarketExpanded = false
     @State var draggedTickerSelectionID: String?
     @State var tickerDropTargetID: String?
+    @State var trendAutoAnalysisTimesDraft = ""
 
     var menuBarTickerEnabledBinding: Binding<Bool> {
         Binding(

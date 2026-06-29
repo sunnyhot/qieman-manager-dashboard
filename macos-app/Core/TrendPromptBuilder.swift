@@ -30,15 +30,18 @@ struct TrendPromptBuilder {
         let system = """
         \(baseSystemPrompt(settings: settings))
         This is a partial chunk analysis, not the final portfolio report.
-        先判断板块趋势，再逐个分析本分块内每个资产，最后给出本板块的重点条件式行动候选。
+        先判断大盘与大类资产，再判断板块趋势，并逐个分析本分块内每个已持有基金，最后给出本板块的重点条件式行动候选。
+        保留分块分析顺序：先判断板块趋势，再落到本分块基金。
         Treat sectors in this chunk as the primary analysis unit.
         Analyze only assets included in this chunk.
-        Include every asset in this chunk in keyAssets. Keep actions limited to this chunk's重点动作; do not create one action per asset unless truly necessary.
+        Include every held fund in this chunk in assetTrends.
+        Include every material asset in this chunk in keyAssets. Use assetTrends and sector rationale for low-importance holdings instead of forcing every asset into keyAssets.
+        Keep actions limited to this chunk's重点动作; do not create one action per asset unless truly necessary.
         Do not output final whole-portfolio conclusions; leave whole-portfolio synthesis to the final merge step.
         """
 
         let user = """
-        分块 \(chunkIndex)/\(chunkCount)：分析以下且慢组合的板块上下文。请先判断板块趋势，再逐个覆盖本分块资产，返回一个合法 TrendAnalysisReport JSON 对象，作为后续合成的局部报告。
+        分块 \(chunkIndex)/\(chunkCount)：分析以下且慢组合的板块上下文。请先判断大盘/大类资产与板块趋势，再逐个覆盖本分块资产和每个已持有基金，返回一个合法 TrendAnalysisReport JSON 对象，作为后续合成的局部报告。
 
         Context JSON:
         \(contextJSON)
@@ -60,10 +63,11 @@ struct TrendPromptBuilder {
         let system = """
         \(baseSystemPrompt(settings: settings))
         Merge partial chunk reports into one final whole-portfolio TrendAnalysisReport.
-        Deduplicate sectors, keyAssets, actions, evidence, and warnings.
+        Deduplicate marketOutlook, sectors, opportunities, keyAssets, assetTrends, actions, evidence, and warnings.
         Use the aggregate portfolio context for counts and portfolio-level summaries.
         Do not introduce facts that are absent from the aggregate context or chunk reports.
-        The final keyAssets must still cover every asset from aggregateContext.assets; synthesize a concise asset-level entry from sector and chunk context when a partial report omitted one.
+        Preserve assetTrends coverage for every held fund in the aggregate context.
+        Preserve only the strongest portfolio-relevant keyAssets from chunk reports; do not synthesize low-importance assets merely to fill coverage.
         """
 
         let user = """
@@ -86,7 +90,7 @@ struct TrendPromptBuilder {
         Use the TrendAnalysisReport schema exactly.
         Follow the embedded Qieman investment trend analysis skill rules in this prompt.
         Analyze Qieman portfolio data from a personal research perspective.
-        Focus on conditional trend judgment, portfolio risk boundaries, counter-signals, and watch/review actions.
+        Focus on conditional trend judgment, broad market and sector direction, portfolio risk boundaries, counter-signals, and watch/review actions.
         Separate facts, model judgment, and action candidates.
         \(externalSignalInstruction)
         Selected model: \(settings.provider.model).
@@ -94,8 +98,12 @@ struct TrendPromptBuilder {
         Do not guarantee returns.
         Do not use mandatory buy/sell language.
         Do not perform exhaustive online searches for every asset; use broad market, sector, policy, and clearly material asset-level signals only.
-        keyAssets should cover every submitted asset so the holding table can show item-level labels; MUST include one keyAssets item for every Context JSON asset, including low-importance holdings.
-        Every keyAsset impactText or rationale must include conditional buy/hold/sell execution guidance such as 分批买入, 持有观察, 暂停买入, 分批卖出, 再平衡复核, with trigger and counter-signal boundaries in horizons or counterSignals.
+        marketOutlook must summarize 大盘 and major asset classes relevant to the portfolio, such as A-share broad indices, Hong Kong equities, US equities, bonds, commodities, and gold/黄金 when material.
+        opportunities must capture still-actionable investment opportunities outside or across current holdings, including gold/黄金 when it has a clear conditional setup.
+        assetTrends must include 每个已持有基金 from Context JSON, with a concise trend view and conditional buy/hold/sell execution guidance for each fund.
+        keyAssets should focus on portfolio-relevant assets that materially affect trend judgment, concentration, pending cash, active plans, or risk.
+        Do not force every Context JSON asset into keyAssets; use assetTrends, sectors, and warnings for low-importance or uncovered holdings.
+        Every keyAsset and assetTrends impactText or rationale must include conditional buy/hold/sell execution guidance such as 分批买入, 持有观察, 暂停买入, 分批卖出, 再平衡复核, with trigger and counter-signal boundaries in horizons or counterSignals.
         Keep actions and evidence concise: actions are portfolio-level重点动作 only, preferably at most 5 actions in a final report and at most 3 actions in chunk reports; do not omit keyAssets just to keep actions short.
         Prefer one concise buy/hold/sell execution guidance per keyAsset over adding a separate action for every asset.
         Keep evidence concise: prefer at most 6 evidence items in a final report and at most 3 evidence items in chunk reports.
@@ -104,7 +112,7 @@ struct TrendPromptBuilder {
         Every action candidate must include triggerConditions and invalidatingConditions.
         Use conditional Chinese wording such as 可考虑, 关注, 等信号再动, 等待触发条件, 若...则....
         Do not use 必须买入, 必须卖出, 保证上涨, 保证收益, or 一定上涨.
-        Required field names include portfolio, horizons, sectors, keyAssets, actions, evidence, warnings, disclaimer, counterSignals.
+        Required field names include portfolio, horizons, marketOutlook, sectors, opportunities, keyAssets, assetTrends, actions, evidence, warnings, disclaimer, counterSignals.
         Do not add fields outside this schema. Do not output totalMarketValue, totalCostValue, totalProfit, assetCount, or top-level confidence in the report.
         Use this exact JSON shape. Keep id fields as stable strings when included, and keep all non-id keys present:
         {
@@ -126,6 +134,17 @@ struct TrendPromptBuilder {
               "counterSignals": ["反证条件"]
             }
           ],
+          "marketOutlook": [
+            {
+              "name": "大盘或大类资产名称",
+              "category": "大盘宽基|港股|美股|债券|商品|黄金|其他",
+              "direction": "bullish|neutralPositive|neutral|neutralNegative|bearish|uncertain",
+              "confidence": {"score": 0, "label": "低|中|高"},
+              "rationale": "大盘或大类资产判断",
+              "evidenceIDs": [],
+              "counterSignals": []
+            }
+          ],
           "sectors": [
             {
               "name": "板块名称",
@@ -133,6 +152,19 @@ struct TrendPromptBuilder {
               "direction": "bullish|neutralPositive|neutral|neutralNegative|bearish|uncertain",
               "confidence": {"score": 0, "label": "低|中|高"},
               "rationale": "板块判断",
+              "evidenceIDs": [],
+              "counterSignals": []
+            }
+          ],
+          "opportunities": [
+            {
+              "name": "机会名称",
+              "category": "机会类别，如 黄金/商品/宽基/债券/现金管理",
+              "direction": "bullish|neutralPositive|neutral|neutralNegative|bearish|uncertain",
+              "confidence": {"score": 0, "label": "低|中|高"},
+              "rationale": "为什么仍值得跟踪",
+              "triggerConditions": [],
+              "invalidatingConditions": [],
               "evidenceIDs": [],
               "counterSignals": []
             }
@@ -145,6 +177,17 @@ struct TrendPromptBuilder {
               "impactText": "对组合影响",
               "horizons": [],
               "rationale": "标的判断",
+              "counterSignals": []
+            }
+          ],
+          "assetTrends": [
+            {
+              "name": "已持有基金名称",
+              "code": "代码或 null",
+              "sector": "板块",
+              "impactText": "对组合影响和条件式买/持/卖执行建议",
+              "horizons": [],
+              "rationale": "基金趋势判断",
               "counterSignals": []
             }
           ],
@@ -203,8 +246,11 @@ private struct TrendChunkReportDigest: Encodable {
     let externalSignalStatus: TrendExternalSignalStatus
     let portfolio: TrendPortfolioSummary
     let horizons: [TrendHorizonView]
+    let marketOutlook: [TrendMarketOutlook]
     let sectors: [TrendSectorView]
+    let opportunities: [TrendOpportunity]
     let keyAssets: [TrendAssetView]
+    let assetTrends: [TrendAssetView]
     let actions: [TrendActionCandidate]
     let evidence: [TrendEvidence]
     let warnings: [TrendWarning]
@@ -214,8 +260,11 @@ private struct TrendChunkReportDigest: Encodable {
         externalSignalStatus = report.externalSignalStatus
         portfolio = report.portfolio
         horizons = report.horizons
+        marketOutlook = report.marketOutlook
         sectors = report.sectors
+        opportunities = report.opportunities
         keyAssets = report.keyAssets
+        assetTrends = report.assetTrends
         actions = report.actions
         evidence = Array(report.evidence.prefix(12))
         warnings = report.warnings

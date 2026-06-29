@@ -9,29 +9,22 @@
     "externalSignalStatus",
     "portfolio",
     "horizons",
+    "marketOutlook",
     "sectors",
+    "opportunities",
     "keyAssets",
+    "assetTrends",
     "actions",
     "evidence",
     "warnings",
     "disclaimer"
   ],
   "properties": {
-    "id": {
-      "type": "string"
-    },
-    "generatedAt": {
-      "type": "string"
-    },
-    "dataAsOf": {
-      "type": "string"
-    },
-    "privacyMode": {
-      "enum": ["脱敏摘要", "完整明细"]
-    },
-    "externalSignalStatus": {
-      "enum": ["available", "unavailable", "partial", "stale"]
-    },
+    "id": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "dataAsOf": { "type": "string" },
+    "privacyMode": { "enum": ["脱敏摘要", "完整明细"] },
+    "externalSignalStatus": { "enum": ["available", "unavailable", "partial", "stale"] },
     "portfolio": {
       "type": "object",
       "additionalProperties": false,
@@ -44,79 +37,72 @@
     },
     "horizons": {
       "type": "array",
-      "items": { "$ref": "#/$defs/horizon" }
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/horizon" },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": ["horizon"],
+            "properties": { "horizon": { "const": "short" } }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["horizon"],
+            "properties": { "horizon": { "const": "medium" } }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["horizon"],
+            "properties": { "horizon": { "const": "long" } }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
     },
     "sectors": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": true,
-        "required": ["name", "direction", "confidence", "rationale", "counterSignals"],
-        "properties": {
-          "name": { "type": "string" },
-          "exposureText": { "type": "string" },
-          "direction": { "$ref": "#/$defs/direction" },
-          "confidence": { "$ref": "#/$defs/confidence" },
-          "rationale": { "type": "string" },
-          "counterSignals": {
-            "type": "array",
-            "items": { "type": "string" }
-          }
-        }
-      }
+      "items": { "$ref": "#/$defs/sector" }
+    },
+    "marketOutlook": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/marketOutlook" }
+    },
+    "opportunities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/opportunity" }
     },
     "keyAssets": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": true
-      }
+      "items": { "$ref": "#/$defs/keyAsset" }
+    },
+    "assetTrends": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/keyAsset" }
     },
     "actions": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": true,
-        "required": ["id", "kind", "title", "detail", "confidence", "triggerConditions", "invalidatingConditions"],
-        "properties": {
-          "id": { "type": "string" },
-          "kind": {
-            "enum": ["watch", "waitForConfirmation", "observeInBatches", "pausePlan", "considerIncrease", "considerReduce", "rebalanceReview"]
-          },
-          "title": { "type": "string" },
-          "detail": { "type": "string" },
-          "targetName": {
-            "type": ["string", "null"]
-          },
-          "confidence": { "$ref": "#/$defs/confidence" },
-          "triggerConditions": {
-            "type": "array",
-            "items": { "type": "string" }
-          },
-          "invalidatingConditions": {
-            "type": "array",
-            "items": { "type": "string" }
-          }
-        }
-      }
+      "items": { "$ref": "#/$defs/action" }
     },
     "evidence": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": true
-      }
+      "items": { "$ref": "#/$defs/evidence" }
     },
     "warnings": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": true
-      }
+      "items": { "$ref": "#/$defs/warning" }
     },
-    "disclaimer": {
-      "type": "string"
-    }
+    "disclaimer": { "type": "string" }
   },
   "$defs": {
     "direction": {
@@ -132,9 +118,7 @@
           "minimum": 0,
           "maximum": 100
         },
-        "label": {
-          "type": "string"
-        }
+        "label": { "type": "string" }
       }
     },
     "horizon": {
@@ -142,9 +126,7 @@
       "additionalProperties": false,
       "required": ["horizon", "direction", "confidence", "rationale", "counterSignals"],
       "properties": {
-        "horizon": {
-          "enum": ["short", "medium", "long"]
-        },
+        "horizon": { "enum": ["short", "medium", "long"] },
         "direction": { "$ref": "#/$defs/direction" },
         "confidence": { "$ref": "#/$defs/confidence" },
         "rationale": { "type": "string" },
@@ -152,6 +134,195 @@
           "type": "array",
           "items": { "type": "string" }
         }
+      }
+    },
+    "sector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "exposureText",
+        "direction",
+        "confidence",
+        "rationale",
+        "evidenceIDs",
+        "counterSignals"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "exposureText": { "type": "string" },
+        "direction": { "$ref": "#/$defs/direction" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "rationale": { "type": "string" },
+        "evidenceIDs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "counterSignals": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "marketOutlook": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "category",
+        "direction",
+        "confidence",
+        "rationale",
+        "evidenceIDs",
+        "counterSignals"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "direction": { "$ref": "#/$defs/direction" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "rationale": { "type": "string" },
+        "evidenceIDs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "counterSignals": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "opportunity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "category",
+        "direction",
+        "confidence",
+        "rationale",
+        "triggerConditions",
+        "invalidatingConditions",
+        "evidenceIDs",
+        "counterSignals"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "direction": { "$ref": "#/$defs/direction" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "rationale": { "type": "string" },
+        "triggerConditions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "invalidatingConditions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "evidenceIDs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "counterSignals": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "keyAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "code",
+        "sector",
+        "impactText",
+        "horizons",
+        "rationale",
+        "counterSignals"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": ["string", "null"] },
+        "sector": { "type": "string" },
+        "impactText": { "type": "string" },
+        "horizons": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/horizon" }
+        },
+        "rationale": { "type": "string" },
+        "counterSignals": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "title",
+        "detail",
+        "targetName",
+        "confidence",
+        "triggerConditions",
+        "invalidatingConditions"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": {
+          "enum": [
+            "watch",
+            "waitForConfirmation",
+            "observeInBatches",
+            "pausePlan",
+            "considerIncrease",
+            "considerReduce",
+            "rebalanceReview"
+          ]
+        },
+        "title": { "type": "string" },
+        "detail": { "type": "string" },
+        "targetName": { "type": ["string", "null"] },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "triggerConditions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "invalidatingConditions": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceName", "title", "url", "publishedAt", "retrievedAt", "summary"],
+      "properties": {
+        "id": { "type": "string" },
+        "sourceName": { "type": "string" },
+        "title": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "publishedAt": { "type": ["string", "null"] },
+        "retrievedAt": { "type": "string" },
+        "summary": { "type": "string" }
+      }
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "detail"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "detail": { "type": "string" }
       }
     }
   }

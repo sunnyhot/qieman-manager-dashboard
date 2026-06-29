@@ -212,40 +212,52 @@ struct TrendAnalysisSettings: Codable, Hashable {
     var provider: TrendAIProviderSettings
     var defaultPrivacyMode: TrendPrivacyMode
     var dailyAutoAnalysisEnabled: Bool
+    var dailyAutoAnalysisTimes: [String]
     var lastAutoAnalysisDay: String?
+    var lastAutoAnalysisSlotKey: String?
 
     static let `default` = TrendAnalysisSettings(
         agent: .default,
         provider: .empty,
         defaultPrivacyMode: .sanitized,
         dailyAutoAnalysisEnabled: false,
-        lastAutoAnalysisDay: nil
+        dailyAutoAnalysisTimes: TrendAutoAnalysisSchedule.default.timeStrings,
+        lastAutoAnalysisDay: nil,
+        lastAutoAnalysisSlotKey: nil
     )
 
     init(
         agent: TrendAgentSettings,
         defaultPrivacyMode: TrendPrivacyMode,
         dailyAutoAnalysisEnabled: Bool,
-        lastAutoAnalysisDay: String?
+        dailyAutoAnalysisTimes: [String] = TrendAutoAnalysisSchedule.default.timeStrings,
+        lastAutoAnalysisDay: String?,
+        lastAutoAnalysisSlotKey: String? = nil
     ) {
         self.agent = agent
         self.provider = .empty
         self.defaultPrivacyMode = defaultPrivacyMode
         self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
+        self.dailyAutoAnalysisTimes = TrendAutoAnalysisSchedule(timeStrings: dailyAutoAnalysisTimes).timeStrings
         self.lastAutoAnalysisDay = lastAutoAnalysisDay
+        self.lastAutoAnalysisSlotKey = lastAutoAnalysisSlotKey
     }
 
     init(
         provider: TrendAIProviderSettings,
         defaultPrivacyMode: TrendPrivacyMode,
         dailyAutoAnalysisEnabled: Bool,
-        lastAutoAnalysisDay: String?
+        dailyAutoAnalysisTimes: [String] = TrendAutoAnalysisSchedule.default.timeStrings,
+        lastAutoAnalysisDay: String?,
+        lastAutoAnalysisSlotKey: String? = nil
     ) {
         self.agent = .default
         self.provider = provider
         self.defaultPrivacyMode = defaultPrivacyMode
         self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
+        self.dailyAutoAnalysisTimes = TrendAutoAnalysisSchedule(timeStrings: dailyAutoAnalysisTimes).timeStrings
         self.lastAutoAnalysisDay = lastAutoAnalysisDay
+        self.lastAutoAnalysisSlotKey = lastAutoAnalysisSlotKey
     }
 
     init(
@@ -253,13 +265,17 @@ struct TrendAnalysisSettings: Codable, Hashable {
         provider: TrendAIProviderSettings,
         defaultPrivacyMode: TrendPrivacyMode,
         dailyAutoAnalysisEnabled: Bool,
-        lastAutoAnalysisDay: String?
+        dailyAutoAnalysisTimes: [String] = TrendAutoAnalysisSchedule.default.timeStrings,
+        lastAutoAnalysisDay: String?,
+        lastAutoAnalysisSlotKey: String? = nil
     ) {
         self.agent = agent
         self.provider = provider
         self.defaultPrivacyMode = defaultPrivacyMode
         self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
+        self.dailyAutoAnalysisTimes = TrendAutoAnalysisSchedule(timeStrings: dailyAutoAnalysisTimes).timeStrings
         self.lastAutoAnalysisDay = lastAutoAnalysisDay
+        self.lastAutoAnalysisSlotKey = lastAutoAnalysisSlotKey
     }
 
     init(from decoder: Decoder) throws {
@@ -268,7 +284,26 @@ struct TrendAnalysisSettings: Codable, Hashable {
         provider = try container.decodeIfPresent(TrendAIProviderSettings.self, forKey: .provider) ?? .empty
         defaultPrivacyMode = try container.decodeIfPresent(TrendPrivacyMode.self, forKey: .defaultPrivacyMode) ?? .sanitized
         dailyAutoAnalysisEnabled = try container.decodeIfPresent(Bool.self, forKey: .dailyAutoAnalysisEnabled) ?? false
+        if let times = try container.decodeIfPresent([String].self, forKey: .dailyAutoAnalysisTimes) {
+            dailyAutoAnalysisTimes = TrendAutoAnalysisSchedule(timeStrings: times).timeStrings
+        } else if let time = try container.decodeIfPresent(String.self, forKey: .dailyAutoAnalysisTime) {
+            dailyAutoAnalysisTimes = TrendAutoAnalysisSchedule(timeString: time).timeStrings
+        } else {
+            dailyAutoAnalysisTimes = TrendAutoAnalysisSchedule.default.timeStrings
+        }
         lastAutoAnalysisDay = try container.decodeIfPresent(String.self, forKey: .lastAutoAnalysisDay)
+        lastAutoAnalysisSlotKey = try container.decodeIfPresent(String.self, forKey: .lastAutoAnalysisSlotKey)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(agent, forKey: .agent)
+        try container.encode(provider, forKey: .provider)
+        try container.encode(defaultPrivacyMode, forKey: .defaultPrivacyMode)
+        try container.encode(dailyAutoAnalysisEnabled, forKey: .dailyAutoAnalysisEnabled)
+        try container.encode(dailyAutoAnalysisTimes, forKey: .dailyAutoAnalysisTimes)
+        try container.encodeIfPresent(lastAutoAnalysisDay, forKey: .lastAutoAnalysisDay)
+        try container.encodeIfPresent(lastAutoAnalysisSlotKey, forKey: .lastAutoAnalysisSlotKey)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -276,11 +311,38 @@ struct TrendAnalysisSettings: Codable, Hashable {
         case provider
         case defaultPrivacyMode
         case dailyAutoAnalysisEnabled
+        case dailyAutoAnalysisTimes
+        case dailyAutoAnalysisTime
         case lastAutoAnalysisDay
+        case lastAutoAnalysisSlotKey
+    }
+
+    var dailyAutoAnalysisSchedule: TrendAutoAnalysisSchedule {
+        TrendAutoAnalysisSchedule(timeStrings: dailyAutoAnalysisTimes)
+    }
+
+    var dailyAutoAnalysisTimesText: String {
+        dailyAutoAnalysisSchedule.text
+    }
+
+    mutating func updateDailyAutoAnalysisTimes(from text: String) {
+        dailyAutoAnalysisTimes = TrendAutoAnalysisSchedule(text: text).timeStrings
+    }
+
+    mutating func normalizeDailyAutoAnalysisTimes() {
+        dailyAutoAnalysisTimes = dailyAutoAnalysisSchedule.timeStrings
     }
 
     func hasAutoAnalyzed(on day: String) -> Bool {
         lastAutoAnalysisDay == day
+    }
+
+    func dueAutoAnalysisSlot(at timestamp: String) -> TrendAutoAnalysisSlot? {
+        dailyAutoAnalysisSchedule.dueSlot(
+            at: timestamp,
+            lastCompletedSlotKey: lastAutoAnalysisSlotKey,
+            legacyLastAutoAnalysisDay: lastAutoAnalysisDay
+        )
     }
 }
 
@@ -383,6 +445,60 @@ struct TrendSectorView: Codable, Identifiable, Hashable {
     }
 }
 
+struct TrendMarketOutlook: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let category: String
+    let direction: TrendDirection
+    let confidence: TrendConfidence
+    let rationale: String
+    let evidenceIDs: [String]
+    let counterSignals: [String]
+
+    init(
+        id: String,
+        name: String,
+        category: String,
+        direction: TrendDirection,
+        confidence: TrendConfidence,
+        rationale: String,
+        evidenceIDs: [String],
+        counterSignals: [String]
+    ) {
+        self.id = id
+        self.name = name
+        self.category = category
+        self.direction = direction
+        self.confidence = confidence
+        self.rationale = rationale
+        self.evidenceIDs = evidenceIDs
+        self.counterSignals = counterSignals
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        category = try container.decode(String.self, forKey: .category)
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? "\(category)-\(name)"
+        direction = try container.decode(TrendDirection.self, forKey: .direction)
+        confidence = try container.decode(TrendConfidence.self, forKey: .confidence)
+        rationale = try container.decode(String.self, forKey: .rationale)
+        evidenceIDs = try container.decodeIfPresent([String].self, forKey: .evidenceIDs) ?? []
+        counterSignals = try container.decodeIfPresent([String].self, forKey: .counterSignals) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case category
+        case direction
+        case confidence
+        case rationale
+        case evidenceIDs
+        case counterSignals
+    }
+}
+
 struct TrendAssetView: Codable, Identifiable, Hashable {
     let id: String
     let name: String
@@ -433,6 +549,70 @@ struct TrendAssetView: Codable, Identifiable, Hashable {
         case impactText
         case horizons
         case rationale
+        case counterSignals
+    }
+}
+
+struct TrendOpportunity: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let category: String
+    let direction: TrendDirection
+    let confidence: TrendConfidence
+    let rationale: String
+    let triggerConditions: [String]
+    let invalidatingConditions: [String]
+    let evidenceIDs: [String]
+    let counterSignals: [String]
+
+    init(
+        id: String,
+        name: String,
+        category: String,
+        direction: TrendDirection,
+        confidence: TrendConfidence,
+        rationale: String,
+        triggerConditions: [String],
+        invalidatingConditions: [String],
+        evidenceIDs: [String],
+        counterSignals: [String]
+    ) {
+        self.id = id
+        self.name = name
+        self.category = category
+        self.direction = direction
+        self.confidence = confidence
+        self.rationale = rationale
+        self.triggerConditions = triggerConditions
+        self.invalidatingConditions = invalidatingConditions
+        self.evidenceIDs = evidenceIDs
+        self.counterSignals = counterSignals
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        category = try container.decode(String.self, forKey: .category)
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? "\(category)-\(name)"
+        direction = try container.decode(TrendDirection.self, forKey: .direction)
+        confidence = try container.decode(TrendConfidence.self, forKey: .confidence)
+        rationale = try container.decode(String.self, forKey: .rationale)
+        triggerConditions = try container.decodeIfPresent([String].self, forKey: .triggerConditions) ?? []
+        invalidatingConditions = try container.decodeIfPresent([String].self, forKey: .invalidatingConditions) ?? []
+        evidenceIDs = try container.decodeIfPresent([String].self, forKey: .evidenceIDs) ?? []
+        counterSignals = try container.decodeIfPresent([String].self, forKey: .counterSignals) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case category
+        case direction
+        case confidence
+        case rationale
+        case triggerConditions
+        case invalidatingConditions
+        case evidenceIDs
         case counterSignals
     }
 }
@@ -573,8 +753,11 @@ struct TrendAnalysisReport: Codable, Identifiable, Hashable {
     let externalSignalStatus: TrendExternalSignalStatus
     let portfolio: TrendPortfolioSummary
     let horizons: [TrendHorizonView]
+    let marketOutlook: [TrendMarketOutlook]
     let sectors: [TrendSectorView]
+    let opportunities: [TrendOpportunity]
     let keyAssets: [TrendAssetView]
+    let assetTrends: [TrendAssetView]
     let actions: [TrendActionCandidate]
     let evidence: [TrendEvidence]
     let warnings: [TrendWarning]
@@ -588,8 +771,11 @@ struct TrendAnalysisReport: Codable, Identifiable, Hashable {
         externalSignalStatus: TrendExternalSignalStatus,
         portfolio: TrendPortfolioSummary,
         horizons: [TrendHorizonView],
+        marketOutlook: [TrendMarketOutlook] = [],
         sectors: [TrendSectorView],
+        opportunities: [TrendOpportunity] = [],
         keyAssets: [TrendAssetView],
+        assetTrends: [TrendAssetView] = [],
         actions: [TrendActionCandidate],
         evidence: [TrendEvidence],
         warnings: [TrendWarning],
@@ -602,8 +788,11 @@ struct TrendAnalysisReport: Codable, Identifiable, Hashable {
         self.externalSignalStatus = externalSignalStatus
         self.portfolio = portfolio
         self.horizons = horizons
+        self.marketOutlook = marketOutlook
         self.sectors = sectors
+        self.opportunities = opportunities
         self.keyAssets = keyAssets
+        self.assetTrends = assetTrends
         self.actions = actions
         self.evidence = evidence
         self.warnings = warnings
@@ -619,8 +808,11 @@ struct TrendAnalysisReport: Codable, Identifiable, Hashable {
         externalSignalStatus = try container.decode(TrendExternalSignalStatus.self, forKey: .externalSignalStatus)
         portfolio = try container.decode(TrendPortfolioSummary.self, forKey: .portfolio)
         horizons = try container.decode([TrendHorizonView].self, forKey: .horizons)
+        marketOutlook = try container.decodeIfPresent([TrendMarketOutlook].self, forKey: .marketOutlook) ?? []
         sectors = try container.decodeIfPresent([TrendSectorView].self, forKey: .sectors) ?? []
+        opportunities = try container.decodeIfPresent([TrendOpportunity].self, forKey: .opportunities) ?? []
         keyAssets = try container.decodeIfPresent([TrendAssetView].self, forKey: .keyAssets) ?? []
+        assetTrends = try container.decodeIfPresent([TrendAssetView].self, forKey: .assetTrends) ?? []
         actions = try container.decodeIfPresent([TrendActionCandidate].self, forKey: .actions) ?? []
         evidence = try container.decodeIfPresent([TrendEvidence].self, forKey: .evidence) ?? []
         warnings = try container.decodeIfPresent([TrendWarning].self, forKey: .warnings) ?? []
@@ -635,8 +827,11 @@ struct TrendAnalysisReport: Codable, Identifiable, Hashable {
         case externalSignalStatus
         case portfolio
         case horizons
+        case marketOutlook
         case sectors
+        case opportunities
         case keyAssets
+        case assetTrends
         case actions
         case evidence
         case warnings

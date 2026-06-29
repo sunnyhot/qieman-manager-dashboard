@@ -57,6 +57,7 @@ extension AppModel {
     }
 
     func saveTrendAnalysisSettings() {
+        trendSettings.normalizeDailyAutoAnalysisTimes()
         guard let trendAnalysisSettingsFileURL else { return }
         do {
             try TrendAnalysisSettingsStore().save(trendSettings, to: trendAnalysisSettingsFileURL)
@@ -108,6 +109,7 @@ extension AppModel {
         }
 
         let generatedAt = createdAt ?? Self.timestampString()
+        let autoAnalysisSlot = userInitiated ? nil : trendSettings.dueAutoAnalysisSlot(at: generatedAt)
         trendGenerationState = .generating
         lastTrendError = ""
         trendProgressLogs = []
@@ -130,7 +132,10 @@ extension AppModel {
         do {
             let report = try await generateTrendReport(context: context, settings: trendSettings)
             appendTrendProgress("校验模型报告")
-            let validation = TrendAnalysisValidator().validate(report)
+            let validation = TrendAnalysisValidator().validate(
+                report,
+                expectedFundCodes: expectedFundCodes(in: context)
+            )
             guard validation.isValid else {
                 trendGenerationState = .rejected
                 lastTrendError = validation.messages.joined(separator: "\n")
@@ -145,6 +150,7 @@ extension AppModel {
             trendGenerationState = .succeeded
             if !userInitiated {
                 trendSettings.lastAutoAnalysisDay = trendDayString(from: generatedAt)
+                trendSettings.lastAutoAnalysisSlotKey = autoAnalysisSlot?.key
             }
             appendTrendProgress("保存趋势报告")
             saveTrendAnalysisReport(report)
@@ -160,10 +166,11 @@ extension AppModel {
     func runDailyTrendAnalysisIfNeeded(createdAt: String? = nil) async {
         guard trendSettings.dailyAutoAnalysisEnabled else { return }
         guard trendSettings.provider.isConfigured else { return }
+        guard trendGenerationState != .generating else { return }
 
         let generatedAt = createdAt ?? Self.timestampString()
-        let day = trendDayString(from: generatedAt)
-        guard !trendSettings.hasAutoAnalyzed(on: day) else { return }
+        trendSettings.normalizeDailyAutoAnalysisTimes()
+        guard trendSettings.dueAutoAnalysisSlot(at: generatedAt) != nil else { return }
 
         await generateTrendAnalysis(userInitiated: false, createdAt: generatedAt)
     }
@@ -178,21 +185,63 @@ extension AppModel {
         context: TrendAnalysisContext,
         settings: TrendAnalysisSettings
     ) async throws -> TrendAnalysisReport {
-        appendTrendProgress("单次模型分析：\(context.assets.count) 个标的，\(context.sectors.count) 个板块")
-        appendTrendProgress("生成趋势提示词：\(context.privacyMode.rawValue)")
+        let chunker = TrendAnalysisChunker()
+        let promptBuilder = TrendPromptBuilder()
+        guard chunker.shouldChunk(context) else {
+            appendTrendProgress("单次模型分析：\(context.assets.count) 个标的，\(context.sectors.count) 个板块")
+            appendTrendProgress("生成趋势提示词：\(context.privacyMode.rawValue)")
+            return try await requestTrendReport(
+                prompt: promptBuilder.build(context: context, settings: settings),
+                context: context,
+                expectedAssetCount: context.assets.count,
+                settings: settings,
+                phase: "模型分析"
+            )
+        }
+
+        let chunks = chunker.chunks(from: context)
+        appendTrendProgress("分块趋势分析：\(chunks.count) 个分块，\(context.assets.count) 个标的")
+        var chunkReports: [TrendAnalysisReport] = []
+        for (offset, chunk) in chunks.enumerated() {
+            let index = offset + 1
+            appendTrendProgress("分析分块 \(index)/\(chunks.count)：\(chunk.assets.count) 个标的，\(chunk.sectors.count) 个板块")
+            let report = try await requestTrendReport(
+                prompt: promptBuilder.buildChunk(
+                    context: chunk,
+                    chunkIndex: index,
+                    chunkCount: chunks.count,
+                    settings: settings
+                ),
+                context: chunk,
+                expectedAssetCount: chunk.assets.count,
+                settings: settings,
+                phase: "分块 \(index)/\(chunks.count)"
+            )
+            chunkReports.append(report)
+        }
+
+        let synthesisContext = chunker.synthesisContext(from: context)
+        appendTrendProgress("合成趋势报告：\(chunkReports.count) 个分块结果")
         return try await requestTrendReport(
-            context: context,
+            prompt: promptBuilder.buildSynthesis(
+                context: synthesisContext,
+                chunkReports: chunkReports,
+                settings: settings
+            ),
+            context: synthesisContext,
+            expectedAssetCount: context.assets.count,
             settings: settings,
-            phase: "模型分析"
+            phase: "合成趋势报告"
         )
     }
 
     private func requestTrendReport(
+        prompt: TrendModelPrompt,
         context: TrendAnalysisContext,
+        expectedAssetCount: Int,
         settings: TrendAnalysisSettings,
         phase: String
     ) async throws -> TrendAnalysisReport {
-        let prompt = TrendPromptBuilder().build(context: context, settings: settings)
         appendTrendProgress("提示词摘要", detail: trendPromptSummary(prompt, context: context))
         let provider = settings.provider.upgradedForTrendGeneration
         appendTrendProgress("启动趋势模型：\(provider.model) · 超时 \(trendTimeoutText(provider))")
@@ -201,7 +250,7 @@ extension AppModel {
         let start = Date()
         let report = try await trendAIClient.generateReport(prompt: prompt, settings: provider)
         appendTrendProgress("收到模型报告：\(provider.model) · \(String(format: "%.1f", Date().timeIntervalSince(start)))s")
-        appendTrendProgress("模型输出摘要", detail: trendReportSummary(report, expectedAssetCount: context.assets.count))
+        appendTrendProgress("模型输出摘要", detail: trendReportSummary(report, expectedAssetCount: expectedAssetCount))
         return report
     }
 
@@ -246,7 +295,7 @@ extension AppModel {
     private func trendPromptSummary(_ prompt: TrendModelPrompt, context: TrendAnalysisContext) -> String {
         [
             "system：\(prompt.system.count) 字符；user：\(prompt.user.count) 字符",
-            "约束：返回合法 JSON；每个资产必须有 keyAssets；展示条件式买/持/卖；仅展示可核验分析轨迹",
+            "约束：返回合法 JSON；keyAssets 聚焦重点资产；展示条件式买/持/卖；仅展示可核验分析轨迹",
             "上下文：\(context.assets.count) 个资产、\(context.sectors.count) 个板块、\(context.platformSignals.count) 条平台信号"
         ].joined(separator: "\n")
     }
@@ -257,9 +306,15 @@ extension AppModel {
         return [
             "headline：\(report.portfolio.headline)",
             "risk：\(report.portfolio.riskLevel.rawValue)；external：\(report.externalSignalStatus.rawValue)",
-            "keyAssets：\(coverageText)；sectors：\(report.sectors.count)；actions：\(report.actions.count)；evidence：\(report.evidence.count)",
+            "assetTrends：\(report.assetTrends.count)/\(expectedAssetCount)；keyAssets：\(coverageText)；markets：\(report.marketOutlook.count)；opportunities：\(report.opportunities.count)；sectors：\(report.sectors.count)；actions：\(report.actions.count)；evidence：\(report.evidence.count)",
             "动作：\(actionNames.isEmpty ? "暂无" : actionNames.joined(separator: "；"))"
         ].joined(separator: "\n")
+    }
+
+    private func expectedFundCodes(in context: TrendAnalysisContext) -> [String] {
+        context.assets
+            .filter { $0.assetType == PersonalAssetType.fund.displayName }
+            .compactMap(\.code)
     }
 
     private func trendTimeoutText(_ settings: TrendAIProviderSettings) -> String {

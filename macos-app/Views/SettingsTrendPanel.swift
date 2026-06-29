@@ -17,8 +17,8 @@ extension SettingsSectionView {
                 SettingsDivider()
 
                 SettingsToggleRow(
-                    title: "每日自动分析",
-                    detail: "每天首次启动且模型配置完整时自动更新一次",
+                    title: "每日定时分析",
+                    detail: "默认 09:30、14:30；打开主界面时会补跑错过的最近一次",
                     icon: "clock.badge.checkmark",
                     tint: model.trendSettings.dailyAutoAnalysisEnabled ? AppPalette.positive : AppPalette.muted,
                     isOn: trendAutoAnalysisBinding
@@ -27,6 +27,10 @@ extension SettingsSectionView {
                 SettingsDivider()
 
                 VStack(alignment: .leading, spacing: 12) {
+                    trendField("每日时间", text: trendAutoAnalysisTimesBinding, placeholder: "09:30, 14:30")
+                        .disabled(!model.trendSettings.dailyAutoAnalysisEnabled)
+                        .opacity(model.trendSettings.dailyAutoAnalysisEnabled ? 1 : 0.55)
+
                     Picker("隐私模式", selection: trendPrivacyModeBinding) {
                         ForEach(TrendPrivacyMode.allCases) { mode in
                             Text(mode.rawValue).tag(mode)
@@ -51,7 +55,7 @@ extension SettingsSectionView {
 
                 SettingsActionRow {
                     Button {
-                        model.saveTrendAnalysisSettings()
+                        saveTrendSettingsFromDraft()
                     } label: {
                         Label("保存配置", systemImage: "checkmark.circle")
                     }
@@ -78,6 +82,11 @@ extension SettingsSectionView {
                 if !model.lastTrendError.isEmpty && model.lastTrendError != model.lastTrendConnectionMessage {
                     ToastBar(text: model.lastTrendError, tint: AppPalette.warning)
                         .padding(.top, 12)
+                }
+            }
+            .onAppear {
+                if trendAutoAnalysisTimesDraft.isEmpty {
+                    trendAutoAnalysisTimesDraft = model.trendSettings.dailyAutoAnalysisTimesText
                 }
             }
         }
@@ -185,8 +194,28 @@ extension SettingsSectionView {
     private var trendAutoAnalysisBinding: Binding<Bool> {
         Binding(
             get: { model.trendSettings.dailyAutoAnalysisEnabled },
-            set: { model.trendSettings.dailyAutoAnalysisEnabled = $0 }
+            set: { isEnabled in
+                model.trendSettings.dailyAutoAnalysisEnabled = isEnabled
+                saveTrendSettingsFromDraft()
+            }
         )
+    }
+
+    private var trendAutoAnalysisTimesBinding: Binding<String> {
+        Binding(
+            get: {
+                trendAutoAnalysisTimesDraft.isEmpty
+                    ? model.trendSettings.dailyAutoAnalysisTimesText
+                    : trendAutoAnalysisTimesDraft
+            },
+            set: { trendAutoAnalysisTimesDraft = $0 }
+        )
+    }
+
+    private func saveTrendSettingsFromDraft() {
+        model.trendSettings.updateDailyAutoAnalysisTimes(from: trendAutoAnalysisTimesDraft)
+        trendAutoAnalysisTimesDraft = model.trendSettings.dailyAutoAnalysisTimesText
+        model.saveTrendAnalysisSettings()
     }
 
     private var trendConnectionTint: Color {

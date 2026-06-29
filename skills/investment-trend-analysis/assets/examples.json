@@ -47,6 +47,42 @@
         ]
       }
     ],
+    "marketOutlook": [
+      {
+        "id": "market-csi300",
+        "name": "沪深300",
+        "category": "大盘宽基",
+        "direction": "neutral",
+        "confidence": {
+          "score": 58,
+          "label": "中"
+        },
+        "rationale": "大盘估值具备观察价值，但短期量能和盈利预期尚未形成一致确认。",
+        "evidenceIDs": [
+          "local-portfolio"
+        ],
+        "counterSignals": [
+          "若宽基指数放量突破并带动组合核心持仓同步修复，则大盘判断可上修。"
+        ]
+      },
+      {
+        "id": "market-gold",
+        "name": "黄金",
+        "category": "商品",
+        "direction": "neutralPositive",
+        "confidence": {
+          "score": 63,
+          "label": "中"
+        },
+        "rationale": "若实际利率回落或避险需求升温，黄金仍可作为组合外的防守型机会观察。",
+        "evidenceIDs": [
+          "local-portfolio"
+        ],
+        "counterSignals": [
+          "若美元和实际利率同步走强，黄金配置吸引力需要下调。"
+        ]
+      }
+    ],
     "sectors": [
       {
         "id": "sector-consumption",
@@ -63,6 +99,33 @@
         ],
         "counterSignals": [
           "若消费核心资产连续修复并带动组合回撤收窄，则板块判断需要上修。"
+        ]
+      }
+    ],
+    "opportunities": [
+      {
+        "id": "opp-gold-watch",
+        "name": "黄金配置窗口",
+        "category": "黄金/商品",
+        "direction": "neutralPositive",
+        "confidence": {
+          "score": 62,
+          "label": "中"
+        },
+        "rationale": "黄金与组合现有消费、科技、红利暴露相关性较低，可在触发条件出现后作为防守补充。",
+        "triggerConditions": [
+          "实际利率回落或避险需求升温",
+          "金价回踩关键支撑后企稳"
+        ],
+        "invalidatingConditions": [
+          "美元和实际利率同步走强",
+          "金价跌破中期支撑且未快速收复"
+        ],
+        "evidenceIDs": [
+          "local-portfolio"
+        ],
+        "counterSignals": [
+          "若风险偏好快速回升且权益资产形成更高胜率，黄金机会优先级下降。"
         ]
       }
     ],
@@ -90,6 +153,33 @@
         "rationale": "该资产代表组合消费暴露，适合作为板块验证锚点。",
         "counterSignals": [
           "若消费板块修复扩散，该资产不再是主要拖累。"
+        ]
+      }
+    ],
+    "assetTrends": [
+      {
+        "id": "asset-trend-consumption-index",
+        "name": "消费指数基金",
+        "code": null,
+        "sector": "消费",
+        "impactText": "当前以持有观察为主，若消费核心资产企稳并出现成交确认，可考虑分批恢复计划节奏；若继续破位则暂停买入。",
+        "horizons": [
+          {
+            "horizon": "short",
+            "direction": "neutralNegative",
+            "confidence": {
+              "score": 55,
+              "label": "中"
+            },
+            "rationale": "短期缺少确认信号，先观察回撤是否继续扩大。",
+            "counterSignals": [
+              "若净值重新站上近期压力区且成交确认，则短期看法上修。"
+            ]
+          }
+        ],
+        "rationale": "该基金代表组合消费暴露，趋势判断应跟随消费板块确认信号，而不是单独追涨。",
+        "counterSignals": [
+          "若消费板块修复扩散，该基金不再是主要拖累。"
         ]
       }
     ],

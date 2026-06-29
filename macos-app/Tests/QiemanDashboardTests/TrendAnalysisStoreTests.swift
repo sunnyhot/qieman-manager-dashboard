@@ -12,6 +12,7 @@ final class TrendAnalysisStoreTests: XCTestCase {
         XCTAssertEqual(settings.provider.timeoutSeconds, 300)
         XCTAssertEqual(settings.defaultPrivacyMode, .sanitized)
         XCTAssertFalse(settings.dailyAutoAnalysisEnabled)
+        XCTAssertEqual(settings.dailyAutoAnalysisTimes, ["09:30", "14:30"])
     }
 
     func testSettingsStoreSavesAndLoadsProviderSettings() throws {
@@ -28,7 +29,9 @@ final class TrendAnalysisStoreTests: XCTestCase {
             ),
             defaultPrivacyMode: .fullDetail,
             dailyAutoAnalysisEnabled: true,
-            lastAutoAnalysisDay: "2026-06-22"
+            dailyAutoAnalysisTimes: ["15:10", "09:30"],
+            lastAutoAnalysisDay: "2026-06-22",
+            lastAutoAnalysisSlotKey: "2026-06-22 15:10"
         )
 
         try TrendAnalysisSettingsStore().save(settings, to: url)
@@ -42,10 +45,12 @@ final class TrendAnalysisStoreTests: XCTestCase {
         XCTAssertEqual(loaded.provider.timeoutSeconds, 180)
         XCTAssertEqual(loaded.defaultPrivacyMode, settings.defaultPrivacyMode)
         XCTAssertEqual(loaded.dailyAutoAnalysisEnabled, settings.dailyAutoAnalysisEnabled)
+        XCTAssertEqual(loaded.dailyAutoAnalysisTimes, ["09:30", "15:10"])
         XCTAssertEqual(loaded.lastAutoAnalysisDay, settings.lastAutoAnalysisDay)
+        XCTAssertEqual(loaded.lastAutoAnalysisSlotKey, "2026-06-22 15:10")
     }
 
-    func testSettingsStoreKeepsLegacyProviderSettings() throws {
+    func testSettingsStoreKeepsLegacyProviderSettingsAndUsesDefaultSchedule() throws {
         let directory = try temporaryDirectory()
         let url = directory.appendingPathComponent("trend-settings.json")
         try """
@@ -72,7 +77,25 @@ final class TrendAnalysisStoreTests: XCTestCase {
         XCTAssertEqual(loaded.provider.timeoutSeconds, 60)
         XCTAssertEqual(loaded.defaultPrivacyMode, .fullDetail)
         XCTAssertTrue(loaded.dailyAutoAnalysisEnabled)
+        XCTAssertEqual(loaded.dailyAutoAnalysisTimes, ["09:30", "14:30"])
         XCTAssertEqual(loaded.lastAutoAnalysisDay, "2026-06-22")
+    }
+
+    func testSettingsStoreMigratesSingleLegacyScheduleTime() throws {
+        let directory = try temporaryDirectory()
+        let url = directory.appendingPathComponent("trend-settings.json")
+        try """
+        {
+          "dailyAutoAnalysisEnabled": true,
+          "dailyAutoAnalysisTime": "15:10",
+          "defaultPrivacyMode": "脱敏摘要",
+          "provider": {}
+        }
+        """.write(to: url, atomically: true, encoding: .utf8)
+
+        let loaded = try TrendAnalysisSettingsStore().load(from: url)
+
+        XCTAssertEqual(loaded.dailyAutoAnalysisTimes, ["15:10"])
     }
 
     func testReportStoreKeepsLatestSuccessfulReport() throws {
@@ -90,12 +113,38 @@ final class TrendAnalysisStoreTests: XCTestCase {
         XCTAssertEqual(loaded?.externalSignalStatus, .available)
     }
 
+    func testReportDecodesExpandedMarketOpportunityAndAssetTrendSections() throws {
+        let data = Data(expandedReportJSON.utf8)
+
+        let report = try JSONDecoder().decode(TrendAnalysisReport.self, from: data)
+
+        XCTAssertEqual(report.marketOutlook.map(\.name), ["沪深300", "黄金"])
+        XCTAssertEqual(report.opportunities.map(\.name), ["黄金配置窗口"])
+        XCTAssertEqual(report.assetTrends.map(\.name), ["消费指数基金"])
+        XCTAssertEqual(report.assetTrends.first?.code, "000001")
+    }
+
+    func testLegacyReportDecodesMissingExpandedSectionsAsEmptyArrays() throws {
+        let report = TrendAnalysisReport.fixture(
+            generatedAt: "2026-06-22 12:00:00",
+            externalSignalStatus: .partial
+        )
+        let data = try JSONEncoder().encode(report)
+
+        let decoded = try JSONDecoder().decode(TrendAnalysisReport.self, from: data)
+
+        XCTAssertTrue(decoded.marketOutlook.isEmpty)
+        XCTAssertTrue(decoded.opportunities.isEmpty)
+        XCTAssertTrue(decoded.assetTrends.isEmpty)
+    }
+
     func testSameDayAutoAnalysisUsesStoredLocalDay() {
         let settings = TrendAnalysisSettings(
             provider: .empty,
             defaultPrivacyMode: .sanitized,
             dailyAutoAnalysisEnabled: true,
-            lastAutoAnalysisDay: "2026-06-22"
+            lastAutoAnalysisDay: "2026-06-22",
+            lastAutoAnalysisSlotKey: nil
         )
 
         XCTAssertTrue(settings.hasAutoAnalyzed(on: "2026-06-22"))
@@ -109,6 +158,45 @@ final class TrendAnalysisStoreTests: XCTestCase {
         return url
     }
 }
+
+private let expandedReportJSON = """
+{
+  "generatedAt": "2026-06-24 10:00:00",
+  "dataAsOf": "2026-06-24 10:00:00",
+  "privacyMode": "脱敏摘要",
+  "externalSignalStatus": "available",
+  "portfolio": {
+    "headline": "组合中性偏积极",
+    "riskLevel": "medium",
+    "summary": "组合需关注大盘震荡、消费修复和黄金机会。"
+  },
+  "horizons": [
+    {"horizon":"short","direction":"neutral","confidence":{"score":60,"label":"中"},"rationale":"短期大盘仍在震荡确认。","counterSignals":["若放量突破则上修。"]},
+    {"horizon":"medium","direction":"neutralPositive","confidence":{"score":64,"label":"中"},"rationale":"中期政策和估值有修复空间。","counterSignals":["若盈利下修则降级。"]},
+    {"horizon":"long","direction":"neutralPositive","confidence":{"score":66,"label":"中"},"rationale":"长期分散配置仍有价值。","counterSignals":["若风险偏好持续下行则降级。"]}
+  ],
+  "marketOutlook": [
+    {"id":"market-hs300","name":"沪深300","category":"大盘宽基","direction":"neutral","confidence":{"score":60,"label":"中"},"rationale":"估值处于可观察区间，但短期缺少量能确认。","evidenceIDs":["local-portfolio"],"counterSignals":["若成交持续萎缩且跌破支撑，则判断降级。"]},
+    {"id":"market-gold","name":"黄金","category":"商品","direction":"neutralPositive","confidence":{"score":65,"label":"中"},"rationale":"若实际利率回落，黄金仍有避险和配置价值。","evidenceIDs":["local-portfolio"],"counterSignals":["若美元和实际利率同步走强，则黄金机会减弱。"]}
+  ],
+  "sectors": [
+    {"id":"sector-consumption","name":"消费","exposureText":"组合主要波动来源之一","direction":"neutralNegative","confidence":{"score":56,"label":"中"},"rationale":"消费暴露较高但修复不均衡。","evidenceIDs":["local-portfolio"],"counterSignals":["若消费核心资产连续修复，则判断上修。"]}
+  ],
+  "opportunities": [
+    {"id":"opp-gold","name":"黄金配置窗口","category":"商品/避险","direction":"neutralPositive","confidence":{"score":65,"label":"中"},"rationale":"黄金可作为组合外的观察机会，但需要等触发条件确认。","triggerConditions":["实际利率回落","金价回踩不破关键支撑"],"invalidatingConditions":["美元重新走强","金价跌破中期支撑"],"evidenceIDs":["local-portfolio"],"counterSignals":["若风险偏好快速回升，黄金相对吸引力下降。"]}
+  ],
+  "keyAssets": [],
+  "assetTrends": [
+    {"id":"asset-consumption","name":"消费指数基金","code":"000001","sector":"消费","impactText":"对组合短期波动影响较大","horizons":[{"horizon":"short","direction":"neutralNegative","confidence":{"score":55,"label":"中"},"rationale":"短期缺少确认信号。","counterSignals":["若净值放量修复则上修。"]}],"rationale":"该基金代表组合消费暴露。","counterSignals":["若消费板块修复扩散，该资产不再是主要拖累。"]}
+  ],
+  "actions": [],
+  "evidence": [
+    {"id":"local-portfolio","sourceName":"qieman-manager-dashboard","title":"本地组合上下文","url":null,"publishedAt":null,"retrievedAt":"2026-06-24 10:00:00","summary":"本地持仓、板块和计划构成本次判断的主要证据。"}
+  ],
+  "warnings": [],
+  "disclaimer": "非投资建议，仅供个人研究参考。"
+}
+"""
 
 extension TrendAnalysisReport {
     static func fixture(
@@ -133,12 +221,36 @@ extension TrendAnalysisReport {
                     confidence: TrendConfidence(score: 62, label: "中"),
                     rationale: "短期缺少明确突破信号。",
                     counterSignals: ["成交量放大后可能改变短期判断"]
+                ),
+                TrendHorizonView(
+                    horizon: .medium,
+                    direction: .neutral,
+                    confidence: TrendConfidence(score: 58, label: "中"),
+                    rationale: "中期等待估值和主理人调仓信号进一步确认。",
+                    counterSignals: ["若政策和盈利预期同步改善，中期判断需要上修。"]
+                ),
+                TrendHorizonView(
+                    horizon: .long,
+                    direction: .neutralPositive,
+                    confidence: TrendConfidence(score: 61, label: "中"),
+                    rationale: "长期配置分散度尚可，但仍需控制重复暴露。",
+                    counterSignals: ["若主要板块长期盈利下修，长期判断需要降级。"]
                 )
             ],
             sectors: [],
             keyAssets: [],
             actions: [],
-            evidence: [],
+            evidence: externalSignalStatus == .available ? [
+                TrendEvidence(
+                    id: "local-portfolio",
+                    sourceName: "qieman-manager-dashboard",
+                    title: "本地组合上下文",
+                    url: nil,
+                    publishedAt: nil,
+                    retrievedAt: generatedAt,
+                    summary: "本地持仓、板块、计划和待确认记录构成本次判断的主要证据。"
+                )
+            ] : [],
             warnings: [],
             disclaimer: "非投资建议，仅供个人研究参考。"
         )

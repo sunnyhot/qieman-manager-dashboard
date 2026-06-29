@@ -48,20 +48,57 @@ final class TrendAnalysisAppModelTests: XCTestCase {
         XCTAssertFalse(model.lastTrendError.isEmpty)
     }
 
-    func testDailyAutoAnalysisRunsOnlyOncePerDay() async {
+    func testDailyAutoAnalysisRunsOnceForEachScheduledSlot() async {
         let model = AppModel()
         model.trendSettings = makeProviderSettings(dailyAutoAnalysisEnabled: true)
+        model.trendSettings.dailyAutoAnalysisTimes = ["09:30", "14:30"]
+        let client = CountingTrendAIClient()
+        model.trendAIClient = client
+
+        await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 09:30:00")
+        await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 10:00:00")
+        await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 15:00:00")
+        await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 16:00:00")
+
+        XCTAssertEqual(client.callCount, 2)
+        XCTAssertEqual(model.trendSettings.lastAutoAnalysisDay, "2026-06-22")
+        XCTAssertEqual(model.trendSettings.lastAutoAnalysisSlotKey, "2026-06-22 14:30")
+    }
+
+    func testDailyAutoAnalysisWaitsUntilScheduledTime() async {
+        let model = AppModel()
+        model.trendSettings = makeProviderSettings(dailyAutoAnalysisEnabled: true)
+        model.trendSettings.dailyAutoAnalysisTimes = ["09:30", "14:30"]
         let client = CountingTrendAIClient()
         model.trendAIClient = client
 
         await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 09:00:00")
-        await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 15:00:00")
+
+        XCTAssertEqual(client.callCount, 0)
+        XCTAssertNil(model.trendSettings.lastAutoAnalysisDay)
+
+        await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 09:30:00")
 
         XCTAssertEqual(client.callCount, 1)
         XCTAssertEqual(model.trendSettings.lastAutoAnalysisDay, "2026-06-22")
+        XCTAssertEqual(model.trendSettings.lastAutoAnalysisSlotKey, "2026-06-22 09:30")
     }
 
-    func testLargePortfolioGenerationUsesSingleModelRequest() async {
+    func testDailyAutoAnalysisCatchesUpOnlyLatestMissedSlotWhenMainViewOpensLate() async {
+        let model = AppModel()
+        model.trendSettings = makeProviderSettings(dailyAutoAnalysisEnabled: true)
+        model.trendSettings.dailyAutoAnalysisTimes = ["09:30", "14:30"]
+        let client = CountingTrendAIClient()
+        model.trendAIClient = client
+
+        await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 15:00:00")
+        await model.runDailyTrendAnalysisIfNeeded(createdAt: "2026-06-22 16:00:00")
+
+        XCTAssertEqual(client.callCount, 1)
+        XCTAssertEqual(model.trendSettings.lastAutoAnalysisSlotKey, "2026-06-22 14:30")
+    }
+
+    func testLargePortfolioGenerationUsesChunkedRequestsAndFinalSynthesis() async {
         let model = AppModel()
         model.trendSettings = makeProviderSettings()
         var rows: [PersonalAssetAggregateRow] = []
@@ -79,14 +116,22 @@ final class TrendAnalysisAppModelTests: XCTestCase {
         }
         model.personalAssetRows = rows
         let client = CountingTrendAIClient()
+        client.assetTrendCodes = rows.compactMap { row in
+            guard let code = row.fundCode else { return nil }
+            return (code: code, name: row.fundName)
+        }
         model.trendAIClient = client
 
         await model.generateTrendAnalysis(userInitiated: true, createdAt: "2026-06-22 12:00:00")
 
         XCTAssertEqual(model.trendGenerationState, .succeeded)
-        XCTAssertEqual(client.callCount, 1)
+        XCTAssertEqual(client.callCount, 6)
+        XCTAssertEqual(client.prompts.filter { $0.system.contains("partial chunk analysis") }.count, 5)
+        XCTAssertTrue(client.prompts.last?.system.contains("Merge partial chunk reports") == true)
         let logMessages = model.trendProgressLogs.map(\.message).joined(separator: "\n")
         XCTAssertTrue(logMessages.contains("构建趋势上下文"))
+        XCTAssertTrue(logMessages.contains("分块趋势分析"))
+        XCTAssertTrue(logMessages.contains("合成趋势报告"))
         XCTAssertTrue(logMessages.contains("启动趋势模型"))
         XCTAssertTrue(logMessages.contains("趋势分析完成"))
     }
@@ -105,7 +150,9 @@ final class TrendAnalysisAppModelTests: XCTestCase {
                 estimateChangePct: 0.2
             )
         ]
-        model.trendAIClient = FakeTrendAIClient()
+        model.trendAIClient = FakeTrendAIClient(
+            report: makeTrendReport(assetTrends: [(code: "510300", name: "沪深300ETF")])
+        )
 
         await model.generateTrendAnalysis(userInitiated: true, createdAt: "2026-06-22 12:00:00")
 
@@ -142,7 +189,10 @@ final class TrendAnalysisAppModelTests: XCTestCase {
                 estimateChangePct: 0.2
             )
         ]
-        model.trendAIClient = SlowTrendAIClient(delayNanoseconds: 90_000_000)
+        model.trendAIClient = SlowTrendAIClient(
+            delayNanoseconds: 90_000_000,
+            assetTrendCodes: [(code: "510300", name: "沪深300ETF")]
+        )
 
         let generationTask = Task {
             await model.generateTrendAnalysis(userInitiated: true, createdAt: "2026-06-22 12:00:00")
@@ -269,13 +319,15 @@ private struct FakeTrendAIClient: TrendAIClientProtocol {
 private final class CountingTrendAIClient: TrendAIClientProtocol {
     var callCount = 0
     var prompts: [TrendModelPrompt] = []
+    var assetTrendCodes: [(code: String, name: String)] = []
 
     func generateReport(prompt: TrendModelPrompt, settings: TrendAIProviderSettings) async throws -> TrendAnalysisReport {
         callCount += 1
         prompts.append(prompt)
-        return TrendAnalysisReport.fixture(
+        return makeTrendReport(
             generatedAt: "2026-06-22 09:00:00",
-            externalSignalStatus: .available
+            externalSignalStatus: .available,
+            assetTrends: assetTrendCodes
         )
     }
 
@@ -290,12 +342,14 @@ private final class CountingTrendAIClient: TrendAIClientProtocol {
 
 private struct SlowTrendAIClient: TrendAIClientProtocol {
     let delayNanoseconds: UInt64
+    var assetTrendCodes: [(code: String, name: String)] = []
 
     func generateReport(prompt: TrendModelPrompt, settings: TrendAIProviderSettings) async throws -> TrendAnalysisReport {
         try? await Task.sleep(nanoseconds: delayNanoseconds)
-        return TrendAnalysisReport.fixture(
+        return makeTrendReport(
             generatedAt: "2026-06-22 12:00:00",
-            externalSignalStatus: .available
+            externalSignalStatus: .available,
+            assetTrends: assetTrendCodes
         )
     }
 
@@ -308,12 +362,54 @@ private struct SlowTrendAIClient: TrendAIClientProtocol {
     }
 }
 
+private func makeTrendReport(
+    generatedAt: String = "2026-06-22 12:00:00",
+    externalSignalStatus: TrendExternalSignalStatus = .available,
+    assetTrends: [(code: String, name: String)] = []
+) -> TrendAnalysisReport {
+    TrendAnalysisReport
+        .fixture(generatedAt: generatedAt, externalSignalStatus: externalSignalStatus)
+        .replacingAssetTrends(assetTrends.map { item in
+            TrendAssetView(
+                id: "asset-trend-\(item.code)",
+                name: item.name,
+                code: item.code,
+                sector: "测试板块",
+                impactText: "以持有观察为主，若趋势确认可考虑分批买入，若跌破关键支撑则暂停买入。",
+                horizons: [],
+                rationale: "该基金趋势需要结合板块与大盘信号确认。",
+                counterSignals: ["若板块继续走弱且基金净值破位，则判断下修。"]
+            )
+        })
+}
+
 private extension TrendAnalysisReport {
     func jsonString() -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let data = try! encoder.encode(self)
         return String(data: data, encoding: .utf8)!
+    }
+
+    func replacingAssetTrends(_ assetTrends: [TrendAssetView]) -> TrendAnalysisReport {
+        TrendAnalysisReport(
+            id: id,
+            generatedAt: generatedAt,
+            dataAsOf: dataAsOf,
+            privacyMode: privacyMode,
+            externalSignalStatus: externalSignalStatus,
+            portfolio: portfolio,
+            horizons: horizons,
+            marketOutlook: marketOutlook,
+            sectors: sectors,
+            opportunities: opportunities,
+            keyAssets: keyAssets,
+            assetTrends: assetTrends,
+            actions: actions,
+            evidence: evidence,
+            warnings: warnings,
+            disclaimer: disclaimer
+        )
     }
 }
 

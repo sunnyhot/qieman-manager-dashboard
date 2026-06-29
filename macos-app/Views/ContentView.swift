@@ -80,6 +80,7 @@ struct ContentView: View {
         .frame(minWidth: 860, idealWidth: 1200, minHeight: 600)
         .task {
             await model.start()
+            await model.runDailyTrendAnalysisIfNeeded()
             model.refreshDataForSectionIfNeeded(model.selectedSection)
         }
         .onChange(of: model.selectedSection) { _, section in

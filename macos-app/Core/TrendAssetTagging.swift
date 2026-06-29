@@ -67,7 +67,13 @@ struct TrendAssetTagIndex: Hashable {
         }
 
         self.report = report
-        let builtSummaries = report.keyAssets.map { asset in
+        let assets = report.assetTrends + report.keyAssets.filter { keyAsset in
+            !report.assetTrends.contains { trend in
+                Self.normalizedCode(trend.code) == Self.normalizedCode(keyAsset.code)
+                    || Self.normalizedName(trend.name) == Self.normalizedName(keyAsset.name)
+            }
+        }
+        let builtSummaries = assets.map { asset in
             Self.makeSummary(asset: asset, report: report)
         }
         summaries = builtSummaries
