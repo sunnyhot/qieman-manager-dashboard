@@ -1,25 +1,25 @@
 {
-    "version": "3.0.2",
-    "tag": "v3.0.2",
+    "version": "3.0.3",
+    "tag": "v3.0.3",
     "asset": {
-        "name": "QiemanDashboard-3.0.2.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.2/QiemanDashboard-3.0.2.zip",
-        "size": 4093824,
+        "name": "QiemanDashboard-3.0.3.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.3/QiemanDashboard-3.0.3.zip",
+        "size": 4094053,
         "content_type": "application/zip",
-        "sha256": "dff1c531a2ac82d56f6adcef9998d29aeb54a4efe9b420e94d04761a870f5df1"
+        "sha256": "2a001021b6c0132fdaac3bfceddaad4a8a8eb677470f4b474b4803a59d799a82"
     },
-    "sha256": "dff1c531a2ac82d56f6adcef9998d29aeb54a4efe9b420e94d04761a870f5df1",
-    "notes": "扩展趋势分析覆盖大盘机会和持仓基金",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.2",
+    "sha256": "2a001021b6c0132fdaac3bfceddaad4a8a8eb677470f4b474b4803a59d799a82",
+    "notes": "reuse visible launch window before fallback",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.3",
     "published_at": "",
-    "tag_name": "v3.0.2",
-    "name": "QiemanDashboard v3.0.2",
-    "body": "扩展趋势分析覆盖大盘机会和持仓基金",
+    "tag_name": "v3.0.3",
+    "name": "QiemanDashboard v3.0.3",
+    "body": "reuse visible launch window before fallback",
     "assets": [
         {
-            "name": "QiemanDashboard-3.0.2.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.2/QiemanDashboard-3.0.2.zip",
-            "size": 4093824,
+            "name": "QiemanDashboard-3.0.3.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.3/QiemanDashboard-3.0.3.zip",
+            "size": 4094053,
             "content_type": "application/zip"
         }
     ]
