@@ -65,6 +65,28 @@ final class AppLaunchPresentationPolicyTests: XCTestCase {
         ))
     }
 
+    @MainActor
+    func testShowMainWindowReusesVisibleUntrackedSwiftUIWindowBeforeCreatingFallback() {
+        let delegate = QiemanApplicationDelegate()
+        let existingWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 240),
+            styleMask: [.titled, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        existingWindow.isReleasedWhenClosed = false
+        existingWindow.title = "QiemanDashboard"
+        existingWindow.orderFront(nil)
+        defer {
+            existingWindow.orderOut(nil)
+            existingWindow.close()
+        }
+
+        delegate.showMainWindow()
+
+        XCTAssertTrue(delegate.mainWindow === existingWindow)
+    }
+
     func testDidFinishLaunchingWaitsForSwiftUIWindowBeforeFallbackCreation() {
         XCTAssertFalse(AppLaunchWindowPolicy.shouldCreateImmediateManualWindowOnLaunch)
     }

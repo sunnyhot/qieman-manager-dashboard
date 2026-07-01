@@ -512,6 +512,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         // 2. Search for an existing SwiftUI WindowGroup window (may have been hidden
         //    by windowShouldClose but never tracked in mainWindow).
         if let existing = findReusableMainWindow() {
+            configureMainWindowIdentity(existing)
             mainWindow = existing
             existing.makeKeyAndOrderFront(nil)
             NSApplication.shared.activate(ignoringOtherApps: true)
@@ -586,6 +587,8 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
             window.identifier == Self.mainWindowIdentifier && isReusableMainWindow(window)
         } ?? NSApplication.shared.windows.first { window in
             window.title == "且慢主理人" && isReusableMainWindow(window)
+        } ?? NSApplication.shared.windows.first { window in
+            window.isVisible && isReusableMainWindow(window)
         }
     }
 
