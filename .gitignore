@@ -17,4 +17,5 @@ macos-app/.build/
 releases/macos/*.zip
 
 .superpowers/
+.worktrees
 .worktrees/
