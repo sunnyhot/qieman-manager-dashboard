@@ -67,6 +67,24 @@ final class TradeSignalSettingsStoreTests: XCTestCase {
         XCTAssertTrue(loaded.assetPreferences.isEmpty)
     }
 
+    func testGlobalSettingsCanBeAdjustedForNotificationWorkflow() {
+        var settings = TradeSignalSettings.default
+
+        settings.enabled = false
+        settings.localNotificationsEnabled = true
+        settings.riskPreference = .aggressive
+        settings.primaryHorizon = .short
+        settings.minimumConfidence = 85
+        settings.allowSellSignals = false
+
+        XCTAssertFalse(settings.enabled)
+        XCTAssertTrue(settings.localNotificationsEnabled)
+        XCTAssertEqual(settings.riskPreference, .aggressive)
+        XCTAssertEqual(settings.primaryHorizon, .short)
+        XCTAssertEqual(settings.minimumConfidence, 85)
+        XCTAssertFalse(settings.allowSellSignals)
+    }
+
     private func temporaryURL(_ filename: String) -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

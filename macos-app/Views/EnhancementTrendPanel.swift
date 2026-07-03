@@ -215,6 +215,7 @@ extension EnhancementCenterView {
         VStack(alignment: .leading, spacing: AppPalette.spaceM) {
             trendSectorGrid(report.sectors)
             trendActionList(report.actions)
+            tradeSignalDetailList(model.tradeSignalSummary)
             trendEvidenceList(report.evidence)
             trendWarnings(report)
         }
@@ -406,6 +407,63 @@ extension EnhancementCenterView {
         }
     }
 
+    private func tradeSignalDetailList(_ summary: TradeSignalSummary) -> some View {
+        trendBlock("AI 操作观察", icon: "bell.badge") {
+            if summary.items.isEmpty {
+                trendEmptyState("暂无观察", detail: summary.headline)
+            } else {
+                VStack(spacing: AppPalette.spaceS) {
+                    ForEach(summary.items.prefix(8)) { item in
+                        tradeSignalDetailRow(item)
+                    }
+                }
+            }
+        }
+    }
+
+    private func tradeSignalDetailRow(_ item: TradeSignalItem) -> some View {
+        let tint = trendSignalTint(for: item)
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(item.assetName)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                Text(item.status.displayText)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .lineLimit(1)
+            }
+
+            HStack(spacing: AppPalette.spaceS) {
+                Text(item.action.displayText)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(tint)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(tint.opacity(AppPalette.accentFill), in: Capsule())
+                Text("置信度 \(item.confidence.normalizedScore)")
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AppPalette.info)
+                if item.isBasedOnStaleAnalysis {
+                    Text("上次分析")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(AppPalette.muted)
+                }
+            }
+
+            Text(item.reason)
+                .font(.system(size: 11))
+                .foregroundStyle(AppPalette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+            trendConditionRow(title: "触发", values: [item.triggerSummary])
+            trendConditionRow(title: "反证", values: [item.invalidatingSummary])
+        }
+        .padding(11)
+        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+    }
+
     private func trendEvidenceList(_ evidence: [TrendEvidence]) -> some View {
         trendBlock("证据来源", icon: "link") {
             if evidence.isEmpty {
@@ -526,6 +584,19 @@ extension EnhancementCenterView {
             .font(.system(size: 10))
             .foregroundStyle(title == "触发" ? AppPalette.info : AppPalette.warning)
             .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func trendSignalTint(for item: TradeSignalItem) -> Color {
+        switch item.status {
+        case .triggered, .upgraded:
+            return AppPalette.warning
+        case .approaching, .new:
+            return AppPalette.info
+        case .invalidated:
+            return AppPalette.danger
+        case .staleAnalysis:
+            return AppPalette.muted
+        }
     }
 
     private func trendEmptyState(_ title: String, detail: String) -> some View {
