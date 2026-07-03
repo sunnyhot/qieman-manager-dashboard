@@ -15,3 +15,5 @@ dist/
 .build/
 macos-app/.build/
 releases/macos/*.zip
+
+.superpowers/
