@@ -79,7 +79,9 @@ struct MenuBarPortfolioView: View {
         .task {
             for action in MenuBarPortfolioRefreshDecision.onAppear(
                 hasPortfolioSnapshot: model.userPortfolioSnapshot != nil,
-                hasPersonalPortfolio: model.hasPersonalPortfolio
+                hasPersonalPortfolio: model.hasPersonalPortfolio,
+                hasIncompletePortfolioValuation: model.userPortfolioSnapshot?.hasIncompleteValuationCoverage ?? false,
+                lastPortfolioRefreshAt: model.lastPortfolioRefreshAt
             ) {
                 switch action {
                 case .refreshPortfolio:

@@ -8,11 +8,32 @@ enum MenuBarPortfolioRefreshAction: Equatable {
 enum MenuBarPortfolioRefreshDecision {
     static func onAppear(
         hasPortfolioSnapshot: Bool,
-        hasPersonalPortfolio: Bool
+        hasPersonalPortfolio: Bool,
+        hasIncompletePortfolioValuation: Bool,
+        lastPortfolioRefreshAt: Date?,
+        now: Date = Date()
     ) -> [MenuBarPortfolioRefreshAction] {
-        if hasPersonalPortfolio, !hasPortfolioSnapshot {
+        guard hasPersonalPortfolio else {
+            return [.refreshMarketIndicesIfNeeded]
+        }
+
+        if !hasPortfolioSnapshot {
             return [.refreshPortfolio]
         }
-        return [.refreshMarketIndicesIfNeeded]
+
+        guard hasIncompletePortfolioValuation else {
+            return [.refreshMarketIndicesIfNeeded]
+        }
+
+        if isFresh(lastPortfolioRefreshAt, now: now) {
+            return [.refreshMarketIndicesIfNeeded]
+        }
+
+        return [.refreshPortfolio]
+    }
+
+    private static func isFresh(_ date: Date?, now: Date) -> Bool {
+        guard let date else { return false }
+        return now.timeIntervalSince(date) < RefreshDecision.portfolioFreshnessInterval
     }
 }

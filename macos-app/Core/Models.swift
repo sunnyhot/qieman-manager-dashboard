@@ -1238,6 +1238,9 @@ struct UserPortfolioSnapshot: Hashable {
     let dailyChangeSummary: UserPortfolioDailyChangeSummary
 
     var holdingCount: Int { rows.count }
+    var hasIncompleteValuationCoverage: Bool {
+        rows.contains { $0.marketValue == nil }
+    }
 
     init(
         rows: [UserPortfolioValuationRow],
