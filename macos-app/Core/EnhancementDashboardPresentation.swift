@@ -232,6 +232,7 @@ struct EnhancementDashboardSummary: Hashable {
         insightSummary: PortfolioSnapshotInsightSummary,
         snapshotCount: Int,
         trendStatus: EnhancementTrendStatus,
+        tradeSignals: TradeSignalSummary,
         reminders: PortfolioReminderSummary,
         planSimulation: PlanSimulationSummary
     ) -> EnhancementDashboardSummary {
@@ -245,6 +246,7 @@ struct EnhancementDashboardSummary: Hashable {
             canUndoLatestImport: canUndoLatestImport,
             insightSummary: insightSummary,
             trendStatus: trendStatus,
+            tradeSignals: tradeSignals,
             reminders: reminders,
             planSimulation: planSimulation
         )
@@ -378,6 +380,7 @@ struct EnhancementDashboardSummary: Hashable {
         canUndoLatestImport: Bool,
         insightSummary: PortfolioSnapshotInsightSummary,
         trendStatus: EnhancementTrendStatus,
+        tradeSignals: TradeSignalSummary,
         reminders: PortfolioReminderSummary,
         planSimulation: PlanSimulationSummary
     ) -> [EnhancementActionItem] {
@@ -439,6 +442,20 @@ struct EnhancementDashboardSummary: Hashable {
             ))
         }
 
+        if let signal = tradeSignals.items.first {
+            let count = max(tradeSignals.triggeredCount, tradeSignals.items.count)
+            let staleSuffix = tradeSignals.staleAnalysis ? "（基于上次分析）" : ""
+            items.append(EnhancementActionItem(
+                id: "trade-signals",
+                title: "AI 操作观察",
+                detail: "\(signal.assetName)：\(signal.triggerSummary)\(staleSuffix)",
+                metric: "\(count) 条",
+                targetTab: .trend,
+                kind: .selectTab,
+                severity: tradeSignalSeverity(tradeSignals)
+            ))
+        }
+
         items.append(contentsOf: reminders.items.prefix(3).map { reminder in
             EnhancementActionItem(
                 id: "reminder-\(reminder.kind)",
@@ -464,6 +481,13 @@ struct EnhancementDashboardSummary: Hashable {
         }
 
         return items
+    }
+
+    private static func tradeSignalSeverity(_ summary: TradeSignalSummary) -> EnhancementPresentationSeverity {
+        if summary.staleAnalysis {
+            return .info
+        }
+        return summary.triggeredCount > 0 ? .warning : .info
     }
 
     private static func primaryAction(from item: EnhancementActionItem) -> EnhancementPrimaryAction {

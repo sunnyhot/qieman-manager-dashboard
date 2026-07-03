@@ -42,6 +42,7 @@ struct EnhancementCenterView: View {
             insightSummary: model.portfolioSnapshotInsightSummary,
             snapshotCount: model.portfolioInsightSnapshots.count,
             trendStatus: model.enhancementTrendStatus,
+            tradeSignals: model.tradeSignalSummary,
             reminders: model.portfolioReminderSummary,
             planSimulation: model.planSimulationSummary
         )
@@ -307,12 +308,92 @@ struct EnhancementCenterView: View {
     private var reviewPanel: some View {
         SectionCard(title: "复盘", subtitle: model.monthlyReportSummary.title, icon: "doc.text") {
             VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+                tradeSignalWorkbenchPanel
                 reportStatusStrip
                 reportSummaryGrid
                 reportActionRow
                 monthlyReportPreview
             }
         }
+    }
+
+    private var tradeSignalWorkbenchPanel: some View {
+        let summary = model.tradeSignalSummary
+        return VStack(alignment: .leading, spacing: AppPalette.spaceS) {
+            HStack(alignment: .center, spacing: AppPalette.spaceS) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(summary.triggeredCount > 0 ? AppPalette.warning : AppPalette.info)
+                    .accentIconStyle(tint: summary.triggeredCount > 0 ? AppPalette.warning : AppPalette.info, size: 28)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(summary.headline)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text(summary.generatedAt ?? "等待 AI 趋势分析")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                }
+
+                Spacer(minLength: 0)
+
+                Button {
+                    model.selectedEnhancementTab = .trend
+                } label: {
+                    Label("查看趋势", systemImage: "arrow.right.circle")
+                }
+                .buttonStyle(.bordered)
+            }
+
+            if summary.items.isEmpty {
+                Text("暂无可提醒的 AI 操作观察")
+                    .font(.system(size: 11))
+                    .foregroundStyle(AppPalette.muted)
+            } else {
+                LazyVStack(alignment: .leading, spacing: AppPalette.spaceS) {
+                    ForEach(summary.items.prefix(3)) { item in
+                        tradeSignalWorkbenchRow(item)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, AppPalette.spaceS)
+    }
+
+    private func tradeSignalWorkbenchRow(_ item: TradeSignalItem) -> some View {
+        let tint = tradeSignalTint(for: item)
+        return HStack(alignment: .top, spacing: AppPalette.spaceS) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(tint)
+                .frame(width: 3, height: 36)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: AppPalette.spaceS) {
+                    Text(item.assetName)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                    Text(item.status.displayText)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(tint)
+                        .lineLimit(1)
+                }
+
+                Text("\(item.action.displayText)：\(item.triggerSummary)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("\(item.confidence.normalizedScore)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+        }
+        .padding(AppPalette.spaceS)
+        .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
     }
 
     private var reportStatusStrip: some View {
@@ -476,6 +557,19 @@ struct EnhancementCenterView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+    }
+
+    private func tradeSignalTint(for item: TradeSignalItem) -> Color {
+        switch item.status {
+        case .triggered, .upgraded:
+            return AppPalette.warning
+        case .approaching, .new:
+            return AppPalette.info
+        case .invalidated:
+            return AppPalette.danger
+        case .staleAnalysis:
+            return AppPalette.muted
+        }
     }
 
     private func tint(for severity: EnhancementPresentationSeverity) -> Color {

@@ -130,6 +130,48 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
         XCTAssertFalse(summary.actionQueue.contains { $0.targetTab == .importPreview || $0.targetTab == .watch || $0.targetTab == .insight })
     }
 
+    func testActionQueuePrioritizesTradeSignalAlerts() {
+        let summary = makeDashboard(
+            lastMonthlyReportExport: MonthlyReportExportMetadata(
+                monthText: "2026-06",
+                filePath: "/tmp/2026-06-portfolio-report.md",
+                exportedAt: "2026-06-17 10:30:00"
+            ),
+            tradeSignals: TradeSignalSummary(
+                headline: "2 条 AI 操作观察",
+                generatedAt: "2026-07-03 09:30:00",
+                dataAsOf: "2026-07-03 15:00:00",
+                triggeredCount: 2,
+                staleAnalysis: false,
+                items: [
+                    tradeSignal(status: .approaching, stale: false)
+                ]
+            ),
+            reminders: PortfolioReminderSummary(
+                headline: "1 项需要处理",
+                actionCount: 1,
+                items: [
+                    PortfolioReminderItem(
+                        kind: .pendingTrade,
+                        title: "待确认交易",
+                        detail: "1 笔买入中或转换记录",
+                        metric: "¥700.00",
+                        urgency: .high,
+                        priority: 10
+                    )
+                ]
+            )
+        )
+
+        XCTAssertEqual(summary.actionQueue.first?.id, "trade-signals")
+        XCTAssertEqual(summary.actionQueue.first?.title, "AI 操作观察")
+        XCTAssertEqual(summary.actionQueue.first?.detail, "红利低波：继续回撤")
+        XCTAssertEqual(summary.actionQueue.first?.metric, "2 条")
+        XCTAssertEqual(summary.actionQueue.first?.targetTab, .trend)
+        XCTAssertEqual(summary.actionQueue.first?.kind, .selectTab)
+        XCTAssertEqual(summary.actionQueue.first?.severity, .warning)
+    }
+
     func testTrendMissingModelAddsActionQueueItem() {
         let summary = makeDashboard(
             trendStatus: EnhancementTrendStatus(
@@ -241,6 +283,14 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
         ),
         snapshotCount: Int = 0,
         trendStatus: EnhancementTrendStatus = .ready,
+        tradeSignals: TradeSignalSummary = TradeSignalSummary(
+            headline: "暂无 AI 操作观察",
+            generatedAt: nil,
+            dataAsOf: nil,
+            triggeredCount: 0,
+            staleAnalysis: false,
+            items: []
+        ),
         reminders: PortfolioReminderSummary = PortfolioReminderSummary(headline: "暂无待处理提醒", actionCount: 0, items: []),
         planSimulation: PlanSimulationSummary = PlanSimulationSummary(
             headline: "暂无进行中计划",
@@ -265,6 +315,7 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
             insightSummary: insight,
             snapshotCount: snapshotCount,
             trendStatus: trendStatus,
+            tradeSignals: tradeSignals,
             reminders: reminders,
             planSimulation: planSimulation
         )
@@ -316,6 +367,26 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
                     tone: .gain
                 )
             ]
+        )
+    }
+
+    private func tradeSignal(status: TradeSignalStatus, stale: Bool) -> TradeSignalItem {
+        TradeSignalItem(
+            id: "buy-000001",
+            assetKey: "000001",
+            assetName: "红利低波",
+            assetCode: "000001",
+            action: .watchBuy,
+            status: status,
+            confidence: TrendConfidence(score: 78, label: "中"),
+            title: "关注买入红利低波",
+            reason: stale ? "基于上次 AI 分析：回撤未破坏中期逻辑。" : "回撤未破坏中期逻辑。",
+            triggerSummary: "继续回撤",
+            invalidatingSummary: "趋势破位",
+            dataAsOf: "2026-07-03 15:00:00",
+            analysisGeneratedAt: stale ? "2026-07-02 09:30:00" : "2026-07-03 09:30:00",
+            isBasedOnStaleAnalysis: stale,
+            priority: 10
         )
     }
 }
