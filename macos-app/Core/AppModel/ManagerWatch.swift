@@ -369,7 +369,14 @@ extension AppModel {
             openPlatformAction(payload)
         case .forumRecord:
             openForumRecord(payload)
+        case .workbenchTrend:
+            openWorkbenchTrend()
         }
+    }
+
+    func openWorkbenchTrend() {
+        selectedSection = .enhancement
+        selectedEnhancementTab = .trend
     }
 
     func openPlatformAction(_ payload: NotificationDeepLinkPayload) {

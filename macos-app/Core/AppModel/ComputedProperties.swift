@@ -65,6 +65,14 @@ extension AppModel {
         dataDirectoryURL?.appendingPathComponent("trend-analysis-report.json", isDirectory: false)
     }
 
+    var tradeSignalSettingsFileURL: URL? {
+        dataDirectoryURL?.appendingPathComponent("trade-signal-settings.json", isDirectory: false)
+    }
+
+    var tradeSignalNotificationStateFileURL: URL? {
+        dataDirectoryURL?.appendingPathComponent("trade-signal-notification-state.json", isDirectory: false)
+    }
+
     var hasLiveService: Bool {
         baseURL != nil
     }

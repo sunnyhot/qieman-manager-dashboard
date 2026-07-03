@@ -309,6 +309,7 @@ struct ManagerWatchSettings: Codable, Hashable {
 enum NotificationDeepLinkType: String {
     case platformAction = "platform_action"
     case forumRecord = "forum_record"
+    case workbenchTrend = "workbench_trend"
 }
 
 struct NotificationDeepLinkPayload: Hashable {

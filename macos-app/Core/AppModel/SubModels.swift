@@ -146,6 +146,8 @@ final class EnhancementState: ObservableObject {
     @Published var lastTrendError = ""
     @Published var lastTrendConnectionMessage = ""
     @Published var trendProgressLogs: [TrendProgressLog] = []
+    @Published var tradeSignalSettings: TradeSignalSettings = .default
+    @Published var tradeSignalNotificationState = TradeSignalNotificationState()
 }
 
 enum EnhancementCenterTab: String, CaseIterable, Identifiable {

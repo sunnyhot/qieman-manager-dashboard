@@ -155,6 +155,7 @@ extension AppModel {
             appendTrendProgress("保存趋势报告")
             saveTrendAnalysisReport(report)
             saveTrendAnalysisSettings()
+            await evaluateTradeSignalNotifications(now: report.generatedAt)
             appendTrendProgress("趋势分析完成")
         } catch {
             trendGenerationState = .failed
@@ -191,7 +192,11 @@ extension AppModel {
             appendTrendProgress("单次模型分析：\(context.assets.count) 个标的，\(context.sectors.count) 个板块")
             appendTrendProgress("生成趋势提示词：\(context.privacyMode.rawValue)")
             return try await requestTrendReport(
-                prompt: promptBuilder.build(context: context, settings: settings),
+                prompt: promptBuilder.build(
+                    context: context,
+                    settings: settings,
+                    tradeSignalSettings: tradeSignalSettings
+                ),
                 context: context,
                 expectedAssetCount: context.assets.count,
                 settings: settings,
@@ -210,7 +215,8 @@ extension AppModel {
                     context: chunk,
                     chunkIndex: index,
                     chunkCount: chunks.count,
-                    settings: settings
+                    settings: settings,
+                    tradeSignalSettings: tradeSignalSettings
                 ),
                 context: chunk,
                 expectedAssetCount: chunk.assets.count,
@@ -226,7 +232,8 @@ extension AppModel {
             prompt: promptBuilder.buildSynthesis(
                 context: synthesisContext,
                 chunkReports: chunkReports,
-                settings: settings
+                settings: settings,
+                tradeSignalSettings: tradeSignalSettings
             ),
             context: synthesisContext,
             expectedAssetCount: context.assets.count,

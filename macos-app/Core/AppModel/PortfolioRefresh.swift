@@ -43,6 +43,7 @@ extension AppModel {
                 noticeMessage = "个人持仓估值已刷新。"
             }
             await refreshMarketIndicesIfNeeded()
+            await evaluateTradeSignalNotifications(now: snapshot.refreshedAt)
         } catch {
             telemetryResult = "failed"
             throw error

@@ -100,6 +100,14 @@ final class TradeSignalNotificationDecisionTests: XCTestCase {
         XCTAssertTrue(requests.isEmpty)
     }
 
+    func testWorkbenchTrendDeepLinkPayloadRoundTrips() {
+        let payload = NotificationDeepLinkPayload(type: .workbenchTrend, targetID: "trade-signals")
+        let decoded = NotificationDeepLinkPayload(userInfo: payload.userInfo)
+
+        XCTAssertEqual(decoded?.type, .workbenchTrend)
+        XCTAssertEqual(decoded?.targetID, "trade-signals")
+    }
+
     private func signal(status: TradeSignalStatus, stale: Bool) -> TradeSignalItem {
         TradeSignalItem(
             id: "buy-000001",

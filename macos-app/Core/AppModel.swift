@@ -380,6 +380,16 @@ final class AppModel: ObservableObject {
         set { enhancementState.trendProgressLogs = newValue }
     }
 
+    var tradeSignalSettings: TradeSignalSettings {
+        get { enhancementState.tradeSignalSettings }
+        set { enhancementState.tradeSignalSettings = newValue }
+    }
+
+    var tradeSignalNotificationState: TradeSignalNotificationState {
+        get { enhancementState.tradeSignalNotificationState }
+        set { enhancementState.tradeSignalNotificationState = newValue }
+    }
+
     // MARK: Cache proxies (forwarding to portfolioState)
 
     var _cachedAssetRows: [PersonalAssetAggregateRow]? {
