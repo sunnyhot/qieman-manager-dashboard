@@ -1,25 +1,25 @@
 {
-    "version": "3.0.3",
-    "tag": "v3.0.3",
+    "version": "3.0.4",
+    "tag": "v3.0.4",
     "asset": {
-        "name": "QiemanDashboard-3.0.3.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.3/QiemanDashboard-3.0.3.zip",
-        "size": 4094053,
+        "name": "QiemanDashboard-3.0.4.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.4/QiemanDashboard-3.0.4.zip",
+        "size": 4094730,
         "content_type": "application/zip",
-        "sha256": "2a001021b6c0132fdaac3bfceddaad4a8a8eb677470f4b474b4803a59d799a82"
+        "sha256": "203c8a2f03ef2ce542a44987b57875917fa99fc2f871cb9148c7cc5236c0640c"
     },
-    "sha256": "2a001021b6c0132fdaac3bfceddaad4a8a8eb677470f4b474b4803a59d799a82",
-    "notes": "reuse visible launch window before fallback",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.3",
+    "sha256": "203c8a2f03ef2ce542a44987b57875917fa99fc2f871cb9148c7cc5236c0640c",
+    "notes": "菜单栏持仓估值缺失时自动补刷",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.4",
     "published_at": "",
-    "tag_name": "v3.0.3",
-    "name": "QiemanDashboard v3.0.3",
-    "body": "reuse visible launch window before fallback",
+    "tag_name": "v3.0.4",
+    "name": "QiemanDashboard v3.0.4",
+    "body": "菜单栏持仓估值缺失时自动补刷",
     "assets": [
         {
-            "name": "QiemanDashboard-3.0.3.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.3/QiemanDashboard-3.0.3.zip",
-            "size": 4094053,
+            "name": "QiemanDashboard-3.0.4.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.4/QiemanDashboard-3.0.4.zip",
+            "size": 4094730,
             "content_type": "application/zip"
         }
     ]
