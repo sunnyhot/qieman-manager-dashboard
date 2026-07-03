@@ -6,9 +6,13 @@ struct TrendModelPrompt: Hashable {
 }
 
 struct TrendPromptBuilder {
-    func build(context: TrendAnalysisContext, settings: TrendAnalysisSettings) -> TrendModelPrompt {
+    func build(
+        context: TrendAnalysisContext,
+        settings: TrendAnalysisSettings,
+        tradeSignalSettings: TradeSignalSettings = .default
+    ) -> TrendModelPrompt {
         let contextJSON = encode(context)
-        let system = baseSystemPrompt(settings: settings)
+        let system = baseSystemPrompt(settings: settings, tradeSignalSettings: tradeSignalSettings)
 
         let user = """
         Analyze the following Qieman portfolio context. Use short, medium, and long horizons. Return a single TrendAnalysisReport JSON object.
@@ -24,11 +28,12 @@ struct TrendPromptBuilder {
         context: TrendAnalysisContext,
         chunkIndex: Int,
         chunkCount: Int,
-        settings: TrendAnalysisSettings
+        settings: TrendAnalysisSettings,
+        tradeSignalSettings: TradeSignalSettings = .default
     ) -> TrendModelPrompt {
         let contextJSON = encode(context)
         let system = """
-        \(baseSystemPrompt(settings: settings))
+        \(baseSystemPrompt(settings: settings, tradeSignalSettings: tradeSignalSettings))
         This is a partial chunk analysis, not the final portfolio report.
         先判断大盘与大类资产，再判断板块趋势，并逐个分析本分块内每个已持有基金，最后给出本板块的重点条件式行动候选。
         保留分块分析顺序：先判断板块趋势，再落到本分块基金。
@@ -53,7 +58,8 @@ struct TrendPromptBuilder {
     func buildSynthesis(
         context: TrendAnalysisContext,
         chunkReports: [TrendAnalysisReport],
-        settings: TrendAnalysisSettings
+        settings: TrendAnalysisSettings,
+        tradeSignalSettings: TradeSignalSettings = .default
     ) -> TrendModelPrompt {
         let input = TrendChunkSynthesisInput(
             aggregateContext: context,
@@ -61,7 +67,7 @@ struct TrendPromptBuilder {
         )
         let inputJSON = encode(input)
         let system = """
-        \(baseSystemPrompt(settings: settings))
+        \(baseSystemPrompt(settings: settings, tradeSignalSettings: tradeSignalSettings))
         Merge partial chunk reports into one final whole-portfolio TrendAnalysisReport.
         Deduplicate marketOutlook, sectors, opportunities, keyAssets, assetTrends, actions, evidence, and warnings.
         Use the aggregate portfolio context for counts and portfolio-level summaries.
@@ -80,10 +86,14 @@ struct TrendPromptBuilder {
         return TrendModelPrompt(system: system, user: user)
     }
 
-    private func baseSystemPrompt(settings: TrendAnalysisSettings) -> String {
+    private func baseSystemPrompt(
+        settings: TrendAnalysisSettings,
+        tradeSignalSettings: TradeSignalSettings
+    ) -> String {
         let externalSignalInstruction = settings.provider.supportsOnlineSearch
             ? "If the selected model has reliable external-signal access, include concise evidence. If access is partial, set externalSignalStatus to partial instead of inventing sources."
             : "The selected model is configured without online search. Set externalSignalStatus to unavailable or partial, and do not invent external sources."
+        let tradeSignalInstruction = tradeSignalPreferenceInstruction(tradeSignalSettings)
 
         return """
         Return valid JSON only.
@@ -98,6 +108,7 @@ struct TrendPromptBuilder {
         Do not guarantee returns.
         Do not use mandatory buy/sell language.
         Do not perform exhaustive online searches for every asset; use broad market, sector, policy, and clearly material asset-level signals only.
+        \(tradeSignalInstruction)
         marketOutlook must summarize 大盘 and major asset classes relevant to the portfolio, such as A-share broad indices, Hong Kong equities, US equities, bonds, commodities, and gold/黄金 when material.
         opportunities must capture still-actionable investment opportunities outside or across current holdings, including gold/黄金 when it has a clear conditional setup.
         assetTrends must include 每个已持有基金 from Context JSON, with a concise trend view and conditional buy/hold/sell execution guidance for each fund.
@@ -217,6 +228,34 @@ struct TrendPromptBuilder {
           ],
           "disclaimer": "非投资建议，仅供个人研究参考。"
         }
+        """
+    }
+
+    private func tradeSignalPreferenceInstruction(_ settings: TradeSignalSettings) -> String {
+        let assetText: String
+        if settings.assetPreferences.isEmpty {
+            assetText = "无单标的覆盖"
+        } else {
+            assetText = settings.assetPreferences
+                .map { preference in
+                    let horizon = preference.preferredHorizon.map { "；周期：\($0.displayText)" } ?? ""
+                    let notes = preference.notes.isEmpty ? "" : "；备注：\(preference.notes)"
+                    return "\(preference.assetKey)：\(preference.mode.displayText)\(horizon)\(notes)"
+                }
+                .joined(separator: "\n")
+        }
+
+        return """
+        AI 操作观察偏好：
+        - 启用：\(settings.enabled ? "是" : "否")
+        - 风险偏好：\(settings.riskPreference.displayText)
+        - 主要观察周期：\(settings.primaryHorizon.displayText)
+        - 最低关注置信度：\(settings.minimumConfidence)
+        - 允许关注买入：\(settings.allowBuySignals ? "是" : "否")
+        - 允许关注卖出：\(settings.allowSellSignals ? "是" : "否")
+        - 单标的偏好：
+        \(assetText)
+        These preferences influence prioritization and wording only. They do not authorize automatic trading and must not change the required JSON schema.
         """
     }
 

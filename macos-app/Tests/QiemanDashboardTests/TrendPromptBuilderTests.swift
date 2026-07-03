@@ -51,6 +51,42 @@ final class TrendPromptBuilderTests: XCTestCase {
         XCTAssertTrue(prompt.user.contains("分块 1/3"))
     }
 
+    func testPromptIncludesTradeSignalPreferencesWithoutChangingSchema() {
+        let context = makeTrendPromptContext()
+        let tradeSettings = TradeSignalSettings(
+            enabled: true,
+            localNotificationsEnabled: true,
+            riskPreference: .conservative,
+            primaryHorizon: .long,
+            minimumConfidence: 72,
+            allowBuySignals: true,
+            allowSellSignals: false,
+            useStaleAnalysis: true,
+            assetPreferences: [
+                TradeSignalAssetPreference(
+                    assetKey: "000001",
+                    mode: .raiseAttention,
+                    preferredHorizon: .short,
+                    notes: "核心标的"
+                )
+            ]
+        )
+
+        let prompt = TrendPromptBuilder().build(
+            context: context,
+            settings: TrendAnalysisSettings.default,
+            tradeSignalSettings: tradeSettings
+        )
+
+        XCTAssertTrue(prompt.system.contains("AI 操作观察偏好"))
+        XCTAssertTrue(prompt.system.contains("风险偏好：保守"))
+        XCTAssertTrue(prompt.system.contains("主要观察周期：长期"))
+        XCTAssertTrue(prompt.system.contains("最低关注置信度：72"))
+        XCTAssertTrue(prompt.system.contains("允许关注卖出：否"))
+        XCTAssertTrue(prompt.system.contains("000001：提高关注；周期：短期；备注：核心标的"))
+        XCTAssertTrue(prompt.system.contains("Do not add fields outside this schema"))
+    }
+
     private func makeTrendPromptContext() -> TrendAnalysisContext {
         TrendAnalysisContext(
             createdAt: "2026-06-22 12:00:00",
