@@ -1,25 +1,25 @@
 {
-    "version": "3.0.5",
-    "tag": "v3.0.5",
+    "version": "3.0.6",
+    "tag": "v3.0.6",
     "asset": {
-        "name": "QiemanDashboard-3.0.5.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.5/QiemanDashboard-3.0.5.zip",
-        "size": 4201484,
+        "name": "QiemanDashboard-3.0.6.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.6/QiemanDashboard-3.0.6.zip",
+        "size": 4201611,
         "content_type": "application/zip",
-        "sha256": "04aac4c7d8fecf48bef714d4ba5c8aec60b771ec77f85c9c3ffe7776eb09da7f"
+        "sha256": "6b455592406ca073946ec473386ffcf73f5219cc1a2e39f5121fabeaf500d190"
     },
-    "sha256": "04aac4c7d8fecf48bef714d4ba5c8aec60b771ec77f85c9c3ffe7776eb09da7f",
-    "notes": "add trade signal detail and settings controls\nshow trade signals in enhancement workbench\nwire trade signals into app model\ninclude trade signal preferences in trend prompts\nadd trade signal notification decision\nderive AI trade signal summary\nadd trade signal settings store\nignore local worktrees\nplan AI trade signal notifications\ndesign AI trade signal notifications",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.5",
+    "sha256": "6b455592406ca073946ec473386ffcf73f5219cc1a2e39f5121fabeaf500d190",
+    "notes": "防止启动与重开时出现重复主窗口",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.6",
     "published_at": "",
-    "tag_name": "v3.0.5",
-    "name": "QiemanDashboard v3.0.5",
-    "body": "add trade signal detail and settings controls\nshow trade signals in enhancement workbench\nwire trade signals into app model\ninclude trade signal preferences in trend prompts\nadd trade signal notification decision\nderive AI trade signal summary\nadd trade signal settings store\nignore local worktrees\nplan AI trade signal notifications\ndesign AI trade signal notifications",
+    "tag_name": "v3.0.6",
+    "name": "QiemanDashboard v3.0.6",
+    "body": "防止启动与重开时出现重复主窗口",
     "assets": [
         {
-            "name": "QiemanDashboard-3.0.5.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.5/QiemanDashboard-3.0.5.zip",
-            "size": 4201484,
+            "name": "QiemanDashboard-3.0.6.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.6/QiemanDashboard-3.0.6.zip",
+            "size": 4201611,
             "content_type": "application/zip"
         }
     ]
