@@ -36,9 +36,11 @@ enum AppMainWindowTrackingPolicy {
     static func shouldDiscardPreviousTrackedWindow(
         hasPreviousTrackedWindow: Bool,
         isSameWindow: Bool,
-        previousWindowIsVisible: Bool
+        previousWindowIsVisible _: Bool
     ) -> Bool {
-        hasPreviousTrackedWindow && !isSameWindow && previousWindowIsVisible
+        // Scene attachment can observe a previous main window before AppKit has
+        // ordered it visible. Any different tracked main window is a duplicate.
+        hasPreviousTrackedWindow && !isSameWindow
     }
 }
 

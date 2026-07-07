@@ -47,11 +47,16 @@ final class AppLaunchPresentationPolicyTests: XCTestCase {
         ))
     }
 
-    func testSwiftUISceneWindowDeduplicatesDifferentVisibleTrackedWindow() {
+    func testSwiftUISceneWindowDeduplicatesDifferentTrackedWindowRegardlessOfVisibility() {
         XCTAssertTrue(AppMainWindowTrackingPolicy.shouldDiscardPreviousTrackedWindow(
             hasPreviousTrackedWindow: true,
             isSameWindow: false,
             previousWindowIsVisible: true
+        ))
+        XCTAssertTrue(AppMainWindowTrackingPolicy.shouldDiscardPreviousTrackedWindow(
+            hasPreviousTrackedWindow: true,
+            isSameWindow: false,
+            previousWindowIsVisible: false
         ))
         XCTAssertFalse(AppMainWindowTrackingPolicy.shouldDiscardPreviousTrackedWindow(
             hasPreviousTrackedWindow: true,
@@ -63,6 +68,44 @@ final class AppLaunchPresentationPolicyTests: XCTestCase {
             isSameWindow: false,
             previousWindowIsVisible: false
         ))
+    }
+
+    @MainActor
+    func testTrackingNewSceneDiscardsPreviousTrackedWindowEvenIfPreviousIsNotYetVisible() {
+        let delegate = QiemanApplicationDelegate()
+        let firstWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 240),
+            styleMask: [.titled, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        let secondWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 240),
+            styleMask: [.titled, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        firstWindow.isReleasedWhenClosed = false
+        secondWindow.isReleasedWhenClosed = false
+        defer {
+            firstWindow.delegate = nil
+            secondWindow.delegate = nil
+            firstWindow.orderOut(nil)
+            firstWindow.close()
+            secondWindow.orderOut(nil)
+            secondWindow.close()
+        }
+
+        firstWindow.orderFront(nil)
+        delegate.trackSwiftUISceneMainWindow(firstWindow)
+        firstWindow.delegate = delegate
+        firstWindow.orderOut(nil)
+        secondWindow.orderFront(nil)
+        delegate.trackSwiftUISceneMainWindow(secondWindow)
+
+        XCTAssertTrue(delegate.mainWindow === secondWindow)
+        XCTAssertNil(firstWindow.delegate)
+        XCTAssertFalse(firstWindow.isVisible)
     }
 
     @MainActor
