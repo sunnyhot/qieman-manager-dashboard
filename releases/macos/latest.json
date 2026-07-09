@@ -1,25 +1,25 @@
 {
-    "version": "3.0.7",
-    "tag": "v3.0.7",
+    "version": "3.0.8",
+    "tag": "v3.0.8",
     "asset": {
-        "name": "QiemanDashboard-3.0.7.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.7/QiemanDashboard-3.0.7.zip",
-        "size": 4074614,
+        "name": "QiemanDashboard-3.0.8.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.8/QiemanDashboard-3.0.8.zip",
+        "size": 4086439,
         "content_type": "application/zip",
-        "sha256": "1471c3c6aa80eb14a6d782b21593e62123fd733aa08356a1713aee04de73d059"
+        "sha256": "29079a7d432b4a988bb081e2d5bb0b0cf9994b28dc2aa51e35607a5165b25360"
     },
-    "sha256": "1471c3c6aa80eb14a6d782b21593e62123fd733aa08356a1713aee04de73d059",
-    "notes": "合并趋势设置并优化工作台布局",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.7",
+    "sha256": "29079a7d432b4a988bb081e2d5bb0b0cf9994b28dc2aa51e35607a5165b25360",
+    "notes": "工作台拆分为分析配置、趋势报告、AI操作观察三段",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.8",
     "published_at": "",
-    "tag_name": "v3.0.7",
-    "name": "QiemanDashboard v3.0.7",
-    "body": "合并趋势设置并优化工作台布局",
+    "tag_name": "v3.0.8",
+    "name": "QiemanDashboard v3.0.8",
+    "body": "工作台拆分为分析配置、趋势报告、AI操作观察三段",
     "assets": [
         {
-            "name": "QiemanDashboard-3.0.7.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.7/QiemanDashboard-3.0.7.zip",
-            "size": 4074614,
+            "name": "QiemanDashboard-3.0.8.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.8/QiemanDashboard-3.0.8.zip",
+            "size": 4086439,
             "content_type": "application/zip"
         }
     ]
