@@ -315,6 +315,22 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertTrue(trendSource.contains("trendConfidenceBar(item.confidence)"))
         // 旧版平铺胶囊（裸文字置信度）已替换为带框徽章 + 进度条
         XCTAssertFalse(trendSource.contains("置信度 \\(item.confidence.normalizedScore)"))
+        // 趋势报告重做：精简头部 + 分组卡，消除 trendBlock 三层嵌套，统一子卡片背景
+        XCTAssertTrue(trendSource.contains("trendReportSubHeader"))
+        XCTAssertTrue(trendSource.contains("trendDirectionDot"))
+        XCTAssertTrue(trendSource.contains("trendDirectionBadge"))
+        XCTAssertTrue(trendSource.contains("trendActionCard"))
+        XCTAssertTrue(trendSource.contains("trendAssetCard"))
+        XCTAssertTrue(trendSource.contains("trendEvidenceCard"))
+        // 头部声明 pill 已移除（disclaimer 移至边界与提示区底部）
+        XCTAssertFalse(trendSource.contains("trendMiniPill(\"声明\""))
+        // 6 个子模块不再用 trendBlock 图标标题块包裹
+        XCTAssertFalse(trendSource.contains("trendBlock(\"周期判断\""))
+        XCTAssertFalse(trendSource.contains("trendBlock(\"板块\""))
+        XCTAssertFalse(trendSource.contains("trendBlock(\"重点标的\""))
+        XCTAssertFalse(trendSource.contains("trendBlock(\"行动候选\""))
+        XCTAssertFalse(trendSource.contains("trendBlock(\"证据来源\""))
+        XCTAssertFalse(trendSource.contains("trendBlock(\"边界与提示\""))
     }
 
     func testWorkbenchSourceDropsReviewAndTodoRail() throws {
