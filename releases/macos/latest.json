@@ -1,25 +1,25 @@
 {
-    "version": "3.1.1",
-    "tag": "v3.1.1",
+    "version": "3.1.2",
+    "tag": "v3.1.2",
     "asset": {
-        "name": "QiemanDashboard-3.1.1.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.1/QiemanDashboard-3.1.1.zip",
-        "size": 4095591,
+        "name": "QiemanDashboard-3.1.2.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.2/QiemanDashboard-3.1.2.zip",
+        "size": 4094055,
         "content_type": "application/zip",
-        "sha256": "e2248fab383e4b10990339a8ed47fc4b4491b94ece418f0228a3528030863a24"
+        "sha256": "4c01c8d0143e747c0e6d8fac7c7b513405655e39f564cccddde1508e693f6552"
     },
-    "sha256": "e2248fab383e4b10990339a8ed47fc4b4491b94ece418f0228a3528030863a24",
-    "notes": "重做趋势报告为精简头部+分组卡样式",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.1.1",
+    "sha256": "4c01c8d0143e747c0e6d8fac7c7b513405655e39f564cccddde1508e693f6552",
+    "notes": "趋势报告整页重构为三分区聚拢布局",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.1.2",
     "published_at": "",
-    "tag_name": "v3.1.1",
-    "name": "QiemanDashboard v3.1.1",
-    "body": "重做趋势报告为精简头部+分组卡样式",
+    "tag_name": "v3.1.2",
+    "name": "QiemanDashboard v3.1.2",
+    "body": "趋势报告整页重构为三分区聚拢布局",
     "assets": [
         {
-            "name": "QiemanDashboard-3.1.1.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.1/QiemanDashboard-3.1.1.zip",
-            "size": 4095591,
+            "name": "QiemanDashboard-3.1.2.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.2/QiemanDashboard-3.1.2.zip",
+            "size": 4094055,
             "content_type": "application/zip"
         }
     ]
