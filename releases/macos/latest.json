@@ -1,25 +1,25 @@
 {
-    "version": "3.1.0",
-    "tag": "v3.1.0",
+    "version": "3.1.1",
+    "tag": "v3.1.1",
     "asset": {
-        "name": "QiemanDashboard-3.1.0.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.0/QiemanDashboard-3.1.0.zip",
-        "size": 4068877,
+        "name": "QiemanDashboard-3.1.1.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.1/QiemanDashboard-3.1.1.zip",
+        "size": 4095591,
         "content_type": "application/zip",
-        "sha256": "67a8d6a999d54cd9752f3a9872b5e05f9a2e3233c63378b68c0256de10b93eed"
+        "sha256": "e2248fab383e4b10990339a8ed47fc4b4491b94ece418f0228a3528030863a24"
     },
-    "sha256": "67a8d6a999d54cd9752f3a9872b5e05f9a2e3233c63378b68c0256de10b93eed",
-    "notes": "重做 AI 操作观察信号卡片为状态色条+图标盒样式",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.1.0",
+    "sha256": "e2248fab383e4b10990339a8ed47fc4b4491b94ece418f0228a3528030863a24",
+    "notes": "重做趋势报告为精简头部+分组卡样式",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.1.1",
     "published_at": "",
-    "tag_name": "v3.1.0",
-    "name": "QiemanDashboard v3.1.0",
-    "body": "重做 AI 操作观察信号卡片为状态色条+图标盒样式",
+    "tag_name": "v3.1.1",
+    "name": "QiemanDashboard v3.1.1",
+    "body": "重做趋势报告为精简头部+分组卡样式",
     "assets": [
         {
-            "name": "QiemanDashboard-3.1.0.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.0/QiemanDashboard-3.1.0.zip",
-            "size": 4068877,
+            "name": "QiemanDashboard-3.1.1.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.1/QiemanDashboard-3.1.1.zip",
+            "size": 4095591,
             "content_type": "application/zip"
         }
     ]
