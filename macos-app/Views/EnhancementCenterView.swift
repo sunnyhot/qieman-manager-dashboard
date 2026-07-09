@@ -9,8 +9,6 @@ struct EnhancementCenterView: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: AppPalette.spaceL) {
-                let summary = dashboardSummary
-                dashboardHeader(summary)
                 workbenchSegmentBar
                 workbenchSegmentContent
             }
@@ -30,6 +28,13 @@ struct EnhancementCenterView: View {
         case signals = "AI操作观察"
 
         var id: String { rawValue }
+        var systemImage: String {
+            switch self {
+            case .config: return "slider.horizontal.3"
+            case .report: return "sparkles"
+            case .signals: return "bell.badge"
+            }
+        }
     }
 
     @ViewBuilder
@@ -45,13 +50,44 @@ struct EnhancementCenterView: View {
     }
 
     private var workbenchSegmentBar: some View {
-        Picker("工作台分段", selection: $selectedWorkbenchSegment) {
+        HStack(spacing: AppPalette.spaceS) {
             ForEach(WorkbenchSegment.allCases) { segment in
-                Text(segment.rawValue).tag(segment)
+                workbenchSegmentButton(segment)
             }
         }
-        .pickerStyle(.segmented)
-        .labelsHidden()
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func workbenchSegmentButton(_ segment: WorkbenchSegment) -> some View {
+        let isSelected = selectedWorkbenchSegment == segment
+        return Button {
+            withAnimation(AppPalette.motionSpring) {
+                selectedWorkbenchSegment = segment
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: segment.systemImage)
+                    .font(.system(size: 14, weight: .semibold))
+                Text(segment.rawValue)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
+            .padding(.horizontal, AppPalette.spaceL)
+            .padding(.vertical, 10)
+            .interactiveSurface(
+                isSelected: isSelected,
+                tint: AppPalette.brand,
+                radius: AppPalette.controlRadius,
+                fill: AppPalette.controlFill,
+                hoverFill: AppPalette.cardHover,
+                selectedFill: AppPalette.brand,
+                strokeOpacity: AppPalette.strokeSubtle,
+                activeStrokeOpacity: AppPalette.selectionStrokeOpacity,
+                lift: 0.5
+            )
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
+        .contentShape(RoundedRectangle(cornerRadius: AppPalette.controlRadius))
     }
 
     private func normalizeDefaultSegment() {
@@ -64,88 +100,9 @@ struct EnhancementCenterView: View {
         }
     }
 
-    private var dashboardSummary: EnhancementDashboardSummary {
-        EnhancementDashboardSummary.make(
-            report: model.monthlyReportSummary,
-            lastMonthlyReportExport: model.lastMonthlyReportExport,
-            cookieAvailable: model.cookieAvailable,
-            nativeConnectionAvailable: true,
-            watchSummary: model.managerWatchTimelineSummary,
-            importSession: model.activeImportPreviewSession,
-            canUndoLatestImport: model.canUndoLatestImport,
-            insightSummary: model.portfolioSnapshotInsightSummary,
-            snapshotCount: model.portfolioInsightSnapshots.count,
-            trendStatus: model.enhancementTrendStatus,
-            tradeSignals: model.tradeSignalSummary,
-            reminders: model.portfolioReminderSummary,
-            planSimulation: model.planSimulationSummary
-        )
-    }
-
-    private func dashboardHeader(_ summary: EnhancementDashboardSummary) -> some View {
-        headerTitleBlock(summary)
-        .padding(AppPalette.spaceXL)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
-        .panelStroke()
-        .sectionShadow()
-    }
-
-    private func headerTitleBlock(_ summary: EnhancementDashboardSummary) -> some View {
-        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("理财工作台")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(AppPalette.ink)
-                Text("趋势分析、模型配置与 AI 操作观察")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(AppPalette.muted)
-            }
-
-            FlowLayout(spacing: AppPalette.spaceS) {
-                ForEach(summary.runtimeChips) { chip in
-                    runtimeChip(chip)
-                }
-            }
-        }
-    }
-
-    private func runtimeChip(_ chip: EnhancementRuntimeChip) -> some View {
-        let tint = tint(for: chip.severity)
-        return HStack(spacing: 5) {
-            Text(chip.title)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(AppPalette.muted)
-            Text(chip.value)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundStyle(tint)
-        }
-        .lineLimit(1)
-        .padding(.horizontal, AppPalette.spaceS)
-        .padding(.vertical, AppPalette.spaceXS + 1)
-        .background(tint.opacity(AppPalette.accentFill), in: Capsule())
-        .overlay(Capsule().stroke(tint.opacity(AppPalette.accentBorder), lineWidth: 1))
-    }
-
     private func normalizeSelectedTab() {
         if !model.selectedEnhancementTab.isVisibleInWorkbench {
             model.selectedEnhancementTab = .trend
-        }
-    }
-
-    private func tint(for severity: EnhancementPresentationSeverity) -> Color {
-        switch severity {
-        case .brand:
-            return AppPalette.brand
-        case .info:
-            return AppPalette.info
-        case .positive:
-            return AppPalette.positive
-        case .warning:
-            return AppPalette.warning
-        case .danger:
-            return AppPalette.danger
-        case .neutral:
-            return AppPalette.muted
         }
     }
 
