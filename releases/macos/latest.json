@@ -1,25 +1,25 @@
 {
-    "version": "3.0.6",
-    "tag": "v3.0.6",
+    "version": "3.0.7",
+    "tag": "v3.0.7",
     "asset": {
-        "name": "QiemanDashboard-3.0.6.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.6/QiemanDashboard-3.0.6.zip",
-        "size": 4201611,
+        "name": "QiemanDashboard-3.0.7.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.7/QiemanDashboard-3.0.7.zip",
+        "size": 4074614,
         "content_type": "application/zip",
-        "sha256": "6b455592406ca073946ec473386ffcf73f5219cc1a2e39f5121fabeaf500d190"
+        "sha256": "1471c3c6aa80eb14a6d782b21593e62123fd733aa08356a1713aee04de73d059"
     },
-    "sha256": "6b455592406ca073946ec473386ffcf73f5219cc1a2e39f5121fabeaf500d190",
-    "notes": "防止启动与重开时出现重复主窗口",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.6",
+    "sha256": "1471c3c6aa80eb14a6d782b21593e62123fd733aa08356a1713aee04de73d059",
+    "notes": "合并趋势设置并优化工作台布局",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.7",
     "published_at": "",
-    "tag_name": "v3.0.6",
-    "name": "QiemanDashboard v3.0.6",
-    "body": "防止启动与重开时出现重复主窗口",
+    "tag_name": "v3.0.7",
+    "name": "QiemanDashboard v3.0.7",
+    "body": "合并趋势设置并优化工作台布局",
     "assets": [
         {
-            "name": "QiemanDashboard-3.0.6.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.6/QiemanDashboard-3.0.6.zip",
-            "size": 4201611,
+            "name": "QiemanDashboard-3.0.7.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.7/QiemanDashboard-3.0.7.zip",
+            "size": 4074614,
             "content_type": "application/zip"
         }
     ]
