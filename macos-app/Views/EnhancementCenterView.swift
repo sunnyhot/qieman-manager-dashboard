@@ -4,17 +4,64 @@ struct EnhancementCenterView: View {
     @EnvironmentObject var model: AppModel
     @State var trendAutoAnalysisTimesDraft = ""
     @State var isTrendConfigurationExpanded = false
+    @State var selectedWorkbenchSegment: WorkbenchSegment = .config
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: AppPalette.spaceL) {
                 let summary = dashboardSummary
                 dashboardHeader(summary)
-                trendPanel
+                workbenchSegmentBar
+                workbenchSegmentContent
             }
             .padding(18)
         }
-        .onAppear(perform: normalizeSelectedTab)
+        .onAppear {
+            normalizeSelectedTab()
+            normalizeDefaultSegment()
+        }
+    }
+
+    // MARK: - Workbench Segments
+
+    enum WorkbenchSegment: String, CaseIterable, Identifiable {
+        case config = "分析配置"
+        case report = "趋势报告"
+        case signals = "AI操作观察"
+
+        var id: String { rawValue }
+    }
+
+    @ViewBuilder
+    private var workbenchSegmentContent: some View {
+        switch selectedWorkbenchSegment {
+        case .config:
+            configSegment
+        case .report:
+            reportSegment
+        case .signals:
+            signalsSegment
+        }
+    }
+
+    private var workbenchSegmentBar: some View {
+        Picker("工作台分段", selection: $selectedWorkbenchSegment) {
+            ForEach(WorkbenchSegment.allCases) { segment in
+                Text(segment.rawValue).tag(segment)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+    }
+
+    private func normalizeDefaultSegment() {
+        if model.trendReport != nil {
+            if selectedWorkbenchSegment == .config {
+                selectedWorkbenchSegment = .report
+            }
+        } else if selectedWorkbenchSegment == .report {
+            selectedWorkbenchSegment = .config
+        }
     }
 
     private var dashboardSummary: EnhancementDashboardSummary {

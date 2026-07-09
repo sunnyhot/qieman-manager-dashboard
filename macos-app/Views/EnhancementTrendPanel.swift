@@ -1,22 +1,34 @@
 import SwiftUI
 
-// MARK: - Trend Panel
+// MARK: - Workbench Segments
 
 extension EnhancementCenterView {
-    var trendPanel: some View {
-        SectionCard(title: "趋势", subtitle: trendPanelSubtitle, icon: "sparkles") {
+    // ① 分析配置：状态条、操作栏、模型配置、进度日志、错误
+    var configSegment: some View {
+        SectionCard(title: "分析与配置", subtitle: configSegmentSubtitle, icon: "slider.horizontal.3") {
             VStack(alignment: .leading, spacing: AppPalette.spaceM) {
                 trendStatusStrip
                 trendActionBar
                 trendConfigurationPanel
                 trendProgressLogView
 
+                if !model.lastTrendError.isEmpty {
+                    trendEmptyState("最近错误", detail: model.lastTrendError)
+                }
+            }
+        }
+    }
+
+    // ② 趋势报告：组合头 + 周期/板块/重点标的/行动候选/证据/边界（AI观察移至独立分段）
+    var reportSegment: some View {
+        SectionCard(title: "趋势报告", subtitle: trendPanelSubtitle, icon: "sparkles") {
+            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
                 if let report = model.trendReport {
                     trendReportView(report)
                 } else if model.trendSettings.provider.isConfigured {
                     trendEmptyState("等待生成", detail: "趋势分析会结合本地持仓、平台动态和模型可用的外部信号，输出条件式判断和反证条件。")
                 } else {
-                    trendEmptyState("未配置模型", detail: "在上方配置区填写模型地址、模型名称和 API Key。")
+                    trendEmptyState("未配置模型", detail: "在「分析配置」填写模型地址、模型名称和 API Key 后即可生成。")
                 }
 
                 if !model.lastTrendError.isEmpty {
@@ -24,6 +36,20 @@ extension EnhancementCenterView {
                 }
             }
         }
+    }
+
+    // ③ AI 操作观察：基于趋势分析衍生的交易信号
+    var signalsSegment: some View {
+        SectionCard(title: "AI 操作观察", subtitle: model.tradeSignalSummary.headline, icon: "bell.badge") {
+            tradeSignalDetailList(model.tradeSignalSummary)
+        }
+    }
+
+    private var configSegmentSubtitle: String {
+        if model.trendSettings.provider.isConfigured {
+            return "已配置 · \(model.trendSettings.provider.model)"
+        }
+        return "填写模型地址、模型名称和 API Key"
     }
 
     @ViewBuilder
@@ -199,7 +225,6 @@ extension EnhancementCenterView {
             trendSectorGrid(report.sectors)
             trendAssetList(report.keyAssets)
             trendActionList(report.actions)
-            tradeSignalDetailList(model.tradeSignalSummary)
             trendEvidenceList(report.evidence)
             trendWarnings(report)
         }
@@ -395,11 +420,16 @@ extension EnhancementCenterView {
         }
     }
 
+    @ViewBuilder
     private func tradeSignalDetailList(_ summary: TradeSignalSummary) -> some View {
-        trendBlock("AI 操作观察", icon: "bell.badge") {
-            if summary.items.isEmpty {
-                trendEmptyState("暂无观察", detail: summary.headline)
-            } else {
+        if summary.items.isEmpty {
+            trendEmptyState("暂无观察", detail: summary.headline)
+        } else {
+            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+                Text("基于最近一次趋势分析生成的条件式信号")
+                    .font(.system(size: 11))
+                    .foregroundStyle(AppPalette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
                 VStack(spacing: AppPalette.spaceS) {
                     ForEach(summary.items.prefix(8)) { item in
                         tradeSignalDetailRow(item)

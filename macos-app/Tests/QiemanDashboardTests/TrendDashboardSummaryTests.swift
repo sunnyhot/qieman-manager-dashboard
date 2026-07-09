@@ -267,6 +267,38 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertFalse(source.contains("model.trendProgressLogs.suffix(16)"))
     }
 
+    func testWorkbenchUsesSegmentedConfigReportSignalsLayout() throws {
+        let rootURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let centerSource = try String(
+            contentsOf: rootURL.appendingPathComponent("Views/EnhancementCenterView.swift"),
+            encoding: .utf8
+        )
+        let trendSource = try String(
+            contentsOf: rootURL.appendingPathComponent("Views/EnhancementTrendPanel.swift"),
+            encoding: .utf8
+        )
+
+        // EnhancementCenterView holds a segmented control driving per-segment content
+        XCTAssertTrue(centerSource.contains("enum WorkbenchSegment"))
+        XCTAssertTrue(centerSource.contains("@State var selectedWorkbenchSegment"))
+        XCTAssertTrue(centerSource.contains("workbenchSegmentBar"))
+        XCTAssertTrue(centerSource.contains("workbenchSegmentContent"))
+        XCTAssertTrue(centerSource.contains("selectedWorkbenchSegment = .report"))
+        XCTAssertTrue(centerSource.contains("selectedWorkbenchSegment = .config"))
+        // 巨型 trendPanel 已拆分为三个独立分段
+        XCTAssertFalse(centerSource.contains("trendPanel"))
+
+        // EnhancementTrendPanel 提供三个分段
+        XCTAssertTrue(trendSource.contains("var configSegment"))
+        XCTAssertTrue(trendSource.contains("var reportSegment"))
+        XCTAssertTrue(trendSource.contains("var signalsSegment"))
+        // AI 操作观察从报告网格移出，独立成段
+        XCTAssertFalse(trendSource.contains("SectionCard(title: \"趋势\""))
+    }
+
     func testWorkbenchSourceDropsReviewAndTodoRail() throws {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
