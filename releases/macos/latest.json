@@ -1,25 +1,25 @@
 {
-    "version": "3.0.9",
-    "tag": "v3.0.9",
+    "version": "3.1.0",
+    "tag": "v3.1.0",
     "asset": {
-        "name": "QiemanDashboard-3.0.9.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.9/QiemanDashboard-3.0.9.zip",
-        "size": 4053249,
+        "name": "QiemanDashboard-3.1.0.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.0/QiemanDashboard-3.1.0.zip",
+        "size": 4068877,
         "content_type": "application/zip",
-        "sha256": "13d77d2288d044be81a5c9e42f08af93f1f568d5f6ece88dde5092531ea23078"
+        "sha256": "67a8d6a999d54cd9752f3a9872b5e05f9a2e3233c63378b68c0256de10b93eed"
     },
-    "sha256": "13d77d2288d044be81a5c9e42f08af93f1f568d5f6ece88dde5092531ea23078",
-    "notes": "移除工作台顶部标题卡并将分段按钮改为大号图标样式",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.0.9",
+    "sha256": "67a8d6a999d54cd9752f3a9872b5e05f9a2e3233c63378b68c0256de10b93eed",
+    "notes": "重做 AI 操作观察信号卡片为状态色条+图标盒样式",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.1.0",
     "published_at": "",
-    "tag_name": "v3.0.9",
-    "name": "QiemanDashboard v3.0.9",
-    "body": "移除工作台顶部标题卡并将分段按钮改为大号图标样式",
+    "tag_name": "v3.1.0",
+    "name": "QiemanDashboard v3.1.0",
+    "body": "重做 AI 操作观察信号卡片为状态色条+图标盒样式",
     "assets": [
         {
-            "name": "QiemanDashboard-3.0.9.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.0.9/QiemanDashboard-3.0.9.zip",
-            "size": 4053249,
+            "name": "QiemanDashboard-3.1.0.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.0/QiemanDashboard-3.1.0.zip",
+            "size": 4068877,
             "content_type": "application/zip"
         }
     ]
