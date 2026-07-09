@@ -306,6 +306,15 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertTrue(trendSource.contains("var signalsSegment"))
         // AI 操作观察从报告网格移出，独立成段
         XCTAssertFalse(trendSource.contains("SectionCard(title: \"趋势\""))
+        // 信号卡片重做：左侧状态色条 + 图标盒 + 状态徽章 + 置信度进度条 + 圆点条件
+        XCTAssertTrue(trendSource.contains("tradeSignalStatusBadge"))
+        XCTAssertTrue(trendSource.contains("tradeSignalActionIcon"))
+        XCTAssertTrue(trendSource.contains("tradeSignalConditionLine"))
+        XCTAssertTrue(trendSource.contains("tradeSignalAssetSubtitle"))
+        XCTAssertTrue(trendSource.contains("AppPalette.accentGlow(tint)"))
+        XCTAssertTrue(trendSource.contains("trendConfidenceBar(item.confidence)"))
+        // 旧版平铺胶囊（裸文字置信度）已替换为带框徽章 + 进度条
+        XCTAssertFalse(trendSource.contains("置信度 \\(item.confidence.normalizedScore)"))
     }
 
     func testWorkbenchSourceDropsReviewAndTodoRail() throws {

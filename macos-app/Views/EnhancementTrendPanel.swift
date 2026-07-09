@@ -425,15 +425,9 @@ extension EnhancementCenterView {
         if summary.items.isEmpty {
             trendEmptyState("暂无观察", detail: summary.headline)
         } else {
-            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
-                Text("基于最近一次趋势分析生成的条件式信号")
-                    .font(.system(size: 11))
-                    .foregroundStyle(AppPalette.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                VStack(spacing: AppPalette.spaceS) {
-                    ForEach(summary.items.prefix(8)) { item in
-                        tradeSignalDetailRow(item)
-                    }
+            VStack(spacing: AppPalette.spaceM) {
+                ForEach(summary.items.prefix(8)) { item in
+                    tradeSignalDetailRow(item)
                 }
             }
         }
@@ -441,46 +435,152 @@ extension EnhancementCenterView {
 
     private func tradeSignalDetailRow(_ item: TradeSignalItem) -> some View {
         let tint = trendSignalTint(for: item)
-        return VStack(alignment: .leading, spacing: 7) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(item.assetName)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(AppPalette.ink)
-                    .lineLimit(1)
-                Spacer(minLength: 4)
-                Text(item.status.displayText)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .lineLimit(1)
-            }
+        return HStack(alignment: .top, spacing: 0) {
+            // 左侧状态色条
+            RoundedRectangle(cornerRadius: AppPalette.selectionRailWidth / 2)
+                .fill(AppPalette.accentGlow(tint))
+                .frame(width: AppPalette.selectionRailWidth)
+                .padding(.vertical, 6)
 
-            HStack(spacing: AppPalette.spaceS) {
-                Text(item.action.displayText)
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(tint)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(tint.opacity(AppPalette.accentFill), in: Capsule())
-                Text("置信度 \(item.confidence.normalizedScore)")
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    .foregroundStyle(AppPalette.info)
-                if item.isBasedOnStaleAnalysis {
-                    Text("上次分析")
-                        .font(.system(size: 10, weight: .semibold))
+            VStack(alignment: .leading, spacing: AppPalette.spaceM - 2) {
+                // 头部：图标盒 + 资产名/副标题 + 状态徽章
+                HStack(alignment: .top, spacing: AppPalette.spaceS) {
+                    Image(systemName: tradeSignalActionIcon(item.action))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(tint)
+                        .accentIconStyle(tint: tint, size: 30)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.assetName)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(AppPalette.ink)
+                            .lineLimit(1)
+                        tradeSignalAssetSubtitle(item)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    tradeSignalStatusBadge(item)
+                }
+
+                // 操作区：操作胶囊 + 旧分析标记
+                HStack(spacing: AppPalette.spaceS) {
+                    Text(item.action.displayText)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(tint)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(tint.opacity(AppPalette.accentFill), in: Capsule())
+                        .overlay(Capsule().stroke(tint.opacity(AppPalette.accentBorder), lineWidth: 1))
+
+                    if item.isBasedOnStaleAnalysis {
+                        Text("基于上次分析")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(AppPalette.muted)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(AppPalette.muted.opacity(AppPalette.accentSubtle), in: Capsule())
+                    }
+
+                    Spacer(minLength: AppPalette.spaceS)
+                    Text("置信度")
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(AppPalette.muted)
+                    Text("\(item.confidence.normalizedScore)")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppPalette.info)
+                }
+
+                // 置信度进度条
+                trendConfidenceBar(item.confidence)
+
+                // 原因说明
+                Text(item.reason)
+                    .font(.system(size: 11))
+                    .foregroundStyle(AppPalette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // 触发 / 反证条件
+                VStack(alignment: .leading, spacing: 5) {
+                    tradeSignalConditionLine(title: "触发", text: item.triggerSummary, tint: AppPalette.info, glyph: .filled)
+                    tradeSignalConditionLine(title: "反证", text: item.invalidatingSummary, tint: AppPalette.warning, glyph: .half)
                 }
             }
+            .padding(.leading, AppPalette.spaceS)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                    .stroke(AppPalette.hairline.opacity(AppPalette.borderFaint), lineWidth: 1)
+            )
+        }
+    }
 
-            Text(item.reason)
-                .font(.system(size: 11))
+    private func tradeSignalAssetSubtitle(_ item: TradeSignalItem) -> some View {
+        let parts: [String] = [item.assetCode, item.title].compactMap { value in
+            let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (trimmed?.isEmpty == false) ? trimmed : nil
+        }
+        if parts.isEmpty { return AnyView(EmptyView()) }
+        return AnyView(
+            Text(parts.joined(separator: " · "))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppPalette.muted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        )
+    }
+
+    private func tradeSignalStatusBadge(_ item: TradeSignalItem) -> some View {
+        let tint = trendSignalTint(for: item)
+        return Text(item.status.displayText)
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(tint.opacity(AppPalette.accentFill), in: Capsule())
+            .overlay(Capsule().stroke(tint.opacity(AppPalette.accentBorder), lineWidth: 1))
+    }
+
+    private func tradeSignalActionIcon(_ action: TradeSignalAction) -> String {
+        switch action {
+        case .watchBuy:
+            return "arrow.up.circle"
+        case .watchSell:
+            return "arrow.down.circle"
+        case .holdObserve:
+            return "eye"
+        case .waitForConfirmation:
+            return "clock"
+        case .rebalanceReview:
+            return "arrow.2.squarepath"
+        }
+    }
+
+    private func tradeSignalConditionLine(title: String, text: String, tint: Color, glyph: TradeSignalConditionGlyph) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Group {
+                switch glyph {
+                case .filled:
+                    Circle().fill(tint)
+                case .half:
+                    Circle().fill(tint.opacity(0.5))
+                        .overlay(Circle().stroke(tint, lineWidth: 1))
+                }
+            }
+            .frame(width: 6, height: 6)
+            Text(title)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(tint)
+            Text(text)
+                .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
                 .fixedSize(horizontal: false, vertical: true)
-            trendConditionRow(title: "触发", values: [item.triggerSummary])
-            trendConditionRow(title: "反证", values: [item.invalidatingSummary])
         }
-        .padding(11)
-        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
+
+    private enum TradeSignalConditionGlyph { case filled, half }
 
     private func trendEvidenceList(_ evidence: [TrendEvidence]) -> some View {
         trendBlock("证据来源", icon: "link") {
