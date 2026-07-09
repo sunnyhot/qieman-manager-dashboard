@@ -3,7 +3,8 @@ import XCTest
 
 final class EnhancementDashboardPresentationTests: XCTestCase {
     func testWorkbenchTabsExcludeImportPreview() {
-        XCTAssertEqual(EnhancementCenterTab.workbenchTabs, [.review, .trend])
+        XCTAssertEqual(EnhancementCenterTab.workbenchTabs, [.trend])
+        XCTAssertFalse(EnhancementCenterTab.review.isVisibleInWorkbench)
         XCTAssertFalse(EnhancementCenterTab.importPreview.isVisibleInWorkbench)
     }
 
@@ -40,10 +41,10 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
         XCTAssertEqual(summary.primaryAction.kind, .selectTab)
         XCTAssertFalse(summary.statusCards.contains { $0.tab == .importPreview })
         XCTAssertFalse(summary.actionQueue.contains { $0.targetTab == .importPreview })
-        XCTAssertEqual(summary.stateText, "2026-06 · 组合健康 · 0 项待办")
+        XCTAssertEqual(summary.stateText, "2026-06 · 组合健康")
     }
 
-    func testStatusCardsMapTabsToValuesAndNextActions() {
+    func testStatusCardsOnlySurfaceTrendInWorkbench() {
         let session = ImportPreviewSession(
             target: .holdings,
             mode: .merge,
@@ -67,10 +68,8 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
             insight: readyInsight()
         )
 
-        XCTAssertEqual(summary.statusCards.map(\.tab), [.review, .trend])
-        XCTAssertEqual(summary.statusCards.map(\.title), ["本月复盘", "趋势分析"])
-        XCTAssertEqual(summary.statusCards.first { $0.tab == .review }?.value, "2026-06")
-        XCTAssertEqual(summary.statusCards.first { $0.tab == .review }?.nextAction, "查看摘要")
+        XCTAssertEqual(summary.statusCards.map(\.tab), [.trend])
+        XCTAssertEqual(summary.statusCards.map(\.title), ["趋势分析"])
         XCTAssertEqual(summary.statusCards.first { $0.tab == .trend }?.value, "已生成")
     }
 

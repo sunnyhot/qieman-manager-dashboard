@@ -8,6 +8,7 @@ extension EnhancementCenterView {
             VStack(alignment: .leading, spacing: AppPalette.spaceM) {
                 trendStatusStrip
                 trendActionBar
+                trendConfigurationPanel
                 trendProgressLogView
 
                 if let report = model.trendReport {
@@ -15,7 +16,7 @@ extension EnhancementCenterView {
                 } else if model.trendSettings.provider.isConfigured {
                     trendEmptyState("等待生成", detail: "趋势分析会结合本地持仓、平台动态和模型可用的外部信号，输出条件式判断和反证条件。")
                 } else {
-                    trendEmptyState("未配置模型", detail: "先在设置中填写模型地址、模型名称和 API Key。")
+                    trendEmptyState("未配置模型", detail: "在上方配置区填写模型地址、模型名称和 API Key。")
                 }
 
                 if !model.lastTrendError.isEmpty {
@@ -182,43 +183,30 @@ extension EnhancementCenterView {
     }
 
     private func trendReportView(_ report: TrendAnalysisReport) -> some View {
-        trendReportResponsiveLayout(report)
+        trendReportBalancedLayout(report)
     }
 
-    private func trendReportResponsiveLayout(_ report: TrendAnalysisReport) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: AppPalette.spaceL) {
-                trendReportPrimaryColumn(report)
-                    .frame(minWidth: 520, maxWidth: .infinity, alignment: .topLeading)
-                    .layoutPriority(1)
-
-                trendReportSidebarColumn(report)
-                    .frame(width: 360, alignment: .topLeading)
-            }
-
-            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
-                trendReportPrimaryColumn(report)
-                trendReportSidebarColumn(report)
-            }
-        }
-    }
-
-    private func trendReportPrimaryColumn(_ report: TrendAnalysisReport) -> some View {
+    private func trendReportBalancedLayout(_ report: TrendAnalysisReport) -> some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceM) {
             trendPortfolioHeader(report)
-            trendHorizonGrid(report.horizons)
-            trendAssetList(report.keyAssets)
+            trendReportSectionGrid(report)
         }
     }
 
-    private func trendReportSidebarColumn(_ report: TrendAnalysisReport) -> some View {
-        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+    private func trendReportSectionGrid(_ report: TrendAnalysisReport) -> some View {
+        LazyVGrid(columns: trendReportWideColumns, alignment: .leading, spacing: AppPalette.spaceM) {
+            trendHorizonGrid(report.horizons)
             trendSectorGrid(report.sectors)
+            trendAssetList(report.keyAssets)
             trendActionList(report.actions)
             tradeSignalDetailList(model.tradeSignalSummary)
             trendEvidenceList(report.evidence)
             trendWarnings(report)
         }
+    }
+
+    private var trendReportWideColumns: [GridItem] {
+        [GridItem(.adaptive(minimum: 340), spacing: AppPalette.spaceM, alignment: .top)]
     }
 
     private func trendPortfolioHeader(_ report: TrendAnalysisReport) -> some View {
@@ -528,6 +516,7 @@ extension EnhancementCenterView {
             }
             content()
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     private func trendFact(_ title: String, value: String, tint: Color) -> some View {

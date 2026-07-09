@@ -130,7 +130,7 @@ final class UpdateState: ObservableObject {
 
 @MainActor
 final class EnhancementState: ObservableObject {
-    @Published var selectedTab: EnhancementCenterTab = .review
+    @Published var selectedTab: EnhancementCenterTab = .trend
     @Published var lastMonthlyReportExport: MonthlyReportExportMetadata?
     @Published var managerWatchTimelineEvents: [ManagerWatchTimelineEvent] = []
     @Published var activeImportPreviewSession: ImportPreviewSession?
@@ -159,7 +159,7 @@ enum EnhancementCenterTab: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    static let workbenchTabs: [EnhancementCenterTab] = [.review, .trend]
+    static let workbenchTabs: [EnhancementCenterTab] = [.trend]
 
     var isVisibleInWorkbench: Bool {
         Self.workbenchTabs.contains(self)

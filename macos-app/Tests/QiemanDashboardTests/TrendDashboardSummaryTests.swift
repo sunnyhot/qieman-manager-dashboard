@@ -258,12 +258,56 @@ final class TrendDashboardSummaryTests: XCTestCase {
             .appendingPathComponent("Views/EnhancementTrendPanel.swift")
         let source = try String(contentsOf: sourceURL, encoding: .utf8)
 
-        XCTAssertTrue(source.contains("trendReportResponsiveLayout"))
-        XCTAssertTrue(source.contains("trendReportPrimaryColumn"))
-        XCTAssertTrue(source.contains("trendReportSidebarColumn"))
+        XCTAssertTrue(source.contains("trendReportBalancedLayout"))
+        XCTAssertTrue(source.contains("trendReportSectionGrid"))
+        XCTAssertTrue(source.contains("trendReportWideColumns"))
         XCTAssertTrue(source.contains("trendProgressSummaryCard"))
         XCTAssertTrue(source.contains("model.trendProgressLogs.suffix(6)"))
+        XCTAssertFalse(source.contains(".frame(width: 360"))
         XCTAssertFalse(source.contains("model.trendProgressLogs.suffix(16)"))
+    }
+
+    func testWorkbenchSourceDropsReviewAndTodoRail() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Views/EnhancementCenterView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertFalse(source.contains("statusCardGrid(summary)"))
+        XCTAssertFalse(source.contains("actionQueueRail"))
+        XCTAssertFalse(source.contains("SectionCard(title: \"下一步\""))
+        XCTAssertFalse(source.contains("private var reviewPanel"))
+        XCTAssertFalse(source.contains("monthlyReportPreview"))
+        XCTAssertFalse(source.contains("本月复盘"))
+        XCTAssertFalse(source.contains("待办"))
+    }
+
+    func testTrendSettingsMoveFromSettingsCenterIntoWorkbench() throws {
+        let rootURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let settingsSource = try String(
+            contentsOf: rootURL.appendingPathComponent("Views/SettingsSectionView.swift"),
+            encoding: .utf8
+        )
+        let trendSettingsSource = try String(
+            contentsOf: rootURL.appendingPathComponent("Views/SettingsTrendPanel.swift"),
+            encoding: .utf8
+        )
+        let trendPanelSource = try String(
+            contentsOf: rootURL.appendingPathComponent("Views/EnhancementTrendPanel.swift"),
+            encoding: .utf8
+        )
+
+        XCTAssertFalse(settingsSource.contains("case trend"))
+        XCTAssertFalse(settingsSource.contains("selectedSettingsFocus = .trend"))
+        XCTAssertFalse(settingsSource.contains("trendSettingsPanel"))
+        XCTAssertTrue(trendSettingsSource.contains("extension EnhancementCenterView"))
+        XCTAssertTrue(trendPanelSource.contains("trendConfigurationPanel"))
+        XCTAssertTrue(trendPanelSource.contains("model.checkTrendAIConnection()"))
     }
 }
 

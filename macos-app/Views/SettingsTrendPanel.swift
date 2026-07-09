@@ -2,9 +2,9 @@ import SwiftUI
 
 // MARK: - Trend Analysis Settings
 
-extension SettingsSectionView {
-    var trendSettingsPanel: some View {
-        SettingsPanel(title: "趋势分析", subtitle: "直连 OpenAI-compatible 模型生成趋势分析", icon: "sparkles") {
+extension EnhancementCenterView {
+    var trendConfigurationPanel: some View {
+        DisclosureGroup(isExpanded: $isTrendConfigurationExpanded) {
             VStack(alignment: .leading, spacing: 0) {
                 SettingsRow(
                     title: "当前状态",
@@ -90,8 +90,45 @@ extension SettingsSectionView {
                 if trendAutoAnalysisTimesDraft.isEmpty {
                     trendAutoAnalysisTimesDraft = model.trendSettings.dailyAutoAnalysisTimesText
                 }
+                if !model.trendSettings.provider.isConfigured {
+                    isTrendConfigurationExpanded = true
+                }
+            }
+            .padding(.top, AppPalette.spaceM)
+        } label: {
+            HStack(alignment: .center, spacing: AppPalette.spaceS) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.brand)
+                    .accentIconStyle(tint: AppPalette.brand, size: 28)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("模型与自动化配置")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text(model.trendSettings.provider.isConfigured ? model.trendSettings.provider.model : "填写模型地址、模型名称和 API Key")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                }
+
+                Spacer(minLength: AppPalette.spaceS)
+
+                Text(model.enhancementTrendStatus.valueText)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(model.enhancementTrendStatus.severity.settingsTint)
+                    .lineLimit(1)
             }
         }
+        .font(.system(size: 11))
+        .tint(AppPalette.info)
+        .padding(AppPalette.spaceM)
+        .background(AppPalette.cardStrong.opacity(0.86), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                .stroke(AppPalette.hairline.opacity(AppPalette.borderSubtle), lineWidth: 1)
+        )
     }
 
     private var tradeSignalPreferenceControls: some View {

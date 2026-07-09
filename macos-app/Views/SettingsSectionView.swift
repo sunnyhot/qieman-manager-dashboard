@@ -6,7 +6,6 @@ import SwiftUI
 enum SettingsFocus: CaseIterable, Identifiable {
     case account
     case watch
-    case trend
     case menuBar
     case version
 
@@ -21,7 +20,6 @@ struct SettingsSectionView: View {
     @State var isMenuBarFundMarketExpanded = false
     @State var draggedTickerSelectionID: String?
     @State var tickerDropTargetID: String?
-    @State var trendAutoAnalysisTimesDraft = ""
 
     var menuBarTickerEnabledBinding: Binding<Bool> {
         Binding(
@@ -172,22 +170,6 @@ struct SettingsSectionView: View {
 
         Button {
             withAnimation(.easeInOut(duration: 0.16)) {
-                selectedSettingsFocus = .trend
-            }
-        } label: {
-            SettingsMetric(
-                title: "趋势",
-                value: model.enhancementTrendStatus.valueText,
-                detail: model.trendSettings.provider.isConfigured ? model.trendSettings.provider.model : "模型未配置",
-                icon: "sparkles",
-                tint: model.enhancementTrendStatus.severity.settingsTint,
-                isSelected: selectedSettingsFocus == .trend
-            )
-        }
-        .buttonStyle(PressResponsiveButtonStyle())
-
-        Button {
-            withAnimation(.easeInOut(duration: 0.16)) {
                 selectedSettingsFocus = .menuBar
             }
         } label: {
@@ -226,8 +208,6 @@ struct SettingsSectionView: View {
             accountPanel
         case .watch:
             watchPanel
-        case .trend:
-            trendSettingsPanel
         case .menuBar:
             menuBarPanel
         case .version:

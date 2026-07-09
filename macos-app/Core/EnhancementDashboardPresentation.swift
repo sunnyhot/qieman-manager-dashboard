@@ -262,7 +262,7 @@ struct EnhancementDashboardSummary: Hashable {
 
         return EnhancementDashboardSummary(
             monthText: report.monthText,
-            stateText: "\(report.monthText) · \(state) · \(actionQueue.count) 项待办",
+            stateText: "\(report.monthText) · \(state)",
             actionableCount: actionQueue.count,
             primaryAction: primaryAction,
             runtimeChips: makeRuntimeChips(
@@ -272,14 +272,6 @@ struct EnhancementDashboardSummary: Hashable {
                 watchSummary: watchSummary
             ),
             statusCards: makeStatusCards(
-                report: report,
-                reportMetadata: reportMetadata,
-                watchSummary: watchSummary,
-                importSession: importSession,
-                importCounts: importCounts,
-                canUndoLatestImport: canUndoLatestImport,
-                insightSummary: insightSummary,
-                snapshotCount: snapshotCount,
                 trendStatus: trendStatus
             ),
             actionQueue: actionQueue,
@@ -340,26 +332,9 @@ struct EnhancementDashboardSummary: Hashable {
     }
 
     private static func makeStatusCards(
-        report: MonthlyReportSummary,
-        reportMetadata: EnhancementReportMetadata,
-        watchSummary: ManagerWatchTimelineSummary,
-        importSession: ImportPreviewSession?,
-        importCounts: EnhancementImportCounts,
-        canUndoLatestImport: Bool,
-        insightSummary: PortfolioSnapshotInsightSummary,
-        snapshotCount: Int,
         trendStatus: EnhancementTrendStatus
     ) -> [EnhancementStatusCard] {
         return [
-            EnhancementStatusCard(
-                tab: .review,
-                title: "本月复盘",
-                value: report.monthText,
-                detail: reportMetadata.archiveText,
-                nextAction: reportMetadata.isArchivedForCurrentMonth ? "查看摘要" : "保存归档",
-                systemImage: "doc.text",
-                severity: reportMetadata.isArchivedForCurrentMonth ? .positive : .brand
-            ),
             EnhancementStatusCard(
                 tab: .trend,
                 title: "趋势分析",
