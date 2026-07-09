@@ -290,6 +290,15 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertTrue(centerSource.contains("selectedWorkbenchSegment = .config"))
         // 巨型 trendPanel 已拆分为三个独立分段
         XCTAssertFalse(centerSource.contains("trendPanel"))
+        // 顶部「理财工作台」标题卡与运行时 chips 已删除，分段栏直接作为工作台入口
+        XCTAssertFalse(centerSource.contains("理财工作台"))
+        XCTAssertFalse(centerSource.contains("dashboardHeader"))
+        XCTAssertFalse(centerSource.contains("runtimeChip"))
+        XCTAssertFalse(centerSource.contains("headerTitleBlock"))
+        // 分段按钮使用大号交互样式，不再是原生窄条 segmented Picker
+        XCTAssertFalse(centerSource.contains(".pickerStyle(.segmented)"))
+        XCTAssertTrue(centerSource.contains("workbenchSegmentButton"))
+        XCTAssertTrue(centerSource.contains("interactiveSurface"))
 
         // EnhancementTrendPanel 提供三个分段
         XCTAssertTrue(trendSource.contains("var configSegment"))
