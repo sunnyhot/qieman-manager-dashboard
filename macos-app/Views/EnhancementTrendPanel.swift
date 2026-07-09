@@ -220,18 +220,61 @@ extension EnhancementCenterView {
     }
 
     private func trendReportSectionGrid(_ report: TrendAnalysisReport) -> some View {
-        LazyVGrid(columns: trendReportWideColumns, alignment: .leading, spacing: AppPalette.spaceM) {
-            trendHorizonGrid(report.horizons)
-            trendSectorGrid(report.sectors)
-            trendAssetList(report.keyAssets)
-            trendActionList(report.actions)
-            trendEvidenceList(report.evidence)
-            trendWarnings(report)
+        VStack(alignment: .leading, spacing: AppPalette.spaceL) {
+            marketSection(report)
+            actionSection(report)
+            verificationSection(report)
         }
     }
 
     private var trendReportWideColumns: [GridItem] {
         [GridItem(.adaptive(minimum: 340), spacing: AppPalette.spaceM, alignment: .top)]
+    }
+
+    // MARK: - Report Sections
+
+    // ① 市场视图：周期判断 + 板块
+    private func marketSection(_ report: TrendAnalysisReport) -> some View {
+        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+            trendReportSectionTitle("市场视图", icon: "chart.line.uptrend.xyaxis")
+            trendHorizonGrid(report.horizons)
+            trendSectorGrid(report.sectors)
+        }
+    }
+
+    // ② 操作建议：重点标的 + 行动候选
+    private func actionSection(_ report: TrendAnalysisReport) -> some View {
+        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+            trendReportSectionTitle("操作建议", icon: "checklist")
+            trendAssetList(report.keyAssets)
+            trendActionList(report.actions)
+        }
+    }
+
+    // ③ 核验：证据来源 + 边界与提示
+    private func verificationSection(_ report: TrendAnalysisReport) -> some View {
+        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+            trendReportSectionTitle("核验", icon: "shield.checkered")
+            trendEvidenceList(report.evidence)
+            trendWarnings(report)
+        }
+    }
+
+    private func trendReportSectionTitle(_ title: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.brand)
+                Text(title)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+            }
+            Rectangle()
+                .fill(AppPalette.hairline.opacity(AppPalette.borderSubtle))
+                .frame(height: 1)
+        }
+        .padding(.top, 2)
     }
 
     private func trendPortfolioHeader(_ report: TrendAnalysisReport) -> some View {
@@ -298,12 +341,9 @@ extension EnhancementCenterView {
     }
 
     private func trendHorizonGrid(_ horizons: [TrendHorizonView]) -> some View {
-        VStack(alignment: .leading, spacing: AppPalette.spaceS) {
-            trendReportSubHeader("周期判断")
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
-                ForEach(horizons, id: \.horizon) { horizon in
-                    trendHorizonCard(horizon)
-                }
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+            ForEach(horizons, id: \.horizon) { horizon in
+                trendHorizonCard(horizon)
             }
         }
     }
@@ -337,12 +377,9 @@ extension EnhancementCenterView {
     }
 
     private func trendSectorGrid(_ sectors: [TrendSectorView]) -> some View {
-        VStack(alignment: .leading, spacing: AppPalette.spaceS) {
-            trendReportSubHeader("板块")
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
-                ForEach(sectors) { sector in
-                    trendSectorCard(sector)
-                }
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+            ForEach(sectors) { sector in
+                trendSectorCard(sector)
             }
         }
     }
@@ -384,18 +421,6 @@ extension EnhancementCenterView {
     }
 
     // MARK: - Report helpers
-
-    private func trendReportSubHeader(_ title: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(AppPalette.ink)
-            Rectangle()
-                .fill(AppPalette.hairline.opacity(AppPalette.borderFaint))
-                .frame(height: 1)
-        }
-        .padding(.top, 2)
-    }
 
     private func trendDirectionDot(_ direction: TrendDirection) -> some View {
         Circle()
@@ -441,16 +466,14 @@ extension EnhancementCenterView {
         }
     }
 
+    @ViewBuilder
     private func trendAssetList(_ assets: [TrendAssetView]) -> some View {
-        VStack(alignment: .leading, spacing: AppPalette.spaceS) {
-            trendReportSubHeader("重点标的")
-            if assets.isEmpty {
-                trendEmptyState("暂无重点标的", detail: "模型没有给出需要单独关注的基金或股票。")
-            } else {
-                VStack(spacing: AppPalette.spaceS) {
-                    ForEach(assets.prefix(8)) { asset in
-                        trendAssetCard(asset)
-                    }
+        if assets.isEmpty {
+            trendEmptyState("暂无重点标的", detail: "模型没有给出需要单独关注的基金或股票。")
+        } else {
+            VStack(spacing: AppPalette.spaceS) {
+                ForEach(assets.prefix(8)) { asset in
+                    trendAssetCard(asset)
                 }
             }
         }
@@ -499,16 +522,14 @@ extension EnhancementCenterView {
         )
     }
 
+    @ViewBuilder
     private func trendActionList(_ actions: [TrendActionCandidate]) -> some View {
-        VStack(alignment: .leading, spacing: AppPalette.spaceS) {
-            trendReportSubHeader("行动候选")
-            if actions.isEmpty {
-                trendEmptyState("暂无行动候选", detail: "当前报告没有建议新增观察、调仓复核或计划调整动作。")
-            } else {
-                VStack(spacing: AppPalette.spaceS) {
-                    ForEach(actions.prefix(8)) { action in
-                        trendActionCard(action)
-                    }
+        if actions.isEmpty {
+            trendEmptyState("暂无行动候选", detail: "当前报告没有建议新增观察、调仓复核或计划调整动作。")
+        } else {
+            VStack(spacing: AppPalette.spaceS) {
+                ForEach(actions.prefix(8)) { action in
+                    trendActionCard(action)
                 }
             }
         }
@@ -737,16 +758,14 @@ extension EnhancementCenterView {
 
     private enum TradeSignalConditionGlyph { case filled, half }
 
+    @ViewBuilder
     private func trendEvidenceList(_ evidence: [TrendEvidence]) -> some View {
-        VStack(alignment: .leading, spacing: AppPalette.spaceS) {
-            trendReportSubHeader("证据来源")
-            if evidence.isEmpty {
-                trendEmptyState("暂无外部证据", detail: "模型没有返回可核验来源，按本地上下文结果理解。")
-            } else {
-                VStack(spacing: AppPalette.spaceS) {
-                    ForEach(evidence.prefix(6)) { item in
-                        trendEvidenceCard(item)
-                    }
+        if evidence.isEmpty {
+            trendEmptyState("暂无外部证据", detail: "模型没有返回可核验来源，按本地上下文结果理解。")
+        } else {
+            VStack(spacing: AppPalette.spaceS) {
+                ForEach(evidence.prefix(6)) { item in
+                    trendEvidenceCard(item)
                 }
             }
         }
@@ -794,7 +813,6 @@ extension EnhancementCenterView {
 
     private func trendWarnings(_ report: TrendAnalysisReport) -> some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceS) {
-            trendReportSubHeader("边界与提示")
             VStack(alignment: .leading, spacing: AppPalette.spaceS) {
                 ForEach(report.warnings) { warning in
                     HStack(alignment: .top, spacing: 6) {
