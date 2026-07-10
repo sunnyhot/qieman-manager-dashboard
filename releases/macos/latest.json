@@ -1,25 +1,25 @@
 {
-    "version": "3.1.3",
-    "tag": "v3.1.3",
+    "version": "3.1.4",
+    "tag": "v3.1.4",
     "asset": {
-        "name": "QiemanDashboard-3.1.3.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.3/QiemanDashboard-3.1.3.zip",
-        "size": 4091340,
+        "name": "QiemanDashboard-3.1.4.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.4/QiemanDashboard-3.1.4.zip",
+        "size": 4091116,
         "content_type": "application/zip",
-        "sha256": "4c1601f4c60a67a984b634807585a8fce6545ca0d25081cee5beccbc6f534d23"
+        "sha256": "23832b783d93cb068a80e7f18777ac84abf035f6bce238aa055b63c3233e6335"
     },
-    "sha256": "4c1601f4c60a67a984b634807585a8fce6545ca0d25081cee5beccbc6f534d23",
-    "notes": "工作台列表项悬停效果与其他页面统一",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.1.3",
+    "sha256": "23832b783d93cb068a80e7f18777ac84abf035f6bce238aa055b63c3233e6335",
+    "notes": "市场视图周期与板块统一为三列等宽布局\n统一趋势市场卡片布局设计",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.1.4",
     "published_at": "",
-    "tag_name": "v3.1.3",
-    "name": "QiemanDashboard v3.1.3",
-    "body": "工作台列表项悬停效果与其他页面统一",
+    "tag_name": "v3.1.4",
+    "name": "QiemanDashboard v3.1.4",
+    "body": "市场视图周期与板块统一为三列等宽布局\n统一趋势市场卡片布局设计",
     "assets": [
         {
-            "name": "QiemanDashboard-3.1.3.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.3/QiemanDashboard-3.1.3.zip",
-            "size": 4091340,
+            "name": "QiemanDashboard-3.1.4.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.4/QiemanDashboard-3.1.4.zip",
+            "size": 4091116,
             "content_type": "application/zip"
         }
     ]
