@@ -235,11 +235,18 @@ extension EnhancementCenterView {
 
     // ① 市场视图：周期判断 + 板块
     private func marketSection(_ report: TrendAnalysisReport) -> some View {
-        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+        let columns = marketCardColumns
+        return VStack(alignment: .leading, spacing: AppPalette.spaceM) {
             trendReportSectionTitle("市场视图", icon: "chart.line.uptrend.xyaxis")
-            trendHorizonGrid(report.horizons)
-            trendSectorGrid(report.sectors)
+            trendHorizonGrid(report.horizons, columns: columns)
+            trendSectorGrid(report.sectors, columns: columns)
         }
+    }
+
+    /// 市场视图共用三列定义：周期判断与板块判断沿同一列线对齐，
+    /// 宽屏时三列共同分配空间，消除 adaptive 在周期区右侧产生的空列。
+    private var marketCardColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: AppPalette.spaceS), count: 3)
     }
 
     // ② 操作建议：重点标的 + 行动候选
@@ -340,8 +347,8 @@ extension EnhancementCenterView {
             .background(riskLevel.tint.opacity(AppPalette.accentOnFill), in: Capsule())
     }
 
-    private func trendHorizonGrid(_ horizons: [TrendHorizonView]) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+    private func trendHorizonGrid(_ horizons: [TrendHorizonView], columns: [GridItem]) -> some View {
+        LazyVGrid(columns: columns, spacing: AppPalette.spaceS) {
             ForEach(horizons, id: \.horizon) { horizon in
                 trendHorizonCard(horizon)
             }
@@ -379,8 +386,8 @@ extension EnhancementCenterView {
         )
     }
 
-    private func trendSectorGrid(_ sectors: [TrendSectorView]) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
+    private func trendSectorGrid(_ sectors: [TrendSectorView], columns: [GridItem]) -> some View {
+        LazyVGrid(columns: columns, spacing: AppPalette.spaceS) {
             ForEach(sectors) { sector in
                 trendSectorCard(sector)
             }
@@ -409,7 +416,6 @@ extension EnhancementCenterView {
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
                 .fixedSize(horizontal: false, vertical: true)
-                .lineLimit(3)
             if !sector.counterSignals.isEmpty {
                 trendCounterSignalsRow(sector.counterSignals)
             }

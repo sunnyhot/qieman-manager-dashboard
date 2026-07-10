@@ -341,6 +341,12 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertTrue(trendSource.contains("hoverFill: AppPalette.cardHover"))
         XCTAssertTrue(trendSource.contains("activeStrokeOpacity"))
         XCTAssertTrue(trendSource.contains("lift:"))
+        // 市场视图：周期与板块共用统一三列定义，消除宽屏空列与高矮不齐
+        XCTAssertTrue(trendSource.contains("marketCardColumns"))
+        XCTAssertTrue(trendSource.contains("columns: columns"))
+        XCTAssertFalse(trendSource.contains(".adaptive(minimum: 200)"))
+        // 板块卡说明不再截断（sector rationale 用 fixedSize 完整展示，无 lineLimit）
+        XCTAssertTrue(trendSource.contains("Text(sector.rationale)"))
     }
 
     func testWorkbenchSourceDropsReviewAndTodoRail() throws {
