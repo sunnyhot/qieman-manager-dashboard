@@ -369,10 +369,13 @@ extension EnhancementCenterView {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.hairline.opacity(AppPalette.borderFaint), lineWidth: 1)
+        .interactiveSurface(
+            tint: horizon.direction.tint,
+            fill: AppPalette.cardStrong,
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.18,
+            activeStrokeOpacity: 0.40,
+            lift: 0.8
         )
     }
 
@@ -413,10 +416,13 @@ extension EnhancementCenterView {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.hairline.opacity(AppPalette.borderFaint), lineWidth: 1)
+        .interactiveSurface(
+            tint: sector.direction.tint,
+            fill: AppPalette.cardStrong,
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.18,
+            activeStrokeOpacity: 0.40,
+            lift: 0.8
         )
     }
 
@@ -515,10 +521,13 @@ extension EnhancementCenterView {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.hairline.opacity(AppPalette.borderFaint), lineWidth: 1)
+        .interactiveSurface(
+            tint: AppPalette.info,
+            fill: AppPalette.cardStrong,
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.18,
+            activeStrokeOpacity: 0.40,
+            lift: 0.8
         )
     }
 
@@ -576,10 +585,13 @@ extension EnhancementCenterView {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.hairline.opacity(AppPalette.borderFaint), lineWidth: 1)
+        .interactiveSurface(
+            tint: trendActionTint(action.kind),
+            fill: AppPalette.cardStrong,
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.18,
+            activeStrokeOpacity: 0.40,
+            lift: 0.8
         )
     }
 
@@ -684,10 +696,13 @@ extension EnhancementCenterView {
             .padding(.leading, AppPalette.spaceS)
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                    .stroke(AppPalette.hairline.opacity(AppPalette.borderFaint), lineWidth: 1)
+            .interactiveSurface(
+                tint: tint,
+                fill: AppPalette.cardStrong,
+                hoverFill: AppPalette.cardHover,
+                strokeOpacity: 0.26,
+                activeStrokeOpacity: 0.40,
+                lift: 0.6
             )
         }
     }
@@ -804,10 +819,13 @@ extension EnhancementCenterView {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.hairline.opacity(AppPalette.borderFaint), lineWidth: 1)
+        .interactiveSurface(
+            tint: AppPalette.info,
+            fill: AppPalette.cardStrong,
+            hoverFill: AppPalette.cardHover,
+            strokeOpacity: 0.18,
+            activeStrokeOpacity: 0.38,
+            lift: 0.8
         )
     }
 

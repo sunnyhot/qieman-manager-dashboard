@@ -336,6 +336,11 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertFalse(trendSource.contains("trendBlock(\"行动候选\""))
         XCTAssertFalse(trendSource.contains("trendBlock(\"证据来源\""))
         XCTAssertFalse(trendSource.contains("trendBlock(\"边界与提示\""))
+        // 列表项触碰/悬停效果与其他页面一致：复用 interactiveSurface（hoverFill/lift/描边），
+        // 不再裸用 background(cardStrong)+stroke
+        XCTAssertTrue(trendSource.contains("hoverFill: AppPalette.cardHover"))
+        XCTAssertTrue(trendSource.contains("activeStrokeOpacity"))
+        XCTAssertTrue(trendSource.contains("lift:"))
     }
 
     func testWorkbenchSourceDropsReviewAndTodoRail() throws {
