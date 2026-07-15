@@ -166,7 +166,12 @@ final class QiemanPlatformNativeClient {
     private let historyTTL: TimeInterval = 12 * 60 * 60
     private let quoteTTL: TimeInterval = 45
     private let cache = QiemanPlatformCache()
+    private let session: URLSession
     private static let preloadConcurrencyLimit = 6
+
+    init(session: URLSession = .shared) {
+        self.session = session
+    }
 
     func fetchPlatformPayload(prodCode: String) async throws -> PlatformPayload {
         let target = normalizedString(prodCode)
@@ -966,6 +971,13 @@ final class QiemanPlatformNativeClient {
             }
         }
 
+        if let latestQuote = try? await fetchLatestFundNavQuote(
+            fundCode,
+            fundName: history?.fundName ?? ""
+        ) {
+            return latestQuote
+        }
+
         if let latest = history?.series.last {
             return NativeFundQuote(
                 fundCode: fundCode,
@@ -982,6 +994,52 @@ final class QiemanPlatformNativeClient {
             )
         }
         return .empty(fundCode)
+    }
+
+    private func fetchLatestFundNavQuote(_ fundCode: String, fundName: String) async throws -> NativeFundQuote? {
+        var components = URLComponents(string: "https://api.fund.eastmoney.com/f10/lsjz")
+        components?.queryItems = [
+            URLQueryItem(name: "fundCode", value: fundCode),
+            URLQueryItem(name: "pageIndex", value: "1"),
+            URLQueryItem(name: "pageSize", value: "1"),
+        ]
+        guard let url = components?.url else {
+            throw NativePlatformError.invalidResponse
+        }
+
+        let text = try await requestText(
+            hostURL: URL(string: "https://api.fund.eastmoney.com")!,
+            absoluteURL: url,
+            headers: [
+                "Accept": "application/json",
+                "Referer": "https://fund.eastmoney.com/",
+            ]
+        )
+        guard let data = text.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              intValue(object["ErrCode"]) == 0,
+              let payload = object["Data"] as? [String: Any],
+              let rows = payload["LSJZList"] as? [[String: Any]],
+              let latest = rows.first,
+              let officialNav = doubleValue(latest["DWJZ"]),
+              officialNav > 0 else {
+            return nil
+        }
+
+        let officialNavDate = normalizedString(latest["FSRQ"])
+        return NativeFundQuote(
+            fundCode: fundCode,
+            fundName: fundName,
+            price: officialNav,
+            priceTime: officialNavDate,
+            priceSource: "official_nav",
+            priceSourceLabel: "最近净值",
+            officialNav: officialNav,
+            officialNavDate: officialNavDate,
+            estimatePrice: nil,
+            estimateTime: "",
+            estimateChangePct: nil
+        )
     }
 
     private func fetchStockQuote(_ stockCode: String) async throws -> NativeStockQuote {
@@ -1177,7 +1235,7 @@ final class QiemanPlatformNativeClient {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw NativePlatformError.invalidResponse
         }
@@ -1203,7 +1261,7 @@ final class QiemanPlatformNativeClient {
         for (key, value) in headers {
             request.setValue(value, forHTTPHeaderField: key)
         }
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw NativePlatformError.invalidResponse
         }
