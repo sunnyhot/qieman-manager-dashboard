@@ -1,25 +1,25 @@
 {
-    "version": "3.1.4",
-    "tag": "v3.1.4",
+    "version": "3.1.5",
+    "tag": "v3.1.5",
     "asset": {
-        "name": "QiemanDashboard-3.1.4.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.4/QiemanDashboard-3.1.4.zip",
-        "size": 4091116,
+        "name": "QiemanDashboard-3.1.5.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.5/QiemanDashboard-3.1.5.zip",
+        "size": 4094024,
         "content_type": "application/zip",
-        "sha256": "23832b783d93cb068a80e7f18777ac84abf035f6bce238aa055b63c3233e6335"
+        "sha256": "8bd1e966aabdc55d88e4238766d9252911d2463acaa2d1f5785fb6d8a27f50c4"
     },
-    "sha256": "23832b783d93cb068a80e7f18777ac84abf035f6bce238aa055b63c3233e6335",
-    "notes": "市场视图周期与板块统一为三列等宽布局\n统一趋势市场卡片布局设计",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.1.4",
+    "sha256": "8bd1e966aabdc55d88e4238766d9252911d2463acaa2d1f5785fb6d8a27f50c4",
+    "notes": "不缓存不可用基金报价\n为 QDII 增加最新净值兜底\n规划 QDII 最新净值兜底实现\n设计 QDII 最新净值兜底方案",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.1.5",
     "published_at": "",
-    "tag_name": "v3.1.4",
-    "name": "QiemanDashboard v3.1.4",
-    "body": "市场视图周期与板块统一为三列等宽布局\n统一趋势市场卡片布局设计",
+    "tag_name": "v3.1.5",
+    "name": "QiemanDashboard v3.1.5",
+    "body": "不缓存不可用基金报价\n为 QDII 增加最新净值兜底\n规划 QDII 最新净值兜底实现\n设计 QDII 最新净值兜底方案",
     "assets": [
         {
-            "name": "QiemanDashboard-3.1.4.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.4/QiemanDashboard-3.1.4.zip",
-            "size": 4091116,
+            "name": "QiemanDashboard-3.1.5.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.5/QiemanDashboard-3.1.5.zip",
+            "size": 4094024,
             "content_type": "application/zip"
         }
     ]
