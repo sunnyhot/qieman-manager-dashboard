@@ -48,6 +48,10 @@ actor QiemanPlatformCache {
     }
 
     fileprivate func store(history: NativeFundHistory, for fundCode: String) {
+        guard !history.series.isEmpty else {
+            histories.removeValue(forKey: fundCode)
+            return
+        }
         store(history, for: fundCode, in: &histories, maxEntries: Self.maxFundCacheEntries)
     }
 
@@ -59,6 +63,10 @@ actor QiemanPlatformCache {
     }
 
     fileprivate func store(quote: NativeFundQuote, for fundCode: String) {
+        guard quote.price > 0 || (quote.officialNav ?? 0) > 0 || (quote.estimatePrice ?? 0) > 0 else {
+            quotes.removeValue(forKey: fundCode)
+            return
+        }
         store(quote, for: fundCode, in: &quotes, maxEntries: Self.maxFundCacheEntries)
     }
 

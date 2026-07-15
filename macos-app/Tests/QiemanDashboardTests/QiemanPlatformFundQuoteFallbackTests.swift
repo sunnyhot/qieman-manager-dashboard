@@ -151,6 +151,48 @@ final class QiemanPlatformFundQuoteFallbackTests: XCTestCase {
         XCTAssertEqual(row.estimateChangePct, 0.06)
     }
 
+    func testUnavailableFundDataIsRetriedInsteadOfCached() async throws {
+        let counter = LockedRequestCounter()
+        MockQiemanPlatformURLProtocol.requestHandler = { request in
+            let url = try XCTUnwrap(request.url)
+            let key = url.host ?? "unknown"
+            counter.increment(key)
+
+            switch url.host {
+            case "fund.eastmoney.com":
+                return Self.response(
+                    for: url,
+                    data: Data("""
+                    var fS_name = "暂无数据基金";
+                    var Data_netWorthTrend = [];
+                    """.utf8)
+                )
+            case "fundgz.1234567.com.cn":
+                return Self.response(for: url, data: Data("jsonpgz();".utf8))
+            case "api.fund.eastmoney.com":
+                let data = try JSONSerialization.data(withJSONObject: [
+                    "ErrCode": 0,
+                    "Data": ["LSJZList": []],
+                ])
+                return Self.response(for: url, data: data)
+            default:
+                XCTFail("Unexpected request: \(url.absoluteString)")
+                throw URLError(.unsupportedURL)
+            }
+        }
+
+        let client = makeClient()
+        let holdings = [holding(code: "002286")]
+        let first = try await client.fetchUserPortfolioSnapshot(holdings: holdings)
+        let second = try await client.fetchUserPortfolioSnapshot(holdings: holdings)
+
+        XCTAssertNil(first.rows.first?.marketValue)
+        XCTAssertNil(second.rows.first?.marketValue)
+        XCTAssertEqual(counter.value(for: "fund.eastmoney.com"), 2)
+        XCTAssertEqual(counter.value(for: "fundgz.1234567.com.cn"), 2)
+        XCTAssertEqual(counter.value(for: "api.fund.eastmoney.com"), 2)
+    }
+
     private func makeClient() -> QiemanPlatformNativeClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockQiemanPlatformURLProtocol.self]
@@ -214,4 +256,21 @@ private final class MockQiemanPlatformURLProtocol: URLProtocol {
     }
 
     override func stopLoading() {}
+}
+
+private final class LockedRequestCounter {
+    private let lock = NSLock()
+    private var counts: [String: Int] = [:]
+
+    func increment(_ key: String) {
+        lock.lock()
+        counts[key, default: 0] += 1
+        lock.unlock()
+    }
+
+    func value(for key: String) -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return counts[key, default: 0]
+    }
 }
