@@ -2,6 +2,19 @@ import XCTest
 @testable import QiemanDashboard
 
 final class UIExperienceRegressionTests: XCTestCase {
+    func testPresentedAssetSheetDisablesBackgroundInteractionAndHover() throws {
+        let browser = try source(at: "Views/PersonalAssetBrowser.swift")
+        let row = try source(at: "Views/PersonalAsset/PersonalAssetTableRow.swift")
+        let components = try source(at: "Views/SharedComponents.swift")
+
+        XCTAssertTrue(browser.contains("let allowsInteraction = selectedDetailRow == nil"))
+        XCTAssertTrue(browser.contains(".allowsHitTesting(allowsInteraction)"))
+        XCTAssertTrue(browser.contains("allowsHoverFeedback: allowsInteraction"))
+        XCTAssertTrue(row.contains("allowsHoverFeedback: allowsHoverFeedback"))
+        XCTAssertTrue(components.contains(".onChange(of: allowsHoverFeedback)"))
+        XCTAssertTrue(components.contains("isHovering = false"))
+    }
+
     func testSharedInteractionPrimitivesSupportStaticSurfacesDismissibleToastsAndReducedMotion() throws {
         let source = try source(at: "Views/SharedComponents.swift")
 

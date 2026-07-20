@@ -16,6 +16,7 @@ struct PersonalAssetTableRow: View {
     var trendSummary: TrendAssetTagSummary?
     var isSelectedForComparison = false
     var isComparisonToggleDisabled = false
+    var allowsHoverFeedback = true
     var onToggleComparison: (() -> Void)?
     var onOpenDetail: (() -> Void)?
 
@@ -278,7 +279,8 @@ struct PersonalAssetTableRow: View {
             selectedFill: AppPalette.brandSoft.opacity(0.76),
             strokeOpacity: 0.28,
             activeStrokeOpacity: 0.62,
-            lift: AppPalette.hoverLift
+            lift: AppPalette.hoverLift,
+            allowsHoverFeedback: allowsHoverFeedback
         )
         .alert(deleteConfirmationTitle, isPresented: deleteConfirmationBinding) {
             Button("删除", role: .destructive) {

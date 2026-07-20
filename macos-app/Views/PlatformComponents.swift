@@ -409,7 +409,17 @@ struct PlatformActionDetailCard: View {
                 Spacer()
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
+            Label("调仓概览", systemImage: "rectangle.grid.2x2")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(AppPalette.info)
+
+            LazyVGrid(
+                columns: Array(
+                    repeating: GridItem(.flexible(minimum: 116), spacing: 10),
+                    count: 4
+                ),
+                spacing: 10
+            ) {
                 detailMetric("调仓时间", action.txnDate ?? action.createdAt ?? "未知", tint: AppPalette.ink)
                 detailMetric("调仓估值", decimalOptional(action.tradeValuation), tint: AppPalette.ink)
                 detailMetric("当前估值", decimalOptional(action.currentValuation), tint: AppPalette.ink)
@@ -421,6 +431,10 @@ struct PlatformActionDetailCard: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
+                Label("来源与记录", systemImage: "doc.text.magnifyingglass")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppPalette.info)
+
                 if let comment = action.comment, !comment.isEmpty {
                     Text(comment)
                         .font(.system(size: 12))
@@ -445,6 +459,13 @@ struct PlatformActionDetailCard: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(AppPalette.cardStrong.opacity(0.58), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.cardRadius)
+                    .stroke(AppPalette.line.opacity(0.28), lineWidth: 1)
+            )
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .topLeading)

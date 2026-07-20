@@ -254,10 +254,13 @@ struct InteractiveSurfaceModifier: ViewModifier {
             .offset(y: -effectiveLift)
             .animation(accessibilityReduceMotion ? nil : AppPalette.motionStandard, value: isHovering)
             .animation(accessibilityReduceMotion ? nil : AppPalette.motionStandard, value: isSelected)
-            .onHover { hovering in
-                if allowsHoverFeedback {
-                    isHovering = hovering
+            .onChange(of: allowsHoverFeedback) { _, allowsHoverFeedback in
+                if !allowsHoverFeedback {
+                    isHovering = false
                 }
+            }
+            .onHover { hovering in
+                isHovering = allowsHoverFeedback && hovering
             }
     }
 }
@@ -528,7 +531,8 @@ extension View {
         selectedFill: Color? = nil,
         strokeOpacity: Double = 0.34,
         activeStrokeOpacity: Double = 0.58,
-        lift: CGFloat = 1
+        lift: CGFloat = 1,
+        allowsHoverFeedback: Bool = true
     ) -> some View {
         modifier(InteractiveSurfaceModifier(
             isSelected: isSelected,
@@ -539,7 +543,8 @@ extension View {
             selectedFill: selectedFill,
             strokeOpacity: strokeOpacity,
             activeStrokeOpacity: activeStrokeOpacity,
-            lift: lift
+            lift: lift,
+            allowsHoverFeedback: allowsHoverFeedback
         ))
     }
 

@@ -1,17 +1,25 @@
 import SwiftUI
 
+struct PlatformWorkspaceLayout {
+    static let compactThreshold: CGFloat = 900
+    static let actionListHeight: CGFloat = 430
+
+    static func listWidth(for availableWidth: CGFloat) -> CGFloat {
+        min(max(availableWidth * 0.30, 400), 520)
+    }
+}
+
 // MARK: - Platform
 
 struct PlatformSectionView: View {
     @EnvironmentObject private var model: AppModel
-    private let compactThreshold: CGFloat = 900
     private let detailAnchor = "platform-detail-panel"
 
     // MARK: - Body
 
     var body: some View {
         GeometryReader { proxy in
-            let isCompact = proxy.size.width < compactThreshold
+            let isCompact = proxy.size.width < PlatformWorkspaceLayout.compactThreshold
 
             ScrollViewReader { scrollProxy in
                 ScrollView(showsIndicators: false) {
@@ -41,7 +49,10 @@ struct PlatformSectionView: View {
                                 } else {
                                     HStack(alignment: .top, spacing: 10) {
                                         platformListPanel(isCompact: false, scrollProxy: scrollProxy)
-                                            .frame(width: min(max(proxy.size.width * 0.36, 340), 430), alignment: .top)
+                                            .frame(
+                                                width: PlatformWorkspaceLayout.listWidth(for: proxy.size.width),
+                                                alignment: .top
+                                            )
 
                                         platformDetailPanel
                                             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -225,25 +236,14 @@ struct PlatformSectionView: View {
                     AppPalette.borderOverlay(radius: AppPalette.cardRadius, opacity: AppPalette.borderSubtle)
                 )
             } else {
-                LazyVStack(spacing: 4) {
-                    ForEach(pageActions) { action in
-                        Button {
-                            model.selectPlatformAction(action.id)
-                            if isCompact {
-                                withAnimation(.easeInOut(duration: 0.25)) {
-                                    scrollProxy.scrollTo(detailAnchor, anchor: .top)
-                                }
-                            }
-                        } label: {
-                            PlatformActionRow(
-                                action: action,
-                                isSelected: model.selectedPlatformActionID == action.id,
-                                isCompact: true
-                            )
-                        }
-                        .buttonStyle(PressResponsiveButtonStyle())
-                        .id(action.id)
+                if isCompact {
+                    platformActionRows(pageActions, isCompact: true, scrollProxy: scrollProxy)
+                } else {
+                    ScrollView(.vertical, showsIndicators: true) {
+                        platformActionRows(pageActions, isCompact: false, scrollProxy: scrollProxy)
+                            .padding(.trailing, 4)
                     }
+                    .frame(height: PlatformWorkspaceLayout.actionListHeight)
                 }
             }
 
@@ -305,6 +305,33 @@ struct PlatformSectionView: View {
         .overlay(
             AppPalette.borderOverlay(radius: AppPalette.panelRadius, opacity: AppPalette.borderStrong)
         )
+    }
+
+    private func platformActionRows(
+        _ actions: [PlatformActionPayload],
+        isCompact: Bool,
+        scrollProxy: ScrollViewProxy
+    ) -> some View {
+        LazyVStack(spacing: 4) {
+            ForEach(actions) { action in
+                Button {
+                    model.selectPlatformAction(action.id)
+                    if isCompact {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            scrollProxy.scrollTo(detailAnchor, anchor: .top)
+                        }
+                    }
+                } label: {
+                    PlatformActionRow(
+                        action: action,
+                        isSelected: model.selectedPlatformActionID == action.id,
+                        isCompact: true
+                    )
+                }
+                .buttonStyle(PressResponsiveButtonStyle())
+                .id(action.id)
+            }
+        }
     }
 
     // MARK: - Detail Panel

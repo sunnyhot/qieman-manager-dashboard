@@ -2,6 +2,13 @@ import XCTest
 @testable import QiemanDashboard
 
 final class PlatformActionPresentationTests: XCTestCase {
+    func testWorkspaceListWidthStaysReadableAcrossWideWindows() {
+        XCTAssertEqual(PlatformWorkspaceLayout.listWidth(for: 900), 400)
+        XCTAssertEqual(PlatformWorkspaceLayout.listWidth(for: 1_600), 480)
+        XCTAssertEqual(PlatformWorkspaceLayout.listWidth(for: 2_400), 520)
+        XCTAssertEqual(PlatformWorkspaceLayout.actionListHeight, 430)
+    }
+
     func testCountsUseProvidedValuesWhenBothSidesAreKnown() {
         let actions = [
             action(id: "sell-1", side: "sell", fundName: "债券基金", fundCode: "000001", title: "卖出债券"),

@@ -44,6 +44,7 @@ struct PersonalAssetBrowser: View {
             return presentation
         }()
         let trendTagIndex = TrendAssetTagIndex(report: trendReport)
+        let allowsInteraction = selectedDetailRow == nil
 
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
@@ -105,12 +106,14 @@ struct PersonalAssetBrowser: View {
                     trendTagIndex: trendTagIndex,
                     comparisonSelection: comparisonSelection,
                     comparisonMaxCount: comparisonMaxCount,
+                    allowsHoverFeedback: allowsInteraction,
                     onToggleComparison: toggleComparison
                 ) { row in
                     selectedDetailRow = row
                 }
             }
         }
+        .allowsHitTesting(allowsInteraction)
         .sheet(item: $selectedDetailRow) { row in
             PersonalAssetDetailSheet(row: row, trendSummary: trendTagIndex.summary(for: row))
         }
@@ -384,6 +387,7 @@ struct PersonalAssetGroupedTable: View {
     let trendTagIndex: TrendAssetTagIndex
     let comparisonSelection: [String]
     let comparisonMaxCount: Int
+    let allowsHoverFeedback: Bool
     let onToggleComparison: (PersonalAssetAggregateRow) -> Void
     let onOpenDetail: (PersonalAssetAggregateRow) -> Void
 
@@ -392,6 +396,7 @@ struct PersonalAssetGroupedTable: View {
         trendTagIndex: TrendAssetTagIndex = TrendAssetTagIndex(report: nil),
         comparisonSelection: [String] = [],
         comparisonMaxCount: Int = 4,
+        allowsHoverFeedback: Bool = true,
         onToggleComparison: @escaping (PersonalAssetAggregateRow) -> Void = { _ in },
         onOpenDetail: @escaping (PersonalAssetAggregateRow) -> Void = { _ in }
     ) {
@@ -418,6 +423,7 @@ struct PersonalAssetGroupedTable: View {
         self.trendTagIndex = trendTagIndex
         self.comparisonSelection = comparisonSelection
         self.comparisonMaxCount = comparisonMaxCount
+        self.allowsHoverFeedback = allowsHoverFeedback
         self.onToggleComparison = onToggleComparison
         self.onOpenDetail = onOpenDetail
     }
@@ -478,6 +484,7 @@ struct PersonalAssetGroupedTable: View {
                 trendTagIndex: trendTagIndex,
                 comparisonSelection: comparisonSelection,
                 comparisonMaxCount: comparisonMaxCount,
+                allowsHoverFeedback: allowsHoverFeedback,
                 onToggleComparison: onToggleComparison,
                 onOpenDetail: onOpenDetail
             )
@@ -525,6 +532,7 @@ struct PersonalAssetTable: View {
     let trendTagIndex: TrendAssetTagIndex
     let comparisonSelection: [String]
     let comparisonMaxCount: Int
+    let allowsHoverFeedback: Bool
     let onToggleComparison: (PersonalAssetAggregateRow) -> Void
     let onOpenDetail: (PersonalAssetAggregateRow) -> Void
 
@@ -539,6 +547,7 @@ struct PersonalAssetTable: View {
         trendTagIndex: TrendAssetTagIndex = TrendAssetTagIndex(report: nil),
         comparisonSelection: [String] = [],
         comparisonMaxCount: Int = 4,
+        allowsHoverFeedback: Bool = true,
         onToggleComparison: @escaping (PersonalAssetAggregateRow) -> Void = { _ in },
         onOpenDetail: @escaping (PersonalAssetAggregateRow) -> Void = { _ in }
     ) {
@@ -547,6 +556,7 @@ struct PersonalAssetTable: View {
         self.trendTagIndex = trendTagIndex
         self.comparisonSelection = comparisonSelection
         self.comparisonMaxCount = comparisonMaxCount
+        self.allowsHoverFeedback = allowsHoverFeedback
         self.onToggleComparison = onToggleComparison
         self.onOpenDetail = onOpenDetail
     }
@@ -679,6 +689,7 @@ struct PersonalAssetTable: View {
                         trendSummary: trendTagIndex.summary(for: row),
                         isSelectedForComparison: isSelectedForComparison,
                         isComparisonToggleDisabled: !isSelectedForComparison && comparisonSelection.count >= comparisonMaxCount,
+                        allowsHoverFeedback: allowsHoverFeedback,
                         onToggleComparison: {
                             onToggleComparison(row)
                         },

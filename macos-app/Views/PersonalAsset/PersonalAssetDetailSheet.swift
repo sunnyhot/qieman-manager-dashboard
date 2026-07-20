@@ -19,6 +19,18 @@ private extension PersonalAssetDetailTone {
     }
 }
 
+private enum AssetDetailLayout {
+    static let sheetWidth: CGFloat = 760
+    static let minimumHeight: CGFloat = 620
+    static let idealHeight: CGFloat = 720
+    static let maximumHeight: CGFloat = 780
+    static let secondaryColumnWidth: CGFloat = 292
+    static let metricColumns = Array(
+        repeating: GridItem(.flexible(minimum: 112), spacing: 10),
+        count: 5
+    )
+}
+
 struct PersonalAssetDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -45,7 +57,7 @@ struct PersonalAssetDetailSheet: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 128), spacing: 10)], spacing: 10) {
+                    LazyVGrid(columns: AssetDetailLayout.metricColumns, spacing: 10) {
                         ForEach(summary.metrics) { metric in
                             detailMetricCard(metric)
                         }
@@ -54,30 +66,32 @@ struct PersonalAssetDetailSheet: View {
                     if let trendSummary {
                         trendAnalysisSection(trendSummary)
                     }
-                    attentionSection(summary.attentionItems)
-                    priceSection
-                    sourceSection
+                    supportingSections(summary.attentionItems)
                 }
                 .padding(16)
             }
         }
-        .frame(width: 560)
-        .frame(minHeight: 560)
+        .frame(width: AssetDetailLayout.sheetWidth)
+        .frame(
+            minHeight: AssetDetailLayout.minimumHeight,
+            idealHeight: AssetDetailLayout.idealHeight,
+            maxHeight: AssetDetailLayout.maximumHeight
+        )
         .background(AppPalette.surface)
     }
 
     private func header(_ summary: PersonalAssetDetailSummary) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: 14) {
                 Image(systemName: row.assetType == .stock ? "chart.line.uptrend.xyaxis" : "chart.pie")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(row.assetType == .stock ? AppPalette.info : AppPalette.brand)
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                     .background((row.assetType == .stock ? AppPalette.info : AppPalette.brand).opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(summary.title)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(AppPalette.ink)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -113,7 +127,7 @@ struct PersonalAssetDetailSheet: View {
                     .accessibilityLabel("关闭资产详情")
 
                     Text(summary.effectiveAmountText)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(AppPalette.ink)
                         .monospacedDigit()
                         .lineLimit(1)
@@ -124,7 +138,8 @@ struct PersonalAssetDetailSheet: View {
                 }
             }
         }
-        .padding(16)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
         .background(AppPalette.card, in: Rectangle())
         .overlay(alignment: .bottom) {
             Rectangle()
@@ -202,6 +217,27 @@ struct PersonalAssetDetailSheet: View {
                         .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
                     }
                 }
+            }
+        }
+    }
+
+    private func supportingSections(_ items: [PersonalAssetDetailAttentionItem]) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 14) {
+                VStack(spacing: 14) {
+                    attentionSection(items)
+                    sourceSection
+                }
+                .frame(width: AssetDetailLayout.secondaryColumnWidth, alignment: .top)
+
+                priceSection
+                    .frame(minWidth: 360, maxWidth: .infinity, alignment: .top)
+            }
+
+            VStack(spacing: 14) {
+                attentionSection(items)
+                priceSection
+                sourceSection
             }
         }
     }
