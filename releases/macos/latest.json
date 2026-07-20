@@ -1,26 +1,26 @@
 {
-    "version": "3.1.7",
-    "tag": "v3.1.7",
-    "asset": {
-        "name": "QiemanDashboard-3.1.7.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.7/QiemanDashboard-3.1.7.zip",
-        "size": 4224889,
-        "content_type": "application/zip",
-        "sha256": "ea430a2a0694f1e28c84888bef65ce43fe54d040e4aa1759d8926a06d34741d1"
-    },
-    "sha256": "ea430a2a0694f1e28c84888bef65ce43fe54d040e4aa1759d8926a06d34741d1",
-    "notes": "恢复持仓今日涨跌并修复窗口列表体验",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.1.7",
-    "published_at": "",
-    "tag_name": "v3.1.7",
-    "name": "QiemanDashboard v3.1.7",
-    "body": "恢复持仓今日涨跌并修复窗口列表体验",
-    "assets": [
-        {
-            "name": "QiemanDashboard-3.1.7.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.7/QiemanDashboard-3.1.7.zip",
-            "size": 4224889,
-            "content_type": "application/zip"
-        }
-    ]
+  "asset" : {
+    "content_type" : "application/zip",
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.2.0/QiemanDashboard-3.2.0.zip",
+    "name" : "QiemanDashboard-3.2.0.zip",
+    "sha256" : "85997909c4d56a3fc63402e5fee602c0d63197bcc0ed5be7e4327962e8cb1810",
+    "size" : 4434044
+  },
+  "assets" : [
+    {
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.2.0/QiemanDashboard-3.2.0.zip",
+      "content_type" : "application/zip",
+      "name" : "QiemanDashboard-3.2.0.zip",
+      "size" : 4434044
+    }
+  ],
+  "body" : "升级为纯 Swift 运行时并移除本地文件导入",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.2.0",
+  "name" : "QiemanDashboard v3.2.0",
+  "notes" : "升级为纯 Swift 运行时并移除本地文件导入",
+  "published_at" : "",
+  "sha256" : "85997909c4d56a3fc63402e5fee602c0d63197bcc0ed5be7e4327962e8cb1810",
+  "tag" : "v3.2.0",
+  "tag_name" : "v3.2.0",
+  "version" : "3.2.0"
 }
