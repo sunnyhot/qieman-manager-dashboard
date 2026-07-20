@@ -91,6 +91,12 @@ extension AppModel {
         revealMainWindowIfNeeded()
     }
 
+    /// 终止整个应用进程。提供给菜单栏弹框与设置面板的「退出应用」入口复用，
+    /// 避免在多个 View 里直接耦合 NSApplication。
+    func quitApplication() {
+        NSApplication.shared.terminate(nil)
+    }
+
     func refreshDataForSectionIfNeeded(_ section: AppSection) {
         let decision = RefreshDecision.sectionTriggered(
             section: section,

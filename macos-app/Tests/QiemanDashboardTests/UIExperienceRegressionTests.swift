@@ -90,6 +90,21 @@ final class UIExperienceRegressionTests: XCTestCase {
         XCTAssertTrue(login.contains("isConfirmingClearLogin = true"))
     }
 
+    func testQuitApplicationIsReachableFromMenuBarPopoverAndSettings() throws {
+        let appModel = try source(at: "Core/AppModel/Auth.swift")
+        let menuBar = try source(at: "Views/MenuBarPortfolioView.swift")
+        let settings = try source(at: "Views/SettingsAppPanel.swift")
+
+        XCTAssertTrue(appModel.contains("func quitApplication()"))
+        XCTAssertTrue(appModel.contains("NSApplication.shared.terminate(nil)"))
+
+        XCTAssertTrue(menuBar.contains("Button(\"退出应用\")"))
+        XCTAssertTrue(menuBar.contains("model.quitApplication()"))
+
+        XCTAssertTrue(settings.contains("Label(\"退出应用\", systemImage: \"power\")"))
+        XCTAssertTrue(settings.contains("model.quitApplication()"))
+    }
+
     private func source(at relativePath: String) throws -> String {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

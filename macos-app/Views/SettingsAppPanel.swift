@@ -60,6 +60,17 @@ extension SettingsSectionView {
                         }
                         .buttonStyle(.bordered)
                     }
+
+                    Spacer()
+
+                    Button {
+                        model.quitApplication()
+                    } label: {
+                        Label("退出应用", systemImage: "power")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(AppPalette.danger)
+                    .help("退出且慢主理人看板")
                 }
 
                 if !model.updateInstallProgress.isEmpty {

@@ -71,6 +71,13 @@ struct MenuBarPortfolioView: View {
                     model.openDataDirectory()
                 }
                 .buttonStyle(.link)
+
+                Button("退出应用") {
+                    model.quitApplication()
+                }
+                .buttonStyle(.link)
+                .foregroundStyle(AppPalette.muted)
+                .help("退出且慢主理人看板")
             }
         }
         .padding(14)
