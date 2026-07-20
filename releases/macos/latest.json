@@ -1,25 +1,25 @@
 {
-    "version": "3.1.6",
-    "tag": "v3.1.6",
+    "version": "3.1.7",
+    "tag": "v3.1.7",
     "asset": {
-        "name": "QiemanDashboard-3.1.6.zip",
-        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.6/QiemanDashboard-3.1.6.zip",
-        "size": 4200327,
+        "name": "QiemanDashboard-3.1.7.zip",
+        "download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.7/QiemanDashboard-3.1.7.zip",
+        "size": 4224889,
         "content_type": "application/zip",
-        "sha256": "2df22cca36568b74eff69e8c572a02e6499451aeb97de4728cefb3e4c46d2b3c"
+        "sha256": "ea430a2a0694f1e28c84888bef65ce43fe54d040e4aa1759d8926a06d34741d1"
     },
-    "sha256": "2df22cca36568b74eff69e8c572a02e6499451aeb97de4728cefb3e4c46d2b3c",
-    "notes": "全面优化应用交互与可访问性",
-    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.1.6",
+    "sha256": "ea430a2a0694f1e28c84888bef65ce43fe54d040e4aa1759d8926a06d34741d1",
+    "notes": "恢复持仓今日涨跌并修复窗口列表体验",
+    "html_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.1.7",
     "published_at": "",
-    "tag_name": "v3.1.6",
-    "name": "QiemanDashboard v3.1.6",
-    "body": "全面优化应用交互与可访问性",
+    "tag_name": "v3.1.7",
+    "name": "QiemanDashboard v3.1.7",
+    "body": "恢复持仓今日涨跌并修复窗口列表体验",
     "assets": [
         {
-            "name": "QiemanDashboard-3.1.6.zip",
-            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.6/QiemanDashboard-3.1.6.zip",
-            "size": 4200327,
+            "name": "QiemanDashboard-3.1.7.zip",
+            "browser_download_url": "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.1.7/QiemanDashboard-3.1.7.zip",
+            "size": 4224889,
             "content_type": "application/zip"
         }
     ]
