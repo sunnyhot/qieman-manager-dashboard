@@ -67,7 +67,7 @@ struct PortfolioSectionView: View {
 
                 SectionCard(title: "资产全貌总表", subtitle: "把「已持有 + 待确认 + 计划档案」聚合到同一行", icon: "tablecells", trailing: {
                     Spacer()
-                    Text(hasAnyPersonalData ? "已导入" : "未导入")
+                    Text(hasAnyPersonalData ? "已录入" : "未录入")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(hasAnyPersonalData ? AppPalette.positive : AppPalette.warning)
                     Button("打开设置") {
@@ -79,7 +79,7 @@ struct PortfolioSectionView: View {
                 }) {
                     if model.personalAssetRows.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("还没有可聚合的资产数据。先导入持仓、买入中或定投计划。")
+                            Text("还没有可聚合的资产数据。请先添加持仓、买入中或定投计划。")
                                 .font(.system(size: 12))
                                 .foregroundStyle(AppPalette.muted)
                             PersonalAssetAddButtons()
@@ -177,7 +177,7 @@ struct PortfolioSectionView: View {
                                     Text("当前还没有已暂停或已终止的计划明细。")
                                         .font(.system(size: 11, weight: .medium))
                                         .foregroundStyle(AppPalette.muted)
-                                    Text("后续把这些计划的截图、表格或手工文本导入到「定投计划」草稿区，并把最后一列状态写成「已暂停」或「已终止」，这里就会自动归档。")
+                                    Text("把计划状态改成「已暂停」或「已终止」后，这里会自动归档。")
                                         .font(.system(size: 10))
                                         .foregroundStyle(AppPalette.muted)
                                 }
@@ -279,7 +279,7 @@ struct PortfolioSectionView: View {
         MetricCard(
             title: "覆盖标的",
             value: model.personalAssetSummary.map { "\($0.fundCount)" } ?? "0",
-            subtitle: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "支持手动、图片和表格导入",
+            subtitle: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "支持手动录入与维护",
             icon: "square.grid.3x2",
             accent: AppPalette.accentWarm
         )

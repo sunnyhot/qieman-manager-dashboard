@@ -5,7 +5,7 @@ import Foundation
 extension AppModel {
     var nativeClient: QiemanNativeClient {
         if !_nativeClientInitialized {
-            _nativeClient = QiemanNativeClient(cookieFileURL: serverController.cookieFileURL)
+            _nativeClient = QiemanNativeClient(cookieFileURL: dataController.cookieFileURL)
             _nativeClientInitialized = true
         }
         return _nativeClient!

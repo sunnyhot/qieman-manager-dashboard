@@ -180,7 +180,7 @@ struct DashboardFreshnessSummary: Hashable {
         if let portfolioRefreshedAt = context.portfolioRefreshedAt {
             return portfolioRefreshedAt
         }
-        return context.hasPersonalPortfolio ? "等待下一次估值刷新" : "导入持仓后显示估值时间"
+        return context.hasPersonalPortfolio ? "等待下一次估值刷新" : "添加持仓后显示估值时间"
     }
 
     private static func trimmed(_ value: String?) -> String? {

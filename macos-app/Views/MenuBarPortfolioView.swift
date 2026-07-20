@@ -44,7 +44,7 @@ struct MenuBarPortfolioView: View {
                     } else {
                         MenuBarEmptyState(
                             icon: "briefcase",
-                            title: model.hasInvestmentPlans ? "已导入计划，但还没持仓估值" : "还没配置持仓",
+                            title: model.hasInvestmentPlans ? "已有计划，但还没持仓估值" : "还没配置持仓",
                             subtitle: "去主界面的“我的持仓”录入后，这里会直接显示每只标的的实时估值和总收益。"
                         )
                     }

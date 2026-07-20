@@ -41,8 +41,8 @@ struct PortfolioDiagnosticsSummary: Hashable {
                     PortfolioDiagnosticItem(
                         kind: .quoteCoverage,
                         title: "资产数据",
-                        detail: "导入持仓、买入中或计划后生成组合诊断",
-                        metric: "待导入",
+                        detail: "添加持仓、买入中或计划后生成组合诊断",
+                        metric: "待录入",
                         level: .info,
                         priority: 10
                     )

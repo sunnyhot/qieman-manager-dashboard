@@ -1,120 +1,66 @@
 ---
 name: qieman-alpha-signals
-description: Atomic Qieman toolkit for OpenClaw and Hermes with fine-grained commands across auth status, followed users, group resolution, following/group/space/public speech feeds, post comments, platform launch actions, holdings, timelines, valuation lookup, and JSON-based signal extraction. Use when agents need single-purpose Chinese investment data operations without branching logic.
+description: Native macOS Qieman toolkit with atomic Swift CLI commands for auth, followed users, group/space feeds, comments, platform actions, holdings, valuations, incremental updates, and signal extraction.
 ---
 
 # Qieman Alpha Signals
 
-Use this skill as a single-purpose command toolkit for the Qieman project at `/Users/xufan65/Documents/Codex/2026-04-17-new-chat`.
+Use the native Swift command-line tool in this repository. The toolkit is macOS-only and has no Python or local HTTP-server dependency.
 
-## Quick Start
+## Setup
 
-```bash
-export QIEMAN_PROJECT_DIR=/Users/xufan65/Documents/Codex/2026-04-17-new-chat
-```
-
-All scripts support `--json` for machine-readable output.
-
-## One-Click Full Project Runtime
+Resolve the repository, then use its launcher:
 
 ```bash
-# 默认即 start，拉起 dashboard + 前端页面
-python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/project_runtime.py --json
-
-# 启动并自动打开前端页面
-python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/project_runtime.py --open-browser --json
-
-# 查看状态 / 停止
-python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/project_runtime.py --action status --json
-python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/project_runtime.py --action stop --json
+export QIEMAN_PROJECT_DIR=/path/to/qieman-manager-dashboard
+QIEMAN="$QIEMAN_PROJECT_DIR/scripts/qieman"
 ```
 
-## Incremental Watch (New Trades + New Forum Posts)
+The launcher builds `dist/bin/qieman-cli` on first use. Every data command emits machine-readable JSON with stable snake_case keys.
+
+## Commands
 
 ```bash
-# 首次运行默认建基线，不提醒历史数据
-python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/updates_watch.py \
-  --prod-code LONG_WIN \
-  --manager-name "ETF拯救世界" \
-  --forum-mode auto \
-  --json
-
-# 后续轮询：仅返回新增调仓/新增发言
-python /Users/xufan65/.codex/skills/qieman-alpha-signals/scripts/updates_watch.py \
-  --prod-code LONG_WIN \
-  --manager-name "ETF拯救世界" \
-  --forum-mode auto \
-  --json
+$QIEMAN auth-status
+$QIEMAN following-users --pages 5 --page-size 50
+$QIEMAN my-groups
+$QIEMAN group-lookup --prod-code LONG_WIN --with-group-info
+$QIEMAN following-posts --user-name "ETF拯救世界" --pages 5
+$QIEMAN group-posts --prod-code LONG_WIN --pages 5
+$QIEMAN space-items --space-user-id 123456 --pages 5
+$QIEMAN public-items --prod-code LONG_WIN --query "长赢计划"
+$QIEMAN post-comments --post-id 73567 --sort-type hot
+$QIEMAN platform-actions --prod-code LONG_WIN --side all --limit 20
+$QIEMAN platform-holdings --prod-code LONG_WIN
+$QIEMAN platform-timeline --prod-code LONG_WIN
+$QIEMAN platform-monthly --prod-code LONG_WIN --months 12
+$QIEMAN valuation --fund-codes 021550,001052
+$QIEMAN updates-watch --prod-code LONG_WIN --manager-name "ETF拯救世界"
+$QIEMAN signal-extract --json-path /path/to/posts.json
 ```
 
-## Routing Guide
+To open the native application:
 
-1. Need one-click full project runtime (frontend page): run `project_runtime.py`.
-2. Need auth/user identity: run `auth_status.py`.
-3. Need people/group context: run `following_users_query.py`, `my_groups_query.py`, `group_lookup.py`.
-4. Need posts/speech source data: run one of `following_posts_query.py`, `group_posts_query.py`, `space_items_query.py`, `public_items_query.py`.
-5. Need comments for a post: run `post_comments_query.py`.
-6. Need platform adjustments/positions: run `manager_launch.py`, `platform_holdings_query.py`, `platform_timeline_query.py`, `platform_monthly_overview_query.py`.
-7. Need near-real-time incremental watch for new trades/posts: run `updates_watch.py`.
-8. Need valuation only: run `valuation_query.py`.
-9. Need signal inference from posts JSON: run `signal_extract.py --json-path ...`.
+```bash
+$QIEMAN app-open
+```
 
-## Atomic Commands
+## Routing
 
-### Full Project Runtime
+1. Identity and login: `auth-status`.
+2. People and group context: `following-users`, `my-groups`, `group-lookup`.
+3. Speech sources: `following-posts`, `group-posts`, `space-items`, `public-items`.
+4. Comments: `post-comments`.
+5. Platform data: `platform-actions`, `platform-holdings`, `platform-timeline`, `platform-monthly`.
+6. Current estimates: `valuation`.
+7. Incremental polling: `updates-watch`; first run builds a baseline unless `--emit-initial` is supplied.
+8. Local JSON inference: `signal-extract`.
 
-- `scripts/project_runtime.py`
-  - `--action start|status|stop|restart`
-  - one-click launch dashboard + frontend page URL
-  - supports background mode with PID/log management
+## Safety
 
-### Identity and Context
+- Prefer `--cookie-file` or `~/Library/Application Support/QiemanDashboard/qieman.cookie`.
+- Never print or summarize raw Cookie values.
+- Use absolute dates in user-facing summaries.
+- Treat valuation as an estimate unless the returned source indicates a confirmed official NAV.
 
-- `scripts/auth_status.py`
-- `scripts/following_users_query.py`
-- `scripts/my_groups_query.py`
-- `scripts/group_lookup.py`
-
-### Speech and Content
-
-- `scripts/following_posts_query.py`
-- `scripts/group_posts_query.py`
-- `scripts/space_items_query.py`
-- `scripts/public_items_query.py`
-- `scripts/post_comments_query.py`
-
-### Platform Trading and Valuation
-
-- `scripts/manager_launch.py`
-- `scripts/platform_holdings_query.py`
-- `scripts/platform_timeline_query.py`
-- `scripts/platform_monthly_overview_query.py`
-- `scripts/valuation_query.py`
-
-### Signal Processing
-
-- `scripts/signal_extract.py`
-
-### Incremental Monitoring
-
-- `scripts/updates_watch.py`
-  - watches both platform actions and forum speech
-  - stateful deduplication via local `output/watch-state-*.json`
-  - first run builds baseline (no historical alert), next runs return only new items
-  - `auto` forum mode: tries `following-posts`, falls back to `public` when auth is unavailable
-
-### Compatibility Wrapper
-
-- `scripts/manager_speech.py` remains for multi-mode compatibility, but prefer atomic scripts above for agent workflows.
-
-## Safety and Reliability
-
-1. Prefer `--cookie-file` or local `qieman.cookie`; avoid printing raw cookie values.
-2. Always return absolute dates (`YYYY-MM-DD` or full datetime) in summaries.
-3. Prefer `--json` in autonomous agent flows.
-4. Use atomic scripts instead of one broad script when the task can be expressed as one operation.
-
-## Resources
-
-- Capability matrix and examples: [references/capabilities.md](/Users/xufan65/.codex/skills/qieman-alpha-signals/references/capabilities.md)
-- Scripts directory: [/Users/xufan65/.codex/skills/qieman-alpha-signals/scripts](/Users/xufan65/.codex/skills/qieman-alpha-signals/scripts)
+See [references/capabilities.md](references/capabilities.md) for the command contract.

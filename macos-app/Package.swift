@@ -8,7 +8,7 @@ let package = Package(
         .executableTarget(
             name: "QiemanDashboard",
             path: ".",
-            exclude: ["Package.swift", "Tests"]
+            exclude: ["Package.swift", "Tests", "CLI"]
         ),
         .testTarget(
             name: "QiemanDashboardTests",

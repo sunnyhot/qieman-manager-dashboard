@@ -74,7 +74,7 @@ extension AppModel {
     }
 
     var hasLiveService: Bool {
-        baseURL != nil
+        true
     }
 
     var cookieAvailable: Bool {
@@ -93,7 +93,7 @@ extension AppModel {
     }
 
     var cookieFileURL: URL? {
-        serverController.cookieFileURL
+        dataController.cookieFileURL
     }
 
     var currentSnapshotSupportsComments: Bool {
@@ -150,7 +150,7 @@ extension AppModel {
             if hasArchivedPortfolio {
                 return "暂无活跃持仓，归档记录已保留"
             }
-            return "导入持仓后自动刷新估值"
+            return "添加持仓后自动刷新估值"
         }
         if isRefreshingPortfolio {
             return "持仓估值刷新中…"

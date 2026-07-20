@@ -123,8 +123,8 @@ struct ImportPreviewSession: Identifiable, Codable, Hashable {
                     ImportPreviewRow(
                         id: "\(target.id)-blocked-empty",
                         kind: .blocked,
-                        title: "没有可导入记录",
-                        detail: "请先导入或粘贴有效草稿。",
+                        title: "没有可录入记录",
+                        detail: "请先填写有效草稿。",
                         beforeSummary: nil,
                         afterSummary: nil
                     )
@@ -147,7 +147,7 @@ struct ImportPreviewSession: Identifiable, Codable, Hashable {
                         id: "\(target.id)-duplicate-\(itemKey)-\(rows.count)",
                         kind: .duplicate,
                         title: itemTitle,
-                        detail: "导入草稿中存在重复记录，确认后按现有合并规则处理。",
+                        detail: "录入草稿中存在重复记录，确认后按现有合并规则处理。",
                         beforeSummary: nil,
                         afterSummary: after
                     )

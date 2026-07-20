@@ -21,15 +21,8 @@ jobs:
         working-directory: macos-app
         run: swift test
 
-  python:
-    name: Python syntax check
-    runs-on: macos-15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Build native Qieman CLI
+        run: bash scripts/build_qieman_cli.sh
 
-      - name: Compile Python sources
-        run: python3 -m compileall -q dashboard_server.py dashboard qieman_scraper.py qieman_community_scraper.py scripts
-
-      - name: Run Python contract tests
-        run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Smoke test native Qieman CLI
+        run: scripts/qieman version

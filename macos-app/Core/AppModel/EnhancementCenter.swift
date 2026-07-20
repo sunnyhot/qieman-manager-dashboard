@@ -170,7 +170,7 @@ extension AppModel {
 
     func confirmActiveImportPreview() {
         guard let session = activeImportPreviewSession, session.canConfirm else {
-            errorMessage = "当前导入预览存在阻塞项，不能确认写入。"
+            errorMessage = "当前录入预览存在阻塞项，不能确认写入。"
             return
         }
 
@@ -201,7 +201,7 @@ extension AppModel {
 
     func undoLatestImport() {
         guard let snapshot = importUndoSnapshot else {
-            errorMessage = "没有可撤销的导入。"
+            errorMessage = "没有可撤销的录入。"
             return
         }
         guard snapshot.isValid(
@@ -210,7 +210,7 @@ extension AppModel {
             currentInvestmentPlans: investmentPlans
         ) else {
             invalidateLatestImportUndo()
-            errorMessage = "本地数据已变化，无法安全撤销上次导入。"
+            errorMessage = "本地数据已变化，无法安全撤销上次录入。"
             return
         }
 
@@ -243,7 +243,7 @@ extension AppModel {
             clearCachedComputedProperties()
             rebuildAssetRows()
             invalidateLatestImportUndo()
-            noticeMessage = "已撤销上次导入。"
+            noticeMessage = "已撤销上次录入。"
         } catch {
             errorMessage = error.localizedDescription
         }

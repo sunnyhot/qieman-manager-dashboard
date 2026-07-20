@@ -47,35 +47,7 @@ jobs:
           fi
 
           export RAW_COMMITS
-          NOTES=$(python3 - <<'PY'
-          import os
-          import re
-
-          localized = {
-              "include release notes in update manifest": "升级弹窗现在会显示本次更新内容。",
-              "format update release notes for display": "优化升级弹窗展示，只显示本次版本更新内容。",
-              "expand titlebar zoom hit area": "扩大顶部标题栏双击放大的响应区域。",
-          }
-          hidden = {
-              "align checked-in update notes",
-              "更新 agent 项目指南",
-          }
-
-          items = []
-          for raw in os.environ.get("RAW_COMMITS", "").splitlines():
-              text = raw.strip()
-              if not text:
-                  continue
-              text = re.sub(r"^(feat|fix|chore|docs|style|refactor|perf|test)(\([^)]+\))?:\s*", "", text, flags=re.I).strip()
-              if text.lower() in hidden:
-                  continue
-              text = localized.get(text.lower(), text)
-              if text and text not in items:
-                  items.append(text)
-
-          print("\n".join(items))
-          PY
-          )
+          NOTES=$(swift scripts/release_notes.swift)
 
           if [ -z "$NOTES" ]; then
             NOTES="本次发布仅更新构建资产。"
@@ -118,40 +90,7 @@ jobs:
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${TAG}"
 
           export TAG VERSION ZIP_NAME ZIP_SIZE SHA256 DOWNLOAD_URL RELEASE_URL BODY
-          python3 - <<'PY'
-          import json, os
-          from datetime import datetime, timezone
-          payload = {
-              "version": os.environ["VERSION"],
-              "tag": os.environ["TAG"],
-              "asset": {
-                  "name": os.environ["ZIP_NAME"],
-                  "download_url": os.environ["DOWNLOAD_URL"],
-                  "size": int(os.environ["ZIP_SIZE"]),
-                  "content_type": "application/zip",
-                  "sha256": os.environ["SHA256"],
-              },
-              "sha256": os.environ["SHA256"],
-              "notes": os.environ["BODY"],
-              "html_url": os.environ["RELEASE_URL"],
-              "published_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-              # Backward-compatible fields for existing AppUpdateChecker
-              "tag_name": os.environ["TAG"],
-              "name": f"QiemanDashboard {os.environ['TAG']}",
-              "body": os.environ["BODY"],
-              "assets": [
-                  {
-                      "name": os.environ["ZIP_NAME"],
-                      "browser_download_url": os.environ["DOWNLOAD_URL"],
-                      "size": int(os.environ["ZIP_SIZE"]),
-                      "content_type": "application/zip",
-                  }
-              ],
-          }
-          with open("/tmp/latest.json", "w", encoding="utf-8") as f:
-              json.dump(payload, f, ensure_ascii=False, indent=4)
-              f.write("\n")
-          PY
+          swift scripts/release_manifest.swift /tmp/latest.json --published-now
 
           echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
 
@@ -183,41 +122,7 @@ jobs:
           git switch -C main origin/main
 
           export TAG VERSION ZIP_NAME ZIP_SIZE SHA256 DOWNLOAD_URL RELEASE_URL BODY
-          python3 - <<'PY'
-          import json, os
-
-          payload = {
-              "version": os.environ["VERSION"],
-              "tag": os.environ["TAG"],
-              "asset": {
-                  "name": os.environ["ZIP_NAME"],
-                  "download_url": os.environ["DOWNLOAD_URL"],
-                  "size": int(os.environ["ZIP_SIZE"]),
-                  "content_type": "application/zip",
-                  "sha256": os.environ["SHA256"],
-              },
-              "sha256": os.environ["SHA256"],
-              "notes": os.environ["BODY"],
-              "html_url": os.environ["RELEASE_URL"],
-              "published_at": "",
-              # Backward-compatible fields
-              "tag_name": os.environ["TAG"],
-              "name": f"QiemanDashboard {os.environ['TAG']}",
-              "body": os.environ["BODY"],
-              "assets": [
-                  {
-                      "name": os.environ["ZIP_NAME"],
-                      "browser_download_url": os.environ["DOWNLOAD_URL"],
-                      "size": int(os.environ["ZIP_SIZE"]),
-                      "content_type": "application/zip",
-                  }
-              ],
-          }
-
-          with open("releases/macos/latest.json", "w", encoding="utf-8") as file:
-              json.dump(payload, file, ensure_ascii=False, indent=4)
-              file.write("\n")
-          PY
+          swift scripts/release_manifest.swift releases/macos/latest.json
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

@@ -52,14 +52,14 @@ extension AppModel {
     }
 
     func openDataDirectory() {
-        serverController.openDataDirectory()
+        dataController.openDataDirectory()
     }
 
     func presentLoginSheet() {
         do {
-            let supportDirectory = try serverController.prepareEnvironment()
+            let supportDirectory = try dataController.prepareEnvironment()
             dataDirectoryURL = supportDirectory
-            logFileURL = serverController.logFileURL
+            logFileURL = dataController.logFileURL
             rebuildNativeStatus()
         } catch {
             errorMessage = error.localizedDescription
@@ -167,14 +167,14 @@ extension AppModel {
 
         status = StatusPayload(
             cookieExists: nativeCookieExists,
-            cookieFile: serverController.cookieFileURL?.path ?? "",
+            cookieFile: dataController.cookieFileURL?.path ?? "",
             outputDir: outputDirectoryURL?.path ?? "",
             defaultForm: defaultForm
         )
     }
 
     var nativeCookieExists: Bool {
-        guard let cookieURL = serverController.cookieFileURL else { return false }
+        guard let cookieURL = dataController.cookieFileURL else { return false }
         return FileManager.default.fileExists(atPath: cookieURL.path)
     }
 

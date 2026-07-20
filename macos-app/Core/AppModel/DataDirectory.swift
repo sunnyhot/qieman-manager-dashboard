@@ -20,7 +20,7 @@ extension AppModel {
 
             dataDirectoryURL = newURL
             logFileURL = newURL.appendingPathComponent("dashboard.log", isDirectory: false)
-            serverController.updateSupportDirectory(newURL)
+            dataController.updateSupportDirectory(newURL)
 
             loadSavedPortfolio()
             loadPendingTrades()
@@ -28,7 +28,7 @@ extension AppModel {
             loadManagerWatchSettings()
             loadEnhancementState()
 
-            noticeMessage = "数据存储目录已更新，重启应用后本地服务将使用新目录。"
+            noticeMessage = "数据存储目录已更新。"
         } catch {
             errorMessage = "切换存储目录失败：\(error.localizedDescription)"
         }
@@ -55,7 +55,7 @@ extension AppModel {
 
         dataDirectoryURL = defaultURL
         logFileURL = defaultURL.appendingPathComponent("dashboard.log", isDirectory: false)
-        serverController.updateSupportDirectory(defaultURL)
+        dataController.updateSupportDirectory(defaultURL)
 
         loadSavedPortfolio()
         loadPendingTrades()
@@ -63,7 +63,7 @@ extension AppModel {
         loadManagerWatchSettings()
         loadEnhancementState()
 
-        noticeMessage = "数据存储目录已恢复为默认位置，重启应用后本地服务将使用新目录。"
+        noticeMessage = "数据存储目录已恢复为默认位置。"
     }
 
     func openDataDirectoryInFinder() {

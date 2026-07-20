@@ -114,7 +114,7 @@ struct PersonalInvestmentPlanManagementSheet: View {
     private var deleteConfirmationMessage: String {
         guard let deletingPlan else { return "" }
         let itemText = deletingPlan.fundCode.map { "\(deletingPlan.fundName)（\($0)）" } ?? deletingPlan.fundName
-        return "会从本地保存的数据中删除 \(itemText) 的这条定投计划。这个操作不会影响支付宝或且慢账户。"
+        return "会从本地保存的数据中删除 \(itemText) 的这条定投计划。这个操作不会影响任何外部账户。"
     }
 
     private func comparePlans(_ lhs: PersonalInvestmentPlan, _ rhs: PersonalInvestmentPlan) -> Bool {

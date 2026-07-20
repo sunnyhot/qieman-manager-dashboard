@@ -153,7 +153,7 @@ final class EnhancementState: ObservableObject {
 enum EnhancementCenterTab: String, CaseIterable, Identifiable {
     case review = "复盘"
     case watch = "巡检"
-    case importPreview = "导入"
+    case importPreview = "录入"
     case insight = "洞察"
     case trend = "趋势"
 

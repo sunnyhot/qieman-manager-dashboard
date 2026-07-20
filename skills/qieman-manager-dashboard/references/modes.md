@@ -1,88 +1,39 @@
-# Qieman Skill Modes
+# Native application and CLI routing
 
-## Project Path
+Set `QIEMAN_PROJECT_DIR` to the repository and invoke `$QIEMAN_PROJECT_DIR/scripts/qieman`.
 
-Default project path:
-
-`/Users/xufan65/Documents/Codex/2026-04-17-new-chat`
-
-Override with:
-
-`QIEMAN_PROJECT_DIR=/custom/path`
-
-## Launcher Commands
-
-### Dashboard
+## Native UI
 
 ```bash
-python /Users/xufan65/.codex/skills/qieman-manager-dashboard/scripts/qieman_tool.py dashboard --open
+scripts/qieman app-open
 ```
 
-Use when the user wants:
+Use the SwiftUI application for interactive portfolio, forum, platform, settings and workbench tasks.
 
-- the local web UI
-- platform trades and holdings
-- forum details and comments
-
-### Public Content Search
+## Community
 
 ```bash
-python /Users/xufan65/.codex/skills/qieman-manager-dashboard/scripts/qieman_tool.py public -- --query "长赢计划" --author "ETF拯救世界" --markdown
+scripts/qieman following-posts --user-name "ETF拯救世界"
+scripts/qieman group-posts --prod-code LONG_WIN
+scripts/qieman following-users
+scripts/qieman my-groups
+scripts/qieman space-items --space-user-id 123456
 ```
 
-Use when the user wants:
-
-- public content pages
-- keyword search across Qieman content pages
-- author-filtered public posts
-
-### Community Flow
+## Platform and valuation
 
 ```bash
-python /Users/xufan65/.codex/skills/qieman-manager-dashboard/scripts/qieman_tool.py community -- --prod-code LONG_WIN --pages 3 --markdown
-python /Users/xufan65/.codex/skills/qieman-manager-dashboard/scripts/qieman_tool.py community -- --mode following-posts --user-name "ETF拯救世界" --pages 5 --markdown
+scripts/qieman platform-actions --prod-code LONG_WIN
+scripts/qieman platform-holdings --prod-code LONG_WIN
+scripts/qieman platform-timeline --prod-code LONG_WIN
+scripts/qieman platform-monthly --prod-code LONG_WIN --months 12
+scripts/qieman valuation --fund-codes 021550,001052
 ```
 
-Use when the user wants:
+## Authentication
 
-- group-manager
-- following-posts
-- following-users
-- my-groups
-- space-items
-- keyword/date filtered community posts
+The default Cookie path is `~/Library/Application Support/QiemanDashboard/qieman.cookie`. Override it with `--cookie-file`. Never expose the Cookie content.
 
-### Auth Check
+## Removed modes
 
-```bash
-python /Users/xufan65/.codex/skills/qieman-manager-dashboard/scripts/qieman_tool.py auth-check
-```
-
-Default cookie path:
-
-`/Users/xufan65/Documents/Codex/2026-04-17-new-chat/qieman.cookie`
-
-## Dashboard Notes
-
-The dashboard currently exposes:
-
-- `/`
-  Home summary
-- `/platform`
-  Platform trades, holdings, cost and valuation
-- `/forum`
-  Forum posts and comments
-- `/timeline`
-  Asset-level trade timeline
-
-Dashboard behavior updates:
-
-- Home keeps three focus sections: compact real-time query, platform trades, forum speech.
-- Platform trades now include a monthly buy/sell frequency overview for quick cadence checks.
-- `验证登录态` uses async auth check and transient feedback (auto-hide + manual close), so auth messages do not stay pinned.
-
-## Output Notes
-
-- Local runtime data is written under `output/`.
-- Do not expose raw `qieman.cookie`.
-- When discussing valuation, mention that current estimate may be intraday estimate or latest NAV fallback.
+There is no localhost dashboard, HTTP route, Python crawler, OCR, image import, or spreadsheet import.

@@ -696,7 +696,7 @@ extension SettingsSectionView {
                 }
             } else {
                 HStack(spacing: 10) {
-                    Text(model.hasPersonalPortfolio ? "还没有持仓估值结果，刷新后可选择单标的。" : "导入持仓后可选择单标的。")
+                    Text(model.hasPersonalPortfolio ? "还没有持仓估值结果，刷新后可选择单标的。" : "添加持仓后可选择单标的。")
                         .font(.system(size: 11))
                         .foregroundStyle(AppPalette.muted)
                     Spacer()

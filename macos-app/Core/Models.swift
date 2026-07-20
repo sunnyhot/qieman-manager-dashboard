@@ -69,20 +69,6 @@ enum PersonalDataImportTarget: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-enum PersonalDataImportSource {
-    case image
-    case table
-
-    var prepareSourceValue: String {
-        switch self {
-        case .image:
-            return "ocr"
-        case .table:
-            return "table"
-        }
-    }
-}
-
 enum PersonalDataSaveMode: String, CaseIterable, Identifiable, Codable {
     case merge = "合并更新"
     case replace = "替换该类"
@@ -146,19 +132,6 @@ struct PersonalAssetCodeResolution: Hashable {
         self.displayName = displayName
         self.stockMarket = stockMarket
         self.fundMarket = fundMarket
-    }
-}
-
-extension PersonalDataImportTarget {
-    var prepareTargetValue: String {
-        switch self {
-        case .holdings:
-            return "holdings"
-        case .pendingTrades:
-            return "pending_trades"
-        case .investmentPlans:
-            return "investment_plans"
-        }
     }
 }
 

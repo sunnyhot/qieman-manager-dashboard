@@ -18,8 +18,8 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
                     ImportPreviewRow(
                         id: "blocked",
                         kind: .blocked,
-                        title: "没有可导入记录",
-                        detail: "请先导入或粘贴有效草稿。",
+                        title: "没有可录入记录",
+                        detail: "请先粘贴有效草稿。",
                         beforeSummary: nil,
                         afterSummary: nil
                     )

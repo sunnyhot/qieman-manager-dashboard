@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="${APP_NAME:-QiemanDashboard}"
 APP_DISPLAY_NAME="${APP_DISPLAY_NAME:-且慢主理人}"
-APP_VERSION="${APP_VERSION:-3.0.2}"
+APP_VERSION="${APP_VERSION:-3.2.0}"
 APP_BUILD="${APP_BUILD:-$(date +%Y%m%d%H%M)}"
 BUNDLE_ID="${BUNDLE_ID:-com.sunnyhot.qieman.manager.dashboard}"
 MIN_MACOS_VERSION="${MIN_MACOS_VERSION:-14.0}"
@@ -25,7 +25,7 @@ SWIFT_SOURCES=()
 
 while IFS= read -r file; do
   SWIFT_SOURCES+=("$file")
-done < <(find "$ROOT_DIR/macos-app" -name '*.swift' ! -name 'Package.swift' ! -path "$ROOT_DIR/macos-app/Tests/*" ! -path "$ROOT_DIR/macos-app/.build/*" | sort)
+done < <(find "$ROOT_DIR/macos-app" -name '*.swift' ! -name 'Package.swift' ! -path "$ROOT_DIR/macos-app/Tests/*" ! -path "$ROOT_DIR/macos-app/CLI/*" ! -path "$ROOT_DIR/macos-app/.build/*" | sort)
 
 echo "[1/8] 清理旧产物"
 rm -rf "$APP_DIR"
@@ -47,9 +47,12 @@ swiftc \
   -framework Charts \
   -framework WebKit \
   -framework AppKit \
-  -framework Vision \
-  -framework UniformTypeIdentifiers \
   -o "$MACOS_DIR/$APP_NAME"
+
+QIEMAN_CLI_OUTPUT="$MACOS_DIR/qieman-cli" \
+  TARGET_ARCH="$TARGET_ARCH" \
+  MIN_MACOS_VERSION="$MIN_MACOS_VERSION" \
+  bash "$ROOT_DIR/scripts/build_qieman_cli.sh" >/dev/null
 
 echo "[4/8] 写入 Bundle 元数据"
 cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
@@ -97,13 +100,8 @@ PLIST
 perl -0pi -e 's#__APP_NAME__#'"$APP_NAME"'#g; s#__APP_DISPLAY_NAME__#'"$APP_DISPLAY_NAME"'#g; s#__APP_VERSION__#'"$APP_VERSION"'#g; s#__APP_BUILD__#'"$APP_BUILD"'#g; s#__BUNDLE_ID__#'"$BUNDLE_ID"'#g; s#__MIN_MACOS_VERSION__#'"$MIN_MACOS_VERSION"'#g; s#__UPDATE_REPOSITORY__#'"$UPDATE_REPOSITORY"'#g; s#__UPDATE_FEED_URL__#'"$UPDATE_FEED_URL"'#g' "$CONTENTS_DIR/Info.plist"
 printf 'APPL????' > "$CONTENTS_DIR/PkgInfo"
 
-echo "[5/8] 拷贝项目运行文件"
-cp "$ROOT_DIR/dashboard_server.py" "$PAYLOAD_DIR/"
-cp -R "$ROOT_DIR/dashboard" "$PAYLOAD_DIR/"
-cp "$ROOT_DIR/qieman_community_scraper.py" "$PAYLOAD_DIR/"
-cp "$ROOT_DIR/qieman_scraper.py" "$PAYLOAD_DIR/"
+echo "[5/8] 拷贝 Agent 技能资源"
 cp "$ROOT_DIR/README.md" "$PAYLOAD_DIR/"
-cp -R "$ROOT_DIR/scripts" "$PAYLOAD_DIR/"
 cp -R "$ROOT_DIR/skills" "$PAYLOAD_DIR/"
 
 TREND_SKILL_DIR="$PAYLOAD_DIR/skills/investment-trend-analysis"
@@ -122,12 +120,12 @@ for required_file in "${REQUIRED_TREND_SKILL_FILES[@]}"; do
 done
 
 cat > "$PAYLOAD_DIR/APP_BUNDLE_README.txt" <<'TXT'
-This app bundle contains a copy of the Python project files.
+This app bundle contains the native Agent skill resources.
 
 Runtime data location:
 ~/Library/Application Support/QiemanDashboard
 
-Put your login cookie here if needed:
+Put your Qieman login cookie here if needed:
 ~/Library/Application Support/QiemanDashboard/qieman.cookie
 TXT
 

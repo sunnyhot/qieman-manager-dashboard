@@ -1,19 +1,20 @@
 # 且慢主理人看板 / Qieman Manager Dashboard
 
-> 本地 macOS 原生 App：主理人论坛与调仓追踪、个人持仓管理、菜单栏实时估值、系统通知推送。
+> 纯原生 macOS App：主理人论坛与调仓追踪、个人持仓管理、菜单栏实时估值、系统通知推送。
 
 ## 功能
 
 - **主理人内容** — 抓取论坛发言、平台调仓，支持关键词/作者过滤、评论查看、月度交易总览
-- **个人持仓** — 手动录入 / 图片 OCR / 表格导入，支持持仓、待确认买入、定投计划管理
+- **个人持仓** — App 内手动录入，支持持仓、待确认买入、定投计划管理
 - **菜单栏估值** — 常驻菜单栏显示总资产、今日涨跌、每只持仓实时估值，支持排序
 - **通知巡检** — 定时监控主理人调仓与发言，系统通知推送，点击跳转详情
 - **自动更新** — 启动后检查 GitHub Release，一键下载安装新版本
+- **原生命令行** — Swift CLI 提供登录、动态、评论、调仓、持仓、估值和增量巡检
 
 ## 构建
 
 ```bash
-APP_VERSION=3.0.2 bash scripts/build_macos_app.sh
+APP_VERSION=3.2.0 bash scripts/build_macos_app.sh
 ```
 
 产物：`dist/macos-app/QiemanDashboard.app`，分发包输出到 `/tmp/`。
@@ -23,6 +24,17 @@ APP_VERSION=3.0.2 bash scripts/build_macos_app.sh
 ```bash
 open dist/macos-app/QiemanDashboard.app
 ```
+
+## 原生 CLI
+
+```bash
+# 首次调用自动编译 Swift CLI
+scripts/qieman version
+scripts/qieman following-posts --user-name "ETF拯救世界"
+scripts/qieman platform-holdings --prod-code LONG_WIN
+```
+
+项目仅支持 macOS，不依赖 Python 或本地 HTTP 服务。图片、OCR、CSV、TSV、JSON、XLSX 和支付宝专用导入已移除；个人资产继续支持 App 内手工维护。
 
 ## 发布流程
 
@@ -67,7 +79,7 @@ git ls-remote origin main
 ```bash
 git pull --rebase origin main
 git show --no-patch --format='%h %an <%ae> | %s' HEAD
-git show HEAD:releases/macos/latest.json | python3 -m json.tool
+plutil -p releases/macos/latest.json
 ```
 
 再检查线上更新清单和 Release asset：
@@ -92,17 +104,14 @@ unzip -t "/tmp/QiemanDashboard-$VERSION.zip"
 
 ```
 ├── macos-app/           # SwiftUI 原生 App 源码
-├── scripts/             # 构建、图标、辅助脚本
-├── skills/              # Agent 技能层（增量巡检、估值查询等）
-├── releases/macos/      # latest.json 更新清单
-├── dashboard/           # Python 本地看板服务包（路由、渲染、抓取协调、平台数据）
-├── dashboard_server.py  # Python 本地看板入口
-├── qieman_scraper.py    # 公开内容抓取
-└── qieman_community_scraper.py  # 社区动态抓取
+│   ├── Core/            # 原生 API、状态、存储和 Swift CLI 共享逻辑
+│   └── CLI/             # qieman-cli 入口
+├── scripts/             # App/CLI 构建与 qieman 启动器
+├── skills/              # Agent 技能层（调用原生 Swift CLI）
+└── releases/macos/      # latest.json 更新清单
 ```
 
 ## 环境
 
 - macOS 14+，Xcode Command Line Tools（`swiftc`、`iconutil`、`codesign`）
-- Python 3.x，零第三方依赖
 - 当前为 ad-hoc 签名，适合自用；对外分发需 Apple Developer 证书 + 公证

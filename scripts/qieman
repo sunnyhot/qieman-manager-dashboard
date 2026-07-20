@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CLI_PATH="${QIEMAN_CLI:-$ROOT_DIR/dist/bin/qieman-cli}"
+
+if [ ! -x "$CLI_PATH" ]; then
+  QIEMAN_CLI_OUTPUT="$CLI_PATH" bash "$ROOT_DIR/scripts/build_qieman_cli.sh" >/dev/null
+fi
+
+exec "$CLI_PATH" "$@"

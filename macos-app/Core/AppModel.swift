@@ -77,10 +77,8 @@ final class AppModel: ObservableObject {
     @Published var isRefreshing = false
     var lastLatestRefreshAt: Date?
     var lastPortfolioRefreshAt: Date?
-    @Published var isProcessingImport = false
     @Published var noticeMessage = ""
     @Published var errorMessage = ""
-    @Published var baseURL: URL?
     @Published var logFileURL: URL?
     @Published var dataDirectoryURL: URL?
     @Published var personalAssetRows: [PersonalAssetAggregateRow] = []
@@ -94,13 +92,12 @@ final class AppModel: ObservableObject {
     weak var appDelegate: QiemanApplicationDelegate?
 
     // Services
-    let serverController = LocalServerController()
+    let dataController = ApplicationDataController()
     let platformClient = QiemanPlatformNativeClient()
     let portfolioStore = UserPortfolioStore()
     let pendingTradesStore = PendingTradesStore()
     let investmentPlansStore = InvestmentPlansStore()
     let managerWatchStore = ManagerWatchStore()
-    let importRecognizer = PersonalImportRecognizer()
     let notificationManager = LocalNotificationManager()
     let personalAssetAutomation = PersonalAssetAutomation()
     var trendAIClient: any TrendAIClientProtocol = TrendAIClient()
@@ -518,8 +515,8 @@ final class AppModel: ObservableObject {
         defer { isBootstrapping = false }
 
         do {
-            let supportDirectory = try serverController.prepareEnvironment()
-            logFileURL = serverController.logFileURL
+            let supportDirectory = try dataController.prepareEnvironment()
+            logFileURL = dataController.logFileURL
             dataDirectoryURL = supportDirectory
             loadSavedPortfolio()
             loadPendingTrades()

@@ -160,7 +160,7 @@ struct OverviewSectionView: View {
                 value: model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? "—",
                 detail: model.personalAssetSummary.map {
                     "已持有 \(currencyText($0.totalMarketValue)) + 待确认 \(currencyText($0.totalPendingCashAmount)) + 下次计划 \(currencyText($0.totalEstimatedNextPlanAmount))"
-                } ?? "个人资产还未导入完整",
+                } ?? "个人资产还未录入完整",
                 icon: "wallet.bifold",
                 tint: AppPalette.brand
             ),
@@ -184,7 +184,7 @@ struct OverviewSectionView: View {
                 id: "coverage",
                 title: "覆盖标的",
                 value: model.personalAssetSummary.map { "\($0.fundCount)" } ?? "0",
-                detail: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "先导入你的个人资产",
+                detail: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "先添加你的个人资产",
                 icon: "square.grid.3x2",
                 tint: AppPalette.accentWarm
             )

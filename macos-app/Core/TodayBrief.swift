@@ -129,8 +129,8 @@ enum TodayBriefBuilder {
             items.append(
                 TodayBriefItem(
                     kind: .importPortfolio,
-                    title: "导入个人持仓",
-                    detail: "导入后生成收益、交易和计划简报",
+                    title: "添加个人持仓",
+                    detail: "录入后生成收益、交易和计划简报",
                     metric: "开始",
                     iconName: "square.and.arrow.down",
                     tone: .brand,

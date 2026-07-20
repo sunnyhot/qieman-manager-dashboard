@@ -1,0 +1,95 @@
+import AppKit
+import Foundation
+
+enum ApplicationDataError: LocalizedError {
+    case unavailable(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .unavailable(let message):
+            return "应用数据目录不可用：\(message)"
+        }
+    }
+}
+
+/// Owns the app's local data directory. Network access is handled directly by
+/// the native clients; no local HTTP service or scripting runtime is involved.
+final class ApplicationDataController {
+    private(set) var supportDirectory: URL?
+
+    var dataDirectoryURL: URL? {
+        supportDirectory
+    }
+
+    var logFileURL: URL? {
+        supportDirectory?.appendingPathComponent("dashboard.log", isDirectory: false)
+    }
+
+    var cookieFileURL: URL? {
+        supportDirectory?.appendingPathComponent("qieman.cookie", isDirectory: false)
+    }
+
+    @discardableResult
+    func prepareEnvironment() throws -> URL {
+        let directory = try prepareSupportDirectory()
+        supportDirectory = directory
+        prepareLogFileIfNeeded(at: directory)
+        return directory
+    }
+
+    func openDataDirectory() {
+        guard let supportDirectory else { return }
+        NSWorkspace.shared.open(supportDirectory)
+    }
+
+    func updateSupportDirectory(_ url: URL) {
+        supportDirectory = url
+        prepareLogFileIfNeeded(at: url)
+    }
+
+    private func prepareSupportDirectory() throws -> URL {
+        let fileManager = FileManager.default
+        let directory: URL
+
+        if let customPath = UserDefaults.standard.string(forKey: "qieman.dashboard.customDataDirectory"),
+           !customPath.isEmpty {
+            directory = URL(fileURLWithPath: customPath, isDirectory: true)
+        } else {
+            guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+                throw ApplicationDataError.unavailable("无法定位 Application Support")
+            }
+            directory = appSupport.appendingPathComponent("QiemanDashboard", isDirectory: true)
+        }
+
+        do {
+            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+            try fileManager.createDirectory(
+                at: directory.appendingPathComponent("output", isDirectory: true),
+                withIntermediateDirectories: true
+            )
+        } catch {
+            throw ApplicationDataError.unavailable(error.localizedDescription)
+        }
+        writeReadmeIfNeeded(at: directory)
+        return directory
+    }
+
+    private func prepareLogFileIfNeeded(at directory: URL) {
+        let logURL = directory.appendingPathComponent("dashboard.log", isDirectory: false)
+        guard !FileManager.default.fileExists(atPath: logURL.path) else { return }
+        FileManager.default.createFile(atPath: logURL.path, contents: nil)
+    }
+
+    private func writeReadmeIfNeeded(at directory: URL) {
+        let readme = directory.appendingPathComponent("README.txt", isDirectory: false)
+        guard !FileManager.default.fileExists(atPath: readme.path) else { return }
+        let text = """
+        Qieman Dashboard App 数据目录
+
+        - qieman.cookie: 登录态 Cookie（可选）
+        - output/: 抓取输出与运行数据
+        - dashboard.log: 应用运行日志
+        """
+        try? text.write(to: readme, atomically: true, encoding: .utf8)
+    }
+}
