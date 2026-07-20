@@ -94,7 +94,7 @@ struct MonthlyReportSummary: Hashable {
         } else {
             lines.append(contentsOf: focusRows.map { row in
                 let codeText = row.fundCode?.isEmpty == false ? "（\(row.fundCode!)）" : ""
-                return "- \(row.fundName)\(codeText)：占用 \(currencyText(row.effectiveHoldingAmount, market: row.detectedMarket))，收益 \(signedCurrencyText(row.profitAmount, market: row.detectedMarket))，今日 \(signedCurrencyText(row.estimateChangeAmount, market: row.detectedMarket))"
+                return "- \(row.fundName)\(codeText)：占用 \(currencyText(row.effectiveHoldingAmount, market: row.detectedMarket))，收益 \(signedCurrencyText(row.profitAmount, market: row.detectedMarket))，今日 \(dailyChangeCurrencyText(row.estimateChangeAmount, market: row.detectedMarket))"
             })
         }
 

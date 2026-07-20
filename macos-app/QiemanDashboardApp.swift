@@ -69,6 +69,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     /// Retains a reference to the main window so it can be re-shown after closing.
     /// Set by both the SwiftUI WindowGroup (onAppear) and createMainWindow().
     fileprivate(set) var mainWindow: NSWindow?
+    private var mainWindowRestoreFrames: [ObjectIdentifier: NSRect] = [:]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let telemetryStart = PerformanceTelemetry.start()
@@ -531,6 +532,42 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         return win
     }
 
+    /// Toggles a workspace-filling window frame without reserving the Dock area.
+    /// Native `performZoom` uses `visibleFrame`, which can leave a large empty
+    /// strip at the bottom even when the Dock is hidden.
+    @MainActor func toggleMainWindowZoom(_ window: NSWindow? = nil) {
+        guard let window = window ?? mainWindowForZoom,
+              let screen = window.screen ?? NSScreen.main
+        else { return }
+
+        let windowID = ObjectIdentifier(window)
+        let maximizedFrame = MainWindowZoomPolicy.maximizedFrame(
+            screenFrame: screen.frame,
+            visibleFrame: screen.visibleFrame
+        )
+        let shouldAnimate = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+
+        if MainWindowZoomPolicy.framesMatch(window.frame, maximizedFrame) {
+            if let restoreFrame = mainWindowRestoreFrames.removeValue(forKey: windowID) {
+                window.setFrame(restoreFrame, display: true, animate: shouldAnimate)
+            } else {
+                window.performZoom(nil)
+            }
+            return
+        }
+
+        // A window already zoomed by AppKit should keep its native restore
+        // behavior on the first toggle after upgrading to this policy.
+        if window.isZoomed {
+            mainWindowRestoreFrames.removeValue(forKey: windowID)
+            window.performZoom(nil)
+            return
+        }
+
+        mainWindowRestoreFrames[windowID] = window.frame
+        window.setFrame(maximizedFrame, display: true, animate: shouldAnimate)
+    }
+
     // MARK: - Titlebar Double-Click Zoom
 
     /// Intercepts double-clicks in the native titlebar / unified toolbar region and
@@ -568,7 +605,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
             contentHeight: contentFrame.height,
             nativeTitlebarHeight: titlebarHeight
         ) {
-            win.performZoom(nil)
+            toggleMainWindowZoom(win)
             // Swallow the event so it doesn't propagate further
             return NSEvent()  // dummy event — effectively swallowed
         }
@@ -599,6 +636,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     }
 
     @MainActor private func discardDuplicateMainWindow(_ window: NSWindow) {
+        mainWindowRestoreFrames.removeValue(forKey: ObjectIdentifier(window))
         window.orderOut(nil)
         if window.delegate === self {
             window.delegate = nil

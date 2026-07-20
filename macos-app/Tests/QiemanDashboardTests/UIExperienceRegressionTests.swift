@@ -15,6 +15,16 @@ final class UIExperienceRegressionTests: XCTestCase {
 
         XCTAssertTrue(source.contains("Button {\n                onOpenDetail?()"))
         XCTAssertTrue(source.contains(".accessibilityLabel(\"查看 \\(row.fundName) 详情\")"))
+
+        let fullRowButton = try XCTUnwrap(source.range(of: ".overlay(alignment: .leading)"))
+        let hoverSurface = try XCTUnwrap(source.range(of: ".interactiveSurface("))
+        XCTAssertLessThan(
+            source.distance(from: source.startIndex, to: fullRowButton.lowerBound),
+            source.distance(from: source.startIndex, to: hoverSurface.lowerBound),
+            "hover surface must wrap the transparent full-row button so it receives pointer events"
+        )
+        XCTAssertTrue(source.contains("lift: AppPalette.hoverLift"))
+        XCTAssertTrue(source.contains(".contentShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))"))
     }
 
     func testSettingsControlsHaveSemanticsKeyboardSortingAndSafeResetConfirmation() throws {

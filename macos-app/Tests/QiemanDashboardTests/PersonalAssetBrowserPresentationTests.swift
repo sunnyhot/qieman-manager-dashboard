@@ -44,15 +44,38 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         let browserSource = try String(contentsOf: personalAssetBrowserSourceURL(), encoding: .utf8)
         let rowSource = try String(contentsOf: personalAssetTableRowSourceURL(), encoding: .utf8)
 
-        XCTAssertTrue(browserSource.contains("widthProbe"))
-        XCTAssertTrue(browserSource.contains("let tableWidth = max(availableWidth, minimumTableWidth)"))
-        XCTAssertTrue(browserSource.contains("let labelColWidth = max(labelColMinWidth, tableWidth - fixedColumnsWidth)"))
-        XCTAssertTrue(browserSource.contains(".frame(width: tableWidth, alignment: .leading)"))
-        XCTAssertTrue(browserSource.contains("labelWidth: labelColWidth"))
+        XCTAssertTrue(browserSource.contains("updateAvailableWidth(geometry.size.width)"))
+        XCTAssertFalse(browserSource.contains("widthProbe"))
+        XCTAssertFalse(browserSource.contains("PersonalAssetTableWidthPreferenceKey"))
+        XCTAssertTrue(browserSource.contains("PersonalAssetTableColumnLayout.resolve("))
+        XCTAssertTrue(browserSource.contains(".frame(width: layout.tableWidth, alignment: .leading)"))
+        XCTAssertTrue(browserSource.contains("labelWidth: layout.labelWidth"))
         XCTAssertFalse(browserSource.contains("Text(\"标的\")\n                    .frame(maxWidth: .infinity"))
         XCTAssertTrue(rowSource.contains("var labelWidth: CGFloat = 260"))
         XCTAssertTrue(rowSource.contains(".frame(width: labelWidth, alignment: .leading)"))
-        XCTAssertTrue(rowSource.contains(".frame(maxWidth: .infinity, alignment: .leading)\n        .interactiveSurface("))
+        XCTAssertTrue(rowSource.contains(".frame(maxWidth: .infinity, alignment: .leading)\n        .overlay(alignment: .leading)"))
+    }
+
+    func testPersonalAssetTableLayoutExpandsIntoWideContainer() {
+        let layout = PersonalAssetTableColumnLayout.resolve(
+            availableWidth: 1_720,
+            fixedColumnsWidth: 1_044,
+            minimumLabelWidth: 260
+        )
+
+        XCTAssertEqual(layout.tableWidth, 1_720)
+        XCTAssertEqual(layout.labelWidth, 676)
+    }
+
+    func testPersonalAssetTableLayoutKeepsMinimumWidthForNarrowContainer() {
+        let layout = PersonalAssetTableColumnLayout.resolve(
+            availableWidth: 900,
+            fixedColumnsWidth: 1_044,
+            minimumLabelWidth: 260
+        )
+
+        XCTAssertEqual(layout.tableWidth, 1_304)
+        XCTAssertEqual(layout.labelWidth, 260)
     }
 
     func testAssetDetailUsesAIOpinionCopyAndKeepsConditionsVisible() throws {

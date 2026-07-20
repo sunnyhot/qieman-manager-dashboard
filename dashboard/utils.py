@@ -98,11 +98,16 @@ def date_key_to_text(value: int) -> str:
     return f"{text[:4]}-{text[4:6]}-{text[6:8]}"
 
 
-def fetch_remote_text(url: str, timeout: int = 12) -> str:
-    request = urllib.request.Request(url, headers=EASTMONEY_HEADERS)
+def fetch_remote_text(url: str, timeout: int = 12, headers: Optional[Dict[str, str]] = None) -> str:
+    request_headers = dict(EASTMONEY_HEADERS)
+    request_headers.update(headers or {})
+    request = urllib.request.Request(url, headers=request_headers)
     with urllib.request.urlopen(request, timeout=timeout) as response:
         payload = response.read()
-    return payload.decode("utf-8", "ignore")
+    try:
+        return payload.decode("utf-8")
+    except UnicodeDecodeError:
+        return payload.decode("gb18030", "ignore")
 
 
 def strip_html(value: Any) -> str:

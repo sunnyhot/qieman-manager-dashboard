@@ -57,9 +57,17 @@ func signedCurrencyText(_ value: Double?, market: StockMarket?) -> String {
     return "\(symbol)\(sign)\(formattedNumber(abs(value)))"
 }
 
+func dailyChangeCurrencyText(_ value: Double?, market: StockMarket? = nil) -> String {
+    value.map { signedCurrencyText($0, market: market) } ?? "待公布"
+}
+
 func percentOptional(_ value: Double?) -> String {
     guard let value else { return "—" }
     return String(format: "%+.2f%%", value)
+}
+
+func dailyChangePercentText(_ value: Double?) -> String {
+    value.map { percentOptional($0) } ?? "待公布"
 }
 
 func decimalOptional(_ value: Double?) -> String {

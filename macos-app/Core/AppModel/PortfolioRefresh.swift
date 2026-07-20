@@ -14,6 +14,8 @@ extension AppModel {
                 metadata: [
                     "holdingCount": "\(holdings.count)",
                     "rowCount": "\(userPortfolioSnapshot?.rows.count ?? 0)",
+                    "dailyChangeCoverage": "\(userPortfolioSnapshot?.dailyChangeCoverageCount ?? 0)",
+                    "dailyChangePending": "\(userPortfolioSnapshot?.dailyChangePendingCount ?? 0)",
                     "result": telemetryResult,
                     "updateNotice": "\(updateNotice)"
                 ]
@@ -34,13 +36,16 @@ extension AppModel {
         defer { isRefreshingPortfolio = false }
 
         do {
-            let snapshot = try await platformClient.fetchUserPortfolioSnapshot(holdings: holdings)
+            let snapshot = try await platformClient.fetchUserPortfolioSnapshot(
+                holdings: holdings,
+                forceQuoteRefresh: updateNotice
+            )
             userPortfolioSnapshot = snapshot
             rebuildAssetRows()
             recordPortfolioInsightSnapshotIfPossible(createdAt: snapshot.refreshedAt)
             lastPortfolioRefreshAt = Date()
             if updateNotice {
-                noticeMessage = "个人持仓估值已刷新。"
+                noticeMessage = snapshot.refreshNoticeMessage
             }
             await refreshMarketIndicesIfNeeded()
             await evaluateTradeSignalNotifications(now: snapshot.refreshedAt)

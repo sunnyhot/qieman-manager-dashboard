@@ -256,8 +256,8 @@ struct PortfolioSectionView: View {
         )
         MetricCard(
             title: "今日涨跌",
-            value: signedCurrencyText(dailyChange?.amount),
-            subtitle: "今日涨跌率 \(percentOptional(dailyChange?.pct))",
+            value: dailyChangeCurrencyText(dailyChange?.amount),
+            subtitle: "今日涨跌率 \(dailyChangePercentText(dailyChange?.pct))",
             icon: "waveform.path.ecg",
             accent: dailyChangeTint,
             valueTint: dailyChangeTint

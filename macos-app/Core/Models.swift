@@ -1239,6 +1239,28 @@ struct UserPortfolioSnapshot: Hashable {
     let dailyChangeSummary: UserPortfolioDailyChangeSummary
 
     var holdingCount: Int { rows.count }
+    var dailyChangeCoverageCount: Int {
+        rows.filter { $0.estimatedDailyChangeAmount != nil || $0.estimateChangePct != nil }.count
+    }
+    var dailyChangePendingCount: Int {
+        max(0, holdingCount - dailyChangeCoverageCount)
+    }
+    var latestOfficialNavDate: String? {
+        rows.compactMap(\.officialNavDate).map { String($0.prefix(10)) }.max()
+    }
+    var refreshNoticeMessage: String {
+        guard holdingCount > 0 else { return "个人持仓已刷新。" }
+        if dailyChangeCoverageCount == holdingCount {
+            return "个人持仓估值和今日涨跌已刷新。"
+        }
+        if dailyChangeCoverageCount == 0 {
+            if let latestOfficialNavDate {
+                return "持仓净值已刷新至 \(latestOfficialNavDate)；今日涨跌待净值公布。"
+            }
+            return "个人持仓已刷新；今日涨跌暂时没有可用数据。"
+        }
+        return "个人持仓已刷新；今日涨跌已更新 \(dailyChangeCoverageCount)/\(holdingCount)，其余待公布。"
+    }
     var hasIncompleteValuationCoverage: Bool {
         rows.contains { $0.marketValue == nil }
     }

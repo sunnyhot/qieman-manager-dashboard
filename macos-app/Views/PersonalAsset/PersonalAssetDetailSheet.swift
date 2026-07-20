@@ -413,7 +413,7 @@ struct PersonalAssetDetailSheet: View {
                 compactFact(title: "估值", value: row.currentEstimatePrice.map(decimalText) ?? "—", tint: changeTint)
                 compactFact(title: "成本", value: row.costPrice.map(decimalText) ?? "—", tint: AppPalette.ink)
                 compactFact(title: "总收益率", value: percentOptional(row.profitPct), tint: profitTint)
-                compactFact(title: "今日涨跌幅", value: percentOptional(row.estimateChangePct), tint: changeTint)
+                compactFact(title: "今日涨跌幅", value: dailyChangePercentText(row.estimateChangePct), tint: changeTint)
                 compactFact(title: "估值时间", value: row.holdingRow?.resolvedPriceTime ?? "—", tint: AppPalette.muted)
             }
         }

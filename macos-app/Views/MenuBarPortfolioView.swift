@@ -217,8 +217,8 @@ private struct MenuBarSummaryCard: View {
                 .foregroundStyle(AppPalette.ink)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-                SummaryPill(title: "今日涨跌", value: signedCurrencyText(dailyChange.amount), tint: dailyTint)
-                SummaryPill(title: "今日涨跌率", value: percentOptional(dailyChange.pct), tint: dailyTint)
+                SummaryPill(title: "今日涨跌", value: dailyChangeCurrencyText(dailyChange.amount), tint: dailyTint)
+                SummaryPill(title: "今日涨跌率", value: dailyChangePercentText(dailyChange.pct), tint: dailyTint)
                 SummaryPill(title: "总收益", value: signedCurrencyText(snapshot.totalProfitAmount), tint: profitTint)
                 SummaryPill(title: "总收益率", value: percentOptional(snapshot.totalProfitPct), tint: profitTint)
             }
@@ -326,12 +326,12 @@ private struct MenuBarHoldingRow: View {
             .frame(width: 96, alignment: .trailing)
 
             VStack(alignment: .trailing, spacing: 1) {
-                Text(signedCurrencyText(row.estimatedDailyChangeAmount, market: row.holding.detectedMarket))
+                Text(dailyChangeCurrencyText(row.estimatedDailyChangeAmount, market: row.holding.detectedMarket))
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(dailyTint)
                     .monospacedDigit()
                     .lineLimit(1)
-                Text(percentOptional(row.estimateChangePct))
+                Text(row.estimateChangePct.map(dailyChangePercentText) ?? latestNAVCaption)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(dailyTint)
                     .monospacedDigit()
@@ -348,6 +348,11 @@ private struct MenuBarHoldingRow: View {
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
                 .stroke(marketTint.opacity(0.28), lineWidth: 1)
         )
+    }
+
+    private var latestNAVCaption: String {
+        guard let date = row.officialNavDate, !date.isEmpty else { return "待公布" }
+        return "截至 \(date.suffix(5))"
     }
 }
 

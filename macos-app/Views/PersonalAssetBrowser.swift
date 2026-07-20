@@ -125,6 +125,7 @@ struct PersonalAssetBrowser: View {
         .onReceive(NotificationCenter.default.publisher(for: .qiemanFocusSearch)) { _ in
             isSearchFocused = true
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var browserSearchField: some View {
@@ -433,6 +434,7 @@ struct PersonalAssetGroupedTable: View {
                 group(title: "股票", rows: stockRows, stats: stockStats, tint: AppPalette.info, usesMarketTradeColumns: true)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func group(title: String, rows: [PersonalAssetAggregateRow], stats: PersonalAssetGroupStats, tint: Color, usesMarketTradeColumns: Bool) -> some View {
@@ -480,6 +482,7 @@ struct PersonalAssetGroupedTable: View {
                 onOpenDetail: onOpenDetail
             )
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private static func groupStats(rows: [PersonalAssetAggregateRow]) -> PersonalAssetGroupStats {
@@ -498,11 +501,21 @@ struct PersonalAssetGroupedTable: View {
     }
 }
 
-private struct PersonalAssetTableWidthPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+struct PersonalAssetTableColumnLayout: Equatable {
+    let tableWidth: CGFloat
+    let labelWidth: CGFloat
 
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
+    static func resolve(
+        availableWidth: CGFloat,
+        fixedColumnsWidth: CGFloat,
+        minimumLabelWidth: CGFloat
+    ) -> PersonalAssetTableColumnLayout {
+        let minimumTableWidth = fixedColumnsWidth + minimumLabelWidth
+        let tableWidth = max(availableWidth, minimumTableWidth)
+        return PersonalAssetTableColumnLayout(
+            tableWidth: tableWidth,
+            labelWidth: max(minimumLabelWidth, tableWidth - fixedColumnsWidth)
+        )
     }
 }
 
@@ -543,32 +556,28 @@ struct PersonalAssetTable: View {
         let isCompact = measuredWidth < Self.compactThreshold
 
         VStack(spacing: 0) {
-            widthProbe
-
             ScrollView(.horizontal, showsIndicators: isCompact) {
                 tableContent(availableWidth: measuredWidth, isCompact: isCompact)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear {
+                        updateAvailableWidth(geometry.size.width)
+                    }
+                    .onChange(of: geometry.size.width) { _, width in
+                        updateAvailableWidth(width)
+                    }
+            }
+        }
     }
 
-    private var widthProbe: some View {
-        Color.clear
-            .frame(height: 0)
-            .frame(maxWidth: .infinity)
-            .background(
-                GeometryReader { geometry in
-                    Color.clear.preference(
-                        key: PersonalAssetTableWidthPreferenceKey.self,
-                        value: geometry.size.width
-                    )
-                }
-            )
-            .onPreferenceChange(PersonalAssetTableWidthPreferenceKey.self) { width in
-                guard width > 0, abs(width - availableWidth) > 0.5 else { return }
-                availableWidth = width
-            }
+    private func updateAvailableWidth(_ width: CGFloat) {
+        guard width > 0, abs(width - availableWidth) > 0.5 else { return }
+        availableWidth = width
     }
 
     // MARK: - Column widths adapt to available space
@@ -610,14 +619,16 @@ struct PersonalAssetTable: View {
             + actionColWidth(isCompact: isCompact)
             + colSpacing * CGFloat(visibleColumnCount - 1)
             + 24              // horizontal padding (12*2)
-        let minimumTableWidth = fixedColumnsWidth + labelColMinWidth
-        let tableWidth = max(availableWidth, minimumTableWidth)
-        let labelColWidth = max(labelColMinWidth, tableWidth - fixedColumnsWidth)
+        let layout = PersonalAssetTableColumnLayout.resolve(
+            availableWidth: availableWidth,
+            fixedColumnsWidth: fixedColumnsWidth,
+            minimumLabelWidth: labelColMinWidth
+        )
 
         VStack(spacing: 0) {
             HStack(spacing: colSpacing) {
                 Text("标的")
-                    .frame(width: labelColWidth, alignment: .leading)
+                    .frame(width: layout.labelWidth, alignment: .leading)
                 Text(isCompact ? "估值/收益" : "实时估值 / 收益")
                     .frame(width: valuationColWidth(isCompact: isCompact), alignment: .leading)
                 if !isCompact {
@@ -664,7 +675,7 @@ struct PersonalAssetTable: View {
                         fifthWidth: fifthColWidth(isCompact: isCompact),
                         sixthWidth: sixthColWidth(isCompact: isCompact),
                         actionWidth: actionColWidth(isCompact: isCompact),
-                        labelWidth: labelColWidth,
+                        labelWidth: layout.labelWidth,
                         trendSummary: trendTagIndex.summary(for: row),
                         isSelectedForComparison: isSelectedForComparison,
                         isComparisonToggleDisabled: !isSelectedForComparison && comparisonSelection.count >= comparisonMaxCount,
@@ -679,6 +690,6 @@ struct PersonalAssetTable: View {
             }
             .padding(.top, 10)
         }
-        .frame(width: tableWidth, alignment: .leading)
+        .frame(width: layout.tableWidth, alignment: .leading)
     }
 }

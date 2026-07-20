@@ -440,7 +440,7 @@ struct ContentView: View {
         // Prefer the AppDelegate's tracked mainWindow reference.
         if let delegate = NSApplication.shared.delegate as? QiemanApplicationDelegate,
            let mainWin = delegate.mainWindowForZoom {
-            mainWin.performZoom(nil)
+            delegate.toggleMainWindowZoom(mainWin)
             return
         }
         // Fallback: find the first suitable window, excluding panels/sheets.

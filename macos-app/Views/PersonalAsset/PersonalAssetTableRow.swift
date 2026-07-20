@@ -88,14 +88,14 @@ struct PersonalAssetTableRow: View {
                     Text("收益 \(signedCurrencyText(row.profitAmount, market: row.detectedMarket)) · \(percentOptional(row.profitPct))")
                         .font(.system(size: 10))
                         .foregroundStyle(profitTint)
-                    Text("今日 \(signedCurrencyText(row.estimateChangeAmount, market: row.detectedMarket)) · \(percentOptional(row.estimateChangePct))")
+                    Text(dailyChangeLine(compact: true))
                         .font(.system(size: 10))
                         .foregroundStyle(changeTint)
                 } else {
                     Text("总收益 \(signedCurrencyText(row.profitAmount, market: row.detectedMarket)) · \(percentOptional(row.profitPct))")
                         .font(.system(size: 10))
                         .foregroundStyle(profitTint)
-                    Text("今日涨跌 \(signedCurrencyText(row.estimateChangeAmount, market: row.detectedMarket)) · \(percentOptional(row.estimateChangePct))")
+                    Text(dailyChangeLine(compact: false))
                         .font(.system(size: 10))
                         .foregroundStyle(changeTint)
                 }
@@ -254,16 +254,6 @@ struct PersonalAssetTableRow: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .interactiveSurface(
-            isSelected: isSelectedForComparison,
-            tint: isSelectedForComparison ? AppPalette.brand : AppPalette.info,
-            fill: AppPalette.card,
-            hoverFill: AppPalette.cardHover,
-            selectedFill: AppPalette.brandSoft.opacity(0.76),
-            strokeOpacity: 0.28,
-            activeStrokeOpacity: 0.62,
-            lift: 0.6
-        )
         .overlay(alignment: .leading) {
             Button {
                 onOpenDetail?()
@@ -279,6 +269,17 @@ struct PersonalAssetTableRow: View {
             .accessibilityHint("打开资产详情抽屉")
             .help("查看 \(row.fundName) 详情")
         }
+        .contentShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .interactiveSurface(
+            isSelected: isSelectedForComparison,
+            tint: isSelectedForComparison ? AppPalette.brand : AppPalette.info,
+            fill: AppPalette.card,
+            hoverFill: AppPalette.cardHover,
+            selectedFill: AppPalette.brandSoft.opacity(0.76),
+            strokeOpacity: 0.28,
+            activeStrokeOpacity: 0.62,
+            lift: AppPalette.hoverLift
+        )
         .alert(deleteConfirmationTitle, isPresented: deleteConfirmationBinding) {
             Button("删除", role: .destructive) {
                 if let pendingDeleteScope {
@@ -308,6 +309,17 @@ struct PersonalAssetTableRow: View {
         .sheet(isPresented: $isPresentingPlanManager) {
             PersonalInvestmentPlanManagementSheet(row: row)
         }
+    }
+
+    private func dailyChangeLine(compact: Bool) -> String {
+        guard row.estimateChangeAmount != nil || row.estimateChangePct != nil else {
+            if row.usesMarketTradeColumns {
+                return compact ? "今日行情待更新" : "今日涨跌 待行情更新"
+            }
+            return compact ? "今日净值待公布" : "今日涨跌 待净值公布"
+        }
+        let prefix = compact ? "今日" : "今日涨跌"
+        return "\(prefix) \(dailyChangeCurrencyText(row.estimateChangeAmount, market: row.detectedMarket)) · \(dailyChangePercentText(row.estimateChangePct))"
     }
 
     private func trendSignalBlock(_ summary: TrendAssetTagSummary) -> some View {

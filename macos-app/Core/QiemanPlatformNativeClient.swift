@@ -175,10 +175,12 @@ final class QiemanPlatformNativeClient {
     private let quoteTTL: TimeInterval = 45
     private let cache = QiemanPlatformCache()
     private let session: URLSession
+    private let now: () -> Date
     private static let preloadConcurrencyLimit = 6
 
-    init(session: URLSession = .shared) {
+    init(session: URLSession = .shared, now: @escaping () -> Date = Date.init) {
         self.session = session
+        self.now = now
     }
 
     func fetchPlatformPayload(prodCode: String) async throws -> PlatformPayload {
@@ -196,7 +198,10 @@ final class QiemanPlatformNativeClient {
         return payload
     }
 
-    func fetchUserPortfolioSnapshot(holdings: [UserPortfolioHolding]) async throws -> UserPortfolioSnapshot {
+    func fetchUserPortfolioSnapshot(
+        holdings: [UserPortfolioHolding],
+        forceQuoteRefresh: Bool = false
+    ) async throws -> UserPortfolioSnapshot {
         let normalizedHoldings = holdings.filter { !$0.normalizedFundCode.isEmpty && $0.units > 0 }
         guard !normalizedHoldings.isEmpty else {
             return UserPortfolioSnapshot(
@@ -216,7 +221,10 @@ final class QiemanPlatformNativeClient {
             $0.assetType == .stock || ($0.assetType == .fund && $0.detectedFundMarket == .onExchange)
         }.map(\.normalizedFundCode)))
         async let stockQuotesTask = preloadStockQuotes(stockCodes)
-        let (histories, quotes) = await preloadHistoriesAndQuotes(fundCodes)
+        let (histories, quotes) = await preloadHistoriesAndQuotes(
+            fundCodes,
+            forceQuoteRefresh: forceQuoteRefresh
+        )
         let stockQuotes = await stockQuotesTask
 
         let rows = normalizedHoldings.map { holding -> UserPortfolioValuationRow in
@@ -813,7 +821,10 @@ final class QiemanPlatformNativeClient {
 
     /// Pipelined preload: quotes start as soon as their corresponding history completes,
     /// overlapping the two phases instead of running them sequentially.
-    private func preloadHistoriesAndQuotes(_ fundCodes: [String]) async -> (histories: [String: NativeFundHistory], quotes: [String: NativeFundQuote]) {
+    private func preloadHistoriesAndQuotes(
+        _ fundCodes: [String],
+        forceQuoteRefresh: Bool = false
+    ) async -> (histories: [String: NativeFundHistory], quotes: [String: NativeFundQuote]) {
         var histories: [String: NativeFundHistory] = [:]
         var quotes: [String: NativeFundQuote] = [:]
         let uniqueCodes = uniqueNonEmptyCodes(fundCodes)
@@ -839,7 +850,8 @@ final class QiemanPlatformNativeClient {
             func enqueueQuote(_ code: String, history: NativeFundHistory?) {
                 group.addTask {
                     let quote: NativeFundQuote
-                    if let cached = await self.cache.quote(for: code, ttl: self.quoteTTL) {
+                    if !forceQuoteRefresh,
+                       let cached = await self.cache.quote(for: code, ttl: self.quoteTTL) {
                         quote = cached
                     } else {
                         quote = (try? await self.fetchFundQuote(code, history: history)) ?? NativeFundQuote.empty(code)
@@ -909,8 +921,8 @@ final class QiemanPlatformNativeClient {
     }
 
     private func fetchFundHistorySeries(_ fundCode: String) async throws -> NativeFundHistory {
-        let now = Int(Date().timeIntervalSince1970)
-        let url = URL(string: "https://fund.eastmoney.com/pingzhongdata/\(fundCode).js?v=\(now)")!
+        let requestTime = Int(now().timeIntervalSince1970)
+        let url = URL(string: "https://fund.eastmoney.com/pingzhongdata/\(fundCode).js?v=\(requestTime)")!
         let text = try await requestText(hostURL: url.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent(), absoluteURL: url, headers: [
             "Referer": "https://fund.eastmoney.com/",
         ])
@@ -929,14 +941,72 @@ final class QiemanPlatformNativeClient {
             }
             let date = dateTextFromTimestampMs(ts)
             guard !date.isEmpty else { return nil }
-            return NativeFundHistoryEntry(date: date, dateKey: dateKey(date), nav: nav, ts: ts)
+            return NativeFundHistoryEntry(
+                date: date,
+                dateKey: dateKey(date),
+                nav: nav,
+                ts: ts,
+                changePct: doubleValue(row["equityReturn"])
+            )
         }
         return NativeFundHistory(fundCode: fundCode, fundName: name, series: series)
     }
 
     private func fetchFundQuote(_ fundCode: String, history: NativeFundHistory?) async throws -> NativeFundQuote {
-        let now = Int(Date().timeIntervalSince1970)
-        let url = URL(string: "https://fundgz.1234567.com.cn/js/\(fundCode).js?rt=\(now)")!
+        let historyQuote = latestHistoryQuote(fundCode: fundCode, history: history)
+        let latestOfficialQuote = try? await fetchLatestFundNavQuote(
+            fundCode,
+            fundName: history?.fundName ?? ""
+        )
+
+        if let latestOfficialQuote, latestOfficialQuote.estimateChangePct != nil {
+            return latestOfficialQuote
+        }
+        if let historyQuote, historyQuote.estimateChangePct != nil {
+            return historyQuote
+        }
+
+        let baseOfficialQuote = latestOfficialQuote ?? historyQuote
+        let legacyQuote = await fetchLegacyFundQuote(fundCode)
+        if let legacyQuote,
+           legacyQuote.estimatePrice != nil || legacyQuote.estimateChangePct != nil {
+            return mergingFundEstimate(
+                fundCode: fundCode,
+                base: baseOfficialQuote ?? legacyQuote,
+                estimate: NativeFundEstimate(
+                    fundName: legacyQuote.fundName,
+                    price: legacyQuote.estimatePrice,
+                    time: legacyQuote.estimateTime,
+                    changePct: legacyQuote.estimateChangePct,
+                    source: "eastmoney_legacy_estimate",
+                    sourceLabel: "东方财富盘中估值"
+                )
+            )
+        }
+
+        if let sinaEstimate = try? await fetchSinaFundEstimate(fundCode) {
+            return mergingFundEstimate(
+                fundCode: fundCode,
+                base: baseOfficialQuote ?? legacyQuote,
+                estimate: sinaEstimate
+            )
+        }
+
+        if let base = baseOfficialQuote ?? legacyQuote,
+           let proxyEstimate = try? await fetchFundProxyEstimate(
+               fundCode: fundCode,
+               fundName: firstNonEmpty([base.fundName, history?.fundName ?? ""]),
+               baseQuote: base
+           ) {
+            return mergingFundEstimate(fundCode: fundCode, base: base, estimate: proxyEstimate)
+        }
+
+        return baseOfficialQuote ?? legacyQuote ?? .empty(fundCode)
+    }
+
+    private func fetchLegacyFundQuote(_ fundCode: String) async -> NativeFundQuote? {
+        let requestTime = Int(now().timeIntervalSince1970)
+        let url = URL(string: "https://fundgz.1234567.com.cn/js/\(fundCode).js?rt=\(requestTime)")!
         let text = (try? await requestText(hostURL: url.deletingLastPathComponent().deletingLastPathComponent(), absoluteURL: url, headers: [
             "Referer": "https://fund.eastmoney.com/",
         ])) ?? ""
@@ -946,6 +1016,10 @@ final class QiemanPlatformNativeClient {
            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             let officialNav = doubleValue(object["dwjz"])
             let officialNavDate = normalizedString(object["jzrq"])
+            let estimateTime = normalizedString(object["gztime"])
+            let isCurrentEstimate = normalizeDateText(estimateTime) == currentMarketDateText()
+            let estimatePrice = isCurrentEstimate ? doubleValue(object["gsz"]) : nil
+            let estimateChangePct = isCurrentEstimate ? doubleValue(object["gszzl"]) : nil
             if let officialNav, officialNav > 0 {
                 return NativeFundQuote(
                     fundCode: fundCode,
@@ -956,52 +1030,285 @@ final class QiemanPlatformNativeClient {
                     priceSourceLabel: "最新净值",
                     officialNav: officialNav,
                     officialNavDate: officialNavDate,
-                    estimatePrice: doubleValue(object["gsz"]),
-                    estimateTime: normalizedString(object["gztime"]),
-                    estimateChangePct: doubleValue(object["gszzl"])
+                    estimatePrice: estimatePrice,
+                    estimateTime: isCurrentEstimate ? estimateTime : "",
+                    estimateChangePct: estimateChangePct
                 )
             }
 
-            if let estimatePrice = doubleValue(object["gsz"]), estimatePrice > 0 {
+            if let estimatePrice, estimatePrice > 0 {
                 return NativeFundQuote(
                     fundCode: fundCode,
                     fundName: normalizedString(object["name"]),
                     price: estimatePrice,
-                    priceTime: normalizedString(object["gztime"]),
+                    priceTime: estimateTime,
                     priceSource: "estimate",
                     priceSourceLabel: "盘中估值",
                     officialNav: nil,
                     officialNavDate: "",
                     estimatePrice: estimatePrice,
-                    estimateTime: normalizedString(object["gztime"]),
-                    estimateChangePct: doubleValue(object["gszzl"])
+                    estimateTime: estimateTime,
+                    estimateChangePct: estimateChangePct
+                )
+            }
+        }
+        return nil
+    }
+
+    private func fetchSinaFundEstimate(_ fundCode: String) async throws -> NativeFundEstimate? {
+        let url = URL(string: "https://hq.sinajs.cn/list=fu_\(fundCode)")!
+        let text = try await requestText(
+            hostURL: URL(string: "https://hq.sinajs.cn")!,
+            absoluteURL: url,
+            headers: [
+                "Accept": "text/plain,*/*",
+                "Referer": "https://finance.sina.com.cn/",
+            ]
+        )
+        guard let quoted = firstMatch(in: text, pattern: #"=\"([^\"]*)\";"#) else {
+            return nil
+        }
+        let parts = quoted.split(separator: ",", omittingEmptySubsequences: false).map(String.init)
+        guard parts.count > 7 else { return nil }
+
+        let estimateDate = normalizeDateText(parts[safe: 7] ?? "")
+        guard estimateDate == currentMarketDateText(),
+              let estimatePrice = doubleValue(parts[safe: 2]),
+              estimatePrice > 0 else {
+            return nil
+        }
+        let estimateTime = firstNonEmpty([
+            [estimateDate, normalizedString(parts[safe: 1])].filter { !$0.isEmpty }.joined(separator: " "),
+            estimateDate,
+        ])
+        let reportedChangePct = doubleValue(parts[safe: 6])
+        let derivedChangePct: Double?
+        if let previousNav = doubleValue(parts[safe: 3]), previousNav > 0 {
+            derivedChangePct = (estimatePrice / previousNav - 1) * 100
+        } else {
+            derivedChangePct = nil
+        }
+
+        return NativeFundEstimate(
+            fundName: normalizedString(parts[safe: 0]),
+            price: estimatePrice,
+            time: estimateTime,
+            changePct: reportedChangePct ?? derivedChangePct,
+            source: "sina_estimate",
+            sourceLabel: "新浪盘中估值"
+        )
+    }
+
+    private func fetchFundProxyEstimate(
+        fundCode: String,
+        fundName: String,
+        baseQuote: NativeFundQuote
+    ) async throws -> NativeFundEstimate? {
+        guard let officialNav = baseQuote.officialNav, officialNav > 0 else { return nil }
+        let proxy = fundEstimateProxy(for: fundName)
+        let officialNavDate = normalizeDateText(baseQuote.officialNavDate)
+
+        if let quote = try? await fetchSingleTencentQuote(symbol: proxy.symbol, stockCode: fundCode),
+           quote.hasUsableData,
+           let changePct = quote.changePct,
+           changePct.isFinite,
+           abs(changePct) <= 30 {
+            let quoteDate = normalizeDateText(quote.priceTime)
+            if !quoteDate.isEmpty,
+               officialNavDate.isEmpty || quoteDate > officialNavDate || quoteDate == currentMarketDateText() {
+                return NativeFundEstimate(
+                    fundName: fundName,
+                    price: officialNav * (1 + changePct / 100),
+                    time: quote.priceTime,
+                    changePct: changePct,
+                    source: "market_proxy_estimate",
+                    sourceLabel: "\(proxy.label)代理估算"
                 )
             }
         }
 
-        if let latestQuote = try? await fetchLatestFundNavQuote(
-            fundCode,
-            fundName: history?.fundName ?? ""
-        ) {
-            return latestQuote
+        switch proxy.intradayKind {
+        case "future":
+            guard let intradaySymbol = proxy.intradaySymbol else { return nil }
+            return try await fetchSinaGlobalFuturesEstimate(
+                symbol: intradaySymbol,
+                label: proxy.intradayLabel,
+                fundName: fundName,
+                officialNav: officialNav
+            )
+        case "forex":
+            return try await fetchSinaForexEstimate(
+                symbol: proxy.intradaySymbol ?? "fx_susdcny",
+                label: proxy.intradayLabel,
+                fundName: fundName,
+                officialNav: officialNav
+            )
+        default:
+            return nil
         }
+    }
 
-        if let latest = history?.series.last {
+    private func fundEstimateProxy(
+        for fundName: String
+    ) -> (symbol: String, label: String, intradaySymbol: String?, intradayLabel: String, intradayKind: String) {
+        let name = fundName.uppercased()
+        if (name.contains("中概") && (name.contains("互联网") || name.contains("互联")))
+            || name.contains("海外互联网") {
+            return ("sh513050", "中概互联网ETF", nil, "", "")
+        }
+        if name.contains("纳斯达克100") || name.contains("纳指100") {
+            return ("usNDX", "纳斯达克100", "hf_NQ", "纳指100期货", "future")
+        }
+        if name.contains("标普500") {
+            return ("usINX", "标普500", "hf_ES", "标普500期货", "future")
+        }
+        if name.contains("全球医疗保健") || name.contains("全球医疗") {
+            return ("usIXJ", "全球医疗ETF", "hf_ES", "标普500期货", "future")
+        }
+        if name.contains("QDII"), name.contains("债") {
+            return ("usAGG", "美国综合债券ETF", "fx_susdcny", "美元兑人民币", "forex")
+        }
+        if name.contains("国开债") || name.contains("纯债") || name.contains("债券") {
+            return ("sh000012", "国债指数", nil, "", "")
+        }
+        if name.contains("QDII") {
+            return ("usINX", "标普500", "hf_ES", "标普500期货", "future")
+        }
+        if name.contains("科创") { return ("sh000688", "科创50", nil, "", "") }
+        if name.contains("创业板") { return ("sz399006", "创业板指", nil, "", "") }
+        return ("sh000300", "沪深300", nil, "", "")
+    }
+
+    private func fetchSinaGlobalFuturesEstimate(
+        symbol: String,
+        label: String,
+        fundName: String,
+        officialNav: Double
+    ) async throws -> NativeFundEstimate? {
+        let parts = try await fetchSinaQuoteParts(symbol: symbol)
+        guard parts.count > 12,
+              normalizeDateText(parts[safe: 12] ?? "") == currentMarketDateText(),
+              let price = doubleValue(parts[safe: 0]),
+              let previousClose = doubleValue(parts[safe: 7]),
+              price > 0,
+              previousClose > 0 else {
+            return nil
+        }
+        let changePct = (price / previousClose - 1) * 100
+        guard changePct.isFinite, abs(changePct) <= 20 else { return nil }
+        let quoteTime = [
+            normalizedString(parts[safe: 12]),
+            normalizedString(parts[safe: 6]),
+        ].filter { !$0.isEmpty }.joined(separator: " ")
+        return NativeFundEstimate(
+            fundName: fundName,
+            price: officialNav * (1 + changePct / 100),
+            time: quoteTime,
+            changePct: changePct,
+            source: "market_proxy_estimate",
+            sourceLabel: "\(label)代理估算"
+        )
+    }
+
+    private func fetchSinaForexEstimate(
+        symbol: String,
+        label: String,
+        fundName: String,
+        officialNav: Double
+    ) async throws -> NativeFundEstimate? {
+        let parts = try await fetchSinaQuoteParts(symbol: symbol)
+        guard parts.count > 17,
+              normalizeDateText(parts[safe: 17] ?? "") == currentMarketDateText(),
+              let price = doubleValue(parts[safe: 8]),
+              let previousClose = doubleValue(parts[safe: 3]),
+              price > 0,
+              previousClose > 0 else {
+            return nil
+        }
+        let changePct = (price / previousClose - 1) * 100
+        guard changePct.isFinite, abs(changePct) <= 10 else { return nil }
+        let quoteTime = [
+            normalizedString(parts[safe: 17]),
+            normalizedString(parts[safe: 0]),
+        ].filter { !$0.isEmpty }.joined(separator: " ")
+        return NativeFundEstimate(
+            fundName: fundName,
+            price: officialNav * (1 + changePct / 100),
+            time: quoteTime,
+            changePct: changePct,
+            source: "market_proxy_estimate",
+            sourceLabel: "\(label)代理估算"
+        )
+    }
+
+    private func fetchSinaQuoteParts(symbol: String) async throws -> [String] {
+        let url = URL(string: "https://hq.sinajs.cn/list=\(symbol)")!
+        let text = try await requestText(
+            hostURL: URL(string: "https://hq.sinajs.cn")!,
+            absoluteURL: url,
+            headers: [
+                "Accept": "text/plain,*/*",
+                "Referer": "https://finance.sina.com.cn/",
+            ]
+        )
+        guard let quoted = firstMatch(in: text, pattern: #"=\"([^\"]*)\";"#) else {
+            return []
+        }
+        return quoted.split(separator: ",", omittingEmptySubsequences: false).map(String.init)
+    }
+
+    private func latestHistoryQuote(fundCode: String, history: NativeFundHistory?) -> NativeFundQuote? {
+        guard let latest = history?.series.last else { return nil }
+        let changePct = currentDayChangePct(latest.changePct, dateText: latest.date)
+        return NativeFundQuote(
+            fundCode: fundCode,
+            fundName: history?.fundName ?? "",
+            price: latest.nav,
+            priceTime: latest.date,
+            priceSource: "official_nav",
+            priceSourceLabel: changePct == nil ? "最近净值" : "当日确认净值",
+            officialNav: latest.nav,
+            officialNavDate: latest.date,
+            estimatePrice: nil,
+            estimateTime: "",
+            estimateChangePct: changePct
+        )
+    }
+
+    private func mergingFundEstimate(
+        fundCode: String,
+        base: NativeFundQuote?,
+        estimate: NativeFundEstimate
+    ) -> NativeFundQuote {
+        guard let base else {
             return NativeFundQuote(
                 fundCode: fundCode,
-                fundName: history?.fundName ?? "",
-                price: latest.nav,
-                priceTime: latest.date,
-                priceSource: "official_nav",
-                priceSourceLabel: "最近净值",
-                officialNav: latest.nav,
-                officialNavDate: latest.date,
-                estimatePrice: nil,
-                estimateTime: "",
-                estimateChangePct: nil
+                fundName: estimate.fundName,
+                price: estimate.price ?? 0,
+                priceTime: estimate.time,
+                priceSource: estimate.source,
+                priceSourceLabel: estimate.sourceLabel,
+                officialNav: nil,
+                officialNavDate: "",
+                estimatePrice: estimate.price,
+                estimateTime: estimate.time,
+                estimateChangePct: estimate.changePct
             )
         }
-        return .empty(fundCode)
+
+        return NativeFundQuote(
+            fundCode: base.fundCode,
+            fundName: firstNonEmpty([estimate.fundName, base.fundName]),
+            price: base.price,
+            priceTime: base.priceTime,
+            priceSource: base.priceSource,
+            priceSourceLabel: "\(base.priceSourceLabel) · \(estimate.sourceLabel)",
+            officialNav: base.officialNav,
+            officialNavDate: base.officialNavDate,
+            estimatePrice: estimate.price,
+            estimateTime: estimate.time,
+            estimateChangePct: estimate.changePct
+        )
     }
 
     private func fetchLatestFundNavQuote(_ fundCode: String, fundName: String) async throws -> NativeFundQuote? {
@@ -1035,18 +1342,22 @@ final class QiemanPlatformNativeClient {
         }
 
         let officialNavDate = normalizedString(latest["FSRQ"])
+        let changePct = currentDayChangePct(
+            doubleValue(latest["JZZZL"]),
+            dateText: officialNavDate
+        )
         return NativeFundQuote(
             fundCode: fundCode,
             fundName: fundName,
             price: officialNav,
             priceTime: officialNavDate,
             priceSource: "official_nav",
-            priceSourceLabel: "最近净值",
+            priceSourceLabel: changePct == nil ? "最近净值" : "当日确认净值",
             officialNav: officialNav,
             officialNavDate: officialNavDate,
             estimatePrice: nil,
             estimateTime: "",
-            estimateChangePct: nil
+            estimateChangePct: changePct
         )
     }
 
@@ -1372,6 +1683,9 @@ final class QiemanPlatformNativeClient {
 
     private func formattedTencentQuoteTime(_ value: String?) -> String {
         let raw = (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if raw.count >= 10, raw.dropFirst(4).first == "-" {
+            return String(raw.prefix(19))
+        }
         guard raw.count >= 14 else { return raw }
         let year = raw.prefix(4)
         let month = raw.dropFirst(4).prefix(2)
@@ -1409,7 +1723,7 @@ final class QiemanPlatformNativeClient {
     private static let dateOnlyFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = .current
+        f.timeZone = TimeZone(identifier: "Asia/Shanghai") ?? .current
         f.dateFormat = "yyyy-MM-dd"
         return f
     }()
@@ -1449,6 +1763,15 @@ final class QiemanPlatformNativeClient {
         return text.count >= 10 ? String(text.prefix(10)) : text
     }
 
+    private func currentMarketDateText() -> String {
+        Self.dateOnlyFormatter.string(from: now())
+    }
+
+    private func currentDayChangePct(_ value: Double?, dateText: String) -> Double? {
+        guard normalizeDateText(dateText) == currentMarketDateText() else { return nil }
+        return value
+    }
+
     private func dateKey(_ value: String) -> Int {
         let text = normalizeDateText(value)
         guard !text.isEmpty else { return 0 }
@@ -1461,7 +1784,7 @@ final class QiemanPlatformNativeClient {
     }
 
     private func isoTimestampNow() -> String {
-        Self.displayTimeFormatter.string(from: Date())
+        Self.displayTimeFormatter.string(from: now())
     }
 
     private func zipOptional(_ lhs: Double?, _ rhs: Double?) -> (Double, Double)? {
@@ -1559,6 +1882,7 @@ private struct NativeFundHistoryEntry {
     let dateKey: Int
     let nav: Double
     let ts: Int
+    let changePct: Double?
 }
 
 private struct NativeFundHistory {
@@ -1595,6 +1919,15 @@ private struct NativeFundQuote {
             estimateChangePct: nil
         )
     }
+}
+
+private struct NativeFundEstimate {
+    let fundName: String
+    let price: Double?
+    let time: String
+    let changePct: Double?
+    let source: String
+    let sourceLabel: String
 }
 
 private struct NativeStockQuote {
