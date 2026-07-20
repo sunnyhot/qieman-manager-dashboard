@@ -184,13 +184,24 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertEqual(summary.detail, "等待模型返回：模型分析 已等待 1m")
     }
 
+    /// Overview 板块源码已按子视图拆到 Views/Overview/ 目录，断言汇总该目录下所有 .swift 文件。
+    private func overviewSectionSources() throws -> String {
+        let overviewDir = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Views/Overview")
+        let urls = try FileManager.default
+            .contentsOfDirectory(at: overviewDir, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "swift" }
+        return try urls
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            .map { try String(contentsOf: $0, encoding: .utf8) }
+            .joined(separator: "\n")
+    }
+
     func testOverviewSourceRendersAITrendSummaryPanel() throws {
-        let sourceURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("Views/OverviewSectionView.swift")
-        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let source = try overviewSectionSources()
 
         XCTAssertTrue(source.contains("AITrendSummaryPanel("))
         XCTAssertTrue(source.contains("summary: model.trendDashboardSummary"))
@@ -199,12 +210,7 @@ final class TrendDashboardSummaryTests: XCTestCase {
     }
 
     func testOverviewSourceMergesSummaryIntoTodayBrief() throws {
-        let sourceURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("Views/OverviewSectionView.swift")
-        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let source = try overviewSectionSources()
 
         XCTAssertTrue(source.contains("summaryItems: overviewBriefSummaryItems"))
         XCTAssertTrue(source.contains("TodayBriefSummaryCard("))
@@ -215,12 +221,7 @@ final class TrendDashboardSummaryTests: XCTestCase {
     }
 
     func testOverviewSourceUsesFullWidthGridsAndDropsAssetOverview() throws {
-        let sourceURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("Views/OverviewSectionView.swift")
-        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let source = try overviewSectionSources()
 
         XCTAssertFalse(source.contains("SectionCard(title: \"资产总览\""))
         XCTAssertFalse(source.contains("OverviewAssetTypeSummary"))
@@ -233,12 +234,7 @@ final class TrendDashboardSummaryTests: XCTestCase {
     }
 
     func testOverviewSourceDropsManagerActivityAndFreshnessPanels() throws {
-        let sourceURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("Views/OverviewSectionView.swift")
-        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let source = try overviewSectionSources()
 
         XCTAssertFalse(source.contains("DashboardInsightPanel("))
         XCTAssertFalse(source.contains("struct DashboardInsightPanel"))

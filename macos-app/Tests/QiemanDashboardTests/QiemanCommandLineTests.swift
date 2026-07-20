@@ -19,10 +19,10 @@ final class QiemanCommandLineTests: XCTestCase {
     func testVersionDeclaresSwiftMacOSRuntime() async throws {
         let command = try QiemanCommandLine(arguments: ["version"])
         let payload = try await command.run()
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: payload) as? [String: Any])
 
-        XCTAssertEqual(payload["runtime"] as? String, "swift")
-        XCTAssertEqual(payload["platform"] as? String, "macos")
-        XCTAssertNoThrow(try QiemanCommandLine.JSONData(payload))
+        XCTAssertEqual(object["runtime"] as? String, "swift")
+        XCTAssertEqual(object["platform"] as? String, "macos")
     }
 
     func testHistoricalValuationIsRejectedInsteadOfReturningFakeZero() async throws {
@@ -59,11 +59,11 @@ final class QiemanCommandLineTests: XCTestCase {
             "--json-path", inputURL.path,
         ])
         let payload = try await command.run()
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: payload) as? [String: Any])
 
-        XCTAssertEqual(payload["record_count"] as? Int, 1)
-        XCTAssertEqual(payload["signal_count"] as? Int, 1)
-        let counts = try XCTUnwrap(payload["counts"] as? [String: Int])
+        XCTAssertEqual(object["record_count"] as? Int, 1)
+        XCTAssertEqual(object["signal_count"] as? Int, 1)
+        let counts = try XCTUnwrap(object["counts"] as? [String: Int])
         XCTAssertEqual(counts["buy"], 1)
-        XCTAssertNoThrow(try QiemanCommandLine.JSONData(payload))
     }
 }

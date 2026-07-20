@@ -1,23 +1,6 @@
 import CryptoKit
 import Foundation
 
-enum NativePlatformError: LocalizedError {
-    case missingProdCode
-    case invalidResponse
-    case api(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .missingProdCode:
-            return "没有产品代码，无法直拉平台调仓记录。"
-        case .invalidResponse:
-            return "平台调仓接口返回结构异常。"
-        case .api(let message):
-            return message
-        }
-    }
-}
-
 actor QiemanPlatformCache {
     static let maxPayloadEntries = 16
     static let maxFundCacheEntries = 256
@@ -113,55 +96,6 @@ actor QiemanPlatformCache {
             }
             cache.removeValue(forKey: oldestKey)
         }
-    }
-}
-
-struct PlatformActionAssetBuckets {
-    let latestByAsset: [String: PlatformActionPayload]
-    private let actionsByAsset: [String: [PlatformActionPayload]]
-
-    init(actions: [PlatformActionPayload]) {
-        var latestByAsset: [String: PlatformActionPayload] = [:]
-        var actionsByAsset: [String: [PlatformActionPayload]] = [:]
-
-        for action in actions {
-            let assetKey = Self.assetKey(for: action)
-            guard !assetKey.isEmpty else { continue }
-
-            actionsByAsset[assetKey, default: []].append(action)
-
-            if let current = latestByAsset[assetKey],
-               Self.timestamp(action) <= Self.timestamp(current) {
-                continue
-            }
-            latestByAsset[assetKey] = action
-        }
-
-        self.latestByAsset = latestByAsset
-        self.actionsByAsset = actionsByAsset
-    }
-
-    func sortedActions(for assetKey: String) -> [PlatformActionPayload] {
-        (actionsByAsset[assetKey] ?? []).sorted {
-            Self.timestamp($0) < Self.timestamp($1)
-        }
-    }
-
-    static func assetKey(for action: PlatformActionPayload) -> String {
-        for value in [action.fundCode, action.title, action.fundName] {
-            let text = (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            if !text.isEmpty {
-                return text
-            }
-        }
-        return ""
-    }
-
-    private static func timestamp(_ action: PlatformActionPayload) -> Int {
-        if let txnTs = action.txnTs, txnTs > 0 {
-            return txnTs
-        }
-        return action.createdTs ?? 0
     }
 }
 
@@ -1821,160 +1755,11 @@ final class QiemanPlatformNativeClient {
     }
 }
 
-private enum PreloadResult {
-    case history(code: String, data: NativeFundHistory)
-    case quote(code: String, data: NativeFundQuote)
-}
-
-private struct NativePlatformOrder {
-    let adjustmentID: Int
-    let side: String
-    let label: String
-    let fundCode: String
-    let fundName: String
-    let title: String
-    let tradeUnit: Int
-    let postPlanUnit: Int
-    let strategyType: String
-    let largeClass: String
-    let nav: Double
-    let navDate: String
-    let buyDate: String
-    let orderCountInAdjustment: Int
-}
-
-private struct NativePlatformActionSeed {
-    let actionKey: String
-    let adjustmentID: Int
-    let adjustmentTitle: String
-    let title: String
-    let actionTitle: String
-    let fundName: String
-    let fundCode: String
-    let side: String
-    let action: String
-    let tradeUnit: Int
-    let postPlanUnit: Int
-    let createdAt: String
-    let txnDate: String
-    let createdTs: Int
-    let txnTs: Int
-    let articleURL: String
-    let comment: String
-    let strategyType: String
-    let largeClass: String
-    let buyDate: String
-    let nav: Double
-    let navDate: String
-    let orderCountInAdjustment: Int
-}
-
-private struct NativePlatformAdjustment {
-    let adjustmentID: Int
-    let title: String
-    let createdTs: Int
-    let txnTs: Int
-    let orderCount: Int
-}
-
-private struct NativeFundHistoryEntry {
-    let date: String
-    let dateKey: Int
-    let nav: Double
-    let ts: Int
-    let changePct: Double?
-}
-
-private struct NativeFundHistory {
-    let fundCode: String
-    let fundName: String
-    let series: [NativeFundHistoryEntry]
-}
-
-private struct NativeFundQuote {
-    let fundCode: String
-    let fundName: String
-    let price: Double
-    let priceTime: String
-    let priceSource: String
-    let priceSourceLabel: String
-    let officialNav: Double?
-    let officialNavDate: String
-    let estimatePrice: Double?
-    let estimateTime: String
-    let estimateChangePct: Double?
-
-    static func empty(_ fundCode: String) -> NativeFundQuote {
-        NativeFundQuote(
-            fundCode: fundCode,
-            fundName: "",
-            price: 0,
-            priceTime: "",
-            priceSource: "",
-            priceSourceLabel: "",
-            officialNav: nil,
-            officialNavDate: "",
-            estimatePrice: nil,
-            estimateTime: "",
-            estimateChangePct: nil
-        )
-    }
-}
-
-private struct NativeFundEstimate {
-    let fundName: String
-    let price: Double?
-    let time: String
-    let changePct: Double?
-    let source: String
-    let sourceLabel: String
-}
-
-private struct NativeStockQuote {
-    let stockCode: String
-    let stockName: String
-    let price: Double
-    let priceTime: String
-    let priceSource: String
-    let priceSourceLabel: String
-    let previousClose: Double?
-    let changePct: Double?
-
-    var hasUsableData: Bool {
-        price > 0 || !stockName.isEmpty
-    }
-
-    static func empty(_ stockCode: String) -> NativeStockQuote {
-        NativeStockQuote(
-            stockCode: stockCode,
-            stockName: "",
-            price: 0,
-            priceTime: "",
-            priceSource: "",
-            priceSourceLabel: "",
-            previousClose: nil,
-            changePct: nil
-        )
-    }
-}
-
 private extension Array {
     subscript(safe index: Int) -> Element? {
         guard indices.contains(index) else { return nil }
         return self[index]
     }
-}
-
-private struct NativeUserPortfolioPricePayload {
-    let assetName: String
-    let currentPrice: Double?
-    let priceTime: String
-    let priceSource: String
-    let officialNav: Double?
-    let officialNavDate: String
-    let estimatePrice: Double?
-    let estimatePriceTime: String
-    let estimateChangePct: Double?
 }
 
 private extension String {

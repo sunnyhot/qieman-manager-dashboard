@@ -1,0 +1,207 @@
+import SwiftUI
+
+// MARK: - Overview
+
+struct TodayBriefSummaryItem: Identifiable {
+    let id: String
+    let title: String
+    let value: String
+    let detail: String
+    let icon: String
+    let tint: Color
+}
+
+struct OverviewSectionView: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 14) {
+                TodayBriefPanel(
+                    items: model.todayBriefItems,
+                    summaryItems: overviewBriefSummaryItems,
+                    action: openBrief,
+                    summaryAction: openPortfolio
+                )
+                AITrendSummaryPanel(
+                    summary: model.trendDashboardSummary,
+                    action: handleTrendDashboardAction
+                )
+
+                SectionCard(title: "最近调仓", subtitle: "原生卡片直接消费平台接口", icon: "arrow.left.arrow.right", trailing: {
+                    Spacer()
+                    Button("查看全部") {
+                        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+                            model.selectedSection = .platform
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }) {
+                    if model.latestPlatformActions.isEmpty {
+                        EmptySectionState(
+                            title: "最近调仓暂时为空",
+                            subtitle: "平台接口现在会和论坛分开刷新；点一次刷新后，这里会优先恢复可用数据。",
+                            actionTitle: "刷新"
+                        ) {
+                            Task { try? await model.refreshLatest(persist: false) }
+                        }
+                    } else {
+                        VStack(spacing: 8) {
+                            ForEach(Array(model.latestPlatformActions.prefix(3))) { action in
+                                Button {
+                                    openPlatform(action)
+                                } label: {
+                                    PlatformActionRow(action: action)
+                                }
+                                .buttonStyle(PressResponsiveButtonStyle())
+                                .help("打开平台调仓详情")
+                            }
+                        }
+                    }
+                }
+
+                // Recent posts
+                SectionCard(
+                    title: model.currentSnapshot?.snapshotType == "posts" ? "最近发言" : "最近记录",
+                    subtitle: model.currentSnapshot?.kindLabel == "帖子" ? "主理人发言摘要" : "当前模式下的最新原生结果",
+                    icon: "text.bubble",
+                    trailing: {
+                        Spacer()
+                        Button("查看全部") {
+                            withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+                                model.selectedSection = .forum
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                ) {
+                    if model.hasForumPosts {
+                        VStack(spacing: 8) {
+                            ForEach(Array(model.forumRecords.prefix(3))) { record in
+                                Button {
+                                    openForum(record)
+                                } label: {
+                                    ForumRecordRow(record: record)
+                                }
+                                .buttonStyle(PressResponsiveButtonStyle())
+                                .help("打开论坛发言详情")
+                            }
+                        }
+                    } else {
+                        EmptySectionState(
+                            title: "最近发言暂时为空",
+                            subtitle: "论坛页会自动补拉帖子流；这里也会跟着恢复到最新发言。",
+                            actionTitle: "刷新"
+                        ) {
+                            Task { try? await model.refreshLatest(persist: false) }
+                        }
+                    }
+                }
+            }
+            .padding(14)
+        }
+    }
+
+    private func openPortfolio() {
+        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            model.selectedSection = .portfolio
+        }
+    }
+
+    private func handleTrendDashboardAction(_ action: TrendDashboardAction) {
+        guard !action.isDisabled else { return }
+        switch action.kind {
+        case .configure:
+            withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+                model.selectedSection = .settings
+            }
+        case .generate, .refresh:
+            Task {
+                await model.generateTrendAnalysis(userInitiated: true)
+            }
+        case .openReport:
+            withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+                model.selectedEnhancementTab = .trend
+                model.selectedSection = .enhancement
+            }
+        case .wait:
+            break
+        }
+    }
+
+    private func openBrief(_ item: TodayBriefItem) {
+        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            switch item.destination {
+            case .portfolio:
+                model.selectedSection = .portfolio
+            case .platform:
+                if let action = model.latestPlatformActions.first {
+                    model.selectPlatformAction(action.id)
+                }
+                model.selectedSection = .platform
+            case .forum:
+                if let record = model.forumRecords.first {
+                    model.selectedPostID = record.id
+                }
+                model.selectedSection = .forum
+            case .settings:
+                model.selectedSection = .settings
+            }
+        }
+    }
+
+    private var overviewBriefSummaryItems: [TodayBriefSummaryItem] {
+        [
+            TodayBriefSummaryItem(
+                id: "total",
+                title: "总持仓",
+                value: model.personalAssetSummary.map { currencyText($0.totalEffectiveHoldingAmount) } ?? "—",
+                detail: model.personalAssetSummary.map {
+                    "已持有 \(currencyText($0.totalMarketValue)) + 待确认 \(currencyText($0.totalPendingCashAmount)) + 下次计划 \(currencyText($0.totalEstimatedNextPlanAmount))"
+                } ?? "个人资产还未录入完整",
+                icon: "wallet.bifold",
+                tint: AppPalette.brand
+            ),
+            TodayBriefSummaryItem(
+                id: "pending",
+                title: "待确认买入",
+                value: model.personalAssetSummary.map { currencyText($0.totalPendingCashAmount) } ?? "—",
+                detail: model.pendingTradeSummary.map { "\($0.actionCount) 笔交易进行中" } ?? "暂无买入中",
+                icon: "clock.badge.exclamationmark",
+                tint: AppPalette.warning
+            ),
+            TodayBriefSummaryItem(
+                id: "plans",
+                title: "计划档案",
+                value: model.investmentPlanSummary.map { "\($0.activePlanCount) / \($0.pausedPlanCount) / \($0.endedPlanCount)" } ?? "—",
+                detail: model.investmentPlanSummary.map { "进行中 / 暂停 / 终止 · 共 \($0.planCount) 条" } ?? "还没有计划档案",
+                icon: "calendar.badge.clock",
+                tint: AppPalette.info
+            ),
+            TodayBriefSummaryItem(
+                id: "coverage",
+                title: "覆盖标的",
+                value: model.personalAssetSummary.map { "\($0.fundCount)" } ?? "0",
+                detail: model.personalAssetSummary.map { "持有 \($0.holdingFundCount) · 待确认 \($0.pendingFundCount) · 有计划 \($0.activePlanFundCount)" } ?? "先添加你的个人资产",
+                icon: "square.grid.3x2",
+                tint: AppPalette.accentWarm
+            )
+        ]
+    }
+
+    private func openPlatform(_ action: PlatformActionPayload) {
+        model.selectPlatformAction(action.id)
+        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            model.selectedSection = .platform
+        }
+    }
+
+    private func openForum(_ record: SnapshotRecordPayload) {
+        model.selectedPostID = record.id
+        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            model.selectedSection = .forum
+        }
+    }
+}
