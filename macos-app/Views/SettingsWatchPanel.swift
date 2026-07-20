@@ -81,7 +81,11 @@ extension SettingsSectionView {
                 )
 
                 if let error = model.managerWatchSettings.lastErrorMessage, !error.isEmpty {
-                    ToastBar(text: error, tint: AppPalette.warning)
+                    ToastBar(
+                        text: error,
+                        tint: AppPalette.warning,
+                        onDismiss: { model.managerWatchSettings.lastErrorMessage = nil }
+                    )
                         .padding(.top, 12)
                 }
             }

@@ -50,12 +50,10 @@ struct CommentBlock: View {
             }
         }
         .padding(12)
-        .interactiveSurface(
+        .staticSurface(
             tint: AppPalette.brand,
             fill: AppPalette.card,
-            hoverFill: AppPalette.cardHover,
-            strokeOpacity: 0.28,
-            lift: 0.6
+            strokeOpacity: 0.28
         )
     }
 }
@@ -88,6 +86,7 @@ struct InvestmentPlanCard: View {
                             .foregroundStyle(AppPalette.ink)
                             .lineLimit(2)
                             .layoutPriority(1)
+                            .help(plan.fundName)
                         if plan.isDrawdownMode {
                             ToolbarBadge(title: "涨跌幅模式", tint: AppPalette.info)
                         }
@@ -157,13 +156,11 @@ struct InvestmentPlanCard: View {
             }
         }
         .padding(12)
-        .interactiveSurface(
+        .staticSurface(
             tint: accent,
             fill: AppPalette.card,
-            hoverFill: AppPalette.cardHover,
             strokeOpacity: 0.28,
-            activeStrokeOpacity: 0.46,
-            lift: 0.8
+            activeStrokeOpacity: 0.46
         )
     }
 }
@@ -255,13 +252,11 @@ struct PendingTradeCard: View {
             }
         }
         .padding(12)
-        .interactiveSurface(
+        .staticSurface(
             tint: accent,
             fill: AppPalette.card,
-            hoverFill: AppPalette.cardHover,
             strokeOpacity: 0.28,
-            activeStrokeOpacity: 0.46,
-            lift: 0.8
+            activeStrokeOpacity: 0.46
         )
     }
 }

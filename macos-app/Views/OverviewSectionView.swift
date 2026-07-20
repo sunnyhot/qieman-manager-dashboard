@@ -963,6 +963,7 @@ struct ManagerWatchControlCard: View {
                 .foregroundStyle(AppPalette.muted)
             TextField("", text: text)
                 .textFieldStyle(.plain)
+                .accessibilityLabel(label)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
                 .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))

@@ -336,11 +336,11 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertFalse(trendSource.contains("trendBlock(\"行动候选\""))
         XCTAssertFalse(trendSource.contains("trendBlock(\"证据来源\""))
         XCTAssertFalse(trendSource.contains("trendBlock(\"边界与提示\""))
-        // 列表项触碰/悬停效果与其他页面一致：复用 interactiveSurface（hoverFill/lift/描边），
-        // 不再裸用 background(cardStrong)+stroke
-        XCTAssertTrue(trendSource.contains("hoverFill: AppPalette.cardHover"))
+        // 报告卡片只承载信息，不用悬停抬升制造可点击错觉；统一复用静态表面与描边。
+        XCTAssertTrue(trendSource.contains(".staticSurface("))
         XCTAssertTrue(trendSource.contains("activeStrokeOpacity"))
-        XCTAssertTrue(trendSource.contains("lift:"))
+        XCTAssertFalse(trendSource.contains("hoverFill: AppPalette.cardHover"))
+        XCTAssertFalse(trendSource.contains("lift:"))
         // 市场视图：周期与板块共用统一三列定义，消除宽屏空列与高矮不齐
         XCTAssertTrue(trendSource.contains("marketCardColumns"))
         XCTAssertTrue(trendSource.contains("columns: columns"))

@@ -25,6 +25,7 @@ struct QiemanLoginView: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var session: QiemanLoginSession
+    @State private var isConfirmingClearLogin = false
 
     init(cookieFileURL: URL?, onCookieSaved: @escaping () -> Void) {
         self.cookieFileURL = cookieFileURL
@@ -41,10 +42,19 @@ struct QiemanLoginView: View {
         }
         .frame(minWidth: 1040, minHeight: 760)
         .background(AppPalette.paper)
+        .respectsReducedMotion()
         .sheet(item: $session.popupContext) { context in
             QiemanLoginPopupSheet(context: context) {
                 session.dismissPopup(webView: context.webView)
             }
+        }
+        .alert("清除登录态？", isPresented: $isConfirmingClearLogin) {
+            Button("清除", role: .destructive) {
+                Task { await session.clearLocalLogin() }
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("这会删除本地 qieman.cookie，并清理登录页中的且慢 Cookie。")
         }
     }
 
@@ -92,7 +102,7 @@ struct QiemanLoginView: View {
                             session.requestCookieCapture()
                         }
                         loginActionButton("清除登录态", systemImage: "trash") {
-                            Task { await session.clearLocalLogin() }
+                            isConfirmingClearLogin = true
                         }
                     }
 

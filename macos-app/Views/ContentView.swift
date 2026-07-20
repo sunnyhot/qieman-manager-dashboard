@@ -33,6 +33,7 @@ struct ContentView: View {
 
     // MARK: - Collapsible Filter State
     @State private var isQueryExpanded = false
+    @FocusState private var focusedToolbarField: String?
 
     /// 收起时展示当前活跃（非默认值）筛选条件摘要
     private var activeFilterSummary: String {
@@ -78,6 +79,7 @@ struct ContentView: View {
                 )
         }
         .frame(minWidth: 860, idealWidth: 1200, minHeight: 600)
+        .respectsReducedMotion()
         .task {
             await model.start()
             await model.runDailyTrendAnalysisIfNeeded()
@@ -85,6 +87,11 @@ struct ContentView: View {
         }
         .onChange(of: model.selectedSection) { _, section in
             model.refreshDataForSectionIfNeeded(section)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .qiemanFocusSearch)) { _ in
+            guard model.selectedSection == .forum else { return }
+            isQueryExpanded = true
+            focusedToolbarField = "关键词"
         }
         .sheet(isPresented: $model.isPresentingLoginSheet) {
             QiemanLoginView(cookieFileURL: model.cookieFileURL) {
@@ -150,10 +157,12 @@ struct ContentView: View {
                 } label: {
                     Image(systemName: "folder")
                         .font(.system(size: 12, weight: .medium))
+                        .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(AppPalette.muted)
                 .help("打开数据目录")
+                .accessibilityLabel("打开数据目录")
             }
 
             if let logURL = model.logFileURL {
@@ -201,9 +210,7 @@ struct ContentView: View {
                             .onTapGesture(count: 2) {
                                 toggleMainWindowZoom()
                             }
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            toolbarActionRow
-                        }
+                        toolbarActionRow
                     }
                 }
 
@@ -393,6 +400,8 @@ struct ContentView: View {
                 .textFieldStyle(.plain)
                 .inputFieldStyle()
                 .controlSize(.regular)
+                .accessibilityLabel(label)
+                .focused($focusedToolbarField, equals: label)
         }
         .frame(minWidth: minWidth, maxWidth: .infinity, alignment: .leading)
     }
@@ -450,16 +459,23 @@ struct ContentView: View {
         if !model.noticeMessage.isEmpty || !model.errorMessage.isEmpty {
             VStack(spacing: AppPalette.spaceXS) {
                 if !model.noticeMessage.isEmpty {
-                    ToastBar(text: model.noticeMessage, tint: AppPalette.positive)
+                    ToastBar(
+                        text: model.noticeMessage,
+                        tint: AppPalette.positive,
+                        onDismiss: { model.noticeMessage = "" }
+                    )
                         .task(id: model.noticeMessage) {
                             await dismissNoticeToast(model.noticeMessage, after: 4.5)
                         }
                 }
                 if !model.errorMessage.isEmpty {
-                    ToastBar(text: model.errorMessage, tint: AppPalette.danger)
-                        .task(id: model.errorMessage) {
-                            await dismissErrorToast(model.errorMessage, after: 8)
-                        }
+                    ToastBar(
+                        text: model.errorMessage,
+                        tint: AppPalette.danger,
+                        actionTitle: "复制",
+                        action: { copyErrorMessage() },
+                        onDismiss: { model.errorMessage = "" }
+                    )
                 }
             }
             .padding(.horizontal, AppPalette.contentPadding)
@@ -479,15 +495,9 @@ struct ContentView: View {
         }
     }
 
-    private func dismissErrorToast(_ message: String, after seconds: Double) async {
-        guard !message.isEmpty else { return }
-        try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-        await MainActor.run {
-            guard model.errorMessage == message else { return }
-            withAnimation(.easeOut(duration: 0.18)) {
-                model.errorMessage = ""
-            }
-        }
+    private func copyErrorMessage() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(model.errorMessage, forType: .string)
     }
 
     @ViewBuilder

@@ -20,6 +20,9 @@ struct SettingsSectionView: View {
     @State var isMenuBarFundMarketExpanded = false
     @State var draggedTickerSelectionID: String?
     @State var tickerDropTargetID: String?
+    @State var isConfirmingMenuBarReset = false
+    @State var isConfirmingHoldingSelectionClear = false
+    @State var isConfirmingDataDirectoryReset = false
 
     var menuBarTickerEnabledBinding: Binding<Bool> {
         Binding(

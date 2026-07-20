@@ -168,9 +168,10 @@ struct SettingsToggleRow: View {
 
             Spacer(minLength: 12)
 
-            Toggle("", isOn: isOn)
+            Toggle(title, isOn: isOn)
                 .labelsHidden()
                 .toggleStyle(.switch)
+                .accessibilityHint(detail)
         }
         .frame(minHeight: 54)
     }

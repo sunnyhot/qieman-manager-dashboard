@@ -120,7 +120,7 @@ extension SettingsSectionView {
 
                     if model.isUsingCustomDataDirectory {
                         Button(role: .destructive) {
-                            model.resetDataDirectory()
+                            isConfirmingDataDirectoryReset = true
                         } label: {
                             Label("恢复默认", systemImage: "arrow.uturn.backward")
                         }
@@ -128,6 +128,14 @@ extension SettingsSectionView {
                     }
                 }
             }
+        }
+        .alert("恢复默认数据目录？", isPresented: $isConfirmingDataDirectoryReset) {
+            Button("恢复默认", role: .destructive) {
+                model.resetDataDirectory()
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("应用会把数据迁回默认目录。迁移期间请勿退出应用。")
         }
     }
 }

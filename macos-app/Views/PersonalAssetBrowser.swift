@@ -17,6 +17,7 @@ struct PersonalAssetBrowser: View {
     @State private var sortOption: PersonalAssetSortOption = .defaultOption
     @State private var comparisonSelection: [String] = []
     @State private var selectedDetailRow: PersonalAssetAggregateRow?
+    @FocusState private var isSearchFocused: Bool
 
     var body: some View {
         let presentation: PersonalAssetBrowserPresentationModel = {
@@ -121,6 +122,9 @@ struct PersonalAssetBrowser: View {
         .onChange(of: presentation.validComparisonSelection) { _, validSelection in
             comparisonSelection = validSelection
         }
+        .onReceive(NotificationCenter.default.publisher(for: .qiemanFocusSearch)) { _ in
+            isSearchFocused = true
+        }
     }
 
     private var browserSearchField: some View {
@@ -129,6 +133,7 @@ struct PersonalAssetBrowser: View {
                 .foregroundStyle(AppPalette.muted)
             TextField("搜索名称或代码", text: $searchText)
                 .textFieldStyle(.plain)
+                .focused($isSearchFocused)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -312,10 +317,11 @@ struct PersonalAssetComparisonCard: View {
                     Image(systemName: "minus.circle")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AppPalette.muted)
-                        .frame(width: 24, height: 24)
+                        .frame(width: 28, height: 28)
                 }
                 .buttonStyle(PressResponsiveButtonStyle())
                 .help("移出对比")
+                .accessibilityLabel("将 \(item.title) 移出对比")
             }
 
             VStack(spacing: 7) {
@@ -342,13 +348,11 @@ struct PersonalAssetComparisonCard: View {
         }
         .frame(maxWidth: .infinity, minHeight: 212, alignment: .topLeading)
         .padding(12)
-        .interactiveSurface(
+        .staticSurface(
             tint: AppPalette.brand,
             fill: AppPalette.card.opacity(0.86),
-            hoverFill: AppPalette.cardHover,
             strokeOpacity: 0.36,
-            activeStrokeOpacity: 0.48,
-            lift: 0.8
+            activeStrokeOpacity: 0.48
         )
     }
 

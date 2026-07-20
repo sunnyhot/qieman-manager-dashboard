@@ -8,6 +8,7 @@ struct PersonalInvestmentPlanManagementSheet: View {
 
     @State private var editingPlan: PersonalInvestmentPlan?
     @State private var deletingPlan: PersonalInvestmentPlan?
+    @State private var inlineErrorMessage = ""
 
     private let planIDs: Set<UUID>
 
@@ -41,6 +42,11 @@ struct PersonalInvestmentPlanManagementSheet: View {
                     dismiss()
                 }
                 .buttonStyle(.bordered)
+                .keyboardShortcut(.cancelAction)
+            }
+
+            if !inlineErrorMessage.isEmpty {
+                ToastBar(text: inlineErrorMessage, tint: AppPalette.danger, onDismiss: { inlineErrorMessage = "" })
             }
 
             if plans.isEmpty {
@@ -58,7 +64,9 @@ struct PersonalInvestmentPlanManagementSheet: View {
                                 plan: plan,
                                 onEdit: { editingPlan = plan },
                                 onStatusChange: { status in
+                                    inlineErrorMessage = ""
                                     model.updateInvestmentPlanStatus(plan.id, status: status.rawValue)
+                                    captureModelError()
                                 },
                                 onDelete: { deletingPlan = plan }
                             )
@@ -78,7 +86,9 @@ struct PersonalInvestmentPlanManagementSheet: View {
         .alert("删除定投计划？", isPresented: deleteConfirmationBinding) {
             Button("删除", role: .destructive) {
                 if let deletingPlan {
+                    inlineErrorMessage = ""
                     model.deleteInvestmentPlan(deletingPlan.id)
+                    captureModelError()
                 }
                 deletingPlan = nil
             }
@@ -119,6 +129,12 @@ struct PersonalInvestmentPlanManagementSheet: View {
         return lhs.fundName.localizedStandardCompare(rhs.fundName) == .orderedAscending
     }
 
+    private func captureModelError() {
+        guard !model.errorMessage.isEmpty else { return }
+        inlineErrorMessage = model.errorMessage
+        model.errorMessage = ""
+    }
+
     private func statusRank(_ plan: PersonalInvestmentPlan) -> Int {
         if plan.isActivePlan { return 0 }
         if plan.isPausedPlan { return 1 }
@@ -148,6 +164,7 @@ private struct PersonalInvestmentPlanManageRow: View {
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(AppPalette.ink)
                             .lineLimit(1)
+                            .help(plan.fundName)
                         ToolbarBadge(title: plan.normalizedStatus, tint: statusOption.tint)
                         if plan.isDrawdownMode {
                             ToolbarBadge(title: "涨跌幅模式", tint: AppPalette.info)

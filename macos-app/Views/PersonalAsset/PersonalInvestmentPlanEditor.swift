@@ -1,5 +1,9 @@
 import SwiftUI
 
+private enum PersonalInvestmentPlanFormField: Hashable {
+    case planType, fundName, fundCode, schedule, amount, investedPeriods, cumulativeAmount, paymentMethod, nextExecution, note
+}
+
 struct PersonalInvestmentPlanAddSheet: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
@@ -15,6 +19,8 @@ struct PersonalInvestmentPlanAddSheet: View {
     @State private var nextExecutionDateText = ""
     @State private var status: PersonalInvestmentPlanStatusOption = .active
     @State private var noteText = ""
+    @State private var inlineErrorMessage = ""
+    @FocusState private var focusedField: PersonalInvestmentPlanFormField?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -34,15 +40,15 @@ struct PersonalInvestmentPlanAddSheet: View {
             }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 10) {
-                planField("计划类型", text: $planTypeText, placeholder: "定投 / 智能定投")
-                planField("基金名称", text: $fundNameText, placeholder: "基金名称")
-                planField("基金代码", text: $fundCodeText, placeholder: "例如 013308")
-                planField("计划说明", text: $scheduleText, placeholder: "每周三定投 / 每周五定投-涨跌幅模式")
-                planField("金额", text: $amountText, placeholder: "500.00元 / 250.00~1,000.00元")
-                planField("已投期数", text: $investedPeriodsText, placeholder: "可留空")
-                planField("累计投入", text: $cumulativeAmountText, placeholder: "可留空")
-                planField("支付方式", text: $paymentMethodText, placeholder: "可留空")
-                planField("下次执行", text: $nextExecutionDateText, placeholder: "进行中计划必填")
+                planField("计划类型", text: $planTypeText, placeholder: "定投 / 智能定投", field: .planType)
+                planField("基金名称", text: $fundNameText, placeholder: "基金名称", field: .fundName)
+                planField("基金代码", text: $fundCodeText, placeholder: "例如 013308", field: .fundCode)
+                planField("计划说明", text: $scheduleText, placeholder: "每周三定投 / 每周五定投-涨跌幅模式", field: .schedule)
+                planField("金额", text: $amountText, placeholder: "500.00元 / 250.00~1,000.00元", field: .amount)
+                planField("已投期数", text: $investedPeriodsText, placeholder: "可留空", field: .investedPeriods)
+                planField("累计投入", text: $cumulativeAmountText, placeholder: "可留空", field: .cumulativeAmount)
+                planField("支付方式", text: $paymentMethodText, placeholder: "可留空", field: .paymentMethod)
+                planField("下次执行", text: $nextExecutionDateText, placeholder: "进行中计划必填", field: .nextExecution)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -73,7 +79,10 @@ struct PersonalInvestmentPlanAddSheet: View {
                         RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                             .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                     )
+                    .focused($focusedField, equals: .note)
             }
+
+            inlinePlanError
 
             HStack(spacing: 10) {
                 Spacer()
@@ -81,8 +90,10 @@ struct PersonalInvestmentPlanAddSheet: View {
                     dismiss()
                 }
                 .buttonStyle(.bordered)
+                .keyboardShortcut(.cancelAction)
 
                 Button("添加") {
+                    inlineErrorMessage = ""
                     if model.addInvestmentPlan(
                         planTypeLabel: planTypeText,
                         fundName: fundNameText,
@@ -97,17 +108,28 @@ struct PersonalInvestmentPlanAddSheet: View {
                         note: noteText
                     ) {
                         dismiss()
+                    } else {
+                        presentInlineError()
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppPalette.info)
+                .keyboardShortcut(.defaultAction)
             }
         }
         .padding(18)
         .frame(width: 620)
     }
 
-    private func planField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+    private var inlinePlanError: some View {
+        Group {
+            if !inlineErrorMessage.isEmpty {
+                ToastBar(text: inlineErrorMessage, tint: AppPalette.danger, onDismiss: { inlineErrorMessage = "" })
+            }
+        }
+    }
+
+    private func planField(_ label: String, text: Binding<String>, placeholder: String, field: PersonalInvestmentPlanFormField) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
@@ -121,6 +143,24 @@ struct PersonalInvestmentPlanAddSheet: View {
                     RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
+                .focused($focusedField, equals: field)
+        }
+    }
+
+    private func presentInlineError() {
+        inlineErrorMessage = model.errorMessage.isEmpty ? "保存失败，请检查填写内容。" : model.errorMessage
+        model.errorMessage = ""
+        if planTypeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .planType
+        } else if fundNameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  fundCodeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .fundName
+        } else if scheduleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .schedule
+        } else if amountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .amount
+        } else if status == .active, nextExecutionDateText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .nextExecution
         }
     }
 }
@@ -142,6 +182,8 @@ struct PersonalInvestmentPlanEditSheet: View {
     @State private var nextExecutionDateText: String
     @State private var status: PersonalInvestmentPlanStatusOption
     @State private var noteText: String
+    @State private var inlineErrorMessage = ""
+    @FocusState private var focusedField: PersonalInvestmentPlanFormField?
 
     init(plan: PersonalInvestmentPlan) {
         self.plan = plan
@@ -176,15 +218,15 @@ struct PersonalInvestmentPlanEditSheet: View {
             }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 10) {
-                planField("计划类型", text: $planTypeText, placeholder: "定投 / 智能定投")
-                planField("基金名称", text: $fundNameText, placeholder: "基金名称")
-                planField("基金代码", text: $fundCodeText, placeholder: "例如 013308")
-                planField("计划说明", text: $scheduleText, placeholder: "每周三定投 / 每周五定投-涨跌幅模式")
-                planField("金额", text: $amountText, placeholder: "500.00元 / 250.00~1,000.00元")
-                planField("已投期数", text: $investedPeriodsText, placeholder: "例如 12")
-                planField("累计投入", text: $cumulativeAmountText, placeholder: "例如 6000.00")
-                planField("支付方式", text: $paymentMethodText, placeholder: "余额宝")
-                planField("下次执行", text: $nextExecutionDateText, placeholder: "2026-05-01(星期五)")
+                planField("计划类型", text: $planTypeText, placeholder: "定投 / 智能定投", field: .planType)
+                planField("基金名称", text: $fundNameText, placeholder: "基金名称", field: .fundName)
+                planField("基金代码", text: $fundCodeText, placeholder: "例如 013308", field: .fundCode)
+                planField("计划说明", text: $scheduleText, placeholder: "每周三定投 / 每周五定投-涨跌幅模式", field: .schedule)
+                planField("金额", text: $amountText, placeholder: "500.00元 / 250.00~1,000.00元", field: .amount)
+                planField("已投期数", text: $investedPeriodsText, placeholder: "例如 12", field: .investedPeriods)
+                planField("累计投入", text: $cumulativeAmountText, placeholder: "例如 6000.00", field: .cumulativeAmount)
+                planField("支付方式", text: $paymentMethodText, placeholder: "余额宝", field: .paymentMethod)
+                planField("下次执行", text: $nextExecutionDateText, placeholder: "2026-05-01(星期五)", field: .nextExecution)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -215,7 +257,10 @@ struct PersonalInvestmentPlanEditSheet: View {
                         RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                             .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                     )
+                    .focused($focusedField, equals: .note)
             }
+
+            inlinePlanError
 
             HStack(spacing: 10) {
                 Spacer()
@@ -223,8 +268,10 @@ struct PersonalInvestmentPlanEditSheet: View {
                     dismiss()
                 }
                 .buttonStyle(.bordered)
+                .keyboardShortcut(.cancelAction)
 
                 Button("保存") {
+                    inlineErrorMessage = ""
                     if model.updateInvestmentPlan(
                         plan.id,
                         planTypeLabel: planTypeText,
@@ -240,17 +287,28 @@ struct PersonalInvestmentPlanEditSheet: View {
                         note: noteText
                     ) {
                         dismiss()
+                    } else {
+                        presentInlineError()
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppPalette.brand)
+                .keyboardShortcut(.defaultAction)
             }
         }
         .padding(18)
         .frame(width: 620)
     }
 
-    private func planField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+    private var inlinePlanError: some View {
+        Group {
+            if !inlineErrorMessage.isEmpty {
+                ToastBar(text: inlineErrorMessage, tint: AppPalette.danger, onDismiss: { inlineErrorMessage = "" })
+            }
+        }
+    }
+
+    private func planField(_ label: String, text: Binding<String>, placeholder: String, field: PersonalInvestmentPlanFormField) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
@@ -264,6 +322,24 @@ struct PersonalInvestmentPlanEditSheet: View {
                     RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
+                .focused($focusedField, equals: field)
+        }
+    }
+
+    private func presentInlineError() {
+        inlineErrorMessage = model.errorMessage.isEmpty ? "保存失败，请检查填写内容。" : model.errorMessage
+        model.errorMessage = ""
+        if planTypeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .planType
+        } else if fundNameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  fundCodeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .fundName
+        } else if scheduleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .schedule
+        } else if amountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .amount
+        } else if status == .active, nextExecutionDateText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .nextExecution
         }
     }
 

@@ -256,11 +256,10 @@ struct PlatformSectionView: View {
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 10, weight: .bold))
+                            .frame(width: 28, height: 28)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(AppPalette.ink)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
                     .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
                     .overlay(
                         RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
@@ -268,6 +267,8 @@ struct PlatformSectionView: View {
                     )
                     .disabled(currentPage == 0)
                     .opacity(currentPage == 0 ? 0.4 : 1.0)
+                    .accessibilityLabel("上一页")
+                    .help("上一页")
 
                     Text("\(currentPage + 1) / \(totalPages)")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -280,11 +281,10 @@ struct PlatformSectionView: View {
                     } label: {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 10, weight: .bold))
+                            .frame(width: 28, height: 28)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(AppPalette.ink)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
                     .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
                     .overlay(
                         RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
@@ -292,6 +292,8 @@ struct PlatformSectionView: View {
                     )
                     .disabled(currentPage >= totalPages - 1)
                     .opacity(currentPage >= totalPages - 1 ? 0.4 : 1.0)
+                    .accessibilityLabel("下一页")
+                    .help("下一页")
 
                     Spacer()
                 }

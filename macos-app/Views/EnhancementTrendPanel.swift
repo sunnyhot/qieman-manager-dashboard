@@ -98,6 +98,7 @@ extension EnhancementCenterView {
                     .background(AppPalette.info.opacity(AppPalette.accentFill), in: Capsule())
             }
         }
+        .disclosureGroupStyle(FullRowDisclosureGroupStyle())
         .font(.system(size: 11))
         .tint(AppPalette.info)
         .padding(AppPalette.spaceS)
@@ -123,6 +124,7 @@ extension EnhancementCenterView {
             } label: {
                 trendProgressRowHeader(item)
             }
+            .disclosureGroupStyle(FullRowDisclosureGroupStyle())
             .font(.system(size: 11))
             .tint(AppPalette.info)
             .padding(.horizontal, 10)
@@ -376,13 +378,11 @@ extension EnhancementCenterView {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .interactiveSurface(
+        .staticSurface(
             tint: horizon.direction.tint,
             fill: AppPalette.cardStrong,
-            hoverFill: AppPalette.cardHover,
             strokeOpacity: 0.18,
-            activeStrokeOpacity: 0.40,
-            lift: 0.8
+            activeStrokeOpacity: 0.40
         )
     }
 
@@ -422,13 +422,11 @@ extension EnhancementCenterView {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .interactiveSurface(
+        .staticSurface(
             tint: sector.direction.tint,
             fill: AppPalette.cardStrong,
-            hoverFill: AppPalette.cardHover,
             strokeOpacity: 0.18,
-            activeStrokeOpacity: 0.40,
-            lift: 0.8
+            activeStrokeOpacity: 0.40
         )
     }
 
@@ -527,13 +525,11 @@ extension EnhancementCenterView {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .interactiveSurface(
+        .staticSurface(
             tint: AppPalette.info,
             fill: AppPalette.cardStrong,
-            hoverFill: AppPalette.cardHover,
             strokeOpacity: 0.18,
-            activeStrokeOpacity: 0.40,
-            lift: 0.8
+            activeStrokeOpacity: 0.40
         )
     }
 
@@ -591,13 +587,11 @@ extension EnhancementCenterView {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .interactiveSurface(
+        .staticSurface(
             tint: trendActionTint(action.kind),
             fill: AppPalette.cardStrong,
-            hoverFill: AppPalette.cardHover,
             strokeOpacity: 0.18,
-            activeStrokeOpacity: 0.40,
-            lift: 0.8
+            activeStrokeOpacity: 0.40
         )
     }
 
@@ -702,13 +696,11 @@ extension EnhancementCenterView {
             .padding(.leading, AppPalette.spaceS)
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .interactiveSurface(
+            .staticSurface(
                 tint: tint,
                 fill: AppPalette.cardStrong,
-                hoverFill: AppPalette.cardHover,
                 strokeOpacity: 0.26,
-                activeStrokeOpacity: 0.40,
-                lift: 0.6
+                activeStrokeOpacity: 0.40
             )
         }
     }
@@ -825,13 +817,11 @@ extension EnhancementCenterView {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .interactiveSurface(
+        .staticSurface(
             tint: AppPalette.info,
             fill: AppPalette.cardStrong,
-            hoverFill: AppPalette.cardHover,
             strokeOpacity: 0.18,
-            activeStrokeOpacity: 0.38,
-            lift: 0.8
+            activeStrokeOpacity: 0.38
         )
     }
 

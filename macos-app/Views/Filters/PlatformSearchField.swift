@@ -19,6 +19,9 @@ struct PlatformSearchField: View {
                 .foregroundStyle(AppPalette.ink)
                 .onSubmit { onSubmit() }
                 .focused($isFocused)
+                .onReceive(NotificationCenter.default.publisher(for: .qiemanFocusSearch)) { _ in
+                    isFocused = true
+                }
 
             if !text.isEmpty {
                 Button {
@@ -28,8 +31,11 @@ struct PlatformSearchField: View {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(AppPalette.muted)
                         .font(.system(size: 12))
+                        .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("清除搜索")
+                .help("清除搜索")
             }
         }
         .padding(.horizontal, 10)

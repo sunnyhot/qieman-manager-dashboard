@@ -10,6 +10,7 @@ import SwiftUI
 extension Notification.Name {
     static let qiemanNotificationDeepLink = Notification.Name("qieman.notificationDeepLink")
     static let qiemanAppearanceDidChange = Notification.Name("qieman.appearanceDidChange")
+    static let qiemanFocusSearch = Notification.Name("qieman.focusSearch")
 }
 
 enum AppAppearance: String, CaseIterable, Identifiable {

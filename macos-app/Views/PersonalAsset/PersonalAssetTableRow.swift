@@ -40,6 +40,7 @@ struct PersonalAssetTableRow: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
                         .lineLimit(1)
+                        .help(row.fundName)
                     if let marketLabel = row.rawHolding?.marketLabel ?? row.holdingRow?.holding.marketLabel ?? row.archivedHolding?.marketLabel {
                         ToolbarBadge(title: marketLabel, tint: AppPalette.info)
                     }
@@ -229,6 +230,7 @@ struct PersonalAssetTableRow: View {
                 .disabled(isComparisonToggleDisabled)
                 .opacity(isComparisonToggleDisabled ? 0.42 : 1)
                 .help(isSelectedForComparison ? "移出对比" : "加入对比")
+                .accessibilityLabel(isSelectedForComparison ? "将 \(row.fundName) 移出对比" : "将 \(row.fundName) 加入对比")
 
                 Button {
                     onOpenDetail?()
@@ -241,6 +243,7 @@ struct PersonalAssetTableRow: View {
                 }
                 .buttonStyle(PressResponsiveButtonStyle())
                 .help("查看详情")
+                .accessibilityLabel("查看 \(row.fundName) 详情")
 
                 if hasRowActions {
                     actionMenu
@@ -261,6 +264,21 @@ struct PersonalAssetTableRow: View {
             activeStrokeOpacity: 0.62,
             lift: 0.6
         )
+        .overlay(alignment: .leading) {
+            Button {
+                onOpenDetail?()
+            } label: {
+                Color.clear
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.trailing, actionWidth + colSpacing)
+            .disabled(onOpenDetail == nil)
+            .accessibilityLabel("查看 \(row.fundName) 详情")
+            .accessibilityHint("打开资产详情抽屉")
+            .help("查看 \(row.fundName) 详情")
+        }
         .alert(deleteConfirmationTitle, isPresented: deleteConfirmationBinding) {
             Button("删除", role: .destructive) {
                 if let pendingDeleteScope {

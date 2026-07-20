@@ -105,11 +105,12 @@ struct PersonalAssetDetailSheet: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 11, weight: .bold))
-                            .frame(width: 26, height: 26)
+                            .frame(width: 28, height: 28)
                     }
                     .buttonStyle(.borderless)
                     .foregroundStyle(AppPalette.muted)
                     .help("关闭")
+                    .accessibilityLabel("关闭资产详情")
 
                     Text(summary.effectiveAmountText)
                         .font(.system(size: 20, weight: .bold, design: .rounded))

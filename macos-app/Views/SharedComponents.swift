@@ -131,16 +131,54 @@ struct PressResponsiveButtonStyle: ButtonStyle {
     }
 }
 
+struct FullRowDisclosureGroupStyle: DisclosureGroupStyle {
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                if accessibilityReduceMotion {
+                    configuration.isExpanded.toggle()
+                } else {
+                    withAnimation(AppPalette.motionStandard) {
+                        configuration.isExpanded.toggle()
+                    }
+                }
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(AppPalette.muted)
+                        .frame(width: 10)
+                        .rotationEffect(.degrees(configuration.isExpanded ? 90 : 0))
+
+                    configuration.label
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(configuration.isExpanded ? "已展开" : "已折叠")
+            .accessibilityHint("展开或收起内容")
+
+            if configuration.isExpanded {
+                configuration.content
+            }
+        }
+    }
+}
+
 private struct PressResponsiveButtonLabel: View {
     let configuration: PressResponsiveButtonStyle.Configuration
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @State private var isHovering = false
 
     var body: some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.965 : (isHovering ? 1.018 : 1))
+            .scaleEffect(accessibilityReduceMotion ? 1 : (configuration.isPressed ? 0.965 : (isHovering ? 1.018 : 1)))
             .opacity(configuration.isPressed ? 0.84 : 1)
-            .animation(AppPalette.motionFast, value: configuration.isPressed)
-            .animation(AppPalette.motionStandard, value: isHovering)
+            .animation(accessibilityReduceMotion ? nil : AppPalette.motionFast, value: configuration.isPressed)
+            .animation(accessibilityReduceMotion ? nil : AppPalette.motionStandard, value: isHovering)
             .onHover { hovering in
                 isHovering = hovering
             }
@@ -157,22 +195,24 @@ struct InteractiveSurfaceModifier: ViewModifier {
     var strokeOpacity: Double = 0.34
     var activeStrokeOpacity: Double = 0.58
     var lift: CGFloat = 1
+    var allowsHoverFeedback = true
 
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @State private var isHovering = false
 
     private var isActive: Bool {
-        isSelected || isHovering
+        isSelected || (allowsHoverFeedback && isHovering)
     }
 
     private var effectiveLift: CGFloat {
-        isHovering ? lift : 0
+        allowsHoverFeedback && isHovering && !accessibilityReduceMotion ? lift : 0
     }
 
     private var surfaceFill: Color {
         if isSelected {
             return selectedFill ?? AppPalette.selectionFill.opacity(0.72)
         }
-        if isHovering {
+        if allowsHoverFeedback && isHovering {
             return hoverFill
         }
         return fill
@@ -182,7 +222,7 @@ struct InteractiveSurfaceModifier: ViewModifier {
         if isSelected {
             return tint.opacity(AppPalette.selectionStrokeOpacity)
         }
-        if isHovering {
+        if allowsHoverFeedback && isHovering {
             return tint.opacity(activeStrokeOpacity)
         }
         return AppPalette.line.opacity(strokeOpacity)
@@ -192,7 +232,7 @@ struct InteractiveSurfaceModifier: ViewModifier {
         if isSelected {
             return AppPalette.selectionGlowOpacity
         }
-        if isHovering {
+        if allowsHoverFeedback && isHovering {
             return AppPalette.selectionGlowOpacity * 0.58
         }
         return 0
@@ -212,11 +252,25 @@ struct InteractiveSurfaceModifier: ViewModifier {
                 y: isActive ? 4 : 0
             )
             .offset(y: -effectiveLift)
-            .animation(AppPalette.motionStandard, value: isHovering)
-            .animation(AppPalette.motionStandard, value: isSelected)
+            .animation(accessibilityReduceMotion ? nil : AppPalette.motionStandard, value: isHovering)
+            .animation(accessibilityReduceMotion ? nil : AppPalette.motionStandard, value: isSelected)
             .onHover { hovering in
-                isHovering = hovering
+                if allowsHoverFeedback {
+                    isHovering = hovering
+                }
             }
+    }
+}
+
+private struct ReducedMotionRespectingModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    func body(content: Content) -> some View {
+        content.transaction { transaction in
+            if accessibilityReduceMotion {
+                transaction.animation = nil
+            }
+        }
     }
 }
 
@@ -335,6 +389,23 @@ struct ToolbarBadge: View {
 struct ToastBar: View {
     let text: String
     let tint: Color
+    let actionTitle: String?
+    let action: (() -> Void)?
+    let onDismiss: (() -> Void)?
+
+    init(
+        text: String,
+        tint: Color,
+        actionTitle: String? = nil,
+        action: (() -> Void)? = nil,
+        onDismiss: (() -> Void)? = nil
+    ) {
+        self.text = text
+        self.tint = tint
+        self.actionTitle = actionTitle
+        self.action = action
+        self.onDismiss = onDismiss
+    }
 
     var body: some View {
         HStack(spacing: AppPalette.spaceS) {
@@ -345,6 +416,23 @@ struct ToastBar: View {
                 .font(.system(size: 11))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundStyle(AppPalette.ink)
+                .textSelection(.enabled)
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+            }
+            if let onDismiss {
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppPalette.muted)
+                .accessibilityLabel("关闭提示")
+                .help("关闭")
+            }
         }
         .padding(.horizontal, AppPalette.spaceM)
         .padding(.vertical, AppPalette.spaceS)
@@ -453,6 +541,33 @@ extension View {
             activeStrokeOpacity: activeStrokeOpacity,
             lift: lift
         ))
+    }
+
+    func staticSurface(
+        isSelected: Bool = false,
+        tint: Color = AppPalette.brand,
+        radius: CGFloat = AppPalette.cardRadius,
+        fill: Color = AppPalette.card,
+        selectedFill: Color? = nil,
+        strokeOpacity: Double = 0.34,
+        activeStrokeOpacity: Double = 0.58
+    ) -> some View {
+        modifier(InteractiveSurfaceModifier(
+            isSelected: isSelected,
+            tint: tint,
+            radius: radius,
+            fill: fill,
+            hoverFill: fill,
+            selectedFill: selectedFill,
+            strokeOpacity: strokeOpacity,
+            activeStrokeOpacity: activeStrokeOpacity,
+            lift: 0,
+            allowsHoverFeedback: false
+        ))
+    }
+
+    func respectsReducedMotion() -> some View {
+        modifier(ReducedMotionRespectingModifier())
     }
 
     /// Apply a translucent material background with rounded corners and optional border.

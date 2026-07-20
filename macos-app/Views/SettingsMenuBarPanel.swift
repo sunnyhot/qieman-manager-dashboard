@@ -79,14 +79,14 @@ extension SettingsSectionView {
 
                     SettingsActionRow {
                         Button {
-                            model.resetMenuBarTickerSettings()
+                            isConfirmingMenuBarReset = true
                         } label: {
                             Label("恢复默认", systemImage: "arrow.counterclockwise")
                         }
                         .buttonStyle(.bordered)
 
                         Button {
-                            model.clearMenuBarHoldingSelections()
+                            isConfirmingHoldingSelectionClear = true
                         } label: {
                             Label("清空单标的", systemImage: "xmark.circle")
                         }
@@ -96,6 +96,22 @@ extension SettingsSectionView {
                 }
                 .padding(.leading, 39)
             }
+        }
+        .alert("恢复菜单栏默认设置？", isPresented: $isConfirmingMenuBarReset) {
+            Button("恢复默认", role: .destructive) {
+                model.resetMenuBarTickerSettings()
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("显示项目、顺序和样式都会恢复为默认值。")
+        }
+        .alert("清空所有单标的？", isPresented: $isConfirmingHoldingSelectionClear) {
+            Button("清空", role: .destructive) {
+                model.clearMenuBarHoldingSelections()
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("整体资产和大盘指数设置会保留，所有单个持仓指标将从菜单栏移除。")
         }
     }
 
@@ -122,18 +138,20 @@ extension SettingsSectionView {
                 Text(text)
                     .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.muted)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 9)
+                    .frame(minHeight: 28)
                     .background(Capsule().fill(isSelected ? AppPalette.brand : AppPalette.card))
                     .overlay(Capsule().stroke(isSelected ? AppPalette.brand : AppPalette.line, lineWidth: 1))
             }
             .buttonStyle(PressResponsiveButtonStyle())
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
+            .help(text)
         }
 
         return VStack(alignment: .leading, spacing: 0) {
             LazyVGrid(columns: menuBarStyleGridColumns, spacing: menuBarStyleRowSpacing) {
                 menuBarStyleRow(icon: "square.on.square", title: "同时显示 \(model.menuBarTickerSettings.maxVisibleItems) 项") {
-                    menuBarStyleStepper(value: model.menuBarTickerSettings.maxVisibleItems,
+                    menuBarStyleStepper(label: "显示数量", value: model.menuBarTickerSettings.maxVisibleItems, minValue: 1, maxValue: MenuBarTickerSettings.maxVisibleItemsLimit,
                         decrement: { model.setMenuBarTickerMaxVisibleItems(max(1, model.menuBarTickerSettings.maxVisibleItems - 1)) },
                         increment: { model.setMenuBarTickerMaxVisibleItems(min(MenuBarTickerSettings.maxVisibleItemsLimit, model.menuBarTickerSettings.maxVisibleItems + 1)) }
                     )
@@ -141,7 +159,7 @@ extension SettingsSectionView {
 
                 if model.menuBarTickerConfiguredItemCount > model.menuBarTickerSettings.maxVisibleItems {
                     menuBarStyleRow(icon: "timer", title: "轮播间隔 \(Int(model.menuBarTickerSettings.carouselIntervalSeconds)) 秒") {
-                        menuBarStyleStepper(value: Int(model.menuBarTickerSettings.carouselIntervalSeconds),
+                        menuBarStyleStepper(label: "轮播间隔", value: Int(model.menuBarTickerSettings.carouselIntervalSeconds), minValue: Int(MenuBarTickerSettings.minCarouselInterval), maxValue: Int(MenuBarTickerSettings.maxCarouselInterval),
                             decrement: { model.setMenuBarTickerCarouselInterval(max(MenuBarTickerSettings.minCarouselInterval, model.menuBarTickerSettings.carouselIntervalSeconds - 1)) },
                             increment: { model.setMenuBarTickerCarouselInterval(min(MenuBarTickerSettings.maxCarouselInterval, model.menuBarTickerSettings.carouselIntervalSeconds + 1)) }
                         )
@@ -160,9 +178,10 @@ extension SettingsSectionView {
                             model.updateMenuBarTickerAppearance { a in a.textColorMode = .custom }
                         }
                         if appearance.textColorMode == .custom {
-                            ColorPicker("", selection: menuBarTickerCustomColorBinding, supportsOpacity: false)
+                            ColorPicker("自定义文字颜色", selection: menuBarTickerCustomColorBinding, supportsOpacity: false)
                                 .labelsHidden()
                                 .controlSize(.mini)
+                                .help("选择自定义文字颜色")
                         }
                     }
                 }
@@ -176,17 +195,20 @@ extension SettingsSectionView {
                                 Image(systemName: mode.icon)
                                     .font(.system(size: 9, weight: .semibold))
                                     .foregroundStyle(appearance.layoutMode == mode ? AppPalette.onBrand : AppPalette.muted)
-                                    .frame(width: 22, height: 18)
+                                    .frame(width: 32, height: 28)
                                     .background(RoundedRectangle(cornerRadius: 4).fill(appearance.layoutMode == mode ? AppPalette.brand : AppPalette.card))
                                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(appearance.layoutMode == mode ? AppPalette.brand : AppPalette.line, lineWidth: 1))
                             }
                             .buttonStyle(PressResponsiveButtonStyle())
+                            .accessibilityLabel("排列：\(mode.label)")
+                            .accessibilityAddTraits(appearance.layoutMode == mode ? .isSelected : [])
+                            .help(mode.label)
                         }
                     }
                 }
 
                 menuBarStyleRow(icon: "textformat.size", title: "字号") {
-                    menuBarStyleStepper(value: Int(appearance.fontSize),
+                    menuBarStyleStepper(label: "字号", value: Int(appearance.fontSize), minValue: Int(MenuBarTickerAppearance.minFontSize), maxValue: Int(MenuBarTickerAppearance.maxFontSize),
                         decrement: { model.updateMenuBarTickerAppearance { a in a.fontSize = max(MenuBarTickerAppearance.minFontSize, a.fontSize - 1) } },
                         increment: { model.updateMenuBarTickerAppearance { a in a.fontSize = min(MenuBarTickerAppearance.maxFontSize, a.fontSize + 1) } }
                     )
@@ -207,7 +229,7 @@ extension SettingsSectionView {
                             model.updateMenuBarTickerAppearance { a in a.spacingMode = .manual }
                         }
                         if appearance.spacingMode == .manual {
-                            menuBarStyleStepper(value: Int(appearance.manualSpacing),
+                            menuBarStyleStepper(label: "间距", value: Int(appearance.manualSpacing), minValue: Int(MenuBarTickerAppearance.minManualSpacing), maxValue: Int(MenuBarTickerAppearance.maxManualSpacing),
                                 decrement: { model.updateMenuBarTickerAppearance { a in a.manualSpacing = max(MenuBarTickerAppearance.minManualSpacing, a.manualSpacing - 1) } },
                                 increment: { model.updateMenuBarTickerAppearance { a in a.manualSpacing = min(MenuBarTickerAppearance.maxManualSpacing, a.manualSpacing + 1) } }
                             )
@@ -224,7 +246,7 @@ extension SettingsSectionView {
                             model.updateMenuBarTickerAppearance { a in a.widthMode = .manual }
                         }
                         if appearance.widthMode == .manual {
-                            menuBarStyleStepper(value: Int(appearance.manualWidth),
+                            menuBarStyleStepper(label: "宽度", value: Int(appearance.manualWidth), minValue: Int(MenuBarTickerAppearance.minManualWidth), maxValue: Int(MenuBarTickerAppearance.maxManualWidth),
                                 decrement: { model.updateMenuBarTickerAppearance { a in a.manualWidth = max(MenuBarTickerAppearance.minManualWidth, a.manualWidth - 4) } },
                                 increment: { model.updateMenuBarTickerAppearance { a in a.manualWidth = min(MenuBarTickerAppearance.maxManualWidth, a.manualWidth + 4) } }
                             )
@@ -248,7 +270,7 @@ extension SettingsSectionView {
 
         return menuBarStyleRow(icon: "arrow.up.arrow.down", title: "轮播顺序") {
             HStack(spacing: 6) {
-                Text("拖拽排序")
+                Text("拖拽或按钮排序")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
                     .fixedSize()
@@ -278,12 +300,54 @@ extension SettingsSectionView {
         let isTarget = tickerDropTargetID == selection.id
         let label = selectionLabel(selection, rowsByID: rowsByID)
 
-        return Text(label)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(isSource ? AppPalette.muted : AppPalette.ink)
-            .lineLimit(1)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+        let selectionIndex = selections.firstIndex(where: { $0.id == selection.id }) ?? 0
+
+        return HStack(spacing: 2) {
+            Button {
+                moveCarouselSelection(selection, in: selections, offset: -1)
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 8, weight: .bold))
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .disabled(selectionIndex == 0)
+            .opacity(selectionIndex == 0 ? 0.35 : 1)
+            .accessibilityLabel("向前移动 \(label)")
+            .help("向前移动")
+
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(isSource ? AppPalette.muted : AppPalette.ink)
+                .lineLimit(1)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 4)
+                .draggable(selection.id) {
+                    Text(label)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(AppPalette.onBrand)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(AppPalette.brand.opacity(0.25)))
+                        .overlay(Capsule().stroke(AppPalette.brand, lineWidth: 1))
+                        .onAppear { draggedTickerSelectionID = selection.id }
+                }
+                .accessibilityLabel("\(label)，第 \(selectionIndex + 1) 项")
+                .accessibilityHint("可拖拽，或使用两侧按钮调整顺序")
+
+            Button {
+                moveCarouselSelection(selection, in: selections, offset: 1)
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 8, weight: .bold))
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .disabled(selectionIndex == selections.count - 1)
+            .opacity(selectionIndex == selections.count - 1 ? 0.35 : 1)
+            .accessibilityLabel("向后移动 \(label)")
+            .help("向后移动")
+        }
             .background(Capsule().fill(isTarget ? AppPalette.brand.opacity(0.12) : AppPalette.card))
             .overlay(
                 Capsule()
@@ -297,16 +361,6 @@ extension SettingsSectionView {
                         .offset(x: -6)
                         .transition(.scale.combined(with: .opacity))
                 }
-            }
-            .draggable(selection.id) {
-                Text(label)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(AppPalette.onBrand)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(AppPalette.brand.opacity(0.25)))
-                    .overlay(Capsule().stroke(AppPalette.brand, lineWidth: 1))
-                    .onAppear { draggedTickerSelectionID = selection.id }
             }
             .dropDestination(for: String.self) { items, _ in
                 draggedTickerSelectionID = nil
@@ -322,6 +376,14 @@ extension SettingsSectionView {
                     tickerDropTargetID = isTarget ? selection.id : nil
                 }
             }
+    }
+
+    private func moveCarouselSelection(_ selection: MenuBarTickerSelection, in selections: [MenuBarTickerSelection], offset: Int) {
+        guard let sourceIndex = selections.firstIndex(where: { $0.id == selection.id }) else { return }
+        let targetIndex = sourceIndex + offset
+        guard selections.indices.contains(targetIndex) else { return }
+        let destination = offset > 0 ? targetIndex + 1 : targetIndex
+        model.moveMenuBarTickerSelection(from: IndexSet(integer: sourceIndex), to: destination)
     }
 
     // MARK: - Fund Market Options
@@ -366,6 +428,7 @@ extension SettingsSectionView {
                 Spacer()
             }
         }
+        .disclosureGroupStyle(FullRowDisclosureGroupStyle())
         .padding(.vertical, 14)
     }
 
@@ -425,6 +488,7 @@ extension SettingsSectionView {
                 Spacer()
             }
         }
+        .disclosureGroupStyle(FullRowDisclosureGroupStyle())
         .padding(.vertical, 14)
     }
 
@@ -613,6 +677,7 @@ extension SettingsSectionView {
                 }
             }
         }
+        .disclosureGroupStyle(FullRowDisclosureGroupStyle())
         .padding(.vertical, 14)
     }
 
@@ -673,6 +738,7 @@ extension SettingsSectionView {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(AppPalette.ink)
                         .lineLimit(1)
+                        .help(row.fundName)
                     if let marketLabel = row.holding.marketLabel {
                         ToolbarBadge(title: marketLabel, tint: AppPalette.info)
                     }
@@ -726,7 +792,7 @@ extension SettingsSectionView {
             Image(systemName: icon)
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.info)
-                .frame(width: 18, height: 18)
+                .frame(width: 24, height: 24)
                 .background(AppPalette.info.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
             Text(title)
                 .font(.system(size: 11, weight: .semibold))
@@ -738,17 +804,20 @@ extension SettingsSectionView {
         .frame(height: menuBarStyleRowHeight, alignment: .center)
     }
 
-    private func menuBarStyleStepper(value: Int, decrement: @escaping () -> Void, increment: @escaping () -> Void) -> some View {
-        HStack(spacing: 1) {
+    private func menuBarStyleStepper(label: String, value: Int, minValue: Int, maxValue: Int, decrement: @escaping () -> Void, increment: @escaping () -> Void) -> some View {
+        HStack(spacing: 3) {
             Button(action: decrement) {
                 Image(systemName: "minus")
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(AppPalette.ink)
-                    .frame(width: 18, height: 18)
+                    .frame(width: 28, height: 28)
                     .background(RoundedRectangle(cornerRadius: 4).fill(AppPalette.card))
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(AppPalette.line, lineWidth: 1))
             }
             .buttonStyle(PressResponsiveButtonStyle())
+            .disabled(value <= minValue)
+            .accessibilityLabel("减少\(label)")
+            .help("减少\(label)")
             Text("\(value)")
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .foregroundStyle(AppPalette.ink)
@@ -757,12 +826,17 @@ extension SettingsSectionView {
                 Image(systemName: "plus")
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(AppPalette.ink)
-                    .frame(width: 18, height: 18)
+                    .frame(width: 28, height: 28)
                     .background(RoundedRectangle(cornerRadius: 4).fill(AppPalette.card))
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(AppPalette.line, lineWidth: 1))
             }
             .buttonStyle(PressResponsiveButtonStyle())
+            .disabled(value >= maxValue)
+            .accessibilityLabel("增加\(label)")
+            .help("增加\(label)")
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(label)，当前值 \(value)")
     }
 
     // MARK: - Helpers

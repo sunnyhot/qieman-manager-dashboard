@@ -76,6 +76,7 @@ struct MenuBarPortfolioView: View {
         .padding(14)
         .frame(width: 392, height: 720)
         .background(AppPalette.canvasGradient)
+        .respectsReducedMotion()
         .task {
             for action in MenuBarPortfolioRefreshDecision.onAppear(
                 hasPortfolioSnapshot: model.userPortfolioSnapshot != nil,
@@ -294,6 +295,7 @@ private struct MenuBarHoldingRow: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
                     .lineLimit(1)
+                    .help(row.fundName)
                 HStack(spacing: 4) {
                     Text(row.holding.normalizedFundCode)
                         .font(.system(size: 9))

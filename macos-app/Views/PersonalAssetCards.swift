@@ -158,6 +158,12 @@ struct PersonalAssetAddHoldingSheet: View {
     @State private var codeResolution: PersonalAssetCodeResolution?
     @State private var isResolvingName = false
     @State private var hasResolvedName = false
+    @State private var inlineErrorMessage = ""
+    @FocusState private var focusedField: HoldingField?
+
+    private enum HoldingField: Hashable {
+        case code, units, cost
+    }
 
     private var lookupKey: String {
         codeText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -181,12 +187,16 @@ struct PersonalAssetAddHoldingSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                addHoldingField("代码", text: $codeText, placeholder: "例如 021550 / 600519 / SH600519")
-                addHoldingField("份额", text: $unitsText, placeholder: "例如 100.00")
-                addHoldingField("成本", text: $costPriceText, placeholder: "例如 1.2345")
+                addHoldingField("代码", text: $codeText, placeholder: "例如 021550 / 600519 / SH600519", field: .code)
+                addHoldingField("份额", text: $unitsText, placeholder: "例如 100.00", field: .units)
+                addHoldingField("成本", text: $costPriceText, placeholder: "例如 1.2345", field: .cost)
             }
 
             nameLookupStatus
+
+            if !inlineErrorMessage.isEmpty {
+                ToastBar(text: inlineErrorMessage, tint: AppPalette.danger, onDismiss: { inlineErrorMessage = "" })
+            }
 
             HStack(spacing: 10) {
                 Spacer()
@@ -194,8 +204,10 @@ struct PersonalAssetAddHoldingSheet: View {
                     dismiss()
                 }
                 .buttonStyle(.bordered)
+                .keyboardShortcut(.cancelAction)
 
                 Button("添加") {
+                    inlineErrorMessage = ""
                     guard let codeResolution else { return }
                     if model.addPersonalAssetHolding(
                         assetType: codeResolution.assetType,
@@ -207,11 +219,20 @@ struct PersonalAssetAddHoldingSheet: View {
                         fundMarket: codeResolution.fundMarket
                     ) {
                         dismiss()
+                    } else {
+                        inlineErrorMessage = model.errorMessage.isEmpty ? "添加失败，请检查填写内容。" : model.errorMessage
+                        model.errorMessage = ""
+                        if unitsText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            focusedField = .units
+                        } else {
+                            focusedField = .cost
+                        }
                     }
                 }
                 .disabled(codeResolution == nil || isResolvingName)
                 .buttonStyle(.borderedProminent)
                 .tint(codeResolution?.assetType == .stock ? AppPalette.info : AppPalette.brand)
+                .keyboardShortcut(.defaultAction)
             }
         }
         .padding(18)
@@ -294,7 +315,7 @@ struct PersonalAssetAddHoldingSheet: View {
         return resolution.fundMarket?.displayName ?? resolution.assetType.displayName
     }
 
-    private func addHoldingField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+    private func addHoldingField(_ label: String, text: Binding<String>, placeholder: String, field: HoldingField) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
@@ -302,6 +323,7 @@ struct PersonalAssetAddHoldingSheet: View {
             TextField(placeholder, text: text)
                 .textFieldStyle(.plain)
                 .inputFieldStyle()
+                .focused($focusedField, equals: field)
         }
     }
 
@@ -337,6 +359,12 @@ struct PersonalAssetEditHoldingSheet: View {
     @State private var nameText: String
     @State private var unitsText: String
     @State private var costPriceText: String
+    @State private var inlineErrorMessage = ""
+    @FocusState private var focusedField: HoldingField?
+
+    private enum HoldingField: Hashable {
+        case name, code, units, cost
+    }
 
     private var holding: UserPortfolioHolding? {
         row.rawHolding ?? row.holdingRow?.holding
@@ -374,11 +402,15 @@ struct PersonalAssetEditHoldingSheet: View {
                     .foregroundStyle(AppPalette.muted)
             } else {
                 VStack(alignment: .leading, spacing: 10) {
-                    editField("名称", text: $nameText, placeholder: "可留空，按代码自动补全")
-                    editField("代码", text: $codeText, placeholder: "例如 021550 / ETF:510300 / HK:00700 / US:AAPL")
-                    editField("份额", text: $unitsText, placeholder: "例如 100.00")
-                    editField("成本价", text: $costPriceText, placeholder: "可留空")
+                    editField("名称", text: $nameText, placeholder: "可留空，按代码自动补全", field: .name)
+                    editField("代码", text: $codeText, placeholder: "例如 021550 / ETF:510300 / HK:00700 / US:AAPL", field: .code)
+                    editField("份额", text: $unitsText, placeholder: "例如 100.00", field: .units)
+                    editField("成本价", text: $costPriceText, placeholder: "可留空", field: .cost)
                 }
+            }
+
+            if !inlineErrorMessage.isEmpty {
+                ToastBar(text: inlineErrorMessage, tint: AppPalette.danger, onDismiss: { inlineErrorMessage = "" })
             }
 
             HStack(spacing: 10) {
@@ -387,8 +419,10 @@ struct PersonalAssetEditHoldingSheet: View {
                     dismiss()
                 }
                 .buttonStyle(.bordered)
+                .keyboardShortcut(.cancelAction)
 
                 Button("保存") {
+                    inlineErrorMessage = ""
                     if model.updatePersonalAssetHolding(
                         row,
                         codeText: codeText,
@@ -397,11 +431,22 @@ struct PersonalAssetEditHoldingSheet: View {
                         displayNameText: nameText
                     ) {
                         dismiss()
+                    } else {
+                        inlineErrorMessage = model.errorMessage.isEmpty ? "保存失败，请检查填写内容。" : model.errorMessage
+                        model.errorMessage = ""
+                        if codeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            focusedField = .code
+                        } else if unitsText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            focusedField = .units
+                        } else {
+                            focusedField = .cost
+                        }
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppPalette.brand)
                 .disabled(holding == nil)
+                .keyboardShortcut(.defaultAction)
             }
         }
         .padding(18)
@@ -415,7 +460,7 @@ struct PersonalAssetEditHoldingSheet: View {
         return holding?.detectedFundMarket?.displayName ?? row.detectedFundMarket?.displayName ?? row.assetType.displayName
     }
 
-    private func editField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+    private func editField(_ label: String, text: Binding<String>, placeholder: String, field: HoldingField) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
@@ -423,6 +468,7 @@ struct PersonalAssetEditHoldingSheet: View {
             TextField(placeholder, text: text)
                 .textFieldStyle(.plain)
                 .inputFieldStyle()
+                .focused($focusedField, equals: field)
         }
     }
 
@@ -438,6 +484,7 @@ struct PersonalAssetEditHoldingSheet: View {
 }
 
 struct PersonalAssetUnitAdjustmentSheet: View {
+    @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
 
     let row: PersonalAssetAggregateRow
@@ -446,6 +493,12 @@ struct PersonalAssetUnitAdjustmentSheet: View {
 
     @State private var adjustmentUnitsText: String
     @State private var adjustmentUnitNetValueText: String
+    @State private var inlineErrorMessage = ""
+    @FocusState private var focusedField: AdjustmentField?
+
+    private enum AdjustmentField: Hashable {
+        case units, netValue
+    }
 
     init(
         row: PersonalAssetAggregateRow,
@@ -477,8 +530,12 @@ struct PersonalAssetUnitAdjustmentSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                adjustmentField("份额", text: $adjustmentUnitsText, placeholder: "例如 100.00")
-                adjustmentField("单位净值", text: $adjustmentUnitNetValueText, placeholder: "例如 1.2345")
+                adjustmentField("份额", text: $adjustmentUnitsText, placeholder: "例如 100.00", field: .units)
+                adjustmentField("单位净值", text: $adjustmentUnitNetValueText, placeholder: "例如 1.2345", field: .netValue)
+            }
+
+            if !inlineErrorMessage.isEmpty {
+                ToastBar(text: inlineErrorMessage, tint: AppPalette.danger, onDismiss: { inlineErrorMessage = "" })
             }
 
             if mode == .remove, let holdingUnits = row.holdingUnits {
@@ -497,21 +554,28 @@ struct PersonalAssetUnitAdjustmentSheet: View {
                     dismiss()
                 }
                 .buttonStyle(.bordered)
+                .keyboardShortcut(.cancelAction)
 
                 Button(mode == .add ? "添加" : "删除") {
+                    inlineErrorMessage = ""
                     if onSubmit(adjustmentUnitsText, adjustmentUnitNetValueText) {
                         dismiss()
+                    } else {
+                        inlineErrorMessage = model.errorMessage.isEmpty ? "调整失败，请检查填写内容。" : model.errorMessage
+                        model.errorMessage = ""
+                        focusedField = adjustmentUnitsText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .units : .netValue
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(mode == .add ? AppPalette.positive : AppPalette.warning)
+                .keyboardShortcut(.defaultAction)
             }
         }
         .padding(18)
         .frame(width: 380)
     }
 
-    private func adjustmentField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+    private func adjustmentField(_ label: String, text: Binding<String>, placeholder: String, field: AdjustmentField) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
@@ -519,6 +583,7 @@ struct PersonalAssetUnitAdjustmentSheet: View {
             TextField(placeholder, text: text)
                 .textFieldStyle(.plain)
                 .inputFieldStyle()
+                .focused($focusedField, equals: field)
         }
     }
 }

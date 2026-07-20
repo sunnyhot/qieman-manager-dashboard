@@ -15,6 +15,12 @@ struct PersonalPendingTradeEditSheet: View {
     @State private var amountText: String
     @State private var statusText: String
     @State private var noteText: String
+    @State private var inlineErrorMessage = ""
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case occurredAt, action, fundName, fundCode, targetFundName, targetFundCode, amount, status, note
+    }
 
     init(trade: PersonalPendingTrade? = nil) {
         self.trade = trade
@@ -47,14 +53,14 @@ struct PersonalPendingTradeEditSheet: View {
             }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 10) {
-                formField("发生时间", text: $occurredAtText, placeholder: "留空则使用当前时间")
-                formField("动作", text: $actionText, placeholder: "买入 / 定投 / 转换")
-                formField("基金名称", text: $fundNameText, placeholder: "可填名称或只填代码")
-                formField("基金代码", text: $fundCodeText, placeholder: "例如 019524")
-                formField("目标名称", text: $targetFundNameText, placeholder: "转换目标，可留空")
-                formField("目标代码", text: $targetFundCodeText, placeholder: "转换目标代码，可留空")
-                formField("金额/份额", text: $amountText, placeholder: "例如 10元 或 100份")
-                formField("状态", text: $statusText, placeholder: "交易进行中")
+                formField("发生时间", text: $occurredAtText, placeholder: "留空则使用当前时间", field: .occurredAt)
+                formField("动作", text: $actionText, placeholder: "买入 / 定投 / 转换", field: .action)
+                formField("基金名称", text: $fundNameText, placeholder: "可填名称或只填代码", field: .fundName)
+                formField("基金代码", text: $fundCodeText, placeholder: "例如 019524", field: .fundCode)
+                formField("目标名称", text: $targetFundNameText, placeholder: "转换目标，可留空", field: .targetFundName)
+                formField("目标代码", text: $targetFundCodeText, placeholder: "转换目标代码，可留空", field: .targetFundCode)
+                formField("金额/份额", text: $amountText, placeholder: "例如 10元 或 100份", field: .amount)
+                formField("状态", text: $statusText, placeholder: "交易进行中", field: .status)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -71,6 +77,15 @@ struct PersonalPendingTradeEditSheet: View {
                         RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                             .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                     )
+                    .focused($focusedField, equals: .note)
+            }
+
+            if !inlineErrorMessage.isEmpty {
+                ToastBar(
+                    text: inlineErrorMessage,
+                    tint: AppPalette.danger,
+                    onDismiss: { inlineErrorMessage = "" }
+                )
             }
 
             HStack(spacing: 10) {
@@ -79,8 +94,10 @@ struct PersonalPendingTradeEditSheet: View {
                     dismiss()
                 }
                 .buttonStyle(.bordered)
+                .keyboardShortcut(.cancelAction)
 
                 Button(trade == nil ? "添加" : "保存") {
+                    inlineErrorMessage = ""
                     let didSave: Bool
                     if let trade {
                         didSave = model.updatePendingTrade(
@@ -110,17 +127,22 @@ struct PersonalPendingTradeEditSheet: View {
                     }
                     if didSave {
                         dismiss()
+                    } else {
+                        inlineErrorMessage = model.errorMessage.isEmpty ? "保存失败，请检查填写内容。" : model.errorMessage
+                        model.errorMessage = ""
+                        focusFirstInvalidField()
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppPalette.warning)
+                .keyboardShortcut(.defaultAction)
             }
         }
         .padding(18)
         .frame(width: 620)
     }
 
-    private func formField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+    private func formField(_ label: String, text: Binding<String>, placeholder: String, field: Field) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
@@ -134,6 +156,20 @@ struct PersonalPendingTradeEditSheet: View {
                     RoundedRectangle(cornerRadius: AppPalette.controlRadius)
                         .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
                 )
+                .focused($focusedField, equals: field)
+        }
+    }
+
+    private func focusFirstInvalidField() {
+        if actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .action
+        } else if fundNameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  fundCodeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .fundName
+        } else if amountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .amount
+        } else if statusText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            focusedField = .status
         }
     }
 }

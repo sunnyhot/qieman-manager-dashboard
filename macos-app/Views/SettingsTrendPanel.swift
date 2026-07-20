@@ -77,12 +77,20 @@ extension EnhancementCenterView {
                 }
 
                 if !model.lastTrendConnectionMessage.isEmpty {
-                    ToastBar(text: model.lastTrendConnectionMessage, tint: trendConnectionTint)
+                    ToastBar(
+                        text: model.lastTrendConnectionMessage,
+                        tint: trendConnectionTint,
+                        onDismiss: { model.lastTrendConnectionMessage = "" }
+                    )
                         .padding(.top, 12)
                 }
 
                 if !model.lastTrendError.isEmpty && model.lastTrendError != model.lastTrendConnectionMessage {
-                    ToastBar(text: model.lastTrendError, tint: AppPalette.warning)
+                    ToastBar(
+                        text: model.lastTrendError,
+                        tint: AppPalette.warning,
+                        onDismiss: { model.lastTrendError = "" }
+                    )
                         .padding(.top, 12)
                 }
             }
@@ -121,6 +129,7 @@ extension EnhancementCenterView {
                     .lineLimit(1)
             }
         }
+        .disclosureGroupStyle(FullRowDisclosureGroupStyle())
         .font(.system(size: 11))
         .tint(AppPalette.info)
         .padding(AppPalette.spaceM)
@@ -230,6 +239,7 @@ extension EnhancementCenterView {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
                     .lineLimit(1)
+                    .help(row.fundName)
                 Text(row.fundCode ?? row.key)
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundStyle(AppPalette.muted)
@@ -238,7 +248,7 @@ extension EnhancementCenterView {
 
             Spacer(minLength: AppPalette.spaceS)
 
-            Picker("", selection: tradeSignalAssetModeBinding(for: row)) {
+            Picker("\(row.fundName)观察模式", selection: tradeSignalAssetModeBinding(for: row)) {
                 ForEach(TradeSignalAssetPreferenceMode.allCases) { mode in
                     Text(mode.displayText).tag(mode)
                 }

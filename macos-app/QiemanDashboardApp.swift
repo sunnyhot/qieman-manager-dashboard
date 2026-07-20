@@ -729,6 +729,53 @@ struct QiemanDashboardApp: App {
                 }
                 .keyboardShortcut("r")
             }
+
+            CommandMenu("导航") {
+                Button("总览") {
+                    model.selectedSection = .overview
+                    appDelegate.showMainWindow()
+                }
+                .keyboardShortcut("1")
+
+                Button("我的持仓") {
+                    model.selectedSection = .portfolio
+                    appDelegate.showMainWindow()
+                }
+                .keyboardShortcut("2")
+
+                Button("平台调仓") {
+                    model.selectedSection = .platform
+                    appDelegate.showMainWindow()
+                }
+                .keyboardShortcut("3")
+
+                Button("论坛发言") {
+                    model.selectedSection = .forum
+                    appDelegate.showMainWindow()
+                }
+                .keyboardShortcut("4")
+
+                Button("工作台") {
+                    model.selectedSection = .enhancement
+                    appDelegate.showMainWindow()
+                }
+                .keyboardShortcut("5")
+
+                Button("设置") {
+                    model.selectedSection = .settings
+                    appDelegate.showMainWindow()
+                }
+                .keyboardShortcut("6")
+            }
+
+            CommandGroup(after: .textEditing) {
+                Button("搜索当前页面") {
+                    appDelegate.showMainWindow()
+                    NotificationCenter.default.post(name: .qiemanFocusSearch, object: nil)
+                }
+                .keyboardShortcut("f")
+                .disabled(![AppSection.portfolio, .platform, .forum].contains(model.selectedSection))
+            }
         }
     }
 }

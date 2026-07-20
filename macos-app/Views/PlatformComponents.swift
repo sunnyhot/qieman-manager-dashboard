@@ -49,6 +49,7 @@ struct ForumSelectableRow: View {
                 .font(.system(size: isCompact ? 12 : 13, weight: .semibold))
                 .foregroundStyle(AppPalette.ink)
                 .lineLimit(isCompact ? 1 : 2)
+                .help(record.titleText)
 
             Text(record.metaText ?? record.createdAt ?? "无附加信息")
                 .font(.system(size: isCompact ? 10 : 12))
@@ -118,6 +119,7 @@ struct PlatformActionRow: View {
                                 .foregroundStyle(AppPalette.ink)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.82)
+                                .help(action.displayTitle)
                             Text("\(action.fundName ?? action.title ?? "未命名标的") · \(action.fundCode ?? "无代码")")
                                 .font(.system(size: 10))
                                 .foregroundStyle(AppPalette.muted)
@@ -343,10 +345,9 @@ struct StrategyRadarTile: View {
         }
         .frame(maxWidth: .infinity, minHeight: 116, alignment: .topLeading)
         .padding(12)
-        .interactiveSurface(
+        .staticSurface(
             tint: scoreTint,
             fill: AppPalette.cardStrong.opacity(0.64),
-            hoverFill: AppPalette.cardHover,
             strokeOpacity: 0.16,
             activeStrokeOpacity: 0.30
         )
@@ -537,13 +538,11 @@ struct HoldingCard: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .interactiveSurface(
+        .staticSurface(
             tint: profitTint,
             fill: AppPalette.card,
-            hoverFill: AppPalette.cardHover,
             strokeOpacity: 0.45,
-            activeStrokeOpacity: 0.50,
-            lift: 0.8
+            activeStrokeOpacity: 0.50
         )
     }
 

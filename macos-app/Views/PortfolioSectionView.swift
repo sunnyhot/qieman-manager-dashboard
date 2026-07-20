@@ -455,13 +455,11 @@ struct PortfolioDiagnosticTile: View {
         }
         .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
         .padding(12)
-        .interactiveSurface(
+        .staticSurface(
             tint: item.level.color,
             fill: AppPalette.cardStrong.opacity(0.74),
-            hoverFill: AppPalette.cardHover,
             strokeOpacity: 0.18,
-            activeStrokeOpacity: 0.38,
-            lift: 0.8
+            activeStrokeOpacity: 0.38
         )
     }
 }
@@ -598,14 +596,12 @@ struct ProfitAttributionEntryRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .interactiveSurface(
+        .staticSurface(
             tint: entry.kind.color,
             radius: AppPalette.controlRadius,
             fill: AppPalette.cardStrong.opacity(0.56),
-            hoverFill: AppPalette.cardHover,
             strokeOpacity: 0.26,
-            activeStrokeOpacity: 0.40,
-            lift: 0.6
+            activeStrokeOpacity: 0.40
         )
     }
 }

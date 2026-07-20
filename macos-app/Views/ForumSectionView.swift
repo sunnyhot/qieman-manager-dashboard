@@ -110,22 +110,21 @@ struct ForumSectionView: View {
                     Text(post.titleText)
                         .font(.system(size: 22, weight: .bold))
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            if let createdAt = post.createdAt, !createdAt.isEmpty {
-                                StatChip(title: "时间", value: createdAt)
-                            }
-                            if let groupName = post.groupName, !groupName.isEmpty {
-                                StatChip(title: "小组", value: groupName)
-                            }
-                            if let userName = post.userName, !userName.isEmpty {
-                                StatChip(title: "用户", value: userName)
-                            }
-                            if let interaction = post.interactionText {
-                                StatChip(title: "互动", value: interaction)
-                            }
+                    FlowLayout(spacing: 8) {
+                        if let createdAt = post.createdAt, !createdAt.isEmpty {
+                            StatChip(title: "时间", value: createdAt)
+                        }
+                        if let groupName = post.groupName, !groupName.isEmpty {
+                            StatChip(title: "小组", value: groupName)
+                        }
+                        if let userName = post.userName, !userName.isEmpty {
+                            StatChip(title: "用户", value: userName)
+                        }
+                        if let interaction = post.interactionText {
+                            StatChip(title: "互动", value: interaction)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text(post.bodyText)
                         .textSelection(.enabled)
