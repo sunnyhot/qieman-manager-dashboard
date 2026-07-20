@@ -566,10 +566,15 @@ struct PersonalAssetTable: View {
         let isCompact = measuredWidth < Self.compactThreshold
 
         VStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: isCompact) {
+            if isCompact {
+                ScrollView(.horizontal, showsIndicators: true) {
+                    tableContent(availableWidth: measuredWidth, isCompact: isCompact)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
                 tableContent(availableWidth: measuredWidth, isCompact: isCompact)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
@@ -638,7 +643,7 @@ struct PersonalAssetTable: View {
         VStack(spacing: 0) {
             HStack(spacing: colSpacing) {
                 Text("标的")
-                    .frame(width: layout.labelWidth, alignment: .leading)
+                    .modifier(AssetTableLabelColumnModifier(isCompact: isCompact, minWidth: layout.labelWidth))
                 Text(isCompact ? "估值/收益" : "实时估值 / 收益")
                     .frame(width: valuationColWidth(isCompact: isCompact), alignment: .leading)
                 if !isCompact {
@@ -661,6 +666,7 @@ struct PersonalAssetTable: View {
                 Text("操作")
                     .frame(width: actionColWidth(isCompact: isCompact), alignment: .trailing)
             }
+            .modifier(AssetTableContainerFillModifier(isCompact: isCompact, tableWidth: layout.tableWidth))
             .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(AppPalette.muted)
             .padding(.horizontal, 12)
@@ -701,6 +707,38 @@ struct PersonalAssetTable: View {
             }
             .padding(.top, 10)
         }
-        .frame(width: layout.tableWidth, alignment: .leading)
+        .modifier(AssetTableContainerFillModifier(isCompact: isCompact, tableWidth: layout.tableWidth))
+    }
+}
+
+/// 在 compact 模式下保持固定表格宽度以支持横向滚动；
+/// 在常规宽度下让表格铺满容器，避免右侧出现空白列。
+struct AssetTableContainerFillModifier: ViewModifier {
+    let isCompact: Bool
+    let tableWidth: CGFloat
+
+    func body(content: Content) -> some View {
+        if isCompact {
+            content.frame(width: tableWidth, alignment: .leading)
+        } else {
+            content.frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+/// 标的列在 compact 下用固定宽度配合横向滚动；
+/// 在常规宽度下吸收剩余空间，避免列表右侧出现空白。
+struct AssetTableLabelColumnModifier: ViewModifier {
+    let isCompact: Bool
+    let minWidth: CGFloat
+
+    func body(content: Content) -> some View {
+        if isCompact {
+            content.frame(width: minWidth, alignment: .leading)
+        } else {
+            content
+                .frame(minWidth: minWidth, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }

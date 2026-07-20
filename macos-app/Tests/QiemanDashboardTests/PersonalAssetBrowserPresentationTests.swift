@@ -48,12 +48,19 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertFalse(browserSource.contains("widthProbe"))
         XCTAssertFalse(browserSource.contains("PersonalAssetTableWidthPreferenceKey"))
         XCTAssertTrue(browserSource.contains("PersonalAssetTableColumnLayout.resolve("))
-        XCTAssertTrue(browserSource.contains(".frame(width: layout.tableWidth, alignment: .leading)"))
+        XCTAssertTrue(browserSource.contains("AssetTableContainerFillModifier(isCompact: isCompact, tableWidth: layout.tableWidth)"))
+        XCTAssertTrue(browserSource.contains("AssetTableLabelColumnModifier(isCompact: isCompact, minWidth: layout.labelWidth)"))
         XCTAssertTrue(browserSource.contains("labelWidth: layout.labelWidth"))
-        XCTAssertFalse(browserSource.contains("Text(\"标的\")\n                    .frame(maxWidth: .infinity"))
+        XCTAssertFalse(browserSource.contains(".frame(width: layout.tableWidth, alignment: .leading)"))
         XCTAssertTrue(rowSource.contains("var labelWidth: CGFloat = 260"))
         XCTAssertTrue(rowSource.contains(".frame(width: labelWidth, alignment: .leading)"))
+        XCTAssertTrue(rowSource.contains("AssetTableLabelColumnModifier(isCompact: isCompact, minWidth: labelWidth)"))
         XCTAssertTrue(rowSource.contains(".frame(maxWidth: .infinity, alignment: .leading)\n        .overlay(alignment: .leading)"))
+
+        // compact 横向滚动保持固定宽度，常规宽度必须撑满容器避免右侧空白
+        XCTAssertTrue(browserSource.contains("struct AssetTableContainerFillModifier"))
+        XCTAssertTrue(browserSource.contains("content.frame(width: tableWidth, alignment: .leading)"))
+        XCTAssertTrue(browserSource.contains("content.frame(maxWidth: .infinity, alignment: .leading)"))
     }
 
     func testPersonalAssetTableLayoutExpandsIntoWideContainer() {

@@ -79,6 +79,7 @@ struct PersonalAssetTableRow: View {
                 }
             }
             .frame(width: labelWidth, alignment: .leading)
+            .modifier(AssetTableLabelColumnModifier(isCompact: isCompact, minWidth: labelWidth))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(row.marketValue.map { currencyText($0, market: row.detectedMarket) } ?? "—")

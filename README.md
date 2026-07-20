@@ -14,7 +14,7 @@
 ## 构建
 
 ```bash
-APP_VERSION=3.2.1 bash scripts/build_macos_app.sh
+APP_VERSION=3.2.2 bash scripts/build_macos_app.sh
 ```
 
 产物：`dist/macos-app/QiemanDashboard.app`，分发包输出到 `/tmp/`。

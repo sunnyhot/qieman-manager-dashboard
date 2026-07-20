@@ -47,7 +47,7 @@ There is no Python Web dashboard, localhost HTTP service, Python crawler, OCR, i
 cd macos-app && swift test
 bash scripts/build_qieman_cli.sh
 scripts/qieman version
-APP_VERSION=3.2.1 bash scripts/build_macos_app.sh
+APP_VERSION=3.2.2 bash scripts/build_macos_app.sh
 ```
 
 ## Contracts
