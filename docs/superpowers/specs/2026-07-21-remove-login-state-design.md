@@ -510,3 +510,47 @@ func fetchMultiGroupSnapshot(groupIds: [Int], pages: Int, pageSize: Int, persist
 2. 决定平台调仓范围（仅 LONG_WIN / 多产品）。
 3. 重新规划 Task 13-16，重点处理 ManagerWatch 的 prodCode 依赖。
 4. 若平台调仓限定 LONG_WIN：ManagerWatchSettings 保留 prodCode 字段（默认 LONG_WIN），watchPlatform 不走主理人选择；watchForum 改用 groupId。
+
+---
+
+## 14. 主理人调研最终结论（2026-07-21，HAR 实测）
+
+经两份 HAR 抓包（`/dashboard` 个人页 + `/m4/more` 市场页）实测，**纠正之前所有关于"完整主理人列表"的推测**：
+
+### 14.1 `/pomodels/manages` 走不通（证伪调研报告的方案 A）
+
+之前调研报告推断 `/pmdj/v1/pomodels/manages` 是"全部主理人列表"——**错误**。HAR 实测证明它是"**当前登录账号作为主理人管理的组合**"。普通用户登录返回 `content: []`、`totalElements: 0`。只对主理人账号有意义，**不能用来枚举全部主理人**。
+
+### 14.2 `/pomodels/follows` 是"我关注的产品"（含主理人字段）
+
+返回当前用户关注的产品列表，每个产品含完整 `poManagers` 数组（`poManagerId`/`poManagerName`/`verified`/`poManagerAvatarUrl`）。但这是**关注的产品**，空关注列表的用户拿不到任何主理人。
+
+### 14.3 `/m4/hand-picked` 是市场精选（含机构 author）
+
+`/pmdj/v2/m4/hand-picked` 返回按"稳钱/长钱"分类的 **16 个推荐产品**，每个产品有 `author`（机构名，如"盈米基金"/"招商基金"）、`recCode`（=prodCode）、`recName`。**公开、无需登录**。但 `author` 是机构名字符串，**没有唯一 ID、没有 groupId**。
+
+### 14.4 "主理人"两个概念
+
+且慢有两个不同的"主理人"概念，能力不同：
+
+| 概念 | 形式 | 数量 | 字段 | 能否抓发言 |
+|---|---|---|---|---|
+| 个人主理人（社区组长） | "ETF拯救世界" 等个人昵称 | 6 个社区小组，其中**仅 2 个是产品主理人**（长赢 E大、稳稳幸福） | brokerUserId/userName/userLabel/头像/groupId 完整 | ✅ 有 groupId 能抓 |
+| 机构主理人（产品 author） | "盈米基金" 等机构名 | 16 产品 / 9 机构 | 只有 author 字符串 | ❌ 无 groupId |
+
+### 14.5 用户决策
+
+**主理人 = 个人（社区组长）**。即便只有 2 个有产品的小组，也做多选控件（为未来扩展）。
+
+### 14.6 不需要恢复登录态
+
+既然主理人 = 社区组长，用公开的 `/community/group/awesome-list` + `/community/group/manager-info` 就能拿到，**完全不需要登录态**。这与 v3.4.1 删除登录态不冲突——之前为"恢复登录态拿主理人列表"的方案被证伪，取消。
+
+### 14.7 重新规划的筛选重构范围
+
+基于以上结论，筛选重构简化为：
+- 主理人列表来源：`fetchManagerIndex()`（已在 Task 11 实现，拉 6 个社区小组长）。
+- 主理人多选控件：让用户从 6 个里多选，UI 上联想搜索（即便只有 2 个有用，也为未来扩展）。
+- 论坛发言抓取：`fetchMultiGroupSnapshot`（已在 Task 12 实现，多小组并发）。
+- **ManagerWatch（巡检）适配**：这是之前的计划缺口。Task 12 删了 `prodCode`/`managerName` 字段，破坏了巡检。需要重新设计——巡检改为订阅选中的主理人小组（groupId），而不是 prodCode。平台调仓巡检保留 LONG_WIN 逻辑（只有 LONG_WIN 有调仓接口）。
+- **不恢复登录态**。
