@@ -113,6 +113,8 @@ struct ManagerWatchControlCard: View {
                     model.syncManagerWatchTargetsFromCurrentForm()
                 }
                 .buttonStyle(.bordered)
+                .disabled(model.form.filterMode == .managerSubscription)
+                .help("切换到精确参数模式后可用")
 
                 Button("立即巡检") {
                     model.runManagerWatchNow()

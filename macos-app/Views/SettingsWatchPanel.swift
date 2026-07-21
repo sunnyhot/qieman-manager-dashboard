@@ -61,6 +61,8 @@ extension SettingsSectionView {
                         Label("同步当前查询", systemImage: "arrow.triangle.2.circlepath")
                     }
                     .buttonStyle(.bordered)
+                    .disabled(model.form.filterMode == .managerSubscription)
+                    .help("切换到精确参数模式后可用")
 
                     Button {
                         model.runManagerWatchNow()
