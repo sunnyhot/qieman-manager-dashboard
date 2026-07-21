@@ -476,3 +476,37 @@ func fetchMultiGroupSnapshot(groupIds: [Int], pages: Int, pageSize: Int, persist
 - **Task 14**：ContentView 筛选面板替换为 `ManagerPicker` 组件。
 - **Task 15**：CLI `group-posts` 参数改造 + 新增 `managers` 命令。
 - **Task 16**：测试（新增 2 个 + 改契约快照）。
+
+---
+
+## 13. 进度存档（2026-07-21）
+
+### 已完成并保留在分支的部分
+
+**「删除登录态」（Task 1-10）已全部完成**，10 个 commit（`76b5b82`..`5fb36ef`），编译 0 错误、281 测试全过、残留符号 0 命中、CLI 构建通过、smoke 通过。这部分可以直接合并发版（v3.4.0）。
+
+### 已暂停的部分（筛选重构）
+
+**「筛选重构」（Task 11-16）暂停**，原因是发现计划缺口：
+
+- **缺口 1**：巡检功能（ManagerWatch）深依赖被删的 `prodCode`/`managerName` 字段（ManagerWatchSettings 持久化、NotificationDeepLinkPayload、performManagerWatchPoll、fetchForumWatchSnapshot、openPlatformAction/openForumRecord）。
+- **缺口 2**：平台调仓接口 `/long-win/plan/adjustments` 是 long-win 专属，App 当前**只接入了 LONG_WIN 一个产品的调仓**。其他产品（稳稳的幸福 STABLE_WIN、简慢 J7、春华秋实等）的调仓接口未接入，需要浏览器登录抓包逆向（命令行 agent 做不了）。
+- **缺口 3**：社区小组（awesome-list，6 个）≠ 主理人策略产品。社区小组的 `group/summary.groupProds` 里 6 个小组只有长赢同路人（groupId=43）有 prodCode，其余 5 个不绑定可调仓产品。
+
+### 已完成的筛选重构 commit（暂停保留，未来可 cherry-pick）
+
+这两个 commit 已通过 spec + code quality review，代码质量合格，但因依赖未解决（调用方编译错误）不能单独合并：
+
+| commit | 内容 | 状态 |
+|---|---|---|
+| `29fdd60` | Task 11: ManagerSummary 模型 + fetchManagerIndex 方法 | 独立、可编译、真实数据源验证通过（6 主理人） |
+| `123300c` | Task 12: 多小组顺序抓取 + QueryFormState 精简为 selectedManagerIds | NativeClient/Query.swift 自身 0 错误；调用方（AppModel/CLI/ContentView/ManagerWatch）有预期编译错误 |
+
+**恢复筛选重构的前提**：先用浏览器抓包逆向出其他产品的调仓接口（或明确决定平台调仓只支持 LONG_WIN），再重新规划 Task 13-16。
+
+### 恢复筛选重构的步骤
+
+1. 在新分支 `git cherry-pick 29fdd60 123300c` 恢复 Task 11-12。
+2. 决定平台调仓范围（仅 LONG_WIN / 多产品）。
+3. 重新规划 Task 13-16，重点处理 ManagerWatch 的 prodCode 依赖。
+4. 若平台调仓限定 LONG_WIN：ManagerWatchSettings 保留 prodCode 字段（默认 LONG_WIN），watchPlatform 不走主理人选择；watchForum 改用 groupId。
