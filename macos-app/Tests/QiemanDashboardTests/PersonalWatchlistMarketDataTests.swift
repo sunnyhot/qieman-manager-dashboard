@@ -74,8 +74,8 @@ final class PersonalWatchlistMarketDataTests: XCTestCase {
             now: { Self.date("2026-07-21 15:00:00") }
         )
         let records = [
-            record(code: "000001", category: .offExchangeFund, baseline: 1.0),
-            record(code: "510300", category: .onExchangeFund, baseline: 4.5),
+            Self.record(code: "000001", category: .offExchangeFund, baseline: 1.0),
+            Self.record(code: "510300", category: .onExchangeFund, baseline: 4.5),
         ]
 
         let snapshot = try await client.fetchPersonalWatchlistSnapshot(records: records)
