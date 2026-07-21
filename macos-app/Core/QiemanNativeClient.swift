@@ -3,9 +3,7 @@ import Foundation
 
 enum NativeQiemanError: LocalizedError {
     case unsupportedMode(String)
-    case missingCookie
     case missingGroup
-    case missingSpaceUser
     case noResults(String)
     case invalidResponse
     case api(String)
@@ -14,12 +12,8 @@ enum NativeQiemanError: LocalizedError {
         switch self {
         case .unsupportedMode(let mode):
             return "原生抓取暂不支持当前模式：\(mode)"
-        case .missingCookie:
-            return "未发现 qieman.cookie"
         case .missingGroup:
             return "无法解析主理人所在小组"
-        case .missingSpaceUser:
-            return "无法解析目标 spaceUserId"
         case .noResults(let message):
             return message
         case .invalidResponse:
@@ -35,54 +29,17 @@ final class QiemanNativeClient {
     private let apiBase = "/pmdj/v2"
     private let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     private let snapshotStore = NativeSnapshotStore()
-
-    private let cookieFileURL: URL?
-    private let rawCookie: String?
     private let anonymousID: String
 
-    init(cookieFileURL: URL?, rawCookie: String? = nil) {
-        self.cookieFileURL = cookieFileURL
-        self.rawCookie = rawCookie?.trimmingCharacters(in: .whitespacesAndNewlines)
+    init() {
         let seed = "\(Date().timeIntervalSince1970)-\(UUID().uuidString)"
         self.anonymousID = "anon-\(Self.sha256Hex(seed).prefix(16))"
-    }
-
-    func validateAuth() async -> AuthCheckPayload {
-        do {
-            let cookie = try loadCookie()
-            guard !cookie.isEmpty else {
-                return AuthCheckPayload(ok: false, message: "未发现 qieman.cookie", userName: "", brokerUserId: "", userLabel: "")
-            }
-            let payload = try await requestJSON(path: "/community/auth-user-info", params: [:], cookie: cookie)
-            let object = unwrapUserPayload(payload)
-            let jwtPayload = decodeJWTPayload(token: extractAccessToken(from: cookie))
-            return AuthCheckPayload(
-                ok: true,
-                message: "登录态有效",
-                userName: normalizedString(object["userName"]),
-                brokerUserId: firstNonEmpty([
-                    normalizedString(object["brokerUserId"]),
-                    normalizedString(jwtPayload["sub"]),
-                ]),
-                userLabel: normalizedString(object["userLabel"])
-            )
-        } catch {
-            return AuthCheckPayload(ok: false, message: error.localizedDescription, userName: "", brokerUserId: "", userLabel: "")
-        }
     }
 
     func fetchSnapshot(form: QueryFormState, persist: Bool, outputDirectory: URL?) async throws -> SnapshotPayload {
         switch form.mode {
         case .groupManager:
             return try await fetchGroupManagerSnapshot(form: form, persist: persist, outputDirectory: outputDirectory)
-        case .followingPosts:
-            return try await fetchFollowingPostsSnapshot(form: form, persist: persist, outputDirectory: outputDirectory)
-        case .followingUsers:
-            return try await fetchFollowingUsersSnapshot(form: form, persist: persist, outputDirectory: outputDirectory)
-        case .myGroups:
-            return try await fetchMyGroupsSnapshot(form: form, persist: persist, outputDirectory: outputDirectory)
-        case .spaceItems:
-            return try await fetchSpaceItemsSnapshot(form: form, persist: persist, outputDirectory: outputDirectory)
         }
     }
 
@@ -93,7 +50,6 @@ final class QiemanNativeClient {
         pageSize: Int,
         managerBrokerUserID: String
     ) async throws -> CommentsPayload {
-        let cookie = try loadCookie()
         var params: [String: String] = [
             "pageNum": String(max(1, pageNum)),
             "pageSize": String(max(1, pageSize)),
@@ -103,7 +59,7 @@ final class QiemanNativeClient {
             params["sortType"] = "HOT"
         }
 
-        let payload = try await requestJSON(path: "/community/comment/list", params: params, cookie: cookie.isEmpty ? nil : cookie)
+        let payload = try await requestJSON(path: "/community/comment/list", params: params, cookie: nil)
         guard let items = payload as? [[String: Any]] else {
             throw NativeQiemanError.invalidResponse
         }
@@ -129,10 +85,7 @@ final class QiemanNativeClient {
         let group = try await fetchGroupInfo(groupID: groupID, source: resolvedGroupSource(form: form, groupID: groupID))
         let pageSize = positiveInt(form.pageSize, fallback: 10)
         let pages = positiveInt(form.pages, fallback: 5)
-        let targetUserID = firstNonEmpty([
-            normalizedString(form.brokerUserID),
-            group.managerBrokerUserId,
-        ])
+        let targetUserID = group.managerBrokerUserId
 
         var posts: [[String: Any]] = []
         for pageNum in 1...pages {
@@ -175,7 +128,6 @@ final class QiemanNativeClient {
             ("prod_code", nonEmptyOrNil(form.prodCode)),
             ("group_id", String(groupID)),
             ("manager_name", nonEmptyOrNil(form.managerName)),
-            ("broker_user_id", nonEmptyOrNil(form.brokerUserID)),
             ("keyword", nonEmptyOrNil(form.keyword)),
             ("since", nonEmptyOrNil(form.since)),
             ("until", nonEmptyOrNil(form.until))
@@ -196,220 +148,6 @@ final class QiemanNativeClient {
         return try buildSnapshot(raw: raw, fileStem: fileStem, suffix: "community", persist: persist, outputDirectory: outputDirectory)
     }
 
-    private func fetchFollowingPostsSnapshot(form: QueryFormState, persist: Bool, outputDirectory: URL?) async throws -> SnapshotPayload {
-        let cookie = try loadCookie()
-        guard !cookie.isEmpty else {
-            throw NativeQiemanError.missingCookie
-        }
-        let authUser = try await fetchAuthUserInfo(cookie: cookie)
-        let pageSize = positiveInt(form.pageSize, fallback: 10)
-        let pages = positiveInt(form.pages, fallback: 5)
-        let brokerFilter = normalizedString(form.brokerUserID)
-        let userNameFilter = normalizedString(form.userName).lowercased()
-
-        var posts: [[String: Any]] = []
-        var cursor: String?
-        for pageIndex in 0..<pages {
-            var params: [String: String] = ["size": String(pageSize)]
-            if let cursor, !cursor.isEmpty {
-                params["pageId"] = cursor
-            }
-            let payload = try await requestJSON(
-                path: "/community/follow/following/post/list",
-                params: params,
-                cookie: cookie
-            )
-            let items = extractItems(payload)
-            if items.isEmpty {
-                break
-            }
-            for item in items {
-                let post = parsePostItem(item, defaultGroup: nil)
-                if !brokerFilter.isEmpty, normalizedString(post["broker_user_id"]) != brokerFilter {
-                    continue
-                }
-                if !userNameFilter.isEmpty, !normalizedString(post["user_name"]).lowercased().contains(userNameFilter) {
-                    continue
-                }
-                if !postMatchesFilters(post: post, keyword: form.keyword, since: form.since, until: form.until, userName: nil) {
-                    continue
-                }
-                posts.append(post)
-            }
-            let nextCursor = extractCursor(payload)
-            if nextCursor == nil || nextCursor == cursor {
-                break
-            }
-            cursor = nextCursor
-            if pageIndex < pages - 1 {
-                try await Task.sleep(nanoseconds: 200_000_000)
-            }
-        }
-
-        if posts.isEmpty {
-            throw NativeQiemanError.noResults("关注动态里没有抓到符合条件的发言。")
-        }
-
-        let meta: [String: Any] = [
-            "mode": "following-posts",
-            "auth_user": authUser,
-            "filters": stringMap(
-                ("broker_user_id", nonEmptyOrNil(form.brokerUserID)),
-                ("user_name", nonEmptyOrNil(form.userName)),
-                ("keyword", nonEmptyOrNil(form.keyword)),
-                ("since", nonEmptyOrNil(form.since)),
-                ("until", nonEmptyOrNil(form.until))
-            ),
-        ]
-
-        let raw: [String: Any] = [
-            "meta": meta,
-            "posts": posts,
-        ]
-
-        let fileStem = safeFileStem(firstNonEmpty([
-            normalizedString(form.userName),
-            normalizedString(authUser["user_name"]),
-            normalizedString(authUser["broker_user_id"]),
-            "following",
-        ]))
-        return try buildSnapshot(raw: raw, fileStem: fileStem, suffix: "following", persist: persist, outputDirectory: outputDirectory)
-    }
-
-    private func fetchFollowingUsersSnapshot(form: QueryFormState, persist: Bool, outputDirectory: URL?) async throws -> SnapshotPayload {
-        let cookie = try loadCookie()
-        guard !cookie.isEmpty else {
-            throw NativeQiemanError.missingCookie
-        }
-
-        let authUser = try await fetchAuthUserInfo(cookie: cookie)
-        var users = try await fetchFollowingUsers(cookie: cookie, pageSize: positiveInt(form.pageSize, fallback: 50), pages: positiveInt(form.pages, fallback: 5))
-        let brokerFilter = normalizedString(form.brokerUserID)
-        let spaceFilter = normalizedString(form.spaceUserID)
-        if !brokerFilter.isEmpty {
-            users = users.filter { normalizedString($0["broker_user_id"]) == brokerFilter }
-        }
-        if !spaceFilter.isEmpty {
-            users = users.filter { normalizedString($0["space_user_id"]) == spaceFilter }
-        }
-
-        if users.isEmpty {
-            throw NativeQiemanError.noResults("没有抓到关注用户。可能账号尚未关注任何主理人，或登录态已失效。")
-        }
-
-        let raw: [String: Any] = [
-            "meta": [
-                "mode": "following-users",
-                "auth_user": authUser,
-            ],
-            "users": users,
-        ]
-
-        let fileStem = safeFileStem(firstNonEmpty([
-            normalizedString(authUser["user_name"]),
-            normalizedString(authUser["broker_user_id"]),
-            "following-users",
-        ]))
-        return try buildSnapshot(raw: raw, fileStem: fileStem, suffix: "following-users", persist: persist, outputDirectory: outputDirectory)
-    }
-
-    private func fetchMyGroupsSnapshot(form: QueryFormState, persist: Bool, outputDirectory: URL?) async throws -> SnapshotPayload {
-        let cookie = try loadCookie()
-        guard !cookie.isEmpty else {
-            throw NativeQiemanError.missingCookie
-        }
-
-        let authUser = try await fetchAuthUserInfo(cookie: cookie)
-        var groups = try await fetchMyGroups(cookie: cookie)
-        let targetGroupID = normalizedString(form.groupID)
-        let targetManagerName = normalizedString(form.managerName).lowercased()
-        if !targetGroupID.isEmpty {
-            groups = groups.filter { normalizedString($0["group_id"]) == targetGroupID }
-        }
-        if !targetManagerName.isEmpty {
-            groups = groups.filter { normalizedString($0["manager_name"]).lowercased().contains(targetManagerName) }
-        }
-
-        if groups.isEmpty {
-            throw NativeQiemanError.noResults("没有抓到已加入小组。可能账号尚未加入任何社区小组，或过滤条件过严。")
-        }
-
-        let raw: [String: Any] = [
-            "meta": [
-                "mode": "my-groups",
-                "auth_user": authUser,
-            ],
-            "groups": groups,
-        ]
-
-        let fileStem = safeFileStem(firstNonEmpty([
-            normalizedString(authUser["user_name"]),
-            normalizedString(authUser["broker_user_id"]),
-            "my-groups",
-        ]))
-        return try buildSnapshot(raw: raw, fileStem: fileStem, suffix: "my-groups", persist: persist, outputDirectory: outputDirectory)
-    }
-
-    private func fetchSpaceItemsSnapshot(form: QueryFormState, persist: Bool, outputDirectory: URL?) async throws -> SnapshotPayload {
-        let pageSize = positiveInt(form.pageSize, fallback: 20)
-        let pages = positiveInt(form.pages, fallback: 5)
-        let spaceUserID = try await resolveSpaceUserID(form: form, pageSize: pageSize, pages: pages)
-        let spaceUser = try await fetchSpaceUserInfo(spaceUserID: spaceUserID)
-
-        var posts: [[String: Any]] = []
-        for page in 1...pages {
-            let payload = try await requestJSON(
-                path: "/community/space/items",
-                params: [
-                    "spaceUserId": spaceUserID,
-                    "page": String(page),
-                    "size": String(pageSize),
-                ],
-                cookie: nil
-            )
-            let items = extractItems(payload)
-            if items.isEmpty {
-                break
-            }
-            for item in items {
-                let post = parsePostItem(item, defaultGroup: nil)
-                if !postMatchesFilters(post: post, keyword: form.keyword, since: form.since, until: form.until, userName: nil) {
-                    continue
-                }
-                posts.append(post)
-            }
-            if page < pages {
-                try await Task.sleep(nanoseconds: 200_000_000)
-            }
-        }
-
-        if posts.isEmpty {
-            throw NativeQiemanError.noResults("没有抓到个人空间动态。可能这个 spaceUserId 没有公开内容，或关键词/日期过滤条件过严。")
-        }
-
-        let raw: [String: Any] = [
-            "meta": [
-                "mode": "space-items",
-                "space_user": spaceUser.dictionary,
-                "filters": stringMap(
-                    ("space_user_id", spaceUserID),
-                    ("user_name", nonEmptyOrNil(form.userName)),
-                    ("broker_user_id", nonEmptyOrNil(form.brokerUserID)),
-                    ("keyword", nonEmptyOrNil(form.keyword)),
-                    ("since", nonEmptyOrNil(form.since)),
-                    ("until", nonEmptyOrNil(form.until))
-                ),
-            ],
-            "posts": posts,
-        ]
-
-        let fileStem = safeFileStem(firstNonEmpty([
-            spaceUser.userName,
-            spaceUser.spaceUserID,
-            "space-items",
-        ]))
-        return try buildSnapshot(raw: raw, fileStem: fileStem, suffix: "space-items", persist: persist, outputDirectory: outputDirectory)
-    }
 
     private func buildSnapshot(raw: [String: Any], fileStem: String, suffix: String, persist _: Bool, outputDirectory _: URL?) throws -> SnapshotPayload {
         let timestamp = timestampString()
@@ -446,136 +184,6 @@ final class QiemanNativeClient {
             managerAvatarURL: nonEmptyOrNil(leader["userAvatarUrl"]) ?? "",
             source: source
         )
-    }
-
-    private func fetchAuthUserInfo(cookie: String) async throws -> [String: Any] {
-        let payload = try await requestJSON(path: "/community/auth-user-info", params: [:], cookie: cookie)
-        let object = unwrapUserPayload(payload)
-        let jwtPayload = decodeJWTPayload(token: extractAccessToken(from: cookie))
-        return [
-            "user_name": normalizedString(object["userName"]),
-            "user_label": normalizedString(object["userLabel"]),
-            "broker_user_id": firstNonEmpty([
-                normalizedString(object["brokerUserId"]),
-                normalizedString(jwtPayload["sub"]),
-            ]),
-            "user_avatar_url": normalizedString(object["userAvatarUrl"]),
-        ]
-    }
-
-    private func fetchFollowingUsers(cookie: String, pageSize: Int, pages: Int) async throws -> [[String: Any]] {
-        var results: [[String: Any]] = []
-        for page in 1...pages {
-            let payload = try await requestJSON(
-                path: "/community/follow/page/user",
-                params: [
-                    "page": String(max(1, page)),
-                    "size": String(max(1, pageSize)),
-                ],
-                cookie: cookie
-            )
-            let items = extractItems(payload)
-            if items.isEmpty {
-                break
-            }
-            for item in items {
-                results.append(
-                    stringAnyMap(
-                        ("broker_user_id", nonEmptyOrNil(item["brokerUserId"])),
-                        ("space_user_id", firstNonEmpty([
-                            normalizedString(item["spaceUserId"]),
-                            normalizedString(item["userId"]),
-                        ])),
-                        ("user_name", nonEmptyOrNil(item["userName"])),
-                        ("user_label", nonEmptyOrNil(item["userLabel"])),
-                        ("user_desc", nonEmptyOrNil(item["userDesc"])),
-                        ("user_avatar_url", nonEmptyOrNil(item["userAvatarUrl"]))
-                    )
-                )
-            }
-            if page < pages {
-                try await Task.sleep(nanoseconds: 200_000_000)
-            }
-        }
-        return results
-    }
-
-    private func fetchMyGroups(cookie: String) async throws -> [[String: Any]] {
-        let payload = try await requestJSON(path: "/community/group/my-groups", params: [:], cookie: cookie)
-        let items = extractItems(payload)
-        var groupIDs: [Int] = []
-        var seen: Set<Int> = []
-        for item in items {
-            let groupID = positiveInt(firstNonNil(item["groupId"], item["id"]), fallback: 0)
-            guard groupID > 0, !seen.contains(groupID) else { continue }
-            groupIDs.append(groupID)
-            seen.insert(groupID)
-        }
-
-        var groups: [[String: Any]] = []
-        for (index, groupID) in groupIDs.enumerated() {
-            let group = try await fetchGroupInfo(groupID: groupID, source: "my-groups")
-            groups.append(groupDictionary(group))
-            if index < groupIDs.count - 1 {
-                try await Task.sleep(nanoseconds: 200_000_000)
-            }
-        }
-        return groups
-    }
-
-    private func fetchSpaceUserInfo(spaceUserID: String) async throws -> NativeSpaceUserInfo {
-        let payload = try await requestJSON(path: "/community/space/userInfo", params: ["spaceUserId": spaceUserID], cookie: nil)
-        let object = unwrapFirstObject(payload, keys: ["data", "userInfo", "user", "content"])
-        guard !object.isEmpty else {
-            throw NativeQiemanError.invalidResponse
-        }
-        return NativeSpaceUserInfo(
-            spaceUserID: firstNonEmpty([
-                normalizedString(object["spaceUserId"]),
-                spaceUserID,
-            ]),
-            brokerUserID: firstNonEmpty([
-                normalizedString(object["brokerUserId"]),
-                normalizedString(object["userId"]),
-            ]),
-            userName: normalizedString(object["userName"]),
-            userLabel: normalizedString(object["userLabel"]),
-            userDesc: normalizedString(object["userDesc"]),
-            userAvatarURL: normalizedString(object["userAvatarUrl"])
-        )
-    }
-
-    private func resolveSpaceUserID(form: QueryFormState, pageSize: Int, pages: Int) async throws -> String {
-        let explicit = normalizedString(form.spaceUserID)
-        if !explicit.isEmpty {
-            return explicit
-        }
-
-        let targetUserName = normalizedString(form.userName).lowercased()
-        let targetBrokerUserID = normalizedString(form.brokerUserID)
-        guard !targetUserName.isEmpty || !targetBrokerUserID.isEmpty else {
-            throw NativeQiemanError.missingSpaceUser
-        }
-
-        let cookie = try loadCookie()
-        guard !cookie.isEmpty else {
-            throw NativeQiemanError.missingCookie
-        }
-
-        let users = try await fetchFollowingUsers(cookie: cookie, pageSize: max(pageSize, 50), pages: max(pages, 5))
-        for user in users {
-            let candidate = normalizedString(user["space_user_id"])
-            if candidate.isEmpty {
-                continue
-            }
-            if !targetBrokerUserID.isEmpty, normalizedString(user["broker_user_id"]) == targetBrokerUserID {
-                return candidate
-            }
-            if !targetUserName.isEmpty, normalizedString(user["user_name"]).lowercased().contains(targetUserName) {
-                return candidate
-            }
-        }
-        throw NativeQiemanError.missingSpaceUser
     }
 
     private func resolveGroupID(form: QueryFormState) async throws -> Int {
@@ -656,13 +264,6 @@ final class QiemanNativeClient {
         request.setValue(makeXSign(), forHTTPHeaderField: "x-sign")
         request.setValue(makeXRequestID(pathWithQuery: pathWithQuery), forHTTPHeaderField: "x-request-id")
         request.setValue(anonymousID, forHTTPHeaderField: "sensors-anonymous-id")
-        if let cookie, !cookie.isEmpty {
-            request.setValue(cookie, forHTTPHeaderField: "Cookie")
-            let accessToken = extractAccessToken(from: cookie)
-            if !accessToken.isEmpty {
-                request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-            }
-        }
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
@@ -679,19 +280,6 @@ final class QiemanNativeClient {
             }
         }
         return payload
-    }
-
-    private func loadCookie() throws -> String {
-        if let rawCookie, !rawCookie.isEmpty {
-            return rawCookie
-        }
-        guard let cookieFileURL else {
-            return ""
-        }
-        guard FileManager.default.fileExists(atPath: cookieFileURL.path) else {
-            return ""
-        }
-        return try String(contentsOf: cookieFileURL, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func buildErrorMessage(from payload: Any, statusCode: Int) -> String {
@@ -988,35 +576,6 @@ final class QiemanNativeClient {
         return number > 0 ? number : nil
     }
 
-    private func extractAccessToken(from cookie: String) -> String {
-        for chunk in cookie.split(separator: ";") {
-            let parts = chunk.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "=", maxSplits: 1)
-            if parts.count == 2, parts[0] == "access_token" {
-                return String(parts[1])
-            }
-        }
-        return ""
-    }
-
-    private func decodeJWTPayload(token: String) -> [String: Any] {
-        guard token.split(separator: ".").count >= 3 else {
-            return [:]
-        }
-        let parts = token.split(separator: ".")
-        var payload = String(parts[1])
-            .replacingOccurrences(of: "-", with: "+")
-            .replacingOccurrences(of: "_", with: "/")
-        let padding = (4 - payload.count % 4) % 4
-        if padding > 0 {
-            payload += String(repeating: "=", count: padding)
-        }
-        guard let data = Data(base64Encoded: payload),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return [:]
-        }
-        return object
-    }
-
     private func normalizedString(_ value: Any?) -> String {
         guard let value else { return "" }
         if value is NSNull { return "" }
@@ -1082,22 +641,3 @@ private struct NativeGroupInfo {
     let source: String
 }
 
-private struct NativeSpaceUserInfo {
-    let spaceUserID: String
-    let brokerUserID: String
-    let userName: String
-    let userLabel: String
-    let userDesc: String
-    let userAvatarURL: String
-
-    var dictionary: [String: Any] {
-        [
-            "space_user_id": spaceUserID,
-            "broker_user_id": brokerUserID,
-            "user_name": userName,
-            "user_label": userLabel,
-            "user_desc": userDesc,
-            "user_avatar_url": userAvatarURL,
-        ]
-    }
-}
