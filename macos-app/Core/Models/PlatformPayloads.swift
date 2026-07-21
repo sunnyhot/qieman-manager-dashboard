@@ -122,14 +122,6 @@ struct PlatformTimelinePayload: Decodable, Hashable, Identifiable {
     var id: String { label }
 }
 
-struct AuthCheckPayload: Decodable {
-    let ok: Bool
-    let message: String
-    let userName: String
-    let brokerUserId: String
-    let userLabel: String
-}
-
 struct CommentsPayload: Decodable {
     let postId: Int
     let pageNum: Int

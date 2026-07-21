@@ -1,24 +1,5 @@
 import Foundation
 
-struct BootstrapPayload: Decodable {
-    let status: StatusPayload
-}
-
-struct StatusPayload: Decodable {
-    let cookieExists: Bool
-    let cookieFile: String
-    let outputDir: String
-    let defaultForm: DefaultFormPayload
-}
-
-struct DefaultFormPayload: Decodable {
-    let mode: String
-    let prodCode: String
-    let userName: String
-    let pages: String
-    let pageSize: String
-}
-
 struct FetchResponsePayload: Decodable {
     let snapshot: SnapshotPayload
 }
