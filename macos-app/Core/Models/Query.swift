@@ -1,5 +1,21 @@
 import Foundation
 
+enum FilterMode: String, CaseIterable, Identifiable {
+    case managerSubscription = "manager-subscription"
+    case preciseParams = "precise-params"
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .managerSubscription:
+            return "主理人订阅"
+        case .preciseParams:
+            return "精确参数"
+        }
+    }
+}
+
 enum QueryMode: String, CaseIterable, Identifiable {
     case groupManager = "group-manager"
 
@@ -23,6 +39,8 @@ extension QueryMode {
 }
 
 struct QueryFormState {
+    var filterMode: FilterMode = .managerSubscription
+    var selectedManagerIds: Set<String> = []
     var mode: QueryMode = .groupManager
     var prodCode: String = "LONG_WIN"
     var managerName: String = ""
@@ -39,6 +57,8 @@ struct QueryFormState {
     func fetchPayload(persist: Bool) -> [String: Any] {
         var payload: [String: Any] = [
             "mode": mode.rawValue,
+            "filter_mode": filterMode.rawValue,
+            "selected_manager_ids": selectedManagerIds.sorted(),
             "prod_code": prodCode,
             "manager_name": managerName,
             "group_url": groupURL,
