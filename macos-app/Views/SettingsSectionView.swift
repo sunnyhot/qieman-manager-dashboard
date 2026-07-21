@@ -4,7 +4,6 @@ import SwiftUI
 // MARK: - Settings
 
 enum SettingsFocus: CaseIterable, Identifiable {
-    case account
     case watch
     case menuBar
     case version
@@ -22,7 +21,6 @@ struct SettingsSectionView: View {
     @State var tickerDropTargetID: String?
     @State var isConfirmingMenuBarReset = false
     @State var isConfirmingHoldingSelectionClear = false
-    @State var isConfirmingDataDirectoryReset = false
 
     var menuBarTickerEnabledBinding: Binding<Bool> {
         Binding(
@@ -112,7 +110,6 @@ struct SettingsSectionView: View {
 
     private var overviewBadges: some View {
         Group {
-            ToolbarBadge(title: model.cookieAvailable ? "Cookie 可用" : "需要登录", tint: model.cookieAvailable ? AppPalette.positive : AppPalette.warning)
             ToolbarBadge(title: model.liveModeLabel, tint: model.hasLiveService ? AppPalette.brand : AppPalette.muted)
             ToolbarBadge(title: model.managerWatchSettings.isEnabled ? "巡检已开" : "巡检关闭", tint: model.managerWatchSettings.isEnabled ? AppPalette.positive : AppPalette.muted)
             ToolbarBadge(title: model.menuBarTickerSettings.isEnabled ? "菜单栏已显" : "菜单栏关闭", tint: model.menuBarTickerSettings.isEnabled ? AppPalette.info : AppPalette.muted)
@@ -139,22 +136,6 @@ struct SettingsSectionView: View {
 
     @ViewBuilder
     private func overviewMetricButtons(tickerEntries: [MenuBarTickerEntry]) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.16)) {
-                selectedSettingsFocus = .account
-            }
-        } label: {
-            SettingsMetric(
-                title: "账号",
-                value: model.cookieAvailable ? "登录态可用" : "等待登录",
-                detail: model.isCheckingAuth ? "验证中" : model.cookieFileURL?.lastPathComponent ?? "未找到 Cookie",
-                icon: "person.crop.circle.badge.checkmark",
-                tint: model.cookieAvailable ? AppPalette.positive : AppPalette.warning,
-                isSelected: selectedSettingsFocus == .account
-            )
-        }
-        .buttonStyle(PressResponsiveButtonStyle())
-
         Button {
             withAnimation(.easeInOut(duration: 0.16)) {
                 selectedSettingsFocus = .watch
@@ -207,8 +188,6 @@ struct SettingsSectionView: View {
     @ViewBuilder
     private var selectedSettingsPanel: some View {
         switch selectedSettingsFocus {
-        case .account:
-            accountPanel
         case .watch:
             watchPanel
         case .menuBar:

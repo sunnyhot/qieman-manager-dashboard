@@ -1,11 +1,43 @@
 import SwiftUI
 
-// MARK: - App Panel (Version / Updates)
+// MARK: - App Panel (General / Updates)
 
 extension SettingsSectionView {
     var appPanel: some View {
-        SettingsPanel(title: "版本更新", subtitle: "当前版本与在线更新", icon: "arrow.down.circle") {
+        SettingsPanel(title: "通用", subtitle: "外观、版本与更新", icon: "slider.horizontal.3") {
             VStack(alignment: .leading, spacing: 0) {
+                SettingsRow(
+                    title: "外观",
+                    value: model.appearance.rawValue,
+                    detail: "浅色 / 深色 / 跟随系统",
+                    icon: "circle.lefthalf.filled",
+                    tint: AppPalette.info
+                )
+                HStack(spacing: 8) {
+                    ForEach(AppAppearance.allCases) { mode in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                model.appearance = mode
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: mode == .light ? "sun.max.fill" : mode == .dark ? "moon.fill" : "circle.lefthalf.filled")
+                                    .font(.system(size: 11))
+                                Text(mode.rawValue)
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundStyle(model.appearance == mode ? AppPalette.onBrand : AppPalette.muted)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Capsule().fill(model.appearance == mode ? AppPalette.brand : AppPalette.card))
+                            .overlay(Capsule().stroke(model.appearance == mode ? AppPalette.brand : AppPalette.line, lineWidth: 1))
+                        }
+                        .buttonStyle(PressResponsiveButtonStyle())
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 6)
+                SettingsDivider()
                 SettingsToggleRow(
                     title: "启动时检查更新",
                     detail: "每次打开应用自动检测新版本",
