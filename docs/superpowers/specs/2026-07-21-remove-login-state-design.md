@@ -342,3 +342,137 @@ refreshLatest ─┬─ snapshotTask: nativeClient.fetchSnapshot(mode: .groupMan
 12. （可选）在 PROJECT_MAP.md / AGENTS.md 同步描述。
 
 每步独立编译通过，便于定位问题。
+
+---
+
+## 12. 筛选重构：主理人多选 + 联想搜索（追加范围）
+
+### 12.1 背景与数据事实
+
+经 API 实测确认：
+- 且慢社区**总共只有 6 个小组**（`/community/group/awesome-list` 的 `totalCount=6`）。
+- 每个小组有**唯一一个主理人**（leader），小组↔主理人≈1:1。
+- `awesome-list` 返回的每个 group **不含主理人 userName**，只有 `broker`(brokerId)；要拿主理人名字须对每个 group 调 `/community/group/manager-info`。
+- `manager-info` 返回完整主理人信息：`userName` / `brokerUserId` / `userLabel` / `userAvatarUrl`。
+- 一个主理人可能领导多个小组（待实测确认，但 6 个小组的规模下不影响）。
+
+**结论**：选主理人 ≈ 选小组。产品字段（prodCode）作为独立筛选维度已无意义（每个小组本身对应一个产品），**去掉产品字段**。
+
+### 12.2 目标
+
+- 筛选面板只保留**主理人多选 + 联想搜索**一个控件。
+- 删除其他所有筛选字段：产品、关键词、日期范围、页数/每页、groupId/groupUrl/brokerUserId/spaceUserId/自动刷新。
+- 底层抓取改为**多小组并发抓取 + 合并去重 + 按时间排序**。
+- 主理人联想数据源：预拉 awesome-list（1 次）+ 每个小组 manager-info（6 次）= 7 个请求，内存建索引，启动时或首次展开筛选面板时触发，缓存到 AppModel。
+
+### 12.3 新增数据模型
+
+**`Core/Models/ManagerSummary.swift`（新文件）**：
+
+```swift
+import Foundation
+
+struct ManagerSummary: Identifiable, Hashable {
+    let brokerUserId: String   // 唯一标识，用作 id
+    let userName: String       // 显示名，如 "ETF拯救世界"
+    let userLabel: String      // 副标题，如 "长赢指数投资计划主理人"
+    let userAvatarURL: String
+    let groupId: Int           // 他领导的小组 ID
+    let groupName: String      // 小组名，如 "长赢同路人"
+
+    var id: String { brokerUserId }
+}
+```
+
+### 12.4 NativeClient 改造
+
+**新增方法** `fetchManagerIndex() async throws -> [ManagerSummary]`：
+
+- 拉 awesome-list 全部页（totalCount 已知，一次 size=50 够了）。
+- 对每个 group 调 manager-info，提取 leader。
+- 组装 `[ManagerSummary]`，按 userName 排序。
+- 这个方法独立于 `fetchGroupManagerSnapshot`，不依赖 QueryFormState。
+
+**改造** `fetchGroupManagerSnapshot` → `fetchMultiGroupSnapshot(groupIds: persist: outputDirectory:)`：
+
+- 入参从单个 `QueryFormState` 改为 `[Int]`（多个 groupId）。
+- 对每个 groupId 并发调用现有的「抓单个小组帖子」逻辑（抽成 `fetchSingleGroupPosts(groupId:)`）。
+- 合并所有小组的帖子，按 `created_at` 降序排序，去重（按 postId）。
+- `postMatchesFilters` 调用简化：去掉 keyword/since/until/userName 参数（字段都删了），这个方法可以直接删除，或保留为 always-true。
+
+**删除** `resolveGroupID`：不再需要从 prodCode/managerName 反查，groupId 直接从 ManagerSummary 来。
+
+### 12.5 QueryFormState 重构
+
+```swift
+struct QueryFormState {
+    var selectedManagerIds: Set<String> = []   // 选中的主理人 brokerUserId
+    var pages: String = "5"
+    var pageSize: String = "10"
+}
+```
+
+- 删除：`mode`（只剩一种，不需要枚举）、`prodCode`、`managerName`、`groupURL`、`groupID`、`userName`、`keyword`、`since`、`until`、`autoRefresh`。
+- `QueryMode` 枚举：既然只剩一种模式，**整个枚举删除**。`fetchSnapshot` 不再 switch mode，直接调 `fetchMultiGroupSnapshot`。
+- 保留 `pages` / `pageSize` 作为「每个小组抓几页」的参数（用默认值，UI 上可不暴露，或放高级区）。
+
+### 12.6 AppModel 改造
+
+新增：
+- `@Published private(set) var managerIndex: [ManagerSummary] = []`
+- `@Published private(set) var isLoadingManagerIndex: Bool = false`
+- `func loadManagerIndex() async`：调 `nativeClient.fetchManagerIndex()`，结果存 `managerIndex`。启动时（`start()`）触发一次，失败静默（UI 显示重试）。
+
+改造 `refreshLatest`：
+- 从 `form.selectedManagerIds` + `managerIndex` 解析出 `[Int]` groupIds。
+- 调 `nativeClient.fetchMultiGroupSnapshot(groupIds:...)`。
+
+### 12.7 UI 改造（ContentView 筛选面板）
+
+筛选面板内容区从「一堆 toolbarField」替换为：
+
+**主理人多选联想控件**（新 SwiftUI 组件 `ManagerPicker`，放 `Views/SharedComponents.swift` 或新文件）：
+- 一个搜索框 + 下拉列表。
+- 输入时从 `model.managerIndex` 按 userName 模糊匹配，显示候选。
+- 候选项带勾选状态（选中/未选中），点击切换。
+- 已选主理人显示为芯片（chip）标签，可点 × 移除。
+- 数据来自 `model.managerIndex`；若 `managerIndex` 为空，显示「正在加载主理人列表…」并触发 `loadManagerIndex`。
+
+筛选面板只剩这一个控件 + 一个「刷新」按钮（已有）。
+
+### 12.8 fetchSnapshot 签名变化
+
+原：
+```swift
+func fetchSnapshot(form: QueryFormState, persist: Bool, outputDirectory: URL?) async throws -> SnapshotPayload
+```
+
+新（不再需要 form，直接传 groupIds）：
+```swift
+func fetchMultiGroupSnapshot(groupIds: [Int], pages: Int, pageSize: Int, persist: Bool, outputDirectory: URL?) async throws -> SnapshotPayload
+```
+
+调用方（AppModel.refreshLatest、CLI）同步改。
+
+### 12.9 CLI 影响
+
+- `group-posts` 命令：原参数 `--prod-code` / `--manager-name` 改为 `--group-id`（可重复，多值）或 `--manager-id`（可重复）。底层调 `fetchMultiGroupSnapshot`。
+- 新增 `managers` 命令：输出所有主理人列表（从 fetchManagerIndex），供脚本查询 groupId/brokerUserId。
+- `--forum-mode` 参数彻底删除（只剩一种模式）。
+
+### 12.10 测试
+
+- 新增 `ManagerIndexTests`：mock awesome-list + manager-info 响应，验证 `fetchManagerIndex` 解析正确。
+- 新增 `MultiGroupSnapshotTests`：mock 多小组帖子，验证合并、去重、按时间排序。
+- 改 `CLIContractSnapshotTests`：`group-posts` 命令的 DTO 快照（参数变了）。
+- 删除依赖旧 QueryFormState 字段的测试（若有）。
+
+### 12.11 实施顺序（追加 Task 11-14）
+
+在删除登录态（Task 1-10）完成后，追加：
+- **Task 11**：新增 `ManagerSummary` 模型 + `fetchManagerIndex` 方法。
+- **Task 12**：改造 `fetchGroupManagerSnapshot` → `fetchMultiGroupSnapshot`，删 `resolveGroupID` / `postMatchesFilters` / `QueryMode`。
+- **Task 13**：AppModel 加 `managerIndex` + `loadManagerIndex`，改 `refreshLatest`。
+- **Task 14**：ContentView 筛选面板替换为 `ManagerPicker` 组件。
+- **Task 15**：CLI `group-posts` 参数改造 + 新增 `managers` 命令。
+- **Task 16**：测试（新增 2 个 + 改契约快照）。

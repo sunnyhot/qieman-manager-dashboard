@@ -1020,6 +1020,688 @@ git commit -m "chore: 删除登录态功能后的全量验证"
 
 ---
 
+# 第二部分：筛选重构（主理人多选 + 联想搜索）
+
+> 这部分在删除登录态（Task 1-10）完成后进行。目标：筛选面板只留「主理人多选+联想」，删掉产品/关键词/日期等其他字段，底层改为多小组并发抓取合并。
+
+## Task 11: 新增 ManagerSummary 模型 + fetchManagerIndex
+
+**Files:**
+- Create: `macos-app/Core/Models/ManagerSummary.swift`
+- Modify: `macos-app/Core/QiemanNativeClient.swift`（加 fetchManagerIndex）
+- Modify: `scripts/build_qieman_cli.sh`（加新文件到 CLI 源文件列表）
+
+- [ ] **Step 11.1: 创建 `ManagerSummary.swift`**
+
+```swift
+import Foundation
+
+struct ManagerSummary: Identifiable, Hashable, Codable {
+    let brokerUserId: String
+    let userName: String
+    let userLabel: String
+    let userAvatarURL: String
+    let groupId: Int
+    let groupName: String
+
+    var id: String { brokerUserId }
+}
+```
+
+- [ ] **Step 11.2: 在 QiemanNativeClient 加 `fetchManagerIndex`**
+
+在 `QiemanNativeClient.swift` 的 `fetchSnapshot` 附近加：
+
+```swift
+/// 拉取全部小组及其主理人，建立主理人索引。
+/// 数据源：awesome-list（1 次）+ 每个小组 manager-info（约 6 次）。
+func fetchManagerIndex() async throws -> [ManagerSummary] {
+    var summaries: [ManagerSummary] = []
+    var seenGroupIDs: Set<Int> = []
+    for page in 1...5 {
+        let payload = try await requestJSON(
+            path: "/community/group/awesome-list",
+            params: ["page": String(page), "size": "50"],
+            cookie: nil
+        )
+        guard let object = payload as? [String: Any],
+              let groups = object["data"] as? [[String: Any]],
+              !groups.isEmpty else {
+            break
+        }
+        for group in groups {
+            let groupID = positiveInt(group["groupId"], fallback: 0)
+            guard groupID > 0, !seenGroupIDs.contains(groupID) else { continue }
+            seenGroupIDs.insert(groupID)
+            let groupName = normalizedString(group["groupName"])
+            do {
+                let managerPayload = try await requestJSON(
+                    path: "/community/group/manager-info",
+                    params: ["groupId": String(groupID)],
+                    cookie: nil
+                )
+                let leader = (((managerPayload as? [String: Any])?["groupLeaderInfo"] as? [String: Any])?["leader"] as? [String: Any]) ?? [:]
+                let brokerUserId = normalizedString(leader["brokerUserId"])
+                guard !brokerUserId.isEmpty else { continue }
+                summaries.append(ManagerSummary(
+                    brokerUserId: brokerUserId,
+                    userName: normalizedString(leader["userName"]),
+                    userLabel: normalizedString(leader["userLabel"]),
+                    userAvatarURL: normalizedString(leader["userAvatarUrl"]),
+                    groupId: groupID,
+                    groupName: groupName
+                ))
+            } catch {
+                continue
+            }
+        }
+        // awesome-list 总共 6 个小组，一页就够；若还有更多页继续
+        if groups.count < 50 { break }
+    }
+    return summaries.sorted { $0.userName < $1.userName }
+}
+```
+
+- [ ] **Step 11.3: 把新文件加入 CLI 构建脚本**
+
+打开 `scripts/build_qieman_cli.sh`，在源文件列表里加一行 `Core/Models/ManagerSummary.swift`（参照现有 Models 文件的添加方式）。
+
+- [ ] **Step 11.4: 编译验证**
+
+Run: `cd macos-app && swift build 2>&1 | tail -5`
+
+Expected: PASS（新代码独立，不破坏现有）。
+
+- [ ] **Step 11.5: Commit**
+
+```bash
+git add macos-app/Core/Models/ManagerSummary.swift macos-app/Core/QiemanNativeClient.swift scripts/build_qieman_cli.sh
+git commit -m "feat: 新增 ManagerSummary 模型和 fetchManagerIndex 主理人索引"
+```
+
+---
+
+## Task 12: 改造 fetchGroupManagerSnapshot 为多小组抓取
+
+**Files:**
+- Modify: `macos-app/Core/QiemanNativeClient.swift`
+- Modify: `macos-app/Core/Models/Query.swift`（重构 QueryFormState）
+
+- [ ] **Step 12.1: 重构 QueryFormState（删字段）**
+
+把 `macos-app/Core/Models/Query.swift` 整文件替换为：
+
+```swift
+import Foundation
+
+struct QueryFormState {
+    var selectedManagerIds: Set<String> = []
+    var pages: String = "5"
+    var pageSize: String = "10"
+
+    func fetchPayload(persist: Bool) -> [String: Any] {
+        [
+            "selected_manager_ids": selectedManagerIds.sorted(),
+            "pages": pages,
+            "page_size": pageSize,
+            "persist": persist,
+        ]
+    }
+}
+```
+
+注：`QueryMode` 枚举整个删除。`fetchSnapshot` 不再 switch mode。
+
+- [ ] **Step 12.2: 改造 fetchSnapshot 签名 + 抽取单小组抓取**
+
+在 `QiemanNativeClient.swift`：
+
+a. 删除 `func fetchSnapshot(form:persist:outputDirectory:)` 旧签名。
+
+b. 把原 `fetchGroupManagerSnapshot` 里的「抓单个小组帖子」循环抽成私有方法：
+
+```swift
+private func fetchSingleGroupPosts(groupId: Int, group: NativeGroupInfo, pages: Int, pageSize: Int) async throws -> [[String: Any]] {
+    var posts: [[String: Any]] = []
+    for pageNum in 1...pages {
+        let payload = try await requestJSON(
+            path: "/community/post/list",
+            params: [
+                "pageNum": String(pageNum),
+                "pageSize": String(pageSize),
+                "groupId": String(groupId),
+                "postType": "1",
+                "queryStrategy": "ONLY_GROUP_POST",
+                "orderBy": "TIME",
+            ],
+            cookie: nil
+        )
+        let items = extractItemsFromGroupList(payload)
+        if items.isEmpty { break }
+        for item in items {
+            let post = parsePostItem(item, defaultGroup: group)
+            posts.append(post)
+        }
+        if pageNum < pages {
+            try await Task.sleep(nanoseconds: 200_000_000)
+        }
+    }
+    return posts
+}
+```
+
+c. 新增多小组抓取方法：
+
+```swift
+func fetchMultiGroupSnapshot(groupIds: [Int], pages: Int, pageSize: Int, persist: Bool, outputDirectory: URL?) async throws -> SnapshotPayload {
+    let uniqueIDs = Array(Set(groupIds)).sorted()
+    guard !uniqueIDs.isEmpty else {
+        throw NativeQiemanError.noResults("请至少选择一位主理人。")
+    }
+
+    // 并发抓取各小组
+    var failures: [String] = []
+    var allPosts: [[String: Any]] = []
+    var groups: [NativeGroupInfo] = []
+    for groupId in uniqueIDs {
+        do {
+            let group = try await fetchGroupInfo(groupID: groupId, source: "manager-index")
+            groups.append(group)
+            let posts = try await fetchSingleGroupPosts(groupId: groupId, group: group, pages: pages, pageSize: pageSize)
+            allPosts.append(contentsOf: posts)
+        } catch {
+            failures.append("group \(groupId): \(error.localizedDescription)")
+        }
+    }
+
+    // 去重（按 postId）+ 按时间降序
+    var seen: Set<Int> = []
+    let deduped = allPosts.filter { post in
+        let postId = positiveInt(post["post_id"], fallback: 0)
+        if postId > 0 {
+            if seen.contains(postId) { return false }
+            seen.insert(postId)
+        }
+        return true
+    }
+    let sorted = deduped.sorted { lhs, rhs in
+        dateKey(normalizedString(rhs["created_at"])) ?? 0 > (dateKey(normalizedString(lhs["created_at"])) ?? 0)
+    }
+
+    guard !sorted.isEmpty else {
+        throw NativeQiemanError.noResults(failures.isEmpty ? "没有抓到主理人发言。" : "抓取失败：\(failures.joined(separator: "; "))")
+    }
+
+    let raw: [String: Any] = [
+        "groups": groups.map(groupDictionary),
+        "filters": ["group_ids": uniqueIDs.map(String.init).joined(separator: ",")],
+        "posts": sorted,
+    ]
+    let fileStem = safeFileStem(groups.first?.managerName ?? "managers")
+    return try buildSnapshot(raw: raw, fileStem: fileStem, suffix: "community", persist: persist, outputDirectory: outputDirectory)
+}
+```
+
+d. 删除 `resolveGroupID`、`resolvedGroupSource`（不再需要反查）。
+e. 删除 `postMatchesFilters`、`dateKey`（若 dateKey 仅被 postMatchesFilters 和 fetchMultiGroupSnapshot 用，则 fetchMultiGroupSnapshot 改用内联逻辑或保留 dateKey——grep 确认 `dateKey` 其他引用）。
+
+- [ ] **Step 12.3: 编译验证**
+
+Run: `cd macos-app && swift build 2>&1 | grep -v "Views/\|Tests/\|Core/QiemanCommandLine" | head -20`
+
+Expected: QiemanNativeClient + Query.swift 无错误。AppModel / Views / CLI 还有报错（后续 Task 修）。
+
+- [ ] **Step 12.4: Commit**
+
+```bash
+git add macos-app/Core/QiemanNativeClient.swift macos-app/Core/Models/Query.swift
+git commit -m "refactor: 抓取逻辑改为多小组并发合并，QueryFormState 精简"
+```
+
+---
+
+## Task 13: AppModel 加 managerIndex + 改 refreshLatest
+
+**Files:**
+- Modify: `macos-app/Core/AppModel.swift`
+- Modify: `macos-app/Core/AppModel/AssetAggregation.swift`（若 nativeClient 持有在此）
+
+- [ ] **Step 13.1: AppModel 加 managerIndex 状态**
+
+在 `macos-app/Core/AppModel.swift` 的 `@Published` 区域加：
+
+```swift
+@Published private(set) var managerIndex: [ManagerSummary] = []
+@Published private(set) var isLoadingManagerIndex = false
+@Published private(set) var managerIndexError: String?
+```
+
+- [ ] **Step 13.2: 加 loadManagerIndex 方法**
+
+在 `macos-app/Core/AppModel/Auth.swift`（或合适的 extension）加：
+
+```swift
+func loadManagerIndex() async {
+    guard !isLoadingManagerIndex else { return }
+    isLoadingManagerIndex = true
+    managerIndexError = nil
+    do {
+        managerIndex = try await nativeClient.fetchManagerIndex()
+    } catch {
+        managerIndexError = error.localizedDescription
+    }
+    isLoadingManagerIndex = false
+}
+```
+
+- [ ] **Step 13.3: start() 触发首次加载**
+
+在 `AppModel.swift` 的 `start()` 里加：
+
+```swift
+Task { await loadManagerIndex() }
+```
+
+- [ ] **Step 13.4: 改 refreshLatest 用多小组抓取**
+
+定位 `refreshLatest`，把原来调 `nativeClient.fetchSnapshot(form:...)` 的地方改为：
+
+```swift
+let groupIds = form.selectedManagerIds.compactMap { id in
+    managerIndex.first { $0.brokerUserId == id }?.groupId
+}
+let snapshot = try await nativeClient.fetchMultiGroupSnapshot(
+    groupIds: groupIds,
+    pages: positiveInt(form.pages, fallback: 5),
+    pageSize: positiveInt(form.pageSize, fallback: 10),
+    persist: persist,
+    outputDirectory: nil
+)
+```
+
+注：先读 `refreshLatest` 完整代码，确认 snapshot 如何赋值给 `currentSnapshot` 等状态，保持其余逻辑不变。
+
+- [ ] **Step 13.5: 编译验证**
+
+Run: `cd macos-app && swift build 2>&1 | grep -v "Views/\|Tests/" | head -20`
+
+Expected: Core 全绿。Views / Tests 还有报错。
+
+- [ ] **Step 13.6: Commit**
+
+```bash
+git add macos-app/Core/AppModel.swift macos-app/Core/AppModel/
+git commit -m "feat: AppModel 加主理人索引，refreshLatest 改多小组抓取"
+```
+
+---
+
+## Task 14: ContentView 筛选面板替换为 ManagerPicker
+
+**Files:**
+- Create: `macos-app/Views/ManagerPicker.swift`
+- Modify: `macos-app/Views/ContentView.swift`
+
+- [ ] **Step 14.1: 创建 ManagerPicker 组件**
+
+新建 `macos-app/Views/ManagerPicker.swift`：
+
+```swift
+import SwiftUI
+
+/// 主理人多选 + 联想搜索控件。
+struct ManagerPicker: View {
+    let managers: [ManagerSummary]
+    let selectedIds: Set<String>
+    let isLoading: Bool
+    let error: String?
+    let onToggle: (String) -> Void
+    let onRetry: () -> Void
+
+    @State private var query: String = ""
+    @State private var isExpanded: Bool = false
+
+    private var filtered: [ManagerSummary] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !trimmed.isEmpty else { return managers }
+        return managers.filter {
+            $0.userName.lowercased().contains(trimmed) ||
+            $0.userLabel.lowercased().contains(trimmed) ||
+            $0.groupName.lowercased().contains(trimmed)
+        }
+    }
+
+    private var selectedManagers: [ManagerSummary] {
+        managers.filter { selectedIds.contains($0.brokerUserId) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // 已选主理人芯片
+            if !selectedManagers.isEmpty {
+                FlowLayout(spacing: 6) {
+                    ForEach(selectedManagers) { manager in
+                        ManagerChip(manager: manager) {
+                            onToggle(manager.brokerUserId)
+                        }
+                    }
+                }
+            }
+
+            // 搜索框
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(AppPalette.muted)
+                TextField("搜索主理人 / 小组", text: $query)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13))
+                if !query.isEmpty {
+                    Button {
+                        query = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(AppPalette.muted)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                    .stroke(AppPalette.line, lineWidth: 1)
+            )
+
+            // 下拉候选列表
+            if isLoading {
+                Text("正在加载主理人列表…")
+                    .font(.system(size: 11))
+                    .foregroundStyle(AppPalette.muted)
+            } else if let error {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("加载失败：\(error)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppPalette.warning)
+                    Button("重试") { onRetry() }
+                        .font(.system(size: 11))
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(filtered) { manager in
+                        ManagerRow(
+                            manager: manager,
+                            isSelected: selectedIds.contains(manager.brokerUserId)
+                        ) {
+                            onToggle(manager.brokerUserId)
+                        }
+                    }
+                    if filtered.isEmpty {
+                        Text("没有匹配的主理人")
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppPalette.muted)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct ManagerChip: View {
+    let manager: ManagerSummary
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(manager.userName)
+                .font(.system(size: 11, weight: .medium))
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(AppPalette.muted)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(AppPalette.brand.opacity(0.12), in: Capsule())
+        .overlay(Capsule().stroke(AppPalette.brand.opacity(0.3), lineWidth: 1))
+    }
+}
+
+private struct ManagerRow: View {
+    let manager: ManagerSummary
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 8) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? AppPalette.brand : AppPalette.muted)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(manager.userName)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(AppPalette.ink)
+                    Text("\(manager.userLabel) · \(manager.groupName)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+```
+
+注：`FlowLayout` 已存在于 `macos-app/Views/SharedComponents.swift:5`，直接复用（PersonalAssetBrowser / ForumSectionView / SettingsMenuBarPanel 都在用）。
+
+- [ ] **Step 14.2: 替换 ContentView 筛选面板内容区**
+
+定位 `ContentView.swift` 的 `queryToolbarPanel` 展开内容区（Step 7.2 处理后的位置），把里面所有 `toolbarField(...)` 替换为：
+
+```swift
+ManagerPicker(
+    managers: model.managerIndex,
+    selectedIds: model.form.selectedManagerIds,
+    isLoading: model.isLoadingManagerIndex,
+    error: model.managerIndexError,
+    onToggle: { id in
+        if model.form.selectedManagerIds.contains(id) {
+            model.form.selectedManagerIds.remove(id)
+        } else {
+            model.form.selectedManagerIds.insert(id)
+        }
+    },
+    onRetry: { Task { await model.loadManagerIndex() } }
+)
+```
+
+删除原来的产品、主理人、关键词、日期、页数/每页、高级参数等所有 `toolbarField`。
+
+- [ ] **Step 14.3: 编译验证**
+
+Run: `cd macos-app && swift build 2>&1 | grep "Views/" | head -20`
+
+Expected: Views 全绿。
+
+- [ ] **Step 14.4: Commit**
+
+```bash
+git add macos-app/Views/ManagerPicker.swift macos-app/Views/ContentView.swift
+git commit -m "feat: 筛选面板替换为主理人多选联想控件"
+```
+
+---
+
+## Task 15: CLI 改造（group-posts 参数 + managers 命令）
+
+**Files:**
+- Modify: `macos-app/Core/QiemanCommandLine.swift`
+- Modify: `macos-app/Core/CLI/DTOs.swift`
+
+- [ ] **Step 15.1: 改 group-posts 命令参数**
+
+定位 `QiemanCommandLine.swift` 的 `group-posts` case 和 handler：
+
+a. 参数从 `--prod-code` / `--manager-name` 改为 `--group-id`（可重复，多值）。
+b. handler 调用从 `snapshot(mode: .groupManager, ...)` 改为：
+
+```swift
+let groupIds = arguments.groupIds  // 解析 --group-id 多值
+return try await nativeClient().fetchMultiGroupSnapshot(
+    groupIds: groupIds,
+    pages: ...,
+    pageSize: ...,
+    persist: false,
+    outputDirectory: nil
+).encoded()
+```
+
+c. helpText 里 `group-posts` 说明同步更新。
+d. 删除 `--forum-mode` 参数（只剩一种模式）。
+
+- [ ] **Step 15.2: 新增 managers 命令**
+
+在 `run()` 加 case：
+
+```swift
+case "managers": return try await managersList()
+```
+
+加 handler：
+
+```swift
+private func managersList() async throws -> Data {
+    let summaries = try await nativeClient().fetchManagerIndex()
+    let rows = summaries.map { CLIManagerRow(
+        brokerUserId: $0.brokerUserId,
+        userName: $0.userName,
+        userLabel: $0.userLabel,
+        groupId: $0.groupId,
+        groupName: $0.groupName
+    ) }
+    return try QiemanCLI.encoder.encode(rows)
+}
+```
+
+在 `DTOs.swift` 加：
+
+```swift
+struct CLIManagerRow: Codable {
+    let brokerUserId: String
+    let userName: String
+    let userLabel: String
+    let groupId: Int
+    let groupName: String
+}
+```
+
+helpText 加 `managers` 命令说明。
+
+- [ ] **Step 15.3: 编译验证 CLI**
+
+Run: `cd macos-app && swift build 2>&1 | grep "QiemanCommandLine\|CLI/DTOs" | head -10`
+
+Expected: 无错误。
+
+- [ ] **Step 15.4: Commit**
+
+```bash
+git add macos-app/Core/QiemanCommandLine.swift macos-app/Core/CLI/DTOs.swift
+git commit -m "feat: CLI group-posts 改多 groupId 参数，新增 managers 命令"
+```
+
+---
+
+## Task 16: 测试 + 全量验证
+
+**Files:**
+- Create: `macos-app/Tests/QiemanDashboardTests/ManagerIndexTests.swift`
+- Create: `macos-app/Tests/QiemanDashboardTests/MultiGroupSnapshotTests.swift`
+- Modify: `macos-app/Tests/QiemanDashboardTests/CLIContractSnapshotTests.swift`
+
+- [ ] **Step 16.1: 写 ManagerIndexTests**
+
+测试 `fetchManagerIndex` 的解析逻辑（mock awesome-list + manager-info 响应）。若 NativeClient 不好 mock，改为测试数据解析的纯函数（把 leader 字典→ManagerSummary 的逻辑抽成可测的 helper）。
+
+```swift
+import XCTest
+@testable import QiemanDashboard
+
+final class ManagerIndexTests: XCTestCase {
+    func testParseLeaderFromManagerInfo() throws {
+        // 测试从 [String: Any] leader 字典解析出 ManagerSummary 的逻辑
+        // （需先把解析逻辑抽成可测的 static func）
+    }
+}
+```
+
+注：若 QiemanNativeClient 的请求方法难以 mock，优先把「leader 字典 → ManagerSummary」「awesome-list 元素 → groupId」这类纯转换抽成 static helper 再测。
+
+- [ ] **Step 16.2: 写 MultiGroupSnapshotTests**
+
+测试合并/去重/排序逻辑。把 `fetchMultiGroupSnapshot` 里的「去重 + 按时间排序」抽成纯函数：
+
+```swift
+static func mergeAndSortPosts(_ posts: [[String: Any]]) -> [[String: Any]] { ... }
+```
+
+然后测：
+- 两个小组有相同 postId → 去重为一个
+- 不同时间戳 → 降序排列
+- 空 postId 的记录保留
+
+- [ ] **Step 16.3: 改 CLIContractSnapshotTests**
+
+a. `group-posts` 命令的快照（若有的话）参数从 prodCode 改为 groupId。
+b. 新增 `managers` 命令的契约快照（锁 `CLIManagerRow` 的 snake_case 键名）。
+c. 删除依赖旧 QueryFormState 字段（prodCode/managerName）的快照。
+
+- [ ] **Step 16.4: 运行测试**
+
+Run: `cd macos-app && swift test 2>&1 | tail -10`
+
+Expected: 全绿。
+
+- [ ] **Step 16.5: 全量构建 + smoke**
+
+Run:
+```bash
+APP_VERSION=3.4.0 bash scripts/build_macos_app.sh 2>&1 | tail -5
+bash scripts/build_qieman_cli.sh 2>&1 | tail -3
+```
+
+CLI smoke:
+```bash
+scripts/qieman managers 2>&1 | head -20  # 应输出主理人列表 JSON
+scripts/qieman group-posts --group-id 43 2>&1 | head -5  # 应抓 ETF拯救世界 小组
+```
+
+App smoke:
+```bash
+open dist/macos-app/QiemanDashboard.app
+```
+
+检查：
+- 筛选面板只有主理人多选联想控件，没有其他字段
+- 启动后主理人列表自动加载（几秒内）
+- 搜索框输入"ETF"能联想出"ETF拯救世界"
+- 勾选后点刷新，论坛板块显示该主理人发言
+
+- [ ] **Step 16.6: Commit**
+
+```bash
+git add -A macos-app/Tests/
+git commit -m "test: 主理人索引和多小组抓取的测试"
+```
+
+---
+
 ## 完成标准
 
 - [ ] App 构建（`APP_VERSION=3.4.0 bash scripts/build_macos_app.sh`）通过
@@ -1031,4 +1713,4 @@ git commit -m "chore: 删除登录态功能后的全量验证"
 
 ## 回滚
 
-纯删除性提交，整体回滚只需 `git revert <commit-range>`。
+整体回滚只需 `git revert <commit-range>`。
