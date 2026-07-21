@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.4.0/QiemanDashboard-3.4.0.zip",
-    "name" : "QiemanDashboard-3.4.0.zip",
-    "sha256" : "c754a3de9c739efe1d0555090c071f906766e973667dae7d89f30d154e549a36",
-    "size" : 4631786
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.4.1/QiemanDashboard-3.4.1.zip",
+    "name" : "QiemanDashboard-3.4.1.zip",
+    "sha256" : "3f8a2515f375d1c8942caf0765ccb442ec7ba37e98942d7a6239199e97b3481b",
+    "size" : 4631780
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.4.0/QiemanDashboard-3.4.0.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.4.1/QiemanDashboard-3.4.1.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.4.0.zip",
-      "size" : 4631786
+      "name" : "QiemanDashboard-3.4.1.zip",
+      "size" : 4631780
     }
   ],
-  "body" : "修复 PersonalWatchlistMarketDataTests 的 Self.record 笔误\n存档筛选重构暂停进度（Task 11-12 commit SHA + 恢复指南）\n清理 watchForumSnapshot 死参数和 environment 死存储\n适配登录态删除后的断言\n删除账号面板，外观设置合并到通用面板\n删除登录页和 Cookie 管理器，Views 去登录态 UI\nInsight Core 移除 cookie 提示项\nCLI 删除登录态命令，forum-mode 只支持 public\nApplicationDataController 删除 cookie 路径\nAppModel 删除登录态字段和自定义目录逻辑\nNativeClient 删除登录态方法，fetchComments 改匿名调用\n删除登录态相关 QueryMode case 和 Payload struct\n追加筛选重构方案（主理人多选+联想搜索）\n扩展删除范围至个人空间动态功能\n删除登录态功能的实施计划\n删除登录态功能的设计文档",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.4.0",
-  "name" : "QiemanDashboard v3.4.0",
-  "notes" : "修复 PersonalWatchlistMarketDataTests 的 Self.record 笔误\n存档筛选重构暂停进度（Task 11-12 commit SHA + 恢复指南）\n清理 watchForumSnapshot 死参数和 environment 死存储\n适配登录态删除后的断言\n删除账号面板，外观设置合并到通用面板\n删除登录页和 Cookie 管理器，Views 去登录态 UI\nInsight Core 移除 cookie 提示项\nCLI 删除登录态命令，forum-mode 只支持 public\nApplicationDataController 删除 cookie 路径\nAppModel 删除登录态字段和自定义目录逻辑\nNativeClient 删除登录态方法，fetchComments 改匿名调用\n删除登录态相关 QueryMode case 和 Payload struct\n追加筛选重构方案（主理人多选+联想搜索）\n扩展删除范围至个人空间动态功能\n删除登录态功能的实施计划\n删除登录态功能的设计文档",
+  "body" : "PersonalWatchlistAlert 阈值比较引入浮点容差",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.4.1",
+  "name" : "QiemanDashboard v3.4.1",
+  "notes" : "PersonalWatchlistAlert 阈值比较引入浮点容差",
   "published_at" : "",
-  "sha256" : "c754a3de9c739efe1d0555090c071f906766e973667dae7d89f30d154e549a36",
-  "tag" : "v3.4.0",
-  "tag_name" : "v3.4.0",
-  "version" : "3.4.0"
+  "sha256" : "3f8a2515f375d1c8942caf0765ccb442ec7ba37e98942d7a6239199e97b3481b",
+  "tag" : "v3.4.1",
+  "tag_name" : "v3.4.1",
+  "version" : "3.4.1"
 }
