@@ -93,11 +93,6 @@ struct ContentView: View {
             isQueryExpanded = true
             focusedToolbarField = "关键词"
         }
-        .sheet(isPresented: $model.isPresentingLoginSheet) {
-            QiemanLoginView(cookieFileURL: model.cookieFileURL) {
-                model.handleCookieSavedFromLoginSheet()
-            }
-        }
         .sheet(isPresented: $model.isPresentingUpdateSheet) {
             if let update = model.availableUpdate {
                 AppUpdateSheet(
@@ -145,12 +140,6 @@ struct ContentView: View {
     private var sidebarFooter: some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceS + 2) {
             HStack(spacing: AppPalette.spaceS) {
-                Circle()
-                    .fill(model.cookieAvailable ? AppPalette.positive : AppPalette.warning)
-                    .frame(width: 7, height: 7)
-                Text(model.cookieAvailable ? "Cookie 可用" : "Cookie 缺失")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(AppPalette.muted)
                 Spacer(minLength: 0)
                 Button {
                     model.openDataDirectory()
@@ -232,22 +221,7 @@ struct ContentView: View {
 
     private var queryToolbarPanel: some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceM) {
-            // ① QueryMode 芯片行 — 始终显示
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: AppPalette.spaceS) {
-                    ForEach(QueryMode.allCases) { mode in
-                        queryModeChip(mode: mode)
-                    }
-                }
-
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 126), spacing: AppPalette.spaceS)], alignment: .leading, spacing: AppPalette.spaceS) {
-                    ForEach(QueryMode.allCases) { mode in
-                        queryModeChip(mode: mode)
-                    }
-                }
-            }
-
-            // ② 可折叠的参数卡片
+            // 可折叠的参数卡片
             collapsibleFilterPanel
         }
     }
@@ -342,8 +316,6 @@ struct ContentView: View {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
                             toolbarField("groupId", text: $model.form.groupID, minWidth: 180)
                             toolbarField("groupUrl", text: $model.form.groupURL, minWidth: 260)
-                            toolbarField("brokerUserId", text: $model.form.brokerUserID, minWidth: 180)
-                            toolbarField("spaceUserId", text: $model.form.spaceUserID, minWidth: 180)
                             toolbarField("自动刷新", text: $model.form.autoRefresh, minWidth: 140)
                         }
                     }
@@ -365,10 +337,6 @@ struct ContentView: View {
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(AppPalette.ink)
             HStack(spacing: AppPalette.spaceXS + 2) {
-                ToolbarBadge(
-                    title: model.cookieAvailable ? "Cookie 可用" : "Cookie 缺失",
-                    tint: model.cookieAvailable ? AppPalette.positive : AppPalette.warning
-                )
                 ToolbarBadge(
                     title: model.liveModeLabel,
                     tint: model.hasLiveService ? AppPalette.brand : AppPalette.muted
@@ -404,34 +372,6 @@ struct ContentView: View {
                 .focused($focusedToolbarField, equals: label)
         }
         .frame(minWidth: minWidth, maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func queryModeChip(mode: QueryMode) -> some View {
-        let isSelected = model.form.mode == mode
-        return Button {
-            withAnimation(AppPalette.motionSpring) {
-                model.form.mode = mode
-            }
-        } label: {
-            Text(mode.label)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
-                .padding(.horizontal, AppPalette.spaceL)
-                .padding(.vertical, 10)
-                .interactiveSurface(
-                    isSelected: isSelected,
-                    tint: AppPalette.brand,
-                    radius: AppPalette.controlRadius,
-                    fill: AppPalette.controlFill,
-                    hoverFill: AppPalette.cardHover,
-                    selectedFill: AppPalette.brand,
-                    strokeOpacity: AppPalette.strokeSubtle,
-                    activeStrokeOpacity: AppPalette.selectionStrokeOpacity,
-                    lift: 0.5
-                )
-        }
-        .buttonStyle(PressResponsiveButtonStyle())
-        .contentShape(RoundedRectangle(cornerRadius: AppPalette.controlRadius))
     }
 
     /// Double-click the toolbar title area to zoom (maximize/restore) the main window.

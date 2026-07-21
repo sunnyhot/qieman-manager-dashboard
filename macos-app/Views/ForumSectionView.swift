@@ -187,7 +187,7 @@ struct ForumSectionView: View {
                                 }
                             }
                         } else {
-                            Text(model.isLoadingComments ? "正在加载评论…" : "暂无评论，或当前登录态无法读取评论。")
+                            Text(model.isLoadingComments ? "正在加载评论…" : "暂无评论。")
                                 .foregroundStyle(AppPalette.muted)
                         }
                     }

@@ -753,9 +753,6 @@ struct QiemanDashboardApp: App {
                 Button("打开数据目录") {
                     model.openDataDirectory()
                 }
-                Button("登录且慢") {
-                    model.presentLoginSheet()
-                }
                 Divider()
                 Button(model.isCheckingForUpdates ? "检查更新中…" : "检查更新…") {
                     Task { await model.checkForUpdates(userInitiated: true) }
