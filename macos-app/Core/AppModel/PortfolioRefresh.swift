@@ -184,20 +184,34 @@ extension AppModel {
     }
 
     func refreshPortfolioIfAutoRefreshVisible() async {
-        guard hasPersonalPortfolio, !isRefreshingPortfolio else {
-            await refreshMarketIndicesIfNeeded()
-            return
-        }
-        guard selectedSection == .portfolio || selectedSection == .overview || menuBarTickerSettings.isEnabled else {
+        let shouldRefreshPortfolio = hasPersonalPortfolio
+            && !isRefreshingPortfolio
+            && (selectedSection == .portfolio
+                || selectedSection == .overview
+                || menuBarTickerSettings.isEnabled)
+        let shouldRefreshWatchlist = hasPersonalWatchlist
+            && !isRefreshingPersonalWatchlist
+            && (selectedSection == .portfolio || hasActivePersonalWatchlistAlerts)
+        guard shouldRefreshPortfolio || shouldRefreshWatchlist else {
             await refreshMarketIndicesIfNeeded()
             return
         }
 
-        do {
-            try await refreshUserPortfolio(updateNotice: false)
-        } catch {
-            if selectedSection == .portfolio {
-                errorMessage = "个人持仓自动刷新失败：\(error.localizedDescription)"
+        if shouldRefreshPortfolio {
+            do {
+                try await refreshUserPortfolio(updateNotice: false)
+            } catch {
+                if selectedSection == .portfolio {
+                    errorMessage = "个人持仓自动刷新失败：\(error.localizedDescription)"
+                }
+            }
+        }
+
+        if shouldRefreshWatchlist {
+            do {
+                try await refreshPersonalWatchlist(updateNotice: false)
+            } catch {
+                errorMessage = "我的关注自动刷新失败：\(error.localizedDescription)"
             }
         }
     }

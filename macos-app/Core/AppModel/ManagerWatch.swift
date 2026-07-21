@@ -371,6 +371,8 @@ extension AppModel {
             openForumRecord(payload)
         case .workbenchTrend:
             openWorkbenchTrend()
+        case .personalWatchlist:
+            selectedSection = .portfolio
         }
     }
 

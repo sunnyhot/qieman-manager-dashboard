@@ -10,6 +10,7 @@ actor QiemanPlatformCache {
     private var histories: [String: (Date, NativeFundHistory)] = [:]
     private var quotes: [String: (Date, NativeFundQuote)] = [:]
     private var stockQuotes: [String: (Date, NativeStockQuote)] = [:]
+    private var stockDailySeries: [String: (Date, [PersonalWatchlistDailyPoint])] = [:]
     private var marketIndexQuotes: [MarketIndexKind: (Date, MarketIndexQuote)] = [:]
 
     func payload(for prodCode: String, ttl: TimeInterval) -> PlatformPayload? {
@@ -64,6 +65,28 @@ actor QiemanPlatformCache {
         store(stockQuote, for: stockCode, in: &stockQuotes, maxEntries: Self.maxStockQuoteEntries)
     }
 
+    fileprivate func stockDailySeries(
+        for identityKey: String,
+        ttl: TimeInterval
+    ) -> [PersonalWatchlistDailyPoint]? {
+        guard let (loadedAt, series) = stockDailySeries[identityKey],
+              Date().timeIntervalSince(loadedAt) < ttl else {
+            return nil
+        }
+        return series
+    }
+
+    fileprivate func store(
+        stockDailySeries series: [PersonalWatchlistDailyPoint],
+        for identityKey: String
+    ) {
+        guard !series.isEmpty else {
+            stockDailySeries.removeValue(forKey: identityKey)
+            return
+        }
+        store(series, for: identityKey, in: &stockDailySeries, maxEntries: Self.maxStockQuoteEntries)
+    }
+
     func marketIndexQuote(for kind: MarketIndexKind, ttl: TimeInterval) -> MarketIndexQuote? {
         guard let (loadedAt, quote) = marketIndexQuotes[kind], Date().timeIntervalSince(loadedAt) < ttl else {
             return nil
@@ -106,6 +129,7 @@ final class QiemanPlatformNativeClient {
     private let anonymousID = "anon-\(QiemanPlatformNativeClient.sha256Hex(UUID().uuidString).prefix(16))"
     private let payloadTTL: TimeInterval = 120
     private let historyTTL: TimeInterval = 12 * 60 * 60
+    private let stockDailySeriesTTL: TimeInterval = 6 * 60 * 60
     private let quoteTTL: TimeInterval = 45
     private let cache = QiemanPlatformCache()
     private let session: URLSession
@@ -220,6 +244,106 @@ final class QiemanPlatformNativeClient {
             totalCostValue: totalCostValue,
             totalProfitAmount: totalProfitAmount,
             totalProfitPct: totalProfitPct
+        )
+    }
+
+    func fetchPersonalWatchlistSnapshot(
+        records: [PersonalWatchlistRecord],
+        forceQuoteRefresh: Bool = false
+    ) async throws -> PersonalWatchlistSnapshot {
+        let normalizedRecords = records.filter { !$0.item.normalizedCode.isEmpty }
+        guard !normalizedRecords.isEmpty else {
+            return PersonalWatchlistSnapshot(rows: [], refreshedAt: isoTimestampNow())
+        }
+
+        let syntheticHoldings = normalizedRecords.map { record in
+            UserPortfolioHolding(
+                id: record.id,
+                fundCode: record.item.normalizedCode,
+                assetType: record.item.assetType,
+                units: 1,
+                costPrice: record.baseline?.price,
+                displayName: record.item.normalizedName,
+                stockMarket: record.item.detectedStockMarket,
+                fundMarket: record.item.detectedFundMarket
+            )
+        }
+
+        async let marketDailySeriesTask = preloadWatchlistMarketDailySeries(
+            normalizedRecords.map(\.item)
+        )
+        let portfolioSnapshot = try await fetchUserPortfolioSnapshot(
+            holdings: syntheticHoldings,
+            forceQuoteRefresh: forceQuoteRefresh
+        )
+
+        let offExchangeCodes = normalizedRecords.compactMap { record -> String? in
+            record.item.category == .offExchangeFund ? record.item.normalizedCode : nil
+        }
+        let fundHistories = await preloadHistories(offExchangeCodes)
+        let marketDailySeries = await marketDailySeriesTask
+        let valuationByID = Dictionary(uniqueKeysWithValues: portfolioSnapshot.rows.map { ($0.id, $0) })
+        let marketDate = currentMarketDateText()
+
+        let rows = normalizedRecords.map { record -> PersonalWatchlistQuoteRow in
+            let valuation = valuationByID[record.id]
+            let displayQuote = valuation?.dropdownQuote(marketDate: marketDate)
+            let currentPrice = displayQuote?.price.flatMap { $0 > 0 ? $0 : nil }
+            let quotedAt = displayQuote?.trimmedTime
+            let sourceLabel = displayQuote?.label
+
+            let fetchedDailyPoints: [PersonalWatchlistDailyPoint]
+            if record.item.category == .offExchangeFund {
+                fetchedDailyPoints = (fundHistories[record.item.normalizedCode]?.series ?? [])
+                    .suffix(PersonalWatchlistRecord.maximumDailyPointCount)
+                    .map {
+                        PersonalWatchlistDailyPoint(
+                            date: $0.date,
+                            price: $0.nav,
+                            quotedAt: $0.date,
+                            sourceLabel: "基金净值"
+                        )
+                    }
+            } else {
+                fetchedDailyPoints = marketDailySeries[record.id] ?? []
+            }
+
+            var allDailyPoints = fetchedDailyPoints
+            if let currentPrice {
+                allDailyPoints.append(
+                    PersonalWatchlistDailyPoint(
+                        date: PersonalWatchlistItem.normalizedDate(quotedAt ?? marketDate),
+                        price: currentPrice,
+                        quotedAt: quotedAt,
+                        sourceLabel: sourceLabel
+                    )
+                )
+            }
+
+            let resolvedName = valuation?.fundName.nilIfEmpty ?? record.item.normalizedName ?? record.item.normalizedCode
+            let enrichedRecord = record.updating(
+                displayName: resolvedName,
+                appending: allDailyPoints
+            )
+            return PersonalWatchlistQuoteRow(
+                record: enrichedRecord,
+                assetName: resolvedName,
+                currentPrice: currentPrice,
+                quotedAt: quotedAt,
+                sourceLabel: sourceLabel,
+                dailyChangePct: valuation?.estimateChangePct,
+                dailyPoints: enrichedRecord.dailyPoints
+            )
+        }
+
+        return PersonalWatchlistSnapshot(
+            rows: rows.sorted {
+                if $0.category != $1.category {
+                    return Self.watchlistCategoryOrder($0.category) < Self.watchlistCategoryOrder($1.category)
+                }
+                return $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending
+            },
+            refreshedAt: isoTimestampNow()
         )
     }
 
@@ -850,8 +974,117 @@ final class QiemanPlatformNativeClient {
         return results
     }
 
+    private func preloadWatchlistMarketDailySeries(
+        _ items: [PersonalWatchlistItem]
+    ) async -> [UUID: [PersonalWatchlistDailyPoint]] {
+        let requestedItems = items.filter { $0.category != .offExchangeFund }
+        guard !requestedItems.isEmpty else { return [:] }
+
+        var results: [UUID: [PersonalWatchlistDailyPoint]] = [:]
+        await withTaskGroup(of: (UUID, [PersonalWatchlistDailyPoint]).self) { group in
+            var nextIndex = 0
+
+            func enqueue(_ item: PersonalWatchlistItem) {
+                group.addTask {
+                    if let cached = await self.cache.stockDailySeries(
+                        for: item.identityKey,
+                        ttl: self.stockDailySeriesTTL
+                    ) {
+                        return (item.id, cached)
+                    }
+                    let series = (try? await self.fetchWatchlistMarketDailySeries(item)) ?? []
+                    await self.cache.store(stockDailySeries: series, for: item.identityKey)
+                    return (item.id, series)
+                }
+            }
+
+            while nextIndex < Swift.min(requestedItems.count, Self.preloadConcurrencyLimit) {
+                enqueue(requestedItems[nextIndex])
+                nextIndex += 1
+            }
+
+            while let (id, series) = await group.next() {
+                results[id] = series
+                if nextIndex < requestedItems.count {
+                    enqueue(requestedItems[nextIndex])
+                    nextIndex += 1
+                }
+            }
+        }
+        return results
+    }
+
+    private func fetchWatchlistMarketDailySeries(
+        _ item: PersonalWatchlistItem
+    ) async throws -> [PersonalWatchlistDailyPoint] {
+        let market = item.category == .onExchangeFund ? StockMarket.aShare : item.detectedStockMarket
+        guard let baseSymbol = tencentStockSymbol(for: item.normalizedCode, market: market) else {
+            return []
+        }
+
+        let symbols: [String]
+        if market == .us {
+            symbols = ["\(baseSymbol).OQ", "\(baseSymbol).N", "\(baseSymbol).A", baseSymbol]
+        } else {
+            symbols = [baseSymbol]
+        }
+
+        for symbol in symbols {
+            guard let series = try? await fetchTencentDailySeries(symbol: symbol) else {
+                continue
+            }
+            if series.count >= 2 || symbol == symbols.last {
+                return series
+            }
+        }
+        return []
+    }
+
+    private func fetchTencentDailySeries(symbol: String) async throws -> [PersonalWatchlistDailyPoint] {
+        var components = URLComponents(string: "https://web.ifzq.gtimg.cn/appstock/app/kline/kline")
+        components?.queryItems = [
+            URLQueryItem(name: "param", value: "\(symbol),day,,,180"),
+        ]
+        guard let url = components?.url else {
+            throw NativePlatformError.invalidResponse
+        }
+
+        let text = try await requestText(
+            hostURL: URL(string: "https://web.ifzq.gtimg.cn")!,
+            absoluteURL: url,
+            headers: [
+                "Accept": "application/json",
+                "Referer": "https://gu.qq.com/",
+            ]
+        )
+        guard let object = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any],
+              intValue(object["code"]) == 0,
+              let data = object["data"] as? [String: Any],
+              let payload = data[symbol] as? [String: Any] else {
+            return []
+        }
+
+        let rows = (payload["day"] as? [[Any]]) ?? (payload["qfqday"] as? [[Any]]) ?? []
+        let points = rows.compactMap { row -> PersonalWatchlistDailyPoint? in
+            guard row.count > 2 else { return nil }
+            let date = PersonalWatchlistItem.normalizedDate(normalizedString(row[0]))
+            guard !date.isEmpty, let close = doubleValue(row[2]), close > 0 else { return nil }
+            return PersonalWatchlistDailyPoint(
+                date: date,
+                price: close,
+                quotedAt: date,
+                sourceLabel: "日线收盘"
+            )
+        }
+        return PersonalWatchlistRecord.mergingDailyPoints(points)
+    }
+
     private func uniqueNonEmptyCodes(_ codes: [String]) -> [String] {
         Array(Set(codes.map(normalizedString).filter { !$0.isEmpty })).sorted()
+    }
+
+    private static func watchlistCategoryOrder(_ category: PersonalWatchlistCategory) -> Int {
+        PersonalWatchlistCategory.allCases.firstIndex(of: category) ?? 0
     }
 
     private func fetchFundHistorySeries(_ fundCode: String) async throws -> NativeFundHistory {

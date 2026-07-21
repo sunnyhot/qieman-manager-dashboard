@@ -92,6 +92,8 @@ struct PortfolioSectionView: View {
                     }
                 }
 
+                PersonalWatchlistPanel()
+
                 SectionCard(title: "买入中", subtitle: "待确认交易单独展示，不并入已成交持仓收益", icon: "clock.badge.exclamationmark", trailing: {
                     Spacer()
                     Button {

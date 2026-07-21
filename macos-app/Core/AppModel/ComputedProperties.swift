@@ -33,6 +33,10 @@ extension AppModel {
         dataDirectoryURL?.appendingPathComponent("user-portfolio.json", isDirectory: false)
     }
 
+    var personalWatchlistFileURL: URL? {
+        dataDirectoryURL?.appendingPathComponent("user-watchlist.json", isDirectory: false)
+    }
+
     var pendingTradeFileURL: URL? {
         dataDirectoryURL?.appendingPathComponent("user-pending-trades.json", isDirectory: false)
     }
@@ -116,6 +120,14 @@ extension AppModel {
         userPortfolioHoldings.contains { !$0.isArchived }
     }
 
+    var hasPersonalWatchlist: Bool {
+        !personalWatchlistRecords.isEmpty
+    }
+
+    var hasActivePersonalWatchlistAlerts: Bool {
+        personalWatchlistRecords.contains { $0.hasActiveAlerts }
+    }
+
     var hasArchivedPortfolio: Bool {
         userPortfolioHoldings.contains { $0.isArchived }
     }
@@ -147,6 +159,11 @@ extension AppModel {
 
     var portfolioAutoRefreshStatusText: String {
         guard hasPersonalPortfolio else {
+            if hasPersonalWatchlist {
+                return isRefreshingPersonalWatchlist
+                    ? "关注行情刷新中…"
+                    : "关注行情每 \(portfolioAutoRefreshIntervalSeconds) 秒自动刷新"
+            }
             if hasArchivedPortfolio {
                 return "暂无活跃持仓，归档记录已保留"
             }

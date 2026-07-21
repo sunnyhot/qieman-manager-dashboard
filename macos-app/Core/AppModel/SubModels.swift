@@ -11,6 +11,9 @@ final class PortfolioState: ObservableObject {
     @Published var userPortfolioSnapshot: UserPortfolioSnapshot?
     @Published var isRefreshingPortfolio = false
     @Published var isResolvingPortfolioNames = false
+    @Published var personalWatchlistRecords: [PersonalWatchlistRecord] = []
+    @Published var personalWatchlistSnapshot: PersonalWatchlistSnapshot?
+    @Published var isRefreshingPersonalWatchlist = false
     @Published var pendingTrades: [PersonalPendingTrade] = []
     @Published var pendingTradesDraft = ""
     @Published var investmentPlans: [PersonalInvestmentPlan] = []

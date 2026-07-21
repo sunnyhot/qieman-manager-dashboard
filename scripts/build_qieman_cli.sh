@@ -17,6 +17,7 @@ SWIFT_SOURCES=(
   "$ROOT_DIR/macos-app/Core/Models/PlatformPayloads.swift"
   "$ROOT_DIR/macos-app/Core/Models/PersonalAsset.swift"
   "$ROOT_DIR/macos-app/Core/Models/UserPortfolio.swift"
+  "$ROOT_DIR/macos-app/Core/Models/PersonalWatchlist.swift"
   "$ROOT_DIR/macos-app/Core/Models/PersonalTrade.swift"
   "$ROOT_DIR/macos-app/Core/Models/PersonalPlan.swift"
   "$ROOT_DIR/macos-app/Core/Platform/NativePlatformError.swift"

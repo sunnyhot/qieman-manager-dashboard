@@ -98,6 +98,10 @@ extension AppModel {
     }
 
     func refreshDataForSectionIfNeeded(_ section: AppSection) {
+        if section == .portfolio, hasPersonalWatchlist, !isRefreshingPersonalWatchlist {
+            Task { try? await refreshPersonalWatchlist(updateNotice: false) }
+        }
+
         let decision = RefreshDecision.sectionTriggered(
             section: section,
             lastLatestRefreshAt: lastLatestRefreshAt,

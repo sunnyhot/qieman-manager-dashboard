@@ -23,6 +23,7 @@ extension AppModel {
             dataController.updateSupportDirectory(newURL)
 
             loadSavedPortfolio()
+            loadSavedPersonalWatchlist()
             loadPendingTrades()
             loadInvestmentPlans()
             loadManagerWatchSettings()
@@ -58,6 +59,7 @@ extension AppModel {
         dataController.updateSupportDirectory(defaultURL)
 
         loadSavedPortfolio()
+        loadSavedPersonalWatchlist()
         loadPendingTrades()
         loadInvestmentPlans()
         loadManagerWatchSettings()

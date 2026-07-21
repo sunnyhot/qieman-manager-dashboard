@@ -95,6 +95,7 @@ final class AppModel: ObservableObject {
     let dataController = ApplicationDataController()
     let platformClient = QiemanPlatformNativeClient()
     let portfolioStore = UserPortfolioStore()
+    let personalWatchlistStore = PersonalWatchlistStore()
     let pendingTradesStore = PendingTradesStore()
     let investmentPlansStore = InvestmentPlansStore()
     let managerWatchStore = ManagerWatchStore()
@@ -140,6 +141,21 @@ final class AppModel: ObservableObject {
     var isResolvingPortfolioNames: Bool {
         get { portfolioState.isResolvingPortfolioNames }
         set { portfolioState.isResolvingPortfolioNames = newValue }
+    }
+
+    var personalWatchlistRecords: [PersonalWatchlistRecord] {
+        get { portfolioState.personalWatchlistRecords }
+        set { portfolioState.personalWatchlistRecords = newValue }
+    }
+
+    var personalWatchlistSnapshot: PersonalWatchlistSnapshot? {
+        get { portfolioState.personalWatchlistSnapshot }
+        set { portfolioState.personalWatchlistSnapshot = newValue }
+    }
+
+    var isRefreshingPersonalWatchlist: Bool {
+        get { portfolioState.isRefreshingPersonalWatchlist }
+        set { portfolioState.isRefreshingPersonalWatchlist = newValue }
     }
 
     var pendingTrades: [PersonalPendingTrade] {
@@ -519,6 +535,7 @@ final class AppModel: ObservableObject {
             logFileURL = dataController.logFileURL
             dataDirectoryURL = supportDirectory
             loadSavedPortfolio()
+            loadSavedPersonalWatchlist()
             loadPendingTrades()
             loadInvestmentPlans()
             loadManagerWatchSettings()
@@ -548,6 +565,11 @@ final class AppModel: ObservableObject {
             group.addTask { @MainActor in
                 if !self.activeUserPortfolioHoldings.isEmpty {
                     try? await self.refreshUserPortfolio(updateNotice: false)
+                }
+            }
+            group.addTask { @MainActor in
+                if self.hasPersonalWatchlist {
+                    try? await self.refreshPersonalWatchlist(updateNotice: false)
                 }
             }
             group.addTask { @MainActor in
