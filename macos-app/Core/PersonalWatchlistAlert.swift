@@ -13,6 +13,12 @@ struct PersonalWatchlistAlertEvaluation: Hashable {
 }
 
 enum PersonalWatchlistAlertEvaluator {
+    /// 浮点比较容差。规则阈值比较用 `>=` / `<=` 的边界包含语义，
+    /// 但 changePct 由 `(price/baseline - 1) * 100` 计算，IEEE 754 双精度会累积
+    /// ~1e-14 级别误差（如 baseline=100、price=90 时 changePct=-9.999999999999998），
+    /// 导致边界值被误判为未突破。引入 epsilon 让边界值可靠触发。
+    private static let thresholdEpsilon: Double = 1e-9
+
     static func evaluate(
         rules: PersonalWatchlistAlertRules,
         previousState: PersonalWatchlistAlertState,
@@ -84,25 +90,25 @@ enum PersonalWatchlistAlertEvaluator {
             kind: .priceAbove,
             threshold: rules.priceAbove,
             observedValue: validCurrentPrice,
-            isBreached: { $0 >= $1 }
+            isBreached: { $0 >= $1 - thresholdEpsilon }
         )
         evaluateRule(
             kind: .priceBelow,
             threshold: rules.priceBelow,
             observedValue: validCurrentPrice,
-            isBreached: { $0 <= $1 }
+            isBreached: { $0 <= $1 + thresholdEpsilon }
         )
         evaluateRule(
             kind: .gainSinceFollow,
             threshold: rules.gainSinceFollowPct,
             observedValue: changePct,
-            isBreached: { $0 >= $1 }
+            isBreached: { $0 >= $1 - thresholdEpsilon }
         )
         evaluateRule(
             kind: .lossSinceFollow,
             threshold: rules.lossSinceFollowPct,
             observedValue: changePct,
-            isBreached: { $0 <= -$1 }
+            isBreached: { $0 <= -$1 + thresholdEpsilon }
         )
 
         return PersonalWatchlistAlertEvaluation(triggers: triggers, nextState: nextState)
