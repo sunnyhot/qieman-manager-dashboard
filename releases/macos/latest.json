@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.4.2/QiemanDashboard-3.4.2.zip",
-    "name" : "QiemanDashboard-3.4.2.zip",
-    "sha256" : "8faab4de9d8bc3b0702a03d0c5a5eca2d293a7e664137f0948bb439118b012e5",
-    "size" : 4632353
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.4.3/QiemanDashboard-3.4.3.zip",
+    "name" : "QiemanDashboard-3.4.3.zip",
+    "sha256" : "92d7cddac99734a308109c57c280aca94c3b388bc7c3d713c4c2a54c17343359",
+    "size" : 4629013
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.4.2/QiemanDashboard-3.4.2.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.4.3/QiemanDashboard-3.4.3.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.4.2.zip",
-      "size" : 4632353
+      "name" : "QiemanDashboard-3.4.3.zip",
+      "size" : 4629013
     }
   ],
-  "body" : "关注列表 item 通栏与展开动画",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.4.2",
-  "name" : "QiemanDashboard v3.4.2",
-  "notes" : "关注列表 item 通栏与展开动画",
+  "body" : "优化关注列表自适应布局与趋势展示",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.4.3",
+  "name" : "QiemanDashboard v3.4.3",
+  "notes" : "优化关注列表自适应布局与趋势展示",
   "published_at" : "",
-  "sha256" : "8faab4de9d8bc3b0702a03d0c5a5eca2d293a7e664137f0948bb439118b012e5",
-  "tag" : "v3.4.2",
-  "tag_name" : "v3.4.2",
-  "version" : "3.4.2"
+  "sha256" : "92d7cddac99734a308109c57c280aca94c3b388bc7c3d713c4c2a54c17343359",
+  "tag" : "v3.4.3",
+  "tag_name" : "v3.4.3",
+  "version" : "3.4.3"
 }
