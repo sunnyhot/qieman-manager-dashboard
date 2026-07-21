@@ -224,7 +224,6 @@ struct EnhancementDashboardSummary: Hashable {
     static func make(
         report: MonthlyReportSummary,
         lastMonthlyReportExport: MonthlyReportExportMetadata?,
-        cookieAvailable: Bool,
         nativeConnectionAvailable: Bool,
         watchSummary: ManagerWatchTimelineSummary,
         importSession: ImportPreviewSession?,
@@ -266,7 +265,6 @@ struct EnhancementDashboardSummary: Hashable {
             actionableCount: actionQueue.count,
             primaryAction: primaryAction,
             runtimeChips: makeRuntimeChips(
-                cookieAvailable: cookieAvailable,
                 nativeConnectionAvailable: nativeConnectionAvailable,
                 snapshotCount: snapshotCount,
                 watchSummary: watchSummary
@@ -304,18 +302,11 @@ struct EnhancementDashboardSummary: Hashable {
     }
 
     private static func makeRuntimeChips(
-        cookieAvailable: Bool,
         nativeConnectionAvailable: Bool,
         snapshotCount: Int,
         watchSummary: ManagerWatchTimelineSummary
     ) -> [EnhancementRuntimeChip] {
         [
-            EnhancementRuntimeChip(
-                id: "cookie",
-                title: "Cookie",
-                value: cookieAvailable ? "可用" : "缺失",
-                severity: cookieAvailable ? .positive : .warning
-            ),
             EnhancementRuntimeChip(
                 id: "native",
                 title: "原生直连",

@@ -1,7 +1,6 @@
 import Foundation
 
 enum TodayBriefKind: String, Hashable {
-    case login
     case importPortfolio
     case pendingTrades
     case investmentPlan
@@ -44,7 +43,6 @@ struct TodayBriefItem: Identifiable, Hashable {
 }
 
 struct TodayBriefContext: Hashable {
-    let cookieAvailable: Bool
     let hasPersonalPortfolio: Bool
     let pendingActionCount: Int
     let pendingCashAmount: Double
@@ -64,7 +62,6 @@ struct TodayBriefContext: Hashable {
     let managerWatchError: String?
 
     init(
-        cookieAvailable: Bool,
         hasPersonalPortfolio: Bool,
         pendingActionCount: Int = 0,
         pendingCashAmount: Double = 0,
@@ -83,7 +80,6 @@ struct TodayBriefContext: Hashable {
         managerWatchScopeText: String = "",
         managerWatchError: String? = nil
     ) {
-        self.cookieAvailable = cookieAvailable
         self.hasPersonalPortfolio = hasPersonalPortfolio
         self.pendingActionCount = pendingActionCount
         self.pendingCashAmount = pendingCashAmount
@@ -109,21 +105,6 @@ enum TodayBriefBuilder {
         guard maxCount > 0 else { return [] }
 
         var items: [TodayBriefItem] = []
-
-        if !context.cookieAvailable {
-            items.append(
-                TodayBriefItem(
-                    kind: .login,
-                    title: "登录状态需要确认",
-                    detail: "Cookie 不可用，刷新和巡检可能失败",
-                    metric: "登录",
-                    iconName: "person.crop.circle.badge.exclamationmark",
-                    tone: .warning,
-                    destination: .settings,
-                    priority: 10
-                )
-            )
-        }
 
         if !context.hasPersonalPortfolio {
             items.append(
@@ -316,7 +297,6 @@ extension AppModel {
         let latestForum = hasForumPosts ? forumRecords.first : nil
 
         return TodayBriefContext(
-            cookieAvailable: cookieAvailable,
             hasPersonalPortfolio: hasPersonalPortfolio || personalAssetSummary != nil,
             pendingActionCount: pendingSummary?.actionCount ?? 0,
             pendingCashAmount: pendingSummary?.totalCashAmount ?? 0,

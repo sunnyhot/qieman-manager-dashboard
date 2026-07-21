@@ -11,7 +11,6 @@ enum DashboardInsightTone: Hashable {
 
 enum DashboardFreshnessKind: Hashable {
     case system
-    case auth
     case portfolio
     case platform
     case forum
@@ -19,7 +18,6 @@ enum DashboardFreshnessKind: Hashable {
 }
 
 struct DashboardFreshnessContext: Hashable {
-    let cookieAvailable: Bool
     let isRefreshingLatest: Bool
     let isRefreshingPortfolio: Bool
     let globalErrorMessage: String?
@@ -96,30 +94,6 @@ struct DashboardFreshnessSummary: Hashable {
                     detail: context.managerLastSuccessAt ?? context.managerLastCheckedAt ?? "尚未完成巡检",
                     tone: context.managerLastSuccessAt == nil ? .warning : .positive,
                     priority: 60
-                )
-            )
-        }
-
-        if !context.cookieAvailable {
-            items.append(
-                DashboardFreshnessItem(
-                    kind: .auth,
-                    title: "登录态",
-                    status: "需确认",
-                    detail: "Cookie 不可用，原生直连可能失败",
-                    tone: .warning,
-                    priority: 30
-                )
-            )
-        } else {
-            items.append(
-                DashboardFreshnessItem(
-                    kind: .auth,
-                    title: "登录态",
-                    status: "可用",
-                    detail: "Cookie 可用于原生直连",
-                    tone: .positive,
-                    priority: 90
                 )
             )
         }
@@ -313,7 +287,6 @@ extension AppModel {
 
         return DashboardFreshnessSummary.make(
             context: DashboardFreshnessContext(
-                cookieAvailable: cookieAvailable,
                 isRefreshingLatest: isRefreshing,
                 isRefreshingPortfolio: isRefreshingPortfolio,
                 globalErrorMessage: errorMessage.isEmpty ? nil : errorMessage,
