@@ -2,19 +2,9 @@ import AppKit
 import Foundation
 import ServiceManagement
 
-// MARK: - Auth, Comments & Login
+// MARK: - Comments & Data Directory
 
 extension AppModel {
-    func validateAuth() async {
-        isCheckingAuth = true
-        errorMessage = ""
-        defer { isCheckingAuth = false }
-
-        let payload = await nativeClient.validateAuth()
-        authPayload = payload
-        noticeMessage = payload.ok ? "登录态有效：\(payload.userName.isEmpty ? "未知用户" : payload.userName)" : payload.message
-    }
-
     func loadCommentsForSelectedPost() async {
         guard let post = selectedPost, let postID = post.postId else { return }
         let sortType = commentSortType
@@ -53,25 +43,6 @@ extension AppModel {
 
     func openDataDirectory() {
         dataController.openDataDirectory()
-    }
-
-    func presentLoginSheet() {
-        do {
-            let supportDirectory = try dataController.prepareEnvironment()
-            dataDirectoryURL = supportDirectory
-            logFileURL = dataController.logFileURL
-            rebuildNativeStatus()
-        } catch {
-            errorMessage = error.localizedDescription
-            return
-        }
-        isPresentingLoginSheet = true
-    }
-
-    func handleCookieSavedFromLoginSheet() {
-        rebuildNativeStatus()
-        noticeMessage = "已自动保存登录态。现在可以直接验证登录态，或切到\u{201c}关注动态\u{201d}刷新。"
-        Task { await validateAuth() }
     }
 }
 
@@ -123,9 +94,6 @@ extension AppModel {
         case .refreshPortfolio:
             Task { try? await refreshUserPortfolio(updateNotice: false) }
         case .refreshLatest:
-            if (section == .overview || section == .forum), !form.mode.producesPostRecords {
-                form.mode = cookieAvailable ? .followingPosts : .groupManager
-            }
             Task { try? await refreshLatest(persist: false, updateNotice: false) }
         }
     }
@@ -164,28 +132,6 @@ extension AppModel {
             return
         }
         selectedPlatformActionID = actions.first?.id
-    }
-
-    func rebuildNativeStatus() {
-        let defaultForm = DefaultFormPayload(
-            mode: nativeCookieExists ? QueryMode.followingPosts.rawValue : QueryMode.groupManager.rawValue,
-            prodCode: "LONG_WIN",
-            userName: "ETF拯救世界",
-            pages: "5",
-            pageSize: "10"
-        )
-
-        status = StatusPayload(
-            cookieExists: nativeCookieExists,
-            cookieFile: dataController.cookieFileURL?.path ?? "",
-            outputDir: outputDirectoryURL?.path ?? "",
-            defaultForm: defaultForm
-        )
-    }
-
-    var nativeCookieExists: Bool {
-        guard let cookieURL = dataController.cookieFileURL else { return false }
-        return FileManager.default.fileExists(atPath: cookieURL.path)
     }
 
     var managerWatchFileURL: URL? {

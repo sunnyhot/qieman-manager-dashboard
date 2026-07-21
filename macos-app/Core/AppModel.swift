@@ -65,14 +65,12 @@ final class AppModel: ObservableObject {
     @Published private(set) var portfolioState = PortfolioState()
     @Published private(set) var forumState = ForumState()
     @Published private(set) var platformState = PlatformState()
-    @Published private(set) var authState = AuthState()
     @Published private(set) var uiState = UIState()
     @Published private(set) var updateState = UpdateState()
     @Published private(set) var enhancementState = EnhancementState()
 
     // MARK: Remaining @Published properties
     @Published var form = QueryFormState()
-    @Published var status: StatusPayload?
     @Published var isBootstrapping = false
     @Published var isRefreshing = false
     var lastLatestRefreshAt: Date?
@@ -107,7 +105,6 @@ final class AppModel: ObservableObject {
     let refreshThrottle = RefreshThrottle()
 
     // Runtime state
-    var didApplyDefaultForm = false
     private var didStart = false
     var managerWatchTask: Task<Void, Never>?
     var personalAssetAutomationTask: Task<Void, Never>?
@@ -228,22 +225,6 @@ final class AppModel: ObservableObject {
     var selectedPlatformActionID: String? {
         get { platformState.selectedPlatformActionID }
         set { platformState.selectedPlatformActionID = newValue }
-    }
-
-    // AuthState proxies
-    var authPayload: AuthCheckPayload? {
-        get { authState.authPayload }
-        set { authState.authPayload = newValue }
-    }
-
-    var isCheckingAuth: Bool {
-        get { authState.isCheckingAuth }
-        set { authState.isCheckingAuth = newValue }
-    }
-
-    var isPresentingLoginSheet: Bool {
-        get { authState.isPresentingLoginSheet }
-        set { authState.isPresentingLoginSheet = newValue }
     }
 
     // UIState proxies
@@ -478,9 +459,6 @@ final class AppModel: ObservableObject {
         platformState.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
-        authState.objectWillChange
-            .sink { [weak self] _ in self?.objectWillChange.send() }
-            .store(in: &cancellables)
         uiState.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
@@ -541,11 +519,6 @@ final class AppModel: ObservableObject {
             loadManagerWatchSettings()
             loadEnhancementState()
             refreshLaunchAtLoginStatus()
-            rebuildNativeStatus()
-            if !didApplyDefaultForm, let defaultForm = status?.defaultForm {
-                form.apply(defaultForm: defaultForm)
-                didApplyDefaultForm = true
-            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -635,8 +608,6 @@ final class AppModel: ObservableObject {
             _cachedMonthlyPlatformSummary = nil
             ensureSelectedPlatformAction()
         }
-
-        rebuildNativeStatus()
 
         if refreshedSnapshot != nil || refreshedPlatform != nil {
             lastLatestRefreshAt = Date()

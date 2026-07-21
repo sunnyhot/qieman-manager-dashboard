@@ -83,15 +83,6 @@ final class PlatformState: ObservableObject {
     @Published var selectedPlatformActionID: String?
 }
 
-// MARK: - AuthState
-
-@MainActor
-final class AuthState: ObservableObject {
-    @Published var authPayload: AuthCheckPayload?
-    @Published var isCheckingAuth = false
-    @Published var isPresentingLoginSheet = false
-}
-
 // MARK: - UIState
 
 @MainActor
