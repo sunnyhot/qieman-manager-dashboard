@@ -207,7 +207,7 @@ private struct PersonalWatchlistGroup: View {
 
                         if selectedItemID == row.id {
                             PersonalWatchlistDetailChart(row: row)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                .transition(.opacity)
                         }
                     }
                 }
@@ -292,18 +292,10 @@ private struct PersonalWatchlistListRow: View {
                 }
                 .padding(.horizontal, AppPalette.spaceM)
                 .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
             }
             .buttonStyle(.plain)
-            .interactiveSurface(
-                isSelected: isSelected,
-                tint: tint,
-                fill: AppPalette.cardStrong,
-                hoverFill: AppPalette.cardHover,
-                lift: AppPalette.hoverLift
-            )
-            .animation(AppPalette.motionFast, value: isSelected)
-            .accessibilityLabel("\(row.displayName)，\(isSelected ? "收起走势" : "展开走势")")
 
             Menu {
                 Button(action: onConfigureAlerts) {
@@ -333,8 +325,18 @@ private struct PersonalWatchlistListRow: View {
             .menuIndicator(.hidden)
             .foregroundStyle(alertTint)
             .help(alertHelpText)
+            .padding(.trailing, AppPalette.spaceM)
             .accessibilityLabel("\(row.displayName)，\(alertHelpText)")
         }
+        .interactiveSurface(
+            isSelected: isSelected,
+            tint: tint,
+            fill: AppPalette.cardStrong,
+            hoverFill: AppPalette.cardHover,
+            lift: AppPalette.hoverLift
+        )
+        .animation(AppPalette.motionStandard, value: isSelected)
+        .accessibilityLabel("\(row.displayName)，\(isSelected ? "收起走势" : "展开走势")")
     }
 
     private var alertHelpText: String {
