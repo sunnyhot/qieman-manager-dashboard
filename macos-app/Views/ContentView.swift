@@ -264,53 +264,32 @@ struct ContentView: View {
             // 筛选内容区（展开时显示）
             if isQueryExpanded {
                 VStack(alignment: .leading, spacing: 10) {
-                    // 基本参数行
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .bottom, spacing: 10) {
-                            toolbarField("产品", text: $model.form.prodCode, minWidth: 170)
-                                .frame(width: 210)
-                            toolbarField("主理人", text: $model.form.userName, minWidth: 190)
-                                .frame(width: 250)
-                            toolbarField("关键词", text: $model.form.keyword, minWidth: 220)
-                                .frame(maxWidth: .infinity)
-                            toolbarField("页数", text: $model.form.pages, minWidth: 88)
-                                .frame(width: 104)
-                            toolbarField("每页", text: $model.form.pageSize, minWidth: 88)
-                                .frame(width: 104)
-                        }
-
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], alignment: .leading, spacing: 10) {
-                            toolbarField("产品", text: $model.form.prodCode, minWidth: 170)
-                            toolbarField("主理人", text: $model.form.userName, minWidth: 190)
-                            toolbarField("关键词", text: $model.form.keyword, minWidth: 220)
-                            toolbarField("页数", text: $model.form.pages, minWidth: 88)
-                            toolbarField("每页", text: $model.form.pageSize, minWidth: 88)
-                        }
+                    // 筛选模式切换（主理人订阅 / 精确参数 互斥）
+                    Picker("筛选模式", selection: $model.form.filterMode) {
+                        Text("主理人订阅").tag(FilterMode.managerSubscription)
+                        Text("精确参数").tag(FilterMode.preciseParams)
                     }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 320)
+                    .labelsHidden()
 
-                    // 日期范围行
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .bottom, spacing: 10) {
-                            toolbarField("起始", text: $model.form.since, minWidth: 180)
-                                .frame(width: 220)
-                            toolbarField("结束", text: $model.form.until, minWidth: 180)
-                                .frame(width: 220)
-                            Spacer(minLength: 0)
-                        }
-
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
-                            toolbarField("起始", text: $model.form.since, minWidth: 180)
-                            toolbarField("结束", text: $model.form.until, minWidth: 180)
-                        }
-                    }
-
-                    // 高级参数（复用现有 showAdvancedParams 逻辑）
-                    if model.showAdvancedParams {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
-                            toolbarField("groupId", text: $model.form.groupID, minWidth: 180)
-                            toolbarField("groupUrl", text: $model.form.groupURL, minWidth: 260)
-                            toolbarField("自动刷新", text: $model.form.autoRefresh, minWidth: 140)
-                        }
+                    if model.form.filterMode == .managerSubscription {
+                        ManagerPicker(
+                            managers: model.managerIndex,
+                            selectedIds: model.form.selectedManagerIds,
+                            isLoading: model.isLoadingManagerIndex,
+                            error: model.managerIndexError,
+                            onToggle: { id in
+                                if model.form.selectedManagerIds.contains(id) {
+                                    model.form.selectedManagerIds.remove(id)
+                                } else {
+                                    model.form.selectedManagerIds.insert(id)
+                                }
+                            },
+                            onRetry: { Task { await model.loadManagerIndex() } }
+                        )
+                    } else {
+                        preciseParamsContent
                     }
                 }
                 .padding(AppPalette.spaceM)
@@ -365,6 +344,60 @@ struct ContentView: View {
                 .focused($focusedToolbarField, equals: label)
         }
         .frame(minWidth: minWidth, maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 精确参数模式下的筛选项：基本参数 + 日期范围 + 高级参数。
+    /// 原样搬运自 collapsibleFilterPanel 展开内容区，字段绑定保持不变。
+    @ViewBuilder
+    private var preciseParamsContent: some View {
+        // 基本参数行
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .bottom, spacing: 10) {
+                toolbarField("产品", text: $model.form.prodCode, minWidth: 170)
+                    .frame(width: 210)
+                toolbarField("主理人", text: $model.form.userName, minWidth: 190)
+                    .frame(width: 250)
+                toolbarField("关键词", text: $model.form.keyword, minWidth: 220)
+                    .frame(maxWidth: .infinity)
+                toolbarField("页数", text: $model.form.pages, minWidth: 88)
+                    .frame(width: 104)
+                toolbarField("每页", text: $model.form.pageSize, minWidth: 88)
+                    .frame(width: 104)
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], alignment: .leading, spacing: 10) {
+                toolbarField("产品", text: $model.form.prodCode, minWidth: 170)
+                toolbarField("主理人", text: $model.form.userName, minWidth: 190)
+                toolbarField("关键词", text: $model.form.keyword, minWidth: 220)
+                toolbarField("页数", text: $model.form.pages, minWidth: 88)
+                toolbarField("每页", text: $model.form.pageSize, minWidth: 88)
+            }
+        }
+
+        // 日期范围行
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .bottom, spacing: 10) {
+                toolbarField("起始", text: $model.form.since, minWidth: 180)
+                    .frame(width: 220)
+                toolbarField("结束", text: $model.form.until, minWidth: 180)
+                    .frame(width: 220)
+                Spacer(minLength: 0)
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
+                toolbarField("起始", text: $model.form.since, minWidth: 180)
+                toolbarField("结束", text: $model.form.until, minWidth: 180)
+            }
+        }
+
+        // 高级参数（复用现有 showAdvancedParams 逻辑）
+        if model.showAdvancedParams {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
+                toolbarField("groupId", text: $model.form.groupID, minWidth: 180)
+                toolbarField("groupUrl", text: $model.form.groupURL, minWidth: 260)
+                toolbarField("自动刷新", text: $model.form.autoRefresh, minWidth: 140)
+            }
+        }
     }
 
     /// Double-click the toolbar title area to zoom (maximize/restore) the main window.
