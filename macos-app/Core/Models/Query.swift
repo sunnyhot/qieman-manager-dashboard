@@ -39,7 +39,9 @@ extension QueryMode {
 }
 
 struct QueryFormState {
-    var filterMode: FilterMode = .managerSubscription
+    // 默认 .preciseParams 保留旧行为（默认 prodCode=LONG_WIN 能直接抓长赢发言）。
+    // 主理人订阅模式需用户主动切换并选择主理人，避免冷启动空选刷新报错。
+    var filterMode: FilterMode = .preciseParams
     var selectedManagerIds: Set<String> = []
     var mode: QueryMode = .groupManager
     var prodCode: String = "LONG_WIN"
