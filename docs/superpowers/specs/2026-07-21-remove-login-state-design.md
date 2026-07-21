@@ -20,12 +20,15 @@
 
 用户决定：**彻底删除登录态，连同必须登录才能用的功能一并删除**，只保留匿名可用的公开数据源。评论功能保留（接受未登录下可能拿不到数据的现状，UI 文案不再误导用户去登录）。
 
+进一步决定：**「个人空间动态」（spaceItems）功能也一并删除**。理由：删登录态后 `resolveSpaceUserID` 失去从 userName/brokerUserID 反查 spaceUserId 的能力（原反查路径走关注列表），普通用户无法获取 spaceUserId；且 UI 上 QueryMode 选择器删除后该模式不可达；与主理人发言功能定位重叠。`QueryMode` 删完后只剩 `.groupManager` 一个 case。
+
 ## 2. 目标
 
 - 移除所有登录态（Cookie / Authorization）基础设施和登录 UI。
 - 删除依赖登录的功能：关注动态、我的关注、我的小组、登录态校验。
-- 保留：评论、平台调仓、主理人发言、个人空间动态、菜单栏小组件、巡检、更新、数据目录默认存储、外观偏好、窗口/通知等所有非身份相关能力。
-- 保留 CLI `qieman`，删除身份相关子命令；保留 `post-comments` / `group-posts` / `space-items` 等公开命令。
+- 删除「个人空间动态」功能（spaceItems 模式 / space-items CLI 命令 / spaceUserID+brokerUserID 表单字段）。
+- 保留：评论、平台调仓、主理人发言、菜单栏小组件、巡检、更新、数据目录默认存储、外观偏好、窗口/通知等所有非身份相关能力。
+- 保留 CLI `qieman`，删除身份相关子命令和 space-items；保留 `post-comments` / `group-posts` 等公开命令。
 - 不破坏既有数据：本地已存的快照、持仓、计划、交易、巡检时间线等 JSON 文件原样保留。
 - `swift test` 全绿（删除或改写相关测试断言）。
 
@@ -69,25 +72,34 @@ QueryMode.followingPosts...  ➜  删    QueryMode.groupManager / spaceItems
 **删除的方法/属性**：
 
 - `NativeQiemanError.missingCookie`（case + errorDescription 分支）
+- `NativeQiemanError.missingSpaceUser`（case + errorDescription 分支）— `resolveSpaceUserID` 删除后无人使用
 - 存储属性 `cookieFileURL` / `rawCookie`
 - `init(cookieFileURL:rawCookie:)` → 改为无参 `init()`
 - `func validateAuth() async -> AuthCheckPayload`
 - `func fetchFollowingPostsSnapshot(form:persist:outputDirectory:)`
 - `func fetchFollowingUsersSnapshot(form:persist:outputDirectory:)`
 - `func fetchMyGroupsSnapshot(form:persist:outputDirectory:)`
+- `func fetchSpaceItemsSnapshot(form:persist:outputDirectory:)` — 个人空间动态功能删除
+- `func resolveSpaceUserID(form:pageSize:pages:)` — 仅 spaceItems 用
+- `func fetchSpaceUserInfo(spaceUserID:)` — 仅 spaceItems 用
 - `func fetchAuthUserInfo(cookie:)`
 - `func fetchFollowingUsers(cookie:pageSize:pages:)`
 - `func fetchMyGroups(cookie:)`
 - `func loadCookie() throws`
 - `func extractAccessToken(from:)`
 - `func decodeJWTPayload(token:)`
+- `private struct NativeSpaceUserInfo` 及其 `dictionary` 扩展（约 1085 行起）— 仅 spaceItems 用
 
 **修改的方法**：
 
-- `fetchSnapshot` switch：删 `.followingPosts` / `.followingUsers` / `.myGroups` 三个 case。
+- `fetchSnapshot` switch：删 `.followingPosts` / `.followingUsers` / `.myGroups` / `.spaceItems` 四个 case，只留 `.groupManager`。
 - `fetchComments(...)`（**保留**）：删掉 `let cookie = try loadCookie()`，第 106 行 `cookie: cookie.isEmpty ? nil : cookie` 改为 `cookie: nil`。其余逻辑（params、normalizeComment、broker user 过滤、`CommentsPayload` 构造）原样保留。
-- `resolveSpaceUserID`：删掉「按关注用户反查」分支（`loadCookie` + `guard !cookie.isEmpty` + `fetchFollowingUsers`），仅保留显式 `spaceUserID` / `userName` / `brokerUserID` 解析路径。仍能抛 `missingSpaceUser`，确保 `fetchSpaceItemsSnapshot` 行为不变。
 - `requestJSON(path:params:cookie:)` / `requestJSONInternal`：**删除第 659-665 行 `if let cookie, !cookie.isEmpty { ... Cookie / Authorization ... }` 整段设头逻辑**。`cookie: String?` 参数保留（很多公开调用点仍传 `nil`，避免大面积改签名），但永远不写头。
+
+**保留的数据模型字段**（历史快照 JSON 兼容，留着无害，永远空）：
+
+- `SnapshotRecordPayload.spaceUserId`（`SnapshotPayloads.swift:86`）
+- `NativeSnapshotStore` 对 `space_user_id` 的解析（`NativeSnapshotStore.swift:210`）
 
 ### 5.3 `Core/AppModel/*.swift`
 
@@ -134,11 +146,12 @@ QueryMode.followingPosts...  ➜  删    QueryMode.groupManager / spaceItems
 
 ### 5.5 `Core/Models/Query.swift`
 
-- `enum QueryMode`：删 `followingPosts` / `followingUsers` / `myGroups` 三个 case；保留 `groupManager` / `spaceItems`。
-- `label`：删对应三分支。
-- `producesPostRecords`：删对应分支，仅留 `.groupManager, .spaceItems` 组合。
+- `enum QueryMode`：删 `followingPosts` / `followingUsers` / `myGroups` / `spaceItems` 四个 case；**只保留 `.groupManager`**（唯一 case）。
+- `label` / `producesPostRecords`：相应简化（单 case switch 仍保留，未来若扩展不改签名）。
 - `var mode: QueryMode = .followingPosts` → 改为 `= .groupManager`（新默认值）。
 - 删 `QueryFormState.apply(defaultForm:)` 方法（仅 `rebuildNativeStatus` + `status?.defaultForm` 链路用）。
+- 删 `QueryFormState.spaceUserID` / `brokerUserID` 两个字段（groupManager 模式不用，且无解析路径）。
+- `fetchPayload` 里删 `"space_user_id"` 和 `"broker_user_id"` 两个键。
 
 ### 5.6 `Core/Models/SnapshotPayloads.swift` / `PlatformPayloads.swift`
 
@@ -177,17 +190,18 @@ QueryMode.followingPosts...  ➜  删    QueryMode.groupManager / spaceItems
 
 ### 5.9 `Core/QiemanCommandLine.swift`（CLI 瘦身）
 
-- `helpText`：删 `auth-status` / `following-posts` / `following-users` / `my-groups` 四条命令说明，删 `--cookie-file PATH 或环境变量 QIEMAN_COOKIE` 通用说明，删「不输出 Cookie 原文」。
-- `run()`：删 `case "auth-status"` / `"following-posts"` / `"following-users"` / `"my-groups"` 四个分支。
+- `helpText`：删 `auth-status` / `following-posts` / `following-users` / `my-groups` / `space-items` 五条命令说明，删 `--cookie-file PATH 或环境变量 QIEMAN_COOKIE` 通用说明，删「不输出 Cookie 原文」。
+- `run()`：删 `case "auth-status"` / `"following-posts"` / `"following-users"` / `"my-groups"` / `"space-items"` 五个分支。
 - 删 `private func authStatus()` 方法。
 - `nativeClient()` 改为 `QiemanNativeClient()`。
 - 删 `rawCookie()` / `cookieFileURL()`。
 - `watchForumSnapshot(mode:managerName:)`：`--forum-mode` 只支持 `public`（= `.groupManager`）。删 `following` / `auto` 分支；若用户传 `following` 或 `auto`，回退到 `public` 并在 stderr 提示（不报错，保证老脚本兼容）。
-- **保留**：`group-posts` / `space-items` / `post-comments` / `valuation` / `group-summary` / `manager-info` / `space-user-info` / `space-items` / `updates-watch` / `forum-watch-state` / 其他平台命令。
+- **保留**：`group-posts` / `post-comments` / `valuation` / `group-summary` / `manager-info` / `updates-watch` / `forum-watch-state` / 其他平台命令。
 
 ### 5.10 `Core/CLI/DTOs.swift`
 
 - 删 `struct CLIAuthStatusOutput`。
+- **保留** `CLISnapshotRecordRow.spaceUserId` 字段（约 47 行）— 历史快照 JSON 兼容，删除会破坏 `CLIContractSnapshotTests` 的 record 序列化断言且让读旧快照失败；该字段今后永远为空串。
 - 其余 DTO 保留。
 
 ### 5.11 `Core/DashboardInsight.swift`（去 cookie 提示）
@@ -218,6 +232,8 @@ QueryMode.followingPosts...  ➜  删    QueryMode.groupManager / spaceItems
 - 删 `queryToolbarPanel` 里的 QueryMode 芯片选择器（整段 `ViewThatFits { HStack { ForEach(QueryMode.allCases)... } LazyVGrid { ... } }`）。
 - 删 `toolbarTitleBlock` 里的 Cookie badge。
 - 删 `queryModeChip(mode:)` 方法。
+- 删 `toolbarField("spaceUserId", text: $model.form.spaceUserID, ...)` 文本框（约 346 行）— spaceItems 功能删除后该字段无意义。
+- 删筛选面板里 `broker_user_id` 文本框（若存在）— brokerUserID 字段已从 QueryFormState 删除。用 grep 确认：`grep -n "brokerUserID\|broker_user_id\|brokerUserId" Views/ContentView.swift`。
 - **保留**：「打开数据目录」按钮（菜单栏、ContentView 底部仍可用）。
 
 ### 5.15 `Views/ForumSectionView.swift`
@@ -251,27 +267,28 @@ QueryMode.followingPosts...  ➜  删    QueryMode.groupManager / spaceItems
 
 ## 6. 数据流变化
 
-**删除前**（论坛板块两种模式）：
+**删除前**（论坛板块多模式）：
 
 ```
-refreshLatest ─┬─ snapshotTask: nativeClient.fetchSnapshot(mode: .followingPosts/.groupManager/...)
+refreshLatest ─┬─ snapshotTask: nativeClient.fetchSnapshot(mode: .followingPosts/.groupManager/.followingUsers/.myGroups/.spaceItems)
                └─ platformTask: platformClient.fetchPlatformPayload(...)
 ```
 
-**删除后**：
+**删除后**（唯一模式）：
 
 ```
-refreshLatest ─┬─ snapshotTask: nativeClient.fetchSnapshot(mode: .groupManager/.spaceItems)
+refreshLatest ─┬─ snapshotTask: nativeClient.fetchSnapshot(mode: .groupManager)
                └─ platformTask: platformClient.fetchPlatformPayload(...)
 ```
 
+- `QueryMode` 只剩 `.groupManager` 一个 case，`fetchSnapshot` 内部 switch 也只留一个 case。
 - 默认 mode 固定 `.groupManager`（主理人小组发言）。
 - `refreshDataForSectionIfNeeded` 不再动态切 mode。
 - 「两条任务并发、互不影响」的设计保留。
 
 ## 7. CLI 兼容性
 
-- 删除的命令：`auth-status` / `following-posts` / `following-users` / `my-groups`。老脚本调用会拿到 `unknown command` 错误，需在 release note 提示。
+- 删除的命令：`auth-status` / `following-posts` / `following-users` / `my-groups` / `space-items`。老脚本调用会拿到 `unknown command` 错误，需在 release note 提示。
 - `updates-watch --forum-mode`：`following` / `auto` 取值静默回退为 `public`，stderr 给一行提示。老脚本能继续跑。
 - 保留命令的行为不变。
 
@@ -280,7 +297,8 @@ refreshLatest ─┬─ snapshotTask: nativeClient.fetchSnapshot(mode: .groupMan
 1. **编译**：`APP_VERSION=3.4.0 bash scripts/build_macos_app.sh` 通过（App + CLI）。
 2. **CLI 构建**：`bash scripts/build_qieman_cli.sh` 通过。
 3. **测试**：`swift test`（在 `macos-app/`）全绿。
-4. **残留符号 grep（应 0 命中，注释除外）**：`cookieAvailable` / `cookieFileURL` / `nativeCookieExists` / `cookieExists` / `validateAuth` / `authPayload` / `isCheckingAuth` / `isPresentingLoginSheet` / `presentLoginSheet` / `handleCookieSavedFromLoginSheet` / `QiemanLoginView` / `QiemanCookieManager` / `fetchFollowingPosts` / `fetchFollowingUsers` / `fetchMyGroups` / `fetchAuthUserInfo` / `followingPosts` / `followingUsers` / `myGroups` / `loadCookie` / `rawCookie` / `missingCookie` / `extractAccessToken` / `decodeJWTPayload` / `StatusPayload` / `BootstrapPayload` / `DefaultFormPayload` / `AuthCheckPayload` / `CLIAuthStatusOutput` / `AuthState` / `auth-status` / `following-posts` / `following-users` / `my-groups`（注意区分 `myGroups` 与历史快照 meta 里的字面量 `my-groups`）。
+4. **残留符号 grep（应 0 命中，注释除外）**：`cookieAvailable` / `cookieFileURL` / `nativeCookieExists` / `cookieExists` / `validateAuth` / `authPayload` / `isCheckingAuth` / `isPresentingLoginSheet` / `presentLoginSheet` / `handleCookieSavedFromLoginSheet` / `QiemanLoginView` / `QiemanCookieManager` / `fetchFollowingPosts` / `fetchFollowingUsers` / `fetchMyGroups` / `fetchAuthUserInfo` / `fetchSpaceItemsSnapshot` / `fetchSpaceUserInfo` / `resolveSpaceUserID` / `NativeSpaceUserInfo` / `followingPosts` / `followingUsers` / `myGroups` / `spaceItems` / `loadCookie` / `rawCookie` / `missingCookie` / `missingSpaceUser` / `extractAccessToken` / `decodeJWTPayload` / `StatusPayload` / `BootstrapPayload` / `DefaultFormPayload` / `AuthCheckPayload` / `CLIAuthStatusOutput` / `AuthState` / `auth-status` / `following-posts` / `following-users` / `my-groups` / `space-items`。
+   - **例外（允许残留）**：`SnapshotRecordPayload.spaceUserId` / `CLISnapshotRecordRow.spaceUserId` / `NativeSnapshotStore` 对 `space_user_id` 的解析——这些是历史快照 JSON 兼容字段，刻意保留。
 5. **手工 smoke**：
    - 启动 App，无登录入口，无 Cookie 徽标。
    - 论坛板块默认显示主理人发言；评论区按钮可见，点击后按现状提示「暂无评论」。

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 从且慢主理人看板彻底删除登录态（Cookie）体系，连带删除必须登录的关注动态/我的关注/我的小组/登录态校验功能；保留评论、平台调仓、主理人发言、个人空间动态等公开能力。
+**Goal:** 从且慢主理人看板彻底删除登录态（Cookie）体系，连带删除必须登录的关注动态/我的关注/我的小组/登录态校验功能，以及依赖登录态解析路径的「个人空间动态」功能；保留评论、平台调仓、主理人发言等公开能力。
 
 **Architecture:** 纯删除性改动 + 少量文案/默认值调整，不新增业务逻辑。按依赖顺序分层删除：错误类型 → Models → NativeClient → AppModel → ApplicationDataController → CLI → Insight Core → Views → Settings → 测试 → 全量验证。每步独立可编译。
 
@@ -11,7 +11,7 @@
 **Spec:** `docs/superpowers/specs/2026-07-21-remove-login-state-design.md`
 
 **关键行为变更（实施时注意）**：
-1. `resolveSpaceUserID` 删掉关注反查分支后，只能通过显式 `spaceUserID` 解析；用户若只填 userName/brokerUserID 将抛 `missingSpaceUser`。个人空间动态功能需要用户显式提供 spaceUserID——这是预期行为变化，无需补救。
+1. 「个人空间动态」（spaceItems）功能整体删除：`QueryMode` 只剩 `.groupManager` 一个 case；`fetchSpaceItemsSnapshot` / `fetchSpaceUserInfo` / `resolveSpaceUserID` / `NativeSpaceUserInfo` 全删；`QueryFormState.spaceUserID` / `brokerUserID` 字段删；CLI `space-items` 命令删。历史快照 JSON 兼容字段（`SnapshotRecordPayload.spaceUserId` / `CLISnapshotRecordRow.spaceUserId` / `NativeSnapshotStore` 的 `space_user_id` 解析）保留，今后永远为空。
 2. `dataDirectoryURL` 属性保留，固定指向默认目录；自定义目录 UI 和方法删除。
 3. CLI `--forum-mode following|auto` 静默回退为 `public`，stderr 给提示。
 4. `requestJSON` 的 `cookie: String?` 参数保留（避免大面积改签名），但永远不写 Cookie/Authorization 头。
@@ -66,7 +66,7 @@
 
 这一层是底层依赖，先改完后续 NativeClient 改造时才能去掉对它们的引用。
 
-- [ ] **Step 1.1: 重写 `Query.swift`，删 3 个 mode case + apply 方法**
+- [ ] **Step 1.1: 重写 `Query.swift`，删 4 个 mode case + apply 方法 + spaceUserID/brokerUserID 字段**
 
 把整个 `macos-app/Core/Models/Query.swift` 替换为：
 
@@ -75,7 +75,6 @@ import Foundation
 
 enum QueryMode: String, CaseIterable, Identifiable {
     case groupManager = "group-manager"
-    case spaceItems = "space-items"
 
     var id: String { rawValue }
 
@@ -83,8 +82,6 @@ enum QueryMode: String, CaseIterable, Identifiable {
         switch self {
         case .groupManager:
             return "公开主理人流"
-        case .spaceItems:
-            return "个人空间动态"
         }
     }
 }
@@ -92,7 +89,7 @@ enum QueryMode: String, CaseIterable, Identifiable {
 extension QueryMode {
     var producesPostRecords: Bool {
         switch self {
-        case .groupManager, .spaceItems:
+        case .groupManager:
             return true
         }
     }
@@ -105,8 +102,6 @@ struct QueryFormState {
     var groupURL: String = ""
     var groupID: String = ""
     var userName: String = "ETF拯救世界"
-    var brokerUserID: String = ""
-    var spaceUserID: String = ""
     var keyword: String = ""
     var since: String = ""
     var until: String = ""
@@ -122,8 +117,6 @@ struct QueryFormState {
             "group_url": groupURL,
             "group_id": groupID,
             "user_name": userName,
-            "broker_user_id": brokerUserID,
-            "space_user_id": spaceUserID,
             "keyword": keyword,
             "since": since,
             "until": until,
@@ -145,6 +138,8 @@ struct QueryFormState {
     }
 }
 ```
+
+注：`brokerUserID` / `spaceUserID` 字段删除。groupManager 模式不需要它们，且删登录态后无解析路径。
 
 - [ ] **Step 1.2: 删 `SnapshotPayloads.swift` 顶部三个 payload struct**
 
@@ -197,9 +192,9 @@ git commit -m "refactor: 删除登录态相关 QueryMode case 和 Payload struct
 **Files:**
 - Modify: `macos-app/Core/QiemanNativeClient.swift`
 
-- [ ] **Step 2.1: 删 `NativeQiemanError.missingCookie`**
+- [ ] **Step 2.1: 删 `NativeQiemanError.missingCookie` 和 `missingSpaceUser`**
 
-在 `QiemanNativeClient.swift:4-11`，从 enum 删掉 `case missingCookie` 这一行（第 6 行）；在 13-30 行的 `errorDescription` switch 里删掉 `case .missingCookie:` 分支（17-18 行）。
+在 `QiemanNativeClient.swift:4-11`，从 enum 删掉 `case missingCookie`（第 6 行）和 `case missingSpaceUser`（第 8 行）；在 13-30 行的 `errorDescription` switch 里删掉 `case .missingCookie:`（17-18 行）和 `case .missingSpaceUser:`（21-22 行）两个分支。
 
 改完的 enum：
 
@@ -207,7 +202,6 @@ git commit -m "refactor: 删除登录态相关 QueryMode case 和 Payload struct
 enum NativeQiemanError: LocalizedError {
     case unsupportedMode(String)
     case missingGroup
-    case missingSpaceUser
     case noResults(String)
     case invalidResponse
     case api(String)
@@ -218,8 +212,6 @@ enum NativeQiemanError: LocalizedError {
             return "原生抓取暂不支持当前模式：\(mode)"
         case .missingGroup:
             return "无法解析主理人所在小组"
-        case .missingSpaceUser:
-            return "无法解析目标 spaceUserId"
         case .noResults(let message):
             return message
         case .invalidResponse:
@@ -253,15 +245,13 @@ final class QiemanNativeClient {
 
 直接删除整个 `func validateAuth() async -> AuthCheckPayload { ... }`。
 
-- [ ] **Step 2.4: 改 `fetchSnapshot` switch（75-87 行）删 3 个 case**
+- [ ] **Step 2.4: 改 `fetchSnapshot` switch（75-87 行）只留 groupManager**
 
 ```swift
 func fetchSnapshot(form: QueryFormState, persist: Bool, outputDirectory: URL?) async throws -> SnapshotPayload {
     switch form.mode {
     case .groupManager:
         return try await fetchGroupManagerSnapshot(form: form, persist: persist, outputDirectory: outputDirectory)
-    case .spaceItems:
-        return try await fetchSpaceItemsSnapshot(form: form, persist: persist, outputDirectory: outputDirectory)
     }
 }
 ```
@@ -293,12 +283,13 @@ func fetchComments(
     // ... 后面 normalizeComment / filter / CommentsPayload 构造原样保留
 ```
 
-- [ ] **Step 2.6: 删三个 snapshot 方法**
+- [ ] **Step 2.6: 删四个 snapshot 方法**
 
 删除整段：
 - `fetchFollowingPostsSnapshot`（199-277 行）
 - `fetchFollowingUsersSnapshot`（279-314 行）
 - `fetchMyGroupsSnapshot`（316-351 行）
+- `fetchSpaceItemsSnapshot`（353-412 行）— 个人空间动态功能删除
 
 - [ ] **Step 2.7: 删 3 个 private helper 方法**
 
@@ -306,21 +297,14 @@ func fetchComments(
 - `fetchFollowingUsers(cookie:pageSize:pages:)`（466-501 行整段删）
 - `fetchMyGroups(cookie:)`（503-524 行整段删）
 
-- [ ] **Step 2.8: 改造 `resolveSpaceUserID`（548-579 行）删关注反查分支**
+- [ ] **Step 2.8: 删除 space 相关方法 + 类型**
 
-替换为只保留显式解析：
+整段删除（个人空间动态功能删除）：
+- `fetchSpaceUserInfo(spaceUserID:)`（526-546 行）
+- `resolveSpaceUserID(form:pageSize:pages:)`（548-579 行）
+- `private struct NativeSpaceUserInfo` 及其 `dictionary` 扩展（约 1085 行起，用 grep 精确定位：`grep -n "struct NativeSpaceUserInfo" macos-app/Core/QiemanNativeClient.swift`）
 
-```swift
-private func resolveSpaceUserID(form: QueryFormState, pageSize: Int, pages: Int) async throws -> String {
-    let explicit = normalizedString(form.spaceUserID)
-    guard !explicit.isEmpty else {
-        throw NativeQiemanError.missingSpaceUser
-    }
-    return explicit
-}
-```
-
-注：`pageSize` / `pages` 参数保留（避免改签名影响调用方），但不再使用。可加 `_ pageSize` / `_ pages` 标注，或直接留着——Swift 不会警告未使用的函数参数。
+注意：删除前确认这些方法/类型没有其他调用方（已在 spec 调研中确认仅 spaceItems 链路使用）。
 
 - [ ] **Step 2.9: 删 `loadCookie` 方法（684-695 行整段）**
 
@@ -493,19 +477,26 @@ git commit -m "refactor: ApplicationDataController 删除 cookie 路径"
 - `following-posts` 说明（约 71 行）
 - `following-users` 说明（约 72 行）
 - `my-groups` 说明（约 73 行）
+- `space-items` 说明（约 76 行）
 
 并删除：
 - 通用说明「通用登录参数：--cookie-file PATH 或环境变量 QIEMAN_COOKIE」（约 88 行）
 - 「不输出 Cookie 原文」（约 89 行）
 
-- [ ] **Step 5.3: 删 run() 里 4 个 case 分支**
+- [ ] **Step 5.3: 删 run() 里 5 个 case 分支**
 
-定位约 110-117 行，删：
+定位约 110-122 行，删：
 ```swift
 case "auth-status": return try await authStatus()
 case "following-posts": return try await snapshot(mode: .followingPosts)
 case "following-users": return try await snapshot(mode: .followingUsers)
 case "my-groups": return try await snapshot(mode: .myGroups)
+case "space-items": return try await snapshot(mode: .spaceItems, ...)  // 精确签名用 grep 确认
+```
+
+用 grep 确认 space-items case 的精确写法：
+```bash
+grep -n 'case "space-items"' macos-app/Core/QiemanCommandLine.swift
 ```
 
 - [ ] **Step 5.4: 删 `authStatus()` 方法**
@@ -624,7 +615,7 @@ rm macos-app/Core/QiemanCookieManager.swift
 
 定位每处（用 grep）：
 ```bash
-grep -n "isPresentingLoginSheet\|QiemanLoginView\|cookieAvailable\|cookieFileURL\|queryModeChip\|QueryMode.allCases" macos-app/Views/ContentView.swift
+grep -n "isPresentingLoginSheet\|QiemanLoginView\|cookieAvailable\|cookieFileURL\|queryModeChip\|QueryMode.allCases\|spaceUserID\|brokerUserID\|spaceUserId\|broker_user_id\|brokerUserId" macos-app/Views/ContentView.swift
 ```
 
 删除：
@@ -633,6 +624,8 @@ b. sidebarFooter 里 Cookie 徽标：`Circle().fill(model.cookieAvailable ? ...)
 c. `queryToolbarPanel` 里的 QueryMode 芯片选择器（约 235-248 行整段 `ViewThatFits { HStack { ForEach(QueryMode.allCases)... } LazyVGrid { ... } }`）
 d. `toolbarTitleBlock` 里 `ToolbarBadge(title: model.cookieAvailable ? "Cookie 可用" : "Cookie 缺失", ...)`（约 367-371 行）
 e. `queryModeChip(mode:)` 整个方法（约 409-435 行）
+f. `toolbarField("spaceUserId", text: $model.form.spaceUserID, minWidth: 180)`（约 346 行）— spaceUserID 字段已从 QueryFormState 删除
+g. 若存在 `toolbarField("brokerUserId"/"broker_user_id", text: $model.form.brokerUserID, ...)` 文本框，一并删除 — brokerUserID 字段已删
 
 **保留**：「打开数据目录」按钮（155-166 行）、刷新按钮、筛选面板里的产品/主理人/关键词等文本框。
 
@@ -946,7 +939,7 @@ Expected: 全部 PASS。
 Run:
 ```bash
 cd macos-app
-for sym in cookieAvailable cookieFileURL nativeCookieExists cookieExists validateAuth authPayload isCheckingAuth isPresentingLoginSheet presentLoginSheet handleCookieSavedFromLoginSheet QiemanLoginView QiemanCookieManager fetchFollowingPosts fetchFollowingUsers fetchMyGroups fetchAuthUserInfo loadCookie rawCookie missingCookie extractAccessToken decodeJWTPayload StatusPayload BootstrapPayload DefaultFormPayload AuthCheckPayload CLIAuthStatusOutput AuthState; do
+for sym in cookieAvailable cookieFileURL nativeCookieExists cookieExists validateAuth authPayload isCheckingAuth isPresentingLoginSheet presentLoginSheet handleCookieSavedFromLoginSheet QiemanLoginView QiemanCookieManager fetchFollowingPosts fetchFollowingUsers fetchMyGroups fetchAuthUserInfo fetchSpaceItemsSnapshot fetchSpaceUserInfo resolveSpaceUserID NativeSpaceUserInfo loadCookie rawCookie missingCookie missingSpaceUser extractAccessToken decodeJWTPayload StatusPayload BootstrapPayload DefaultFormPayload AuthCheckPayload CLIAuthStatusOutput AuthState; do
   hits=$(grep -rn "$sym" --include="*.swift" . | grep -v "//" | wc -l | tr -d ' ')
   if [ "$hits" != "0" ]; then
     echo "❌ $sym: $hits hits"
@@ -954,21 +947,34 @@ for sym in cookieAvailable cookieFileURL nativeCookieExists cookieExists validat
   fi
 done
 echo "--- QueryMode cases ---"
-for sym in followingPosts followingUsers myGroups; do
+for sym in followingPosts followingUsers myGroups spaceItems; do
   hits=$(grep -rn "$sym" --include="*.swift" . | grep -v "//" | wc -l | tr -d ' ')
   if [ "$hits" != "0" ]; then
     echo "❌ $sym: $hits hits"
     grep -rn "$sym" --include="*.swift" . | grep -v "//" | head -5
   fi
 done
+echo "--- QueryFormState 字段 ---"
+for sym in "form.spaceUserID\|form.brokerUserID\|var spaceUserID\|var brokerUserID"; do
+  hits=$(grep -rnE "$sym" --include="*.swift" . | grep -v "//" | wc -l | tr -d ' ')
+  if [ "$hits" != "0" ]; then
+    echo "❌ $sym: $hits hits"
+    grep -rnE "$sym" --include="*.swift" . | grep -v "//" | head -5
+  fi
+done
 echo "--- CLI commands ---"
-for cmd in "auth-status" "following-posts" "following-users" "my-groups"; do
+for cmd in "auth-status" "following-posts" "following-users" "my-groups" "space-items"; do
   hits=$(grep -rn "$cmd" --include="*.swift" . | wc -l | tr -d ' ')
   if [ "$hits" != "0" ]; then
     echo "⚠️  $cmd: $hits hits (可能是历史快照 meta 字面量，需人工判断)"
     grep -rn "$cmd" --include="*.swift" . | head -3
   fi
 done
+echo "Done."
+```
+
+Expected: 上面几组都无 ❌；CLI commands 那组的命中应该只在注释或字符串字面量里（如测试里的快照 meta），人工判断可接受。
+**例外（允许残留）**：`SnapshotRecordPayload.spaceUserId` / `CLISnapshotRecordRow.spaceUserId` / `NativeSnapshotStore` 对 `space_user_id` 的解析——这些是历史快照 JSON 兼容字段，刻意保留，不报错。
 echo "Done."
 ```
 
@@ -985,11 +991,13 @@ open dist/macos-app/QiemanDashboard.app
 - 论坛板块默认显示主理人发言；评论区按钮可见
 - 设置面板只剩「巡检 / 菜单栏 / 通用」三项
 - 「通用」面板里有外观切换 + 更新检查
+- 筛选面板里没有 spaceUserId / brokerUserId 文本框
 
 CLI smoke：
 ```bash
 scripts/qieman version
 scripts/qieman auth-status 2>&1 | head -3  # 应报 unknown command
+scripts/qieman space-items 2>&1 | head -3  # 应报 unknown command
 scripts/qieman group-posts --prod-code LONG_WIN 2>&1 | head -3  # 应正常输出
 ```
 
