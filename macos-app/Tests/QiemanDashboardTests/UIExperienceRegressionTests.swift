@@ -81,15 +81,6 @@ final class UIExperienceRegressionTests: XCTestCase {
         XCTAssertTrue(source.contains(".keyboardShortcut(\"f\")"))
     }
 
-    func testDestructiveSettingsAndLoginActionsRequireConfirmation() throws {
-        let account = try source(at: "Views/SettingsAccountPanel.swift")
-        let login = try source(at: "Views/QiemanLoginView.swift")
-
-        XCTAssertTrue(account.contains("恢复默认数据目录？"))
-        XCTAssertTrue(login.contains("清除登录态？"))
-        XCTAssertTrue(login.contains("isConfirmingClearLogin = true"))
-    }
-
     func testQuitApplicationIsReachableFromMenuBarPopoverAndSettings() throws {
         let appModel = try source(at: "Core/AppModel/Auth.swift")
         let menuBar = try source(at: "Views/MenuBarPortfolioView.swift")

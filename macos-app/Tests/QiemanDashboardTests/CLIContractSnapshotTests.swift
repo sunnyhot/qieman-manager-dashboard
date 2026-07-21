@@ -11,24 +11,19 @@ final class CLIContractSnapshotTests: XCTestCase {
     // MARK: - snake_case key strategy
 
     func testSnakeCaseConversionPreservesExistingKeys() throws {
-        let output = CLIAuthStatusOutput(
-            ok: true,
-            error: "",
-            userName: "alice",
-            brokerUserId: "B-100",
-            userLabel: "主理人",
-            userAvatarUrl: ""
+        let output = CLISnapshotGroupRow(
+            groupId: 1001,
+            groupName: "长赢计划投资",
+            managerName: "ETF拯救世界",
+            managerBrokerUserId: "B-100"
         )
         let json = try decodeJSON(QiemanCLI.encodeJSON(output))
 
         // camelCase 属性 → snake_case 键
-        XCTAssertEqual(json["user_name"] as? String, "alice")
-        XCTAssertEqual(json["broker_user_id"] as? String, "B-100")
-        XCTAssertEqual(json["user_label"] as? String, "主理人")
-        XCTAssertEqual(json["user_avatar_url"] as? String, "")
-        // 单词属性不变形
-        XCTAssertEqual(json["ok"] as? Bool, true)
-        XCTAssertEqual(json["error"] as? String, "")
+        XCTAssertEqual(json["group_id"] as? Int, 1001)
+        XCTAssertEqual(json["group_name"] as? String, "长赢计划投资")
+        XCTAssertEqual(json["manager_name"] as? String, "ETF拯救世界")
+        XCTAssertEqual(json["manager_broker_user_id"] as? String, "B-100")
     }
 
     func testActionRowUsesCliContractKeys() throws {
@@ -203,7 +198,7 @@ final class CLIContractSnapshotTests: XCTestCase {
     func testWatchStateRoundTripsPreservingSnakeCaseKeys() throws {
         let original = CLIWatchState(
             updatedAt: "2026-07-20T10:00:00Z",
-            forumSource: "following-posts",
+            forumSource: "public-group",
             seenTradeIds: ["t1", "t2"],
             seenPostIds: ["p1"],
             prodCode: "LONG_WIN",
@@ -214,7 +209,7 @@ final class CLIContractSnapshotTests: XCTestCase {
         // 直接验证磁盘 JSON 字面 key（保持向后兼容的关键）
         let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(json["updated_at"] as? String, "2026-07-20T10:00:00Z")
-        XCTAssertEqual(json["forum_source"] as? String, "following-posts")
+        XCTAssertEqual(json["forum_source"] as? String, "public-group")
         XCTAssertEqual(json["seen_trade_ids"] as? [String], ["t1", "t2"])
         XCTAssertEqual(json["seen_post_ids"] as? [String], ["p1"])
         XCTAssertEqual(json["prod_code"] as? String, "LONG_WIN")

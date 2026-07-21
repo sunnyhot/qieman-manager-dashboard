@@ -4,7 +4,6 @@ import XCTest
 final class DashboardInsightTests: XCTestCase {
     func testFreshnessSummaryElevatesErrorsAndWarnings() {
         let context = DashboardFreshnessContext(
-            cookieAvailable: false,
             isRefreshingLatest: false,
             isRefreshingPortfolio: false,
             globalErrorMessage: "平台调仓刷新失败",
@@ -21,8 +20,8 @@ final class DashboardInsightTests: XCTestCase {
 
         let summary = DashboardFreshnessSummary.make(context: context)
 
-        XCTAssertEqual(summary.headline, "3 个异常待处理")
-        XCTAssertEqual(summary.items.prefix(3).map(\.kind), [.system, .managerWatch, .auth])
+        XCTAssertEqual(summary.headline, "2 个异常待处理")
+        XCTAssertEqual(summary.items.prefix(2).map(\.kind), [.system, .managerWatch])
         XCTAssertEqual(summary.items.first?.tone, .error)
     }
 

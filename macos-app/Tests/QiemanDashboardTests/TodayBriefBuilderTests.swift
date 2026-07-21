@@ -4,7 +4,6 @@ import XCTest
 final class TodayBriefBuilderTests: XCTestCase {
     func testMakeItemsPrioritizesActionablePortfolioSignals() {
         let context = TodayBriefContext(
-            cookieAvailable: true,
             hasPersonalPortfolio: true,
             pendingActionCount: 3,
             pendingCashAmount: 710.93,
@@ -35,14 +34,12 @@ final class TodayBriefBuilderTests: XCTestCase {
 
     func testMakeItemsShowsSetupWhenPortfolioIsMissing() {
         let context = TodayBriefContext(
-            cookieAvailable: false,
             hasPersonalPortfolio: false
         )
 
         let items = TodayBriefBuilder.makeItems(context: context, maxCount: 4)
 
-        XCTAssertEqual(items.map(\.kind), [.login, .importPortfolio])
-        XCTAssertEqual(items.first?.destination, .settings)
-        XCTAssertEqual(items.last?.destination, .portfolio)
+        XCTAssertEqual(items.map(\.kind), [.importPortfolio])
+        XCTAssertEqual(items.first?.destination, .portfolio)
     }
 }

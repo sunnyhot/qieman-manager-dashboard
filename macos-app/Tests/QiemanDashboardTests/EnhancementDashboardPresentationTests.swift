@@ -273,7 +273,6 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
         canUndoLatestImport: Bool = false,
         watchEvents: [ManagerWatchTimelineEvent] = [],
         lastMonthlyReportExport: MonthlyReportExportMetadata? = nil,
-        cookieAvailable: Bool = true,
         nativeConnectionAvailable: Bool = true,
         insight: PortfolioSnapshotInsightSummary = PortfolioSnapshotInsightSummary(
             headline: "等待组合快照",
@@ -306,7 +305,6 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
         EnhancementDashboardSummary.make(
             report: report,
             lastMonthlyReportExport: lastMonthlyReportExport,
-            cookieAvailable: cookieAvailable,
             nativeConnectionAvailable: nativeConnectionAvailable,
             watchSummary: ManagerWatchTimelineSummary.make(events: watchEvents),
             importSession: importSession,
