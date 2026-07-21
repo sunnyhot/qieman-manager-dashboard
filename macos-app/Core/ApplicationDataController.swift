@@ -25,10 +25,6 @@ final class ApplicationDataController {
         supportDirectory?.appendingPathComponent("dashboard.log", isDirectory: false)
     }
 
-    var cookieFileURL: URL? {
-        supportDirectory?.appendingPathComponent("qieman.cookie", isDirectory: false)
-    }
-
     @discardableResult
     func prepareEnvironment() throws -> URL {
         let directory = try prepareSupportDirectory()
@@ -86,7 +82,6 @@ final class ApplicationDataController {
         let text = """
         Qieman Dashboard App 数据目录
 
-        - qieman.cookie: 登录态 Cookie（可选）
         - user-watchlist.json: 我的关注、关注起始价与每日价格记录
         - output/: 抓取输出与运行数据
         - dashboard.log: 应用运行日志
