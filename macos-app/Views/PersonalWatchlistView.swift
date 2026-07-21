@@ -242,92 +242,124 @@ private struct PersonalWatchlistListRow: View {
     }
 
     var body: some View {
-        HStack(spacing: AppPalette.spaceS) {
-            Button(action: onSelect) {
-                HStack(spacing: AppPalette.spaceM) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(row.displayName)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(AppPalette.ink)
-                            .lineLimit(1)
-                        HStack(spacing: 6) {
-                            Text(row.item.normalizedCode)
-                                .font(.system(size: 10, design: .monospaced))
-                                .foregroundStyle(AppPalette.muted)
-                            Text(row.item.marketLabel)
-                                .font(.system(size: 9, weight: .medium))
-                                .foregroundStyle(tint)
+        GeometryReader { geometry in
+            let showsSparkline = geometry.size.width >= 900
+            let contentWidth = max(
+                0,
+                geometry.size.width
+                    - alertControlWidth
+                    - AppPalette.spaceM * 2
+                    - AppPalette.spaceL * CGFloat(showsSparkline ? 5 : 4)
+                    - disclosureWidth
+            )
+
+            HStack(spacing: AppPalette.spaceS) {
+                Button(action: onSelect) {
+                    HStack(spacing: AppPalette.spaceL) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(row.displayName)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(AppPalette.ink)
+                                .lineLimit(1)
+                            HStack(spacing: 6) {
+                                Text(row.item.normalizedCode)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(AppPalette.muted)
+                                Text(row.item.marketLabel)
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundStyle(tint)
+                            }
+                        }
+                        .frame(
+                            width: contentWidth * (showsSparkline ? 0.26 : 0.30),
+                            alignment: .leading
+                        )
+
+                        watchlistValue(
+                            title: "关注价 · \(row.item.followedDate)",
+                            value: watchlistPriceText(row.record.baseline?.price, item: row.item),
+                            tint: AppPalette.ink
+                        )
+                        .frame(
+                            width: contentWidth * (showsSparkline ? 0.20 : 0.26),
+                            alignment: .leading
+                        )
+
+                        watchlistValue(
+                            title: row.category == .offExchangeFund ? "当前净值" : "当前价格",
+                            value: watchlistPriceText(row.currentPrice, item: row.item),
+                            tint: AppPalette.ink
+                        )
+                        .frame(
+                            width: contentWidth * (showsSparkline ? 0.17 : 0.24),
+                            alignment: .leading
+                        )
+
+                        watchlistValue(
+                            title: "关注以来",
+                            value: percentOptional(row.changeSinceFollowPct),
+                            tint: changeTint
+                        )
+                        .frame(
+                            width: contentWidth * (showsSparkline ? 0.15 : 0.20),
+                            alignment: .leading
+                        )
+
+                        if showsSparkline {
+                            PersonalWatchlistSparkline(row: row)
+                                .frame(width: contentWidth * 0.22)
+                                .frame(height: 38)
+                                .clipped()
+                        }
+
+                        Image(systemName: isSelected ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(isSelected ? tint : AppPalette.muted)
+                            .frame(width: disclosureWidth)
+                    }
+                    .padding(.horizontal, AppPalette.spaceM)
+                    .padding(.vertical, 10)
+                    .frame(
+                        width: max(0, geometry.size.width - alertControlWidth),
+                        alignment: .leading
+                    )
+                    .contentShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                }
+                .buttonStyle(.plain)
+
+                Menu {
+                    Button(action: onConfigureAlerts) {
+                        Label(
+                            activeAlertCount > 0 ? "编辑提醒" : "设置提醒",
+                            systemImage: "bell"
+                        )
+                    }
+                    Divider()
+                    Button(role: .destructive, action: onDelete) {
+                        Label("取消关注", systemImage: "star.slash")
+                    }
+                } label: {
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: activeAlertCount > 0 ? "bell.fill" : "bell")
+                            .font(.system(size: 11, weight: .semibold))
+                        if triggeredAlertCount > 0 {
+                            Circle()
+                                .fill(AppPalette.warning)
+                                .frame(width: 6, height: 6)
+                                .offset(x: 3, y: -2)
                         }
                     }
-                    .frame(minWidth: 150, maxWidth: .infinity, alignment: .leading)
-
-                    watchlistValue(
-                        title: "关注价 · \(row.item.followedDate)",
-                        value: watchlistPriceText(row.record.baseline?.price, item: row.item),
-                        tint: AppPalette.ink
-                    )
-                    .frame(width: 112, alignment: .leading)
-
-                    watchlistValue(
-                        title: row.category == .offExchangeFund ? "当前净值" : "当前价格",
-                        value: watchlistPriceText(row.currentPrice, item: row.item),
-                        tint: AppPalette.ink
-                    )
-                    .frame(width: 90, alignment: .leading)
-
-                    watchlistValue(
-                        title: "关注以来",
-                        value: percentOptional(row.changeSinceFollowPct),
-                        tint: changeTint
-                    )
-                    .frame(width: 78, alignment: .leading)
-
-                    PersonalWatchlistSparkline(row: row)
-                        .frame(width: 118, height: 38)
-
-                    Image(systemName: isSelected ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(isSelected ? tint : AppPalette.muted)
-                        .frame(width: 14)
+                    .frame(width: 28, height: 28)
                 }
-                .padding(.horizontal, AppPalette.spaceM)
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .foregroundStyle(alertTint)
+                .help(alertHelpText)
+                .padding(.trailing, AppPalette.spaceM)
+                .accessibilityLabel("\(row.displayName)，\(alertHelpText)")
             }
-            .buttonStyle(.plain)
-
-            Menu {
-                Button(action: onConfigureAlerts) {
-                    Label(
-                        activeAlertCount > 0 ? "编辑提醒" : "设置提醒",
-                        systemImage: "bell"
-                    )
-                }
-                Divider()
-                Button(role: .destructive, action: onDelete) {
-                    Label("取消关注", systemImage: "star.slash")
-                }
-            } label: {
-                ZStack(alignment: .topTrailing) {
-                    Image(systemName: activeAlertCount > 0 ? "bell.fill" : "bell")
-                        .font(.system(size: 11, weight: .semibold))
-                    if triggeredAlertCount > 0 {
-                        Circle()
-                            .fill(AppPalette.warning)
-                            .frame(width: 6, height: 6)
-                            .offset(x: 3, y: -2)
-                    }
-                }
-                .frame(width: 28, height: 28)
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .foregroundStyle(alertTint)
-            .help(alertHelpText)
-            .padding(.trailing, AppPalette.spaceM)
-            .accessibilityLabel("\(row.displayName)，\(alertHelpText)")
         }
+        .frame(height: 58)
         .interactiveSurface(
             isSelected: isSelected,
             tint: tint,
@@ -337,6 +369,14 @@ private struct PersonalWatchlistListRow: View {
         )
         .animation(AppPalette.motionStandard, value: isSelected)
         .accessibilityLabel("\(row.displayName)，\(isSelected ? "收起走势" : "展开走势")")
+    }
+
+    private var alertControlWidth: CGFloat {
+        28 + AppPalette.spaceM + AppPalette.spaceS
+    }
+
+    private var disclosureWidth: CGFloat {
+        14
     }
 
     private var alertHelpText: String {
@@ -374,6 +414,13 @@ private struct PersonalWatchlistSparkline: View {
         AppPalette.marketTint(for: row.changeSinceFollowPct)
     }
 
+    private var yDomain: ClosedRange<Double> {
+        let prices = points.map(\.price)
+        guard let minimum = prices.min(), let maximum = prices.max() else { return 0...1 }
+        let spread = max(maximum - minimum, abs(maximum) * 0.01, 0.0001)
+        return (minimum - spread * 0.10)...(maximum + spread * 0.10)
+    }
+
     var body: some View {
         if points.isEmpty {
             Text("待记录")
@@ -406,6 +453,7 @@ private struct PersonalWatchlistSparkline: View {
                     .symbolSize(12)
                 }
             }
+            .chartYScale(domain: yDomain)
             .chartXAxis(.hidden)
             .chartYAxis(.hidden)
             .chartLegend(.hidden)
@@ -483,20 +531,11 @@ private struct PersonalWatchlistDetailChart: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
-            HStack(alignment: .top, spacing: AppPalette.spaceS) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(row.displayName)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(AppPalette.ink)
-                        .lineLimit(1)
-                    HStack(spacing: 6) {
-                        Text(row.item.normalizedCode)
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(AppPalette.muted)
-                        ToolbarBadge(title: row.item.marketLabel, tint: categoryTint)
-                    }
-                }
+        VStack(alignment: .leading, spacing: AppPalette.spaceS) {
+            HStack(spacing: AppPalette.spaceS) {
+                Label("价格走势", systemImage: "chart.xyaxis.line")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(AppPalette.muted)
                 Spacer(minLength: 8)
                 Picker("范围", selection: $range) {
                     ForEach(PersonalWatchlistChartRange.allCases) { range in
@@ -505,43 +544,7 @@ private struct PersonalWatchlistDetailChart: View {
                 }
                 .labelsHidden()
                 .pickerStyle(.segmented)
-                .frame(width: 172)
-            }
-
-            HStack(spacing: 0) {
-                chartMetric(
-                    "关注价",
-                    watchlistPriceText(row.record.baseline?.price, item: row.item),
-                    tint: AppPalette.ink
-                )
-                metricDivider
-                chartMetric(
-                    "当前",
-                    watchlistPriceText(row.currentPrice, item: row.item),
-                    tint: AppPalette.ink
-                )
-                metricDivider
-                chartMetric("关注以来", percentOptional(row.changeSinceFollowPct), tint: changeTint)
-            }
-
-            if let rules = row.record.alertRules {
-                HStack(spacing: 7) {
-                    Image(systemName: row.record.effectiveAlertState.isTriggered ? "bell.badge.fill" : "bell.fill")
-                    Text(watchlistAlertRulesText(rules, item: row.item))
-                        .lineLimit(1)
-                    Spacer(minLength: 8)
-                    Text(row.record.effectiveAlertState.isTriggered ? "已触发" : "监控中")
-                        .fontWeight(.semibold)
-                }
-                .font(.system(size: 9))
-                .foregroundStyle(row.record.effectiveAlertState.isTriggered ? AppPalette.warning : categoryTint)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 7)
-                .background(
-                    (row.record.effectiveAlertState.isTriggered ? AppPalette.warning : categoryTint)
-                        .opacity(0.08),
-                    in: RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                )
+                .frame(width: 156)
             }
 
             if chartPoints.isEmpty {
@@ -556,10 +559,10 @@ private struct PersonalWatchlistDetailChart: View {
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
                 }
-                .frame(maxWidth: .infinity, minHeight: 210)
+                .frame(maxWidth: .infinity, minHeight: 128)
             } else {
                 chart
-                    .frame(height: 220)
+                    .frame(height: 148)
                     .overlay { tooltipOverlay }
             }
 
@@ -574,7 +577,7 @@ private struct PersonalWatchlistDetailChart: View {
             }
             .font(.system(size: 9, weight: .medium))
         }
-        .padding(14)
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .cardStroke(opacity: 0.38)
@@ -708,34 +711,6 @@ private struct PersonalWatchlistDetailChart: View {
         .allowsHitTesting(false)
     }
 
-    private var categoryTint: Color {
-        switch row.category {
-        case .offExchangeFund: return AppPalette.brand
-        case .onExchangeFund: return AppPalette.accentWarm
-        case .stock: return AppPalette.info
-        }
-    }
-
-    private var metricDivider: some View {
-        Rectangle()
-            .fill(AppPalette.line.opacity(0.4))
-            .frame(width: 1, height: 34)
-    }
-
-    private func chartMetric(_ title: String, _ value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.system(size: 9))
-                .foregroundStyle(AppPalette.muted)
-            Text(value)
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                .foregroundStyle(tint)
-                .monospacedDigit()
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, AppPalette.spaceS)
-    }
 }
 
 private struct PersonalWatchlistAlertSheet: View {
