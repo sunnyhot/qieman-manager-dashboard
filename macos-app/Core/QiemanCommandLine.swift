@@ -84,11 +84,9 @@ struct QiemanCommandLine {
     """
 
     private let arguments: QiemanCommandArguments
-    private let environment: [String: String]
 
-    init(arguments: [String], environment: [String: String] = ProcessInfo.processInfo.environment) throws {
+    init(arguments: [String]) throws {
         self.arguments = try QiemanCommandArguments(arguments)
-        self.environment = environment
     }
 
     /// 执行命令并返回写入 stdout 的字节。
@@ -350,10 +348,10 @@ struct QiemanCommandLine {
         let managerName = arguments.string("manager-name", default: "ETF拯救世界")
         let forumMode = arguments.string("forum-mode", default: "auto")
         guard ["auto", "following", "public"].contains(forumMode) else {
-            throw QiemanCommandLineError.usage("--forum-mode 仅支持 auto、following 或 public（登录态移除后均回退到 public）")
+            throw QiemanCommandLineError.usage("--forum-mode 已废弃（登录态移除），所有取值都会回退到 public")
         }
         async let platformTask = QiemanPlatformNativeClient().fetchPlatformPayload(prodCode: prodCode)
-        let forumResult = try await watchForumSnapshot(mode: forumMode, managerName: managerName)
+        let forumResult = try await watchForumSnapshot(mode: forumMode)
         let platform = try await platformTask
         let forum = forumResult.payload
         let trades = Array((platform.actions ?? []).prefix(max(1, arguments.int("max-trades", default: 120)))).map(actionRow)
@@ -488,11 +486,10 @@ struct QiemanCommandLine {
     }
 
     private func watchForumSnapshot(
-        mode: String,
-        managerName: String
+        mode: String
     ) async throws -> (payload: SnapshotPayload, source: String, note: String) {
         let effective = mode.lowercased()
-        if effective != "public" && !effective.isEmpty {
+        if effective != "public" {
             FileHandle.standardError.write("forum-mode '\(mode)' 已废弃（登录态移除），回退到 public。\n".data(using: .utf8)!)
         }
         return (

@@ -204,7 +204,7 @@ struct ContentView: View {
                 }
 
                 if shouldShowQueryToolbar {
-                    queryToolbarPanel
+                    collapsibleFilterPanel
                 }
             }
             .padding(.horizontal, AppPalette.toolbarPaddingH)
@@ -216,13 +216,6 @@ struct ContentView: View {
             )
 
             Divider()
-        }
-    }
-
-    private var queryToolbarPanel: some View {
-        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
-            // 可折叠的参数卡片
-            collapsibleFilterPanel
         }
     }
 
