@@ -43,6 +43,53 @@ final class QiemanNativeClient {
         }
     }
 
+    /// 拉取全部小组及其主理人，建立主理人索引。
+    /// 数据源：awesome-list（约 1 页）+ 每个小组 manager-info（约 6 次）。
+    func fetchManagerIndex() async throws -> [ManagerSummary] {
+        var summaries: [ManagerSummary] = []
+        var seenGroupIDs: Set<Int> = []
+        for page in 1...5 {
+            let payload = try await requestJSON(
+                path: "/community/group/awesome-list",
+                params: ["page": String(page), "size": "50"],
+                cookie: nil
+            )
+            guard let object = payload as? [String: Any],
+                  let groups = object["data"] as? [[String: Any]],
+                  !groups.isEmpty else {
+                break
+            }
+            for group in groups {
+                let groupID = positiveInt(group["groupId"], fallback: 0)
+                guard groupID > 0, !seenGroupIDs.contains(groupID) else { continue }
+                seenGroupIDs.insert(groupID)
+                let groupName = normalizedString(group["groupName"])
+                do {
+                    let managerPayload = try await requestJSON(
+                        path: "/community/group/manager-info",
+                        params: ["groupId": String(groupID)],
+                        cookie: nil
+                    )
+                    let leader = (((managerPayload as? [String: Any])?["groupLeaderInfo"] as? [String: Any])?["leader"] as? [String: Any]) ?? [:]
+                    let brokerUserId = normalizedString(leader["brokerUserId"])
+                    guard !brokerUserId.isEmpty else { continue }
+                    summaries.append(ManagerSummary(
+                        brokerUserId: brokerUserId,
+                        userName: normalizedString(leader["userName"]),
+                        userLabel: normalizedString(leader["userLabel"]),
+                        userAvatarURL: normalizedString(leader["userAvatarUrl"]),
+                        groupId: groupID,
+                        groupName: groupName
+                    ))
+                } catch {
+                    continue
+                }
+            }
+            if groups.count < 50 { break }
+        }
+        return summaries.sorted { $0.userName < $1.userName }
+    }
+
     func fetchComments(
         postID: Int,
         sortType: String,
