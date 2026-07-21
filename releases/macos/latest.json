@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.3.0/QiemanDashboard-3.3.0.zip",
-    "name" : "QiemanDashboard-3.3.0.zip",
-    "sha256" : "6b3b6195e95bd76c51137e4ce30e625ee1f8593520a3b57e7dc9f53aa5f81457",
-    "size" : 4529385
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.3.1/QiemanDashboard-3.3.1.zip",
+    "name" : "QiemanDashboard-3.3.1.zip",
+    "sha256" : "b005dc292e9af1c1f23c5f364adbce43313a6589e9f5cb18f06b04eb65c8ad8b",
+    "size" : 4823430
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.3.0/QiemanDashboard-3.3.0.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.3.1/QiemanDashboard-3.3.1.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.3.0.zip",
-      "size" : 4529385
+      "name" : "QiemanDashboard-3.3.1.zip",
+      "size" : 4823430
     }
   ],
-  "body" : "拆分大文件并将 CLI 输出契约 DTO 化\n新增「退出应用」入口",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.3.0",
-  "name" : "QiemanDashboard v3.3.0",
-  "notes" : "拆分大文件并将 CLI 输出契约 DTO 化\n新增「退出应用」入口",
+  "body" : "新增关注列表与价格提醒",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.3.1",
+  "name" : "QiemanDashboard v3.3.1",
+  "notes" : "新增关注列表与价格提醒",
   "published_at" : "",
-  "sha256" : "6b3b6195e95bd76c51137e4ce30e625ee1f8593520a3b57e7dc9f53aa5f81457",
-  "tag" : "v3.3.0",
-  "tag_name" : "v3.3.0",
-  "version" : "3.3.0"
+  "sha256" : "b005dc292e9af1c1f23c5f364adbce43313a6589e9f5cb18f06b04eb65c8ad8b",
+  "tag" : "v3.3.1",
+  "tag_name" : "v3.3.1",
+  "version" : "3.3.1"
 }
