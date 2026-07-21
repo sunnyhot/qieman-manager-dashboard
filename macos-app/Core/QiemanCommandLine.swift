@@ -67,13 +67,8 @@ struct QiemanCommandLine {
 
     用法：qieman-cli <command> [options]
 
-      auth-status          验证登录态
-      following-posts      查询关注动态
-      following-users      查询关注用户
-      my-groups            查询已加入小组
       group-lookup         解析小组
       group-posts          查询公开小组动态
-      space-items          查询个人空间动态
       public-items         查询公开主理人动态（原生小组源）
       post-comments        查询帖子评论
       platform-actions     查询平台调仓
@@ -85,8 +80,7 @@ struct QiemanCommandLine {
       signal-extract       从 JSON 文件提取交易关键词
       app-open             打开原生 macOS App
 
-    通用登录参数：--cookie-file PATH 或环境变量 QIEMAN_COOKIE。
-    所有数据命令默认输出 JSON；不输出 Cookie 原文。
+    所有数据命令默认输出 JSON。
     """
 
     private let arguments: QiemanCommandArguments
@@ -107,20 +101,10 @@ struct QiemanCommandLine {
             return try QiemanCLI.encodeJSON(
                 CLIVersionOutput(version: "1", runtime: "swift", platform: "macos")
             )
-        case "auth-status":
-            return try await authStatus()
-        case "following-posts":
-            return try await snapshot(mode: .followingPosts)
-        case "following-users":
-            return try await snapshot(mode: .followingUsers)
-        case "my-groups":
-            return try await snapshot(mode: .myGroups)
         case "group-lookup":
             return try await groupLookup()
         case "group-posts":
             return try await snapshot(mode: .groupManager)
-        case "space-items":
-            return try await snapshot(mode: .spaceItems)
         case "public-items":
             return try await publicItems()
         case "post-comments":
@@ -147,19 +131,6 @@ struct QiemanCommandLine {
     }
 
     // MARK: - Handlers
-
-    private func authStatus() async throws -> Data {
-        let payload = await nativeClient().validateAuth()
-        let output = CLIAuthStatusOutput(
-            ok: payload.ok,
-            error: payload.ok ? "" : payload.message,
-            userName: payload.userName,
-            brokerUserId: payload.brokerUserId,
-            userLabel: payload.userLabel,
-            userAvatarUrl: ""
-        )
-        return try QiemanCLI.encodeJSON(output)
-    }
 
     private func snapshot(mode: QueryMode) async throws -> Data {
         let payload = try await fetchSnapshot(mode: mode)
@@ -379,7 +350,7 @@ struct QiemanCommandLine {
         let managerName = arguments.string("manager-name", default: "ETF拯救世界")
         let forumMode = arguments.string("forum-mode", default: "auto")
         guard ["auto", "following", "public"].contains(forumMode) else {
-            throw QiemanCommandLineError.usage("--forum-mode 仅支持 auto、following 或 public")
+            throw QiemanCommandLineError.usage("--forum-mode 仅支持 auto、following 或 public（登录态移除后均回退到 public）")
         }
         async let platformTask = QiemanPlatformNativeClient().fetchPlatformPayload(prodCode: prodCode)
         let forumResult = try await watchForumSnapshot(mode: forumMode, managerName: managerName)
@@ -492,24 +463,7 @@ struct QiemanCommandLine {
     // MARK: - Support
 
     private func nativeClient() -> QiemanNativeClient {
-        QiemanNativeClient(cookieFileURL: cookieFileURL(), rawCookie: rawCookie())
-    }
-
-    private func rawCookie() -> String? {
-        let direct = arguments.string("cookie")
-        if !direct.isEmpty { return direct }
-        let envName = arguments.string("cookie-env", default: "QIEMAN_COOKIE")
-        return environment[envName]
-    }
-
-    private func cookieFileURL() -> URL? {
-        let explicit = arguments.string("cookie-file")
-        if !explicit.isEmpty { return URL(fileURLWithPath: NSString(string: explicit).expandingTildeInPath) }
-        if let dataDirectory = environment["QIEMAN_DATA_DIR"], !dataDirectory.isEmpty {
-            return URL(fileURLWithPath: dataDirectory).appendingPathComponent("qieman.cookie")
-        }
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-        return appSupport?.appendingPathComponent("QiemanDashboard/qieman.cookie")
+        QiemanNativeClient()
     }
 
     private func fetchSnapshot(
@@ -525,8 +479,6 @@ struct QiemanCommandLine {
         form.groupURL = arguments.string("group-url")
         form.groupID = arguments.string("group-id")
         form.userName = userNameOverride ?? arguments.string("user-name")
-        form.brokerUserID = arguments.string("broker-user-id")
-        form.spaceUserID = arguments.string("space-user-id")
         form.keyword = keywordOverride ?? arguments.string("keyword")
         form.since = arguments.string("since")
         form.until = arguments.string("until")
@@ -539,28 +491,15 @@ struct QiemanCommandLine {
         mode: String,
         managerName: String
     ) async throws -> (payload: SnapshotPayload, source: String, note: String) {
-        if mode == "public" {
-            return (
-                try await fetchSnapshot(mode: .groupManager, userNameOverride: nil),
-                "public-group",
-                ""
-            )
+        let effective = mode.lowercased()
+        if effective != "public" && !effective.isEmpty {
+            FileHandle.standardError.write("forum-mode '\(mode)' 已废弃（登录态移除），回退到 public。\n".data(using: .utf8)!)
         }
-        do {
-            return (
-                try await fetchSnapshot(mode: .followingPosts, userNameOverride: managerName),
-                "following-posts",
-                ""
-            )
-        } catch {
-            guard mode == "auto" else { throw error }
-            let publicPayload = try await fetchSnapshot(mode: .groupManager, userNameOverride: nil)
-            return (
-                publicPayload,
-                "public-group",
-                "关注流不可用，已回退到且慢公开小组源。"
-            )
-        }
+        return (
+            try await fetchSnapshot(mode: .groupManager, userNameOverride: nil),
+            "public-group",
+            ""
+        )
     }
 
     private func filteredActions(_ actions: [PlatformActionPayload]) -> [PlatformActionPayload] {

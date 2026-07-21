@@ -13,22 +13,13 @@ struct CLIAppOpenOutput: Codable {
     let appPath: String
 }
 
-// MARK: - Auth status
+// MARK: - Snapshot group lookup
 
 struct CLISnapshotGroupRow: Codable, Equatable {
     let groupId: Int
     let groupName: String
     let managerName: String
     let managerBrokerUserId: String
-}
-
-struct CLIAuthStatusOutput: Codable {
-    let ok: Bool
-    let error: String
-    let userName: String
-    let brokerUserId: String
-    let userLabel: String
-    let userAvatarUrl: String
 }
 
 struct CLIGroupLookupOutput: Codable {
