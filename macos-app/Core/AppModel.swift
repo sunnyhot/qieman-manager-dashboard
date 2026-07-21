@@ -69,6 +69,14 @@ final class AppModel: ObservableObject {
     @Published private(set) var updateState = UpdateState()
     @Published private(set) var enhancementState = EnhancementState()
 
+    // MARK: Manager index (主理人订阅模式)
+    // 说明：使用 internal setter 以便在 AppModel/Auth.swift 等 extension 中赋值，
+    // 与现有 portfolioState/forumState 等通过 computed property 代理子模型的方式不同，
+    // 这三个状态直接挂在 AppModel 上，供 loadManagerIndex 直接写入。
+    @Published var managerIndex: [ManagerSummary] = []
+    @Published var isLoadingManagerIndex = false
+    @Published var managerIndexError: String?
+
     // MARK: Remaining @Published properties
     @Published var form = QueryFormState()
     @Published var isBootstrapping = false
@@ -519,6 +527,7 @@ final class AppModel: ObservableObject {
             loadManagerWatchSettings()
             loadEnhancementState()
             refreshLaunchAtLoginStatus()
+            Task { await loadManagerIndex() }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -577,8 +586,7 @@ final class AppModel: ObservableObject {
         errorMessage = ""
         defer { isRefreshing = false }
 
-        let currentForm = form
-        async let snapshotTask = nativeClient.fetchSnapshot(form: currentForm, persist: false, outputDirectory: nil)
+        async let snapshotTask = fetchSnapshotForCurrentForm()
         async let platformTask = fetchPlatformIfPossible()
 
         var refreshedSnapshot: SnapshotPayload?
@@ -633,5 +641,29 @@ final class AppModel: ObservableObject {
         }
 
         await refreshMarketIndicesIfNeeded()
+    }
+
+    /// 按 filterMode 决定如何拉取论坛快照：
+    /// - `.managerSubscription`：根据选中的主理人聚合多小组。
+    /// - `.preciseParams`：沿用既有 fetchSnapshot 的精确参数模式。
+    private func fetchSnapshotForCurrentForm() async throws -> SnapshotPayload {
+        let currentForm = form
+        switch currentForm.filterMode {
+        case .managerSubscription:
+            let groupIds = currentForm.selectedManagerIds.compactMap { id in
+                managerIndex.first { $0.brokerUserId == id }?.groupId
+            }
+            let pages = Int(currentForm.pages) ?? 5
+            let pageSize = Int(currentForm.pageSize) ?? 10
+            return try await nativeClient.fetchMultiGroupSnapshot(
+                groupIds: groupIds,
+                pages: pages,
+                pageSize: pageSize,
+                persist: false,
+                outputDirectory: nil
+            )
+        case .preciseParams:
+            return try await nativeClient.fetchSnapshot(form: currentForm, persist: false, outputDirectory: nil)
+        }
     }
 }

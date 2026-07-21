@@ -44,6 +44,20 @@ extension AppModel {
     func openDataDirectory() {
         dataController.openDataDirectory()
     }
+
+    // MARK: - Manager index (主理人订阅模式)
+
+    func loadManagerIndex() async {
+        guard !isLoadingManagerIndex else { return }
+        isLoadingManagerIndex = true
+        managerIndexError = nil
+        do {
+            managerIndex = try await nativeClient.fetchManagerIndex()
+        } catch {
+            managerIndexError = error.localizedDescription
+        }
+        isLoadingManagerIndex = false
+    }
 }
 
 // MARK: - App Settings, Window & Status
