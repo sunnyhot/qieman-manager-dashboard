@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.4.1/QiemanDashboard-3.4.1.zip",
-    "name" : "QiemanDashboard-3.4.1.zip",
-    "sha256" : "3f8a2515f375d1c8942caf0765ccb442ec7ba37e98942d7a6239199e97b3481b",
-    "size" : 4631780
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.4.2/QiemanDashboard-3.4.2.zip",
+    "name" : "QiemanDashboard-3.4.2.zip",
+    "sha256" : "8faab4de9d8bc3b0702a03d0c5a5eca2d293a7e664137f0948bb439118b012e5",
+    "size" : 4632353
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.4.1/QiemanDashboard-3.4.1.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.4.2/QiemanDashboard-3.4.2.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.4.1.zip",
-      "size" : 4631780
+      "name" : "QiemanDashboard-3.4.2.zip",
+      "size" : 4632353
     }
   ],
-  "body" : "PersonalWatchlistAlert 阈值比较引入浮点容差",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.4.1",
-  "name" : "QiemanDashboard v3.4.1",
-  "notes" : "PersonalWatchlistAlert 阈值比较引入浮点容差",
+  "body" : "关注列表 item 通栏与展开动画",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.4.2",
+  "name" : "QiemanDashboard v3.4.2",
+  "notes" : "关注列表 item 通栏与展开动画",
   "published_at" : "",
-  "sha256" : "3f8a2515f375d1c8942caf0765ccb442ec7ba37e98942d7a6239199e97b3481b",
-  "tag" : "v3.4.1",
-  "tag_name" : "v3.4.1",
-  "version" : "3.4.1"
+  "sha256" : "8faab4de9d8bc3b0702a03d0c5a5eca2d293a7e664137f0948bb439118b012e5",
+  "tag" : "v3.4.2",
+  "tag_name" : "v3.4.2",
+  "version" : "3.4.2"
 }
