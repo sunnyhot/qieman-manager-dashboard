@@ -368,19 +368,19 @@ private struct MenuBarSummaryCard: View {
         let dailyChange = snapshot.dailyChangeSummary
         let dailyTint = AppPalette.marketTint(for: dailyChange.amount)
 
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
             Text(currencyText(personalSummary?.totalEffectiveHoldingAmount ?? snapshot.totalMarketValue))
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundStyle(AppPalette.ink)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 4) {
                 SummaryPill(title: "今日涨跌", value: dailyChangeCurrencyText(dailyChange.amount), tint: dailyTint)
                 SummaryPill(title: "今日涨跌率", value: dailyChangePercentText(dailyChange.pct), tint: dailyTint)
                 SummaryPill(title: "总收益", value: signedCurrencyText(snapshot.totalProfitAmount), tint: profitTint)
                 SummaryPill(title: "总收益率", value: percentOptional(snapshot.totalProfitPct), tint: profitTint)
             }
         }
-        .padding(10)
+        .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppPalette.cardStrong)
         .clipShape(RoundedRectangle(cornerRadius: AppPalette.panelRadius))
@@ -397,19 +397,21 @@ private struct SummaryPill: View {
     let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 6) {
             Text(title)
-                .font(.system(size: 10))
+                .font(.system(size: 9))
                 .foregroundStyle(AppPalette.muted)
+                .lineLimit(1)
+            Spacer(minLength: 4)
             Text(value)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(tint)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .monospacedDigit()
         }
-        .frame(maxWidth: .infinity, minHeight: 44, maxHeight: 44, alignment: .leading)
-        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, minHeight: 30, maxHeight: 30, alignment: .leading)
+        .padding(.horizontal, 7)
         .background(tint.opacity(0.10))
         .clipShape(RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
