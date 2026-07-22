@@ -235,6 +235,7 @@ final class QiemanAlfaClient {
                 for (partIndex, part) in parts.enumerated() {
                     guard let action = makeAction(
                         from: part,
+                        poCode: poCode,
                         adjustmentID: adjustmentID,
                         adjustmentComment: comment,
                         groupName: groupName,
@@ -272,6 +273,7 @@ final class QiemanAlfaClient {
     /// 把单个 part（含 beforePercent/afterPercent/fund）映射成调仓动作。
     private static func makeAction(
         from part: [String: Any],
+        poCode: String,
         adjustmentID: Int,
         adjustmentComment: String,
         groupName: String,
@@ -327,7 +329,8 @@ final class QiemanAlfaClient {
             valuationChangePct: nil,
             beforePercent: before,
             afterPercent: after,
-            groupName: groupName.isEmpty ? nil : groupName
+            groupName: groupName.isEmpty ? nil : groupName,
+            sourcePoCode: poCode.isEmpty ? nil : poCode
         )
     }
 

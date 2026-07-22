@@ -72,7 +72,7 @@ final class AppModel: ObservableObject {
     // alfa 投顾组合
     @Published var alfaPortfolios: [AlfaPortfolioCatalogItem] = []
     @Published var alfaPayload: PlatformPayload?
-    @Published var selectedAlfaPoCode: String?
+    @Published var selectedAlfaPoCodes: Set<String> = []
     @Published var isLoadingAlfa = false
     @Published var alfaError: String?
     @Published var alfaCatalog: [AlfaPortfolioCatalogItem] = []

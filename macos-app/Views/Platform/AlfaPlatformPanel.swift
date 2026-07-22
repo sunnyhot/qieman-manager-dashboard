@@ -2,17 +2,19 @@ import SwiftUI
 
 // MARK: - AlfaPlatformPanel
 
-/// alfa 投顾组合调仓面板：组合切换 + 添加 + 调仓列表/详情。
-/// 复用 `PlatformActionRow` / `PlatformActionDetailCard` 渲染（数据已拍平为
-/// `PlatformActionPayload`，百分比语义编码在 `actionTitle` 与 `beforePercent/afterPercent`）。
+/// alfa 投顾组合调仓面板：汇总所有组合调仓 + 按组合 chip 筛选 + 左右 master-detail 布局。
+/// 复用 `PlatformActionRow` / `PlatformActionDetailCard` 渲染。
 struct AlfaPlatformPanel: View {
     @EnvironmentObject private var model: AppModel
     @State private var selectedActionID: String?
     @State private var showingAddSheet = false
     @State private var manualPoCode = ""
 
+    private let compactThreshold: CGFloat = 900
+    private let detailAnchor = "alfa-detail-panel"
+
     private var actions: [PlatformActionPayload] {
-        model.alfaPayload?.actions ?? []
+        model.filteredAlfaActions
     }
 
     private var selectedAction: PlatformActionPayload? {
@@ -23,31 +25,42 @@ struct AlfaPlatformPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            portfolioSwitcher
+        GeometryReader { proxy in
+            let isCompact = proxy.size.width < compactThreshold
+            ScrollViewReader { scrollProxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        filterBar
 
-            if model.alfaPortfolios.isEmpty {
-                EmptySectionState(
-                    title: "还没有添加投顾组合",
-                    subtitle: "点右上角"+"添加且慢投顾组合（如晓磊「基金全磊打之大航海时代」）。",
-                    actionTitle: "添加组合"
-                ) {
-                    showingAddSheet = true
+                        if model.alfaPortfolios.isEmpty {
+                            emptyPortfoliosState
+                        } else if model.isLoadingAlfa {
+                            loadingState
+                        } else if let error = model.alfaError, actions.isEmpty {
+                            errorState(error)
+                        } else if actions.isEmpty {
+                            emptyActionsState
+                        } else if isCompact {
+                            VStack(alignment: .leading, spacing: 8) {
+                                actionsList(isCompact: true, scrollProxy: scrollProxy)
+                                if let selected = selectedAction {
+                                    PlatformActionDetailCard(action: selected)
+                                        .id(detailAnchor)
+                                }
+                            }
+                        } else {
+                            HStack(alignment: .top, spacing: 10) {
+                                actionsList(isCompact: false, scrollProxy: scrollProxy)
+                                    .frame(width: min(max(proxy.size.width * 0.36, 320), 420), alignment: .top)
+                                if let selected = selectedAction {
+                                    PlatformActionDetailCard(action: selected)
+                                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                                }
+                            }
+                        }
+                    }
+                    .padding(AppPalette.contentPadding)
                 }
-            } else if model.isLoadingAlfa {
-                loadingState
-            } else if let error = model.alfaError {
-                errorState(error)
-            } else if actions.isEmpty {
-                EmptySectionState(
-                    title: "该组合暂无调仓记录",
-                    subtitle: "这个投顾组合目前没有公开的调仓动作。",
-                    actionTitle: "刷新"
-                ) {
-                    Task { await model.refreshAlfaPayload() }
-                }
-            } else {
-                actionsContent
             }
         }
         .sheet(isPresented: $showingAddSheet) {
@@ -60,38 +73,25 @@ struct AlfaPlatformPanel: View {
         }
     }
 
-    // MARK: - 组合切换器
+    // MARK: - 筛选栏
 
-    private var portfolioSwitcher: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "person.crop.rectangle.stack")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(AppPalette.brand)
-
-            if model.alfaPortfolios.isEmpty {
-                Text("投顾组合")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppPalette.muted)
-            } else {
-                Picker("投顾组合", selection: alfaSelectionBinding) {
-                    ForEach(model.alfaPortfolios) { portfolio in
-                        Text(portfolio.name).tag(portfolio.poCode as String?)
+    private var filterBar: some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
+                if model.alfaPortfolios.isEmpty {
+                    Text("投顾组合")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.muted)
+                } else {
+                    FlowLayout(spacing: 6) {
+                        ForEach(model.alfaPortfolios) { portfolio in
+                            portfolioChip(portfolio)
+                        }
                     }
                 }
-                .pickerStyle(.menu)
-                .labelsHidden()
             }
-
-            Spacer()
-
-            Button {
-                showingAddSheet = true
-            } label: {
-                Label("添加", systemImage: "plus.circle")
-                    .font(.system(size: 11, weight: .medium))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(AppPalette.brand)
+            Spacer(minLength: 8)
+            actionButtons
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -102,64 +102,141 @@ struct AlfaPlatformPanel: View {
         )
     }
 
-    private var alfaSelectionBinding: Binding<String?> {
-        Binding(
-            get: { model.selectedAlfaPoCode },
-            set: { newCode in
-                guard let newCode else { return }
-                model.selectedAlfaPoCode = newCode
-                selectedActionID = nil
-                Task { await model.fetchAlfaPayload(poCode: newCode) }
-            }
-        )
+    private func portfolioChip(_ portfolio: AlfaPortfolioCatalogItem) -> some View {
+        let selected = model.selectedAlfaPoCodes.contains(portfolio.poCode)
+        return Button {
+            model.toggleAlfaPoCode(portfolio.poCode)
+            selectedActionID = nil
+        } label: {
+            Text(portfolio.name)
+                .font(.system(size: 11, weight: selected ? .semibold : .regular))
+                .foregroundStyle(selected ? .white : AppPalette.ink)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
+                        .fill(selected ? AppPalette.brand : AppPalette.cardStrong)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
+                        .stroke(selected ? AppPalette.brand : AppPalette.line.opacity(0.4), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
     }
 
-    // MARK: - 调仓内容
+    private var actionButtons: some View {
+        VStack(spacing: 6) {
+            Button {
+                showingAddSheet = true
+            } label: {
+                Label("添加", systemImage: "plus.circle")
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(AppPalette.brand)
 
-    private var actionsContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Text("调仓记录")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(AppPalette.muted)
-                Text("\(actions.count) 条")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .foregroundStyle(AppPalette.muted)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(AppPalette.cardStrong, in: Capsule())
-                Spacer()
+            if !model.alfaPortfolios.isEmpty {
                 Button {
                     Task { await model.refreshAlfaPayload() }
                 } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppPalette.muted)
+                    Label("刷新", systemImage: "arrow.clockwise")
+                        .font(.system(size: 11, weight: .medium))
                 }
                 .buttonStyle(.plain)
-            }
-
-            LazyVStack(spacing: 4) {
-                ForEach(actions.prefix(40)) { action in
-                    PlatformActionRow(
-                        action: action,
-                        isSelected: selectedAction?.id == action.id
-                    )
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedActionID = action.id
-                    }
-                }
-            }
-
-            if let selected = selectedAction {
-                Divider().padding(.vertical, 4)
-                PlatformActionDetailCard(action: selected)
+                .foregroundStyle(AppPalette.muted)
             }
         }
     }
 
+    // MARK: - 调仓列表
+
+    private func actionsList(isCompact: Bool, scrollProxy: ScrollViewProxy) -> some View {
+        SectionCard(
+            title: "调仓记录",
+            subtitle: isCompact ? "窄窗口先选动作，再向下看详情" : "左侧选动作，右侧看详情",
+            icon: "list.bullet.rectangle"
+        ) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Text("\(actions.count) 条")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppPalette.muted)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(AppPalette.cardStrong, in: Capsule())
+                    Spacer()
+                }
+
+                if isCompact {
+                    LazyVStack(spacing: 4) {
+                        actionButtons(isCompact: true, scrollProxy: scrollProxy)
+                    }
+                } else {
+                    ScrollView(.vertical, showsIndicators: true) {
+                        LazyVStack(spacing: 4) {
+                            actionButtons(isCompact: false, scrollProxy: scrollProxy)
+                        }
+                        .padding(.trailing, 4)
+                    }
+                    .frame(height: PlatformWorkspaceLayout.actionListHeight)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func actionButtons(isCompact: Bool, scrollProxy: ScrollViewProxy) -> some View {
+        ForEach(actions.prefix(60)) { action in
+            let prefix = portfolioPrefix(for: action)
+            Button {
+                selectedActionID = action.id
+                if isCompact {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        scrollProxy.scrollTo(detailAnchor, anchor: .top)
+                    }
+                }
+            } label: {
+                PlatformActionRow(
+                    action: action,
+                    isSelected: selectedAction?.id == action.id,
+                    isCompact: true,
+                    titlePrefix: prefix
+                )
+            }
+            .buttonStyle(PressResponsiveButtonStyle())
+        }
+    }
+
+    /// 来源组合名前缀（汇总多组合时区分来源）。
+    private func portfolioPrefix(for action: PlatformActionPayload) -> String {
+        guard let name = model.alfaPortfolioName(for: action.sourcePoCode), !name.isEmpty else {
+            return ""
+        }
+        return "[\(name)] "
+    }
+
     // MARK: - 状态视图
+
+    private var emptyPortfoliosState: some View {
+        EmptySectionState(
+            title: "还没有添加投顾组合",
+            subtitle: "点右上角「添加」，选择且慢投顾组合（如晓磊「基金全磊打之大航海时代」）。",
+            actionTitle: "添加组合"
+        ) {
+            showingAddSheet = true
+        }
+    }
+
+    private var emptyActionsState: some View {
+        EmptySectionState(
+            title: "暂无调仓记录",
+            subtitle: "所选投顾组合目前没有公开的调仓动作。",
+            actionTitle: "刷新"
+        ) {
+            Task { await model.refreshAlfaPayload() }
+        }
+    }
 
     private var loadingState: some View {
         HStack(spacing: 8) {

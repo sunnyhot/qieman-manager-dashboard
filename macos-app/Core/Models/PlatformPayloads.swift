@@ -51,6 +51,8 @@ struct PlatformActionPayload: Decodable, Hashable, Identifiable {
     let afterPercent: Double?
     /// alfa 投顾线特有：调仓分组名（如权益/债券），长赢数据为 nil。
     let groupName: String?
+    /// alfa 投顾线特有：来源组合码（汇总筛选用），长赢数据为 nil。
+    let sourcePoCode: String?
 
     init(
         actionKey: String?,
@@ -86,7 +88,8 @@ struct PlatformActionPayload: Decodable, Hashable, Identifiable {
         valuationChangePct: Double?,
         beforePercent: Double? = nil,
         afterPercent: Double? = nil,
-        groupName: String? = nil
+        groupName: String? = nil,
+        sourcePoCode: String? = nil
     ) {
         self.actionKey = actionKey
         self.adjustmentId = adjustmentId
@@ -122,6 +125,7 @@ struct PlatformActionPayload: Decodable, Hashable, Identifiable {
         self.beforePercent = beforePercent
         self.afterPercent = afterPercent
         self.groupName = groupName
+        self.sourcePoCode = sourcePoCode
     }
 
     var id: String {

@@ -6,6 +6,11 @@ struct PlatformActionRow: View {
     let action: PlatformActionPayload
     var isSelected: Bool = false
     var isCompact: Bool = false
+    var titlePrefix: String = ""
+
+    private var displayTitleWithPrefix: String {
+        titlePrefix.isEmpty ? action.displayTitle : titlePrefix + action.displayTitle
+    }
 
     private var isBuy: Bool { action.side == "buy" }
     private var sideColor: Color { isBuy ? AppPalette.positive : AppPalette.warning }
@@ -29,12 +34,12 @@ struct PlatformActionRow: View {
                 if isCompact {
                     HStack(alignment: .center, spacing: 8) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(action.displayTitle)
+                            Text(displayTitleWithPrefix)
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(AppPalette.ink)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.82)
-                                .help(action.displayTitle)
+                                .help(displayTitleWithPrefix)
                             Text("\(action.fundName ?? action.title ?? "未命名标的") · \(action.fundCode ?? "无代码")")
                                 .font(.system(size: 10))
                                 .foregroundStyle(AppPalette.muted)
@@ -67,7 +72,7 @@ struct PlatformActionRow: View {
                 } else {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(action.displayTitle)
+                            Text(displayTitleWithPrefix)
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(AppPalette.ink)
                             Text("\(action.fundName ?? action.title ?? "未命名标的") · \(action.fundCode ?? "无代码")")

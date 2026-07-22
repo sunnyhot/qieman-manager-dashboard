@@ -121,6 +121,14 @@ final class QiemanAlfaClientTests: XCTestCase {
         XCTAssertEqual(sell?.articleUrl, "https://qieman.com/content/123")
     }
 
+    func testFlattenAdjustments设置sourcePoCode() {
+        // 拍平后每个 action 应带来源组合码（汇总筛选用）
+        let payload = QiemanAlfaClient.flattenAdjustments(poCode: "ZH158735", data: mockAdjustmentData())
+        for action in payload.actions ?? [] {
+            XCTAssertEqual(action.sourcePoCode, "ZH158735")
+        }
+    }
+
     func testFlattenAdjustments统计买卖数() {
         let payload = QiemanAlfaClient.flattenAdjustments(poCode: "X", data: mockAdjustmentData())
         XCTAssertEqual(payload.buyCount, 1)
