@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.7.0/QiemanDashboard-3.7.0.zip",
-    "name" : "QiemanDashboard-3.7.0.zip",
-    "sha256" : "99aba4a97da3b5bf5416e1f30ee1ca0bc023c1607eddf746d4197be435854be6",
-    "size" : 4731605
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.7.1/QiemanDashboard-3.7.1.zip",
+    "name" : "QiemanDashboard-3.7.1.zip",
+    "sha256" : "0be52f9b54aad61b0e687828049a4857ead4efd9b867dce9dbd7cf790ba92453",
+    "size" : 4733767
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.7.0/QiemanDashboard-3.7.0.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.7.1/QiemanDashboard-3.7.1.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.7.0.zip",
-      "size" : 4731605
+      "name" : "QiemanDashboard-3.7.1.zip",
+      "size" : 4733767
     }
   ],
-  "body" : "移除社区动态筛选面板，论坛默认长赢同路人 (#3)",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.7.0",
-  "name" : "QiemanDashboard v3.7.0",
-  "notes" : "移除社区动态筛选面板，论坛默认长赢同路人 (#3)",
+  "body" : "论坛列表点击后右侧详情不可见 (#4)\nAGENTS.md 同步移除筛选面板相关条目，补充行为约定",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.7.1",
+  "name" : "QiemanDashboard v3.7.1",
+  "notes" : "论坛列表点击后右侧详情不可见 (#4)\nAGENTS.md 同步移除筛选面板相关条目，补充行为约定",
   "published_at" : "",
-  "sha256" : "99aba4a97da3b5bf5416e1f30ee1ca0bc023c1607eddf746d4197be435854be6",
-  "tag" : "v3.7.0",
-  "tag_name" : "v3.7.0",
-  "version" : "3.7.0"
+  "sha256" : "0be52f9b54aad61b0e687828049a4857ead4efd9b867dce9dbd7cf790ba92453",
+  "tag" : "v3.7.1",
+  "tag_name" : "v3.7.1",
+  "version" : "3.7.1"
 }
