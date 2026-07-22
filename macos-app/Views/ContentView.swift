@@ -31,34 +31,6 @@ enum PersonalAssetSortOption: String, CaseIterable, Identifiable {
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
 
-    // MARK: - Collapsible Filter State
-    @State private var isQueryExpanded = false
-    @FocusState private var focusedToolbarField: String?
-
-    /// 收起时展示当前活跃（非默认值）筛选条件摘要
-    private var activeFilterSummary: String {
-        var parts: [String] = []
-        if !model.form.prodCode.isEmpty && model.form.prodCode != "LONG_WIN" {
-            parts.append("产品: \(model.form.prodCode)")
-        }
-        if !model.form.userName.isEmpty && model.form.userName != "ETF拯救世界" {
-            parts.append("主理人: \(model.form.userName)")
-        }
-        if !model.form.keyword.isEmpty {
-            parts.append("关键词: \(model.form.keyword)")
-        }
-        return parts.isEmpty ? "" : parts.joined(separator: "  ")
-    }
-
-    private var shouldShowQueryToolbar: Bool {
-        switch model.selectedSection {
-        case .platform, .forum:
-            return true
-        case .overview, .portfolio, .enhancement, .settings:
-            return false
-        }
-    }
-
     var body: some View {
         NavigationSplitView {
             sidebarNavigation
@@ -87,11 +59,6 @@ struct ContentView: View {
         }
         .onChange(of: model.selectedSection) { _, section in
             model.refreshDataForSectionIfNeeded(section)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .qiemanFocusSearch)) { _ in
-            guard model.selectedSection == .forum else { return }
-            isQueryExpanded = true
-            focusedToolbarField = "关键词"
         }
         .sheet(isPresented: $model.isPresentingUpdateSheet) {
             if let update = model.availableUpdate {
@@ -202,10 +169,6 @@ struct ContentView: View {
                         toolbarActionRow
                     }
                 }
-
-                if shouldShowQueryToolbar {
-                    collapsibleFilterPanel
-                }
             }
             .padding(.horizontal, AppPalette.toolbarPaddingH)
             .padding(.top, AppPalette.toolbarPaddingTop)
@@ -219,89 +182,6 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Collapsible Query Filter Panel
-
-    private var collapsibleFilterPanel: some View {
-        VStack(spacing: 0) {
-            // 标题栏（始终可见，点击切换展开/收起）
-            Button {
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    isQueryExpanded.toggle()
-                }
-            } label: {
-                HStack(spacing: 7) {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(AppPalette.brand)
-                        .frame(width: 18, height: 18)
-                        .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
-
-                    Text("社区动态筛选")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(AppPalette.ink)
-
-                    // 收起时展示活跃条件摘要
-                    if !isQueryExpanded && !activeFilterSummary.isEmpty {
-                        Text(activeFilterSummary)
-                            .font(.system(size: 11))
-                            .foregroundStyle(AppPalette.muted)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: isQueryExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(AppPalette.muted)
-                }
-                .padding(.horizontal, AppPalette.spaceM)
-                .padding(.vertical, 9)
-                .background(AppPalette.toolbarBackground.opacity(AppPalette.bgSettings))
-            }
-            .buttonStyle(.plain)
-
-            // 筛选内容区（展开时显示）
-            if isQueryExpanded {
-                VStack(alignment: .leading, spacing: 10) {
-                    // 筛选模式切换（主理人订阅 / 精确参数 互斥）
-                    Picker("筛选模式", selection: $model.form.filterMode) {
-                        Text("主理人订阅").tag(FilterMode.managerSubscription)
-                        Text("精确参数").tag(FilterMode.preciseParams)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: 320)
-                    .labelsHidden()
-
-                    if model.form.filterMode == .managerSubscription {
-                        ManagerPicker(
-                            managers: model.managerIndex,
-                            selectedIds: model.form.selectedManagerIds,
-                            isLoading: model.isLoadingManagerIndex,
-                            error: model.managerIndexError,
-                            onToggle: { id in
-                                if model.form.selectedManagerIds.contains(id) {
-                                    model.form.selectedManagerIds.remove(id)
-                                } else {
-                                    model.form.selectedManagerIds.insert(id)
-                                }
-                            },
-                            onRetry: { Task { await model.loadManagerIndex() } }
-                        )
-                    } else {
-                        preciseParamsContent
-                    }
-                }
-                .padding(AppPalette.spaceM)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .background(AppPalette.panelBackground.opacity(AppPalette.bgPanel), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
-        .overlay(
-            AppPalette.borderOverlay(radius: AppPalette.panelRadius, opacity: AppPalette.borderMedium)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: AppPalette.panelRadius))
-    }
 
     private var toolbarTitleBlock: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -331,74 +211,6 @@ struct ContentView: View {
         }
     }
 
-    private func toolbarField(_ label: String, text: Binding<String>, minWidth: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: AppPalette.spaceXS + 2) {
-            Text(label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(AppPalette.muted)
-            TextField("", text: text)
-                .textFieldStyle(.plain)
-                .inputFieldStyle()
-                .controlSize(.regular)
-                .accessibilityLabel(label)
-                .focused($focusedToolbarField, equals: label)
-        }
-        .frame(minWidth: minWidth, maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// 精确参数模式下的筛选项：基本参数 + 日期范围 + 高级参数。
-    /// 原样搬运自 collapsibleFilterPanel 展开内容区，字段绑定保持不变。
-    @ViewBuilder
-    private var preciseParamsContent: some View {
-        // 基本参数行
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .bottom, spacing: 10) {
-                toolbarField("产品", text: $model.form.prodCode, minWidth: 170)
-                    .frame(width: 210)
-                toolbarField("主理人", text: $model.form.userName, minWidth: 190)
-                    .frame(width: 250)
-                toolbarField("关键词", text: $model.form.keyword, minWidth: 220)
-                    .frame(maxWidth: .infinity)
-                toolbarField("页数", text: $model.form.pages, minWidth: 88)
-                    .frame(width: 104)
-                toolbarField("每页", text: $model.form.pageSize, minWidth: 88)
-                    .frame(width: 104)
-            }
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], alignment: .leading, spacing: 10) {
-                toolbarField("产品", text: $model.form.prodCode, minWidth: 170)
-                toolbarField("主理人", text: $model.form.userName, minWidth: 190)
-                toolbarField("关键词", text: $model.form.keyword, minWidth: 220)
-                toolbarField("页数", text: $model.form.pages, minWidth: 88)
-                toolbarField("每页", text: $model.form.pageSize, minWidth: 88)
-            }
-        }
-
-        // 日期范围行
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .bottom, spacing: 10) {
-                toolbarField("起始", text: $model.form.since, minWidth: 180)
-                    .frame(width: 220)
-                toolbarField("结束", text: $model.form.until, minWidth: 180)
-                    .frame(width: 220)
-                Spacer(minLength: 0)
-            }
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
-                toolbarField("起始", text: $model.form.since, minWidth: 180)
-                toolbarField("结束", text: $model.form.until, minWidth: 180)
-            }
-        }
-
-        // 高级参数（复用现有 showAdvancedParams 逻辑）
-        if model.showAdvancedParams {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], alignment: .leading, spacing: 10) {
-                toolbarField("groupId", text: $model.form.groupID, minWidth: 180)
-                toolbarField("groupUrl", text: $model.form.groupURL, minWidth: 260)
-                toolbarField("自动刷新", text: $model.form.autoRefresh, minWidth: 140)
-            }
-        }
-    }
 
     /// Double-click the toolbar title area to zoom (maximize/restore) the main window.
     /// Only targets the app's tracked main window — never a sheet, popover, or NSPanel.
