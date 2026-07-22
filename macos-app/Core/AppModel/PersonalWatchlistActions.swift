@@ -6,37 +6,51 @@ private struct PreparedPersonalWatchlistAlert {
 }
 
 extension AppModel {
-    func resolvePersonalWatchlistCode(
+    func preparePersonalWatchlistCode(
         category: PersonalWatchlistCategory,
         codeText: String
-    ) async -> PersonalAssetCodeResolution? {
+    ) -> PersonalAssetCodeResolution? {
         let rawCode = normalizedManualAssetRawCode(codeText)
         guard !rawCode.isEmpty else { return nil }
 
         let code = normalizedManualAssetCode(assetType: category.assetType, codeText: rawCode)
         guard !code.isEmpty else { return nil }
 
-        let stockMarket = category == .stock
-            ? manualStockMarket(assetType: .stock, codeText: rawCode)
-            : nil
-        let fundMarket = category.fundMarket
-        let holding = UserPortfolioHolding(
-            fundCode: code,
+        return PersonalAssetCodeResolution(
             assetType: category.assetType,
+            code: code,
+            displayName: nil,
+            stockMarket: category == .stock
+                ? manualStockMarket(assetType: .stock, codeText: rawCode)
+                : nil,
+            fundMarket: category.fundMarket
+        )
+    }
+
+    func resolvePersonalWatchlistCode(
+        category: PersonalWatchlistCategory,
+        codeText: String
+    ) async -> PersonalAssetCodeResolution? {
+        guard let prepared = preparePersonalWatchlistCode(category: category, codeText: codeText) else {
+            return nil
+        }
+        let holding = UserPortfolioHolding(
+            fundCode: prepared.code,
+            assetType: prepared.assetType,
             units: 1,
             costPrice: nil,
             displayName: nil,
-            stockMarket: stockMarket,
-            fundMarket: fundMarket
+            stockMarket: prepared.stockMarket,
+            fundMarket: prepared.fundMarket
         )
         let displayName = await platformClient.resolveAssetNames(holdings: [holding])[holding.id]
 
         return PersonalAssetCodeResolution(
-            assetType: category.assetType,
-            code: code,
+            assetType: prepared.assetType,
+            code: prepared.code,
             displayName: normalizedOptionalName(displayName),
-            stockMarket: stockMarket ?? holding.detectedMarket,
-            fundMarket: fundMarket
+            stockMarket: prepared.stockMarket ?? holding.detectedMarket,
+            fundMarket: prepared.fundMarket
         )
     }
 

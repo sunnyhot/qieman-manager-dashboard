@@ -108,6 +108,17 @@ final class UIExperienceRegressionTests: XCTestCase {
         XCTAssertTrue(menuBar.contains("ForEach(orderedSections)"))
     }
 
+    func testWatchlistLookupKeepsLocalResolutionWhileRefreshingTheName() throws {
+        let watchlist = try source(at: "Views/PersonalWatchlistView.swift")
+
+        XCTAssertTrue(watchlist.contains("model.preparePersonalWatchlistCode("))
+        XCTAssertTrue(watchlist.contains(".onChange(of: lookupKey, initial: true)"))
+        XCTAssertTrue(watchlist.contains("requestID == lookupRequestID"))
+        XCTAssertTrue(watchlist.contains("resolution = resolved ?? prepared"))
+        XCTAssertTrue(watchlist.contains(".disabled(resolution == nil || isSaving)"))
+        XCTAssertFalse(watchlist.contains(".disabled(resolution == nil || isResolving || isSaving)"))
+    }
+
     private func source(at relativePath: String) throws -> String {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

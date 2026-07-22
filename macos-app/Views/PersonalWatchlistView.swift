@@ -1069,6 +1069,8 @@ struct PersonalWatchlistAddSheet: View {
     @State private var isResolving = false
     @State private var isSaving = false
     @State private var inlineErrorMessage = ""
+    @State private var lookupRequestID = UUID()
+    @State private var lookupTask: Task<Void, Never>?
     @FocusState private var isCodeFocused: Bool
 
     private var lookupKey: String {
@@ -1146,7 +1148,7 @@ struct PersonalWatchlistAddSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(categoryTint)
-                .disabled(resolution == nil || isResolving || isSaving)
+                .disabled(resolution == nil || isSaving)
                 .keyboardShortcut(.defaultAction)
             }
         }
@@ -1155,8 +1157,11 @@ struct PersonalWatchlistAddSheet: View {
         .task {
             isCodeFocused = true
         }
-        .task(id: lookupKey) {
-            await resolveCode()
+        .onChange(of: lookupKey, initial: true) { _, _ in
+            scheduleCodeResolution()
+        }
+        .onDisappear {
+            lookupTask?.cancel()
         }
     }
 
@@ -1211,37 +1216,65 @@ struct PersonalWatchlistAddSheet: View {
         }
     }
 
-    private func resolveCode() async {
-        resolution = nil
+    private func scheduleCodeResolution() {
+        lookupTask?.cancel()
         inlineErrorMessage = ""
+        let requestedCategory = category
         let code = codeText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !code.isEmpty else {
+        let prepared = model.preparePersonalWatchlistCode(
+            category: requestedCategory,
+            codeText: code
+        )
+        resolution = prepared
+        guard let prepared else {
             isResolving = false
             return
         }
 
         isResolving = true
-        do {
-            try await Task.sleep(nanoseconds: 350_000_000)
-        } catch {
+        let requestID = UUID()
+        lookupRequestID = requestID
+        lookupTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+
+            let resolved = await model.resolvePersonalWatchlistCode(
+                category: requestedCategory,
+                codeText: code
+            )
+            guard !Task.isCancelled, requestID == lookupRequestID else { return }
+
+            resolution = resolved ?? prepared
             isResolving = false
-            return
         }
-        guard !Task.isCancelled else {
-            isResolving = false
-            return
-        }
-        resolution = await model.resolvePersonalWatchlistCode(category: category, codeText: code)
-        isResolving = false
     }
 
     private func save() async {
-        guard let resolution else { return }
+        guard let prepared = model.preparePersonalWatchlistCode(category: category, codeText: codeText) else {
+            return
+        }
+        lookupTask?.cancel()
+        isResolving = false
+        let currentResolution = resolution.flatMap { candidate in
+            candidate.assetType == prepared.assetType
+                && candidate.code == prepared.code
+                && candidate.stockMarket == prepared.stockMarket
+                && candidate.fundMarket == prepared.fundMarket
+                ? candidate
+                : nil
+        }
         inlineErrorMessage = ""
         isSaving = true
         defer { isSaving = false }
 
-        if await model.addPersonalWatchlistItem(category: category, resolution: resolution) {
+        if await model.addPersonalWatchlistItem(
+            category: category,
+            resolution: currentResolution ?? prepared
+        ) {
             dismiss()
         } else {
             inlineErrorMessage = model.errorMessage.isEmpty ? "添加关注失败，请稍后重试。" : model.errorMessage
