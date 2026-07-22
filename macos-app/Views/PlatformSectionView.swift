@@ -58,8 +58,8 @@ struct PlatformSectionView: View {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         viewMode = mode
                     }
-                    if mode == .alfa, model.alfaPayload == nil, let first = model.alfaPortfolios.first {
-                        Task { await model.fetchAlfaPayload(poCode: first.poCode) }
+                    if mode == .alfa, model.alfaPayload == nil {
+                        Task { await model.fetchAllAlfaPayloads() }
                     }
                 } label: {
                     Text(mode.label)
