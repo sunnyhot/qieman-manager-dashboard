@@ -450,16 +450,11 @@ final class QiemanNativeClient {
     }
 
     private func makeXSign() -> String {
-        let now = Int(Date().timeIntervalSince1970 * 1000)
-        let seed = Int(Double(now) * 1.01)
-        let digest = Self.sha256Hex(String(seed)).uppercased()
-        return "\(now)\(digest.prefix(32))"
+        QiemanRequestSigning.makeXSign()
     }
 
     private func makeXRequestID(pathWithQuery: String) -> String {
-        let now = Int(Date().timeIntervalSince1970 * 1000)
-        let seed = "\(Double.random(in: 0..<1))\(now)\(pathWithQuery)\(anonymousID)"
-        return "albus.\(Self.sha256Hex(seed).suffix(20).uppercased())"
+        QiemanRequestSigning.makeXRequestID(prefix: "albus.", pathWithQuery: pathWithQuery, anonymousID: anonymousID)
     }
 
     private func extractItemsFromGroupList(_ payload: Any) -> [[String: Any]] {
@@ -777,8 +772,7 @@ final class QiemanNativeClient {
     }
 
     private static func sha256Hex(_ value: String) -> String {
-        let digest = SHA256.hash(data: Data(value.utf8))
-        return digest.map { String(format: "%02x", $0) }.joined()
+        QiemanRequestSigning.sha256Hex(value)
     }
 }
 

@@ -77,6 +77,15 @@ final class AppModel: ObservableObject {
     @Published var isLoadingManagerIndex = false
     @Published var managerIndexError: String?
 
+    // alfa 投顾组合
+    @Published var alfaPortfolios: [AlfaPortfolioCatalogItem] = []
+    @Published var alfaPayload: PlatformPayload?
+    @Published var selectedAlfaPoCode: String?
+    @Published var isLoadingAlfa = false
+    @Published var alfaError: String?
+    @Published var alfaCatalog: [AlfaPortfolioCatalogItem] = []
+    @Published var isLoadingAlfaCatalog = false
+
     // MARK: Remaining @Published properties
     @Published var form = QueryFormState()
     @Published var isBootstrapping = false
@@ -100,6 +109,8 @@ final class AppModel: ObservableObject {
     // Services
     let dataController = ApplicationDataController()
     let platformClient = QiemanPlatformNativeClient()
+    let alfaClient = QiemanAlfaClient()
+    let alfaPortfolioStore = AlfaPortfolioStore()
     let portfolioStore = UserPortfolioStore()
     let personalWatchlistStore = PersonalWatchlistStore()
     let pendingTradesStore = PendingTradesStore()
@@ -525,6 +536,7 @@ final class AppModel: ObservableObject {
             loadPendingTrades()
             loadInvestmentPlans()
             loadManagerWatchSettings()
+            loadAlfaPortfolios()
             loadEnhancementState()
             refreshLaunchAtLoginStatus()
             Task { await loadManagerIndex() }

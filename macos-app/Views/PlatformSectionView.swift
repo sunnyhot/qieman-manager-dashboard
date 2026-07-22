@@ -14,6 +14,19 @@ struct PlatformWorkspaceLayout {
 struct PlatformSectionView: View {
     @EnvironmentObject private var model: AppModel
     private let detailAnchor = "platform-detail-panel"
+    @State private var viewMode: PlatformViewMode = .longWin
+
+    enum PlatformViewMode: String, CaseIterable {
+        case longWin
+        case alfa
+
+        var label: String {
+            switch self {
+            case .longWin: return "长赢调仓"
+            case .alfa: return "投顾组合"
+            }
+        }
+    }
 
     // MARK: - Body
 
@@ -24,70 +37,108 @@ struct PlatformSectionView: View {
             ScrollViewReader { scrollProxy in
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 10) {
-                        PlatformFilterBar(filterState: model.filterState)
+                        viewModePicker
 
-                        if model.hasPlatformActions || !model.platformHoldings.isEmpty {
-                            StrategyRadarPanel(summary: model.strategyRadarSummary)
-                        }
-
-                        if !model.monthlyPlatformSummary.isEmpty || !model.platformHoldings.isEmpty {
-                            collapsibleMonthlySection
-                        }
-
-                        SectionCard(
-                            title: "调仓浏览",
-                            subtitle: isCompact ? "点列表会直接跳到详情" : "左边选动作，右边看详情",
-                            icon: "square.split.2x1"
-                        ) {
-                            if model.hasPlatformActions {
-                                if isCompact {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        platformListPanel(isCompact: true, scrollProxy: scrollProxy)
-                                        platformDetailPanel
-                                            .id(detailAnchor)
-                                    }
-                                } else {
-                                    HStack(alignment: .top, spacing: 10) {
-                                        platformListPanel(isCompact: false, scrollProxy: scrollProxy)
-                                            .frame(
-                                                width: PlatformWorkspaceLayout.listWidth(for: proxy.size.width),
-                                                alignment: .top
-                                            )
-
-                                        platformDetailPanel
-                                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                                    }
-                                }
-                            } else {
-                                EmptySectionState(
-                                    title: "平台调仓暂时为空",
-                                    subtitle: "我已经把平台和论坛改成了独立刷新。现在点一次刷新，就算其中一项失败，另一项也会照常显示。",
-                                    actionTitle: "刷新调仓"
-                                ) {
-                                    Task { try? await model.refreshLatest(persist: false) }
-                                }
-                            }
-                        }
-
-                        SectionCard(title: "当前持仓", subtitle: "保留原项目的数据口径", icon: "bag") {
-                            if model.platformHoldings.isEmpty {
-                                EmptySectionState(
-                                    title: "当前没有平台持仓",
-                                    subtitle: "如果最近没有拉到调仓数据，这里会先留空；刷新后会自动恢复。",
-                                    actionTitle: "立即刷新"
-                                ) {
-                                    Task { try? await model.refreshLatest(persist: false) }
-                                }
-                            } else {
-                                LazyVStack(spacing: 6) {
-                                    ForEach(model.platformHoldings) { holding in
-                                        HoldingCard(holding: holding)
-                                    }
-                                }
-                            }
+                        if viewMode == .alfa {
+                            AlfaPlatformPanel()
+                        } else {
+                            longWinContent(isCompact: isCompact, availableWidth: proxy.size.width, scrollProxy: scrollProxy)
                         }
                     }
                     .padding(AppPalette.contentPadding)
+                }
+            }
+        }
+    }
+
+    private var viewModePicker: some View {
+        HStack(spacing: 6) {
+            ForEach(PlatformViewMode.allCases, id: \.self) { mode in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewMode = mode
+                    }
+                    if mode == .alfa, model.alfaPayload == nil, let first = model.alfaPortfolios.first {
+                        Task { await model.fetchAlfaPayload(poCode: first.poCode) }
+                    }
+                } label: {
+                    Text(mode.label)
+                        .font(.system(size: 12, weight: viewMode == mode ? .semibold : .regular))
+                        .foregroundStyle(viewMode == mode ? AppPalette.brand : AppPalette.muted)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                                .fill(viewMode == mode ? AppPalette.brand.opacity(0.12) : .clear)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+        }
+    }
+
+    @ViewBuilder
+    private func longWinContent(isCompact: Bool, availableWidth: CGFloat, scrollProxy: ScrollViewProxy) -> some View {
+        PlatformFilterBar(filterState: model.filterState)
+
+        if model.hasPlatformActions || !model.platformHoldings.isEmpty {
+            StrategyRadarPanel(summary: model.strategyRadarSummary)
+        }
+
+        if !model.monthlyPlatformSummary.isEmpty || !model.platformHoldings.isEmpty {
+            collapsibleMonthlySection
+        }
+
+        SectionCard(
+            title: "调仓浏览",
+            subtitle: isCompact ? "点列表会直接跳到详情" : "左边选动作，右边看详情",
+            icon: "square.split.2x1"
+        ) {
+            if model.hasPlatformActions {
+                if isCompact {
+                    VStack(alignment: .leading, spacing: 8) {
+                        platformListPanel(isCompact: true, scrollProxy: scrollProxy)
+                        platformDetailPanel
+                            .id(detailAnchor)
+                    }
+                } else {
+                    HStack(alignment: .top, spacing: 10) {
+                        platformListPanel(isCompact: false, scrollProxy: scrollProxy)
+                            .frame(
+                                width: PlatformWorkspaceLayout.listWidth(for: availableWidth),
+                                alignment: .top
+                            )
+
+                        platformDetailPanel
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                    }
+                }
+            } else {
+                EmptySectionState(
+                    title: "平台调仓暂时为空",
+                    subtitle: "我已经把平台和论坛改成了独立刷新。现在点一次刷新，就算其中一项失败，另一项也会照常显示。",
+                    actionTitle: "刷新调仓"
+                ) {
+                    Task { try? await model.refreshLatest(persist: false) }
+                }
+            }
+        }
+
+        SectionCard(title: "当前持仓", subtitle: "保留原项目的数据口径", icon: "bag") {
+            if model.platformHoldings.isEmpty {
+                EmptySectionState(
+                    title: "当前没有平台持仓",
+                    subtitle: "如果最近没有拉到调仓数据，这里会先留空；刷新后会自动恢复。",
+                    actionTitle: "立即刷新"
+                ) {
+                    Task { try? await model.refreshLatest(persist: false) }
+                }
+            } else {
+                LazyVStack(spacing: 6) {
+                    ForEach(model.platformHoldings) { holding in
+                        HoldingCard(holding: holding)
+                    }
                 }
             }
         }

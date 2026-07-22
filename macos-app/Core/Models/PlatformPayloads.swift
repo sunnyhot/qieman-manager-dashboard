@@ -46,6 +46,83 @@ struct PlatformActionPayload: Decodable, Hashable, Identifiable {
     let currentValuationSource: String?
     let valuationChangeAmount: Double?
     let valuationChangePct: Double?
+    /// alfa 投顾线特有：调仓前后的持仓比例（0~1），长赢数据为 nil。
+    let beforePercent: Double?
+    let afterPercent: Double?
+    /// alfa 投顾线特有：调仓分组名（如权益/债券），长赢数据为 nil。
+    let groupName: String?
+
+    init(
+        actionKey: String?,
+        adjustmentId: Int?,
+        adjustmentTitle: String?,
+        title: String?,
+        actionTitle: String?,
+        fundName: String?,
+        fundCode: String?,
+        side: String?,
+        action: String?,
+        tradeUnit: Int?,
+        postPlanUnit: Int?,
+        createdAt: String?,
+        txnDate: String?,
+        createdTs: Int?,
+        txnTs: Int?,
+        articleUrl: String?,
+        comment: String?,
+        strategyType: String?,
+        largeClass: String?,
+        buyDate: String?,
+        nav: Double?,
+        navDate: String?,
+        orderCountInAdjustment: Int?,
+        tradeValuation: Double?,
+        tradeValuationDate: String?,
+        tradeValuationSource: String?,
+        currentValuation: Double?,
+        currentValuationTime: String?,
+        currentValuationSource: String?,
+        valuationChangeAmount: Double?,
+        valuationChangePct: Double?,
+        beforePercent: Double? = nil,
+        afterPercent: Double? = nil,
+        groupName: String? = nil
+    ) {
+        self.actionKey = actionKey
+        self.adjustmentId = adjustmentId
+        self.adjustmentTitle = adjustmentTitle
+        self.title = title
+        self.actionTitle = actionTitle
+        self.fundName = fundName
+        self.fundCode = fundCode
+        self.side = side
+        self.action = action
+        self.tradeUnit = tradeUnit
+        self.postPlanUnit = postPlanUnit
+        self.createdAt = createdAt
+        self.txnDate = txnDate
+        self.createdTs = createdTs
+        self.txnTs = txnTs
+        self.articleUrl = articleUrl
+        self.comment = comment
+        self.strategyType = strategyType
+        self.largeClass = largeClass
+        self.buyDate = buyDate
+        self.nav = nav
+        self.navDate = navDate
+        self.orderCountInAdjustment = orderCountInAdjustment
+        self.tradeValuation = tradeValuation
+        self.tradeValuationDate = tradeValuationDate
+        self.tradeValuationSource = tradeValuationSource
+        self.currentValuation = currentValuation
+        self.currentValuationTime = currentValuationTime
+        self.currentValuationSource = currentValuationSource
+        self.valuationChangeAmount = valuationChangeAmount
+        self.valuationChangePct = valuationChangePct
+        self.beforePercent = beforePercent
+        self.afterPercent = afterPercent
+        self.groupName = groupName
+    }
 
     var id: String {
         actionKey ?? "\(adjustmentId ?? 0)-\(fundCode ?? "")-\(txnDate ?? createdAt ?? "")"
@@ -53,6 +130,11 @@ struct PlatformActionPayload: Decodable, Hashable, Identifiable {
 
     var displayTitle: String {
         actionTitle ?? adjustmentTitle ?? title ?? fundName ?? fundCode ?? "未命名动作"
+    }
+
+    /// 是否为 alfa 投顾线的百分比调仓（区别于长赢的份数调仓）。
+    var isPercentBased: Bool {
+        beforePercent != nil || afterPercent != nil
     }
 }
 
