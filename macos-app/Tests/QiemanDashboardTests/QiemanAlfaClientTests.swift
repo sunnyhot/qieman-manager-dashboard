@@ -129,6 +129,38 @@ final class QiemanAlfaClientTests: XCTestCase {
         }
     }
 
+    // MARK: - 持仓成分拍平
+
+    private func mockCompositionData() -> [String: Any] {
+        let fund1: [String: Any] = ["fundCode": "017970", "fundName": "摩根海外稳健配置", "nav": 1.0606, "navDate": "2026-07-20T00:00:00+08:00", "dailyReturn": -0.0001]
+        let part1: [String: Any] = ["percent": 0.1202, "categoryCode": "7", "fund": fund1, "varietyName": "权益"]
+        let fund2: [String: Any] = ["fundCode": "006373", "fundName": "国富全球科技", "nav": 6.7576, "navDate": "2026-07-20T00:00:00+08:00", "dailyReturn": 0.005]
+        let part2: [String: Any] = ["percent": 0.079, "categoryCode": "7", "fund": fund2, "varietyName": "权益"]
+        let group: [String: Any] = ["percent": 0.2, "categoryCode": "7", "parts": [part1, part2]]
+        return [
+            "portfolio": [
+                "composition": ["updatedAt": "2026-07-21", "groups": [group]],
+            ],
+        ]
+    }
+
+    func testFlattenComposition拍平GroupsParts() {
+        let parts = QiemanAlfaClient.flattenComposition(poCode: "SI000192", data: mockCompositionData())
+        XCTAssertEqual(parts.count, 2)
+        // 按占比降序
+        XCTAssertEqual(parts[0].fundCode, "017970")
+        XCTAssertEqual(parts[0].percent, 0.1202, accuracy: 0.0001)
+        XCTAssertEqual(parts[0].sourcePoCode, "SI000192")
+        XCTAssertEqual(parts[0].nav ?? 0, 1.0606, accuracy: 0.0001)
+        XCTAssertEqual(parts[0].varietyName, "权益")
+        XCTAssertEqual(parts[0].percentText, "12.02%")
+    }
+
+    func testFlattenComposition空数据() {
+        let parts = QiemanAlfaClient.flattenComposition(poCode: "X", data: ["portfolio": [:]])
+        XCTAssertTrue(parts.isEmpty)
+    }
+
     func testFlattenAdjustments统计买卖数() {
         let payload = QiemanAlfaClient.flattenAdjustments(poCode: "X", data: mockAdjustmentData())
         XCTAssertEqual(payload.buyCount, 1)

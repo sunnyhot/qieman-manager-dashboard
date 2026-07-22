@@ -21,6 +21,7 @@ SWIFT_SOURCES=(
   "$ROOT_DIR/macos-app/Core/Models/PersonalTrade.swift"
   "$ROOT_DIR/macos-app/Core/Models/PersonalPlan.swift"
   "$ROOT_DIR/macos-app/Core/Models/AlfaPortfolioCatalogItem.swift"
+  "$ROOT_DIR/macos-app/Core/Models/AlfaHoldingPart.swift"
   "$ROOT_DIR/macos-app/Core/Platform/NativePlatformError.swift"
   "$ROOT_DIR/macos-app/Core/Platform/PlatformActionAssetBuckets.swift"
   "$ROOT_DIR/macos-app/Core/Platform/NativePlatformDTOs.swift"
