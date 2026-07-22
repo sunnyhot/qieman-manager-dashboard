@@ -96,6 +96,18 @@ final class UIExperienceRegressionTests: XCTestCase {
         XCTAssertTrue(settings.contains("model.quitApplication()"))
     }
 
+    func testMenuBarPopoverShowsAndRefreshesPersonalWatchlist() throws {
+        let menuBar = try source(at: "Views/MenuBarPortfolioView.swift")
+
+        XCTAssertTrue(menuBar.contains("Text(\"我的关注\")"))
+        XCTAssertTrue(menuBar.contains("MenuBarWatchlistRow(row: row)"))
+        XCTAssertTrue(menuBar.contains("percentOptional(row.changeSinceFollowPct)"))
+        XCTAssertTrue(menuBar.contains("try? await model.refreshPersonalWatchlist(updateNotice: false)"))
+        XCTAssertTrue(menuBar.contains("@AppStorage(\"menu.bar.popover.top-section\")"))
+        XCTAssertTrue(menuBar.contains("Text(\"\\(section.title)在上\")"))
+        XCTAssertTrue(menuBar.contains("ForEach(orderedSections)"))
+    }
+
     private func source(at relativePath: String) throws -> String {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
