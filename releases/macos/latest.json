@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.0/QiemanDashboard-3.8.0.zip",
-    "name" : "QiemanDashboard-3.8.0.zip",
-    "sha256" : "eadadfad93fdfff5cb191bf927ce711421e316d16a4b77cfed977f6141d406e3",
-    "size" : 4749481
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.1/QiemanDashboard-3.8.1.zip",
+    "name" : "QiemanDashboard-3.8.1.zip",
+    "sha256" : "641fbcaf2af9a419c672e1a543079edd1939765adb3c1be4367d8fa8d17a79f8",
+    "size" : 4770991
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.0/QiemanDashboard-3.8.0.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.1/QiemanDashboard-3.8.1.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.0.zip",
-      "size" : 4749481
+      "name" : "QiemanDashboard-3.8.1.zip",
+      "size" : 4770991
     }
   ],
-  "body" : "投顾组合汇总展示 + chip 筛选 + 左右 master-detail 布局 (#5)",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.0",
-  "name" : "QiemanDashboard v3.8.0",
-  "notes" : "投顾组合汇总展示 + chip 筛选 + 左右 master-detail 布局 (#5)",
+  "body" : "投顾组合加当前持仓展示（PoFundComposition） (#6)\nAGENTS.md 更新投顾汇总展示说明（多组合合并 + chip 筛选）",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.1",
+  "name" : "QiemanDashboard v3.8.1",
+  "notes" : "投顾组合加当前持仓展示（PoFundComposition） (#6)\nAGENTS.md 更新投顾汇总展示说明（多组合合并 + chip 筛选）",
   "published_at" : "",
-  "sha256" : "eadadfad93fdfff5cb191bf927ce711421e316d16a4b77cfed977f6141d406e3",
-  "tag" : "v3.8.0",
-  "tag_name" : "v3.8.0",
-  "version" : "3.8.0"
+  "sha256" : "641fbcaf2af9a419c672e1a543079edd1939765adb3c1be4367d8fa8d17a79f8",
+  "tag" : "v3.8.1",
+  "tag_name" : "v3.8.1",
+  "version" : "3.8.1"
 }
