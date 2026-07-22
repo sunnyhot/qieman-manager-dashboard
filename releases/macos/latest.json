@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.5.0/QiemanDashboard-3.5.0.zip",
-    "name" : "QiemanDashboard-3.5.0.zip",
-    "sha256" : "77727ca9a230c4437c9fd425cebc0f3be2705a0816211661eab87990d97488b2",
-    "size" : 4685957
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.5.1/QiemanDashboard-3.5.1.zip",
+    "name" : "QiemanDashboard-3.5.1.zip",
+    "sha256" : "e47e3d7c0a9b029b419e9f1eee50220553feb668de15f340ebe038a3f52160ed",
+    "size" : 4714968
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.5.0/QiemanDashboard-3.5.0.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.5.1/QiemanDashboard-3.5.1.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.5.0.zip",
-      "size" : 4685957
+      "name" : "QiemanDashboard-3.5.1.zip",
+      "size" : 4714968
     }
   ],
-  "body" : "同步到巡检按钮在订阅模式禁用 + 多小组抓取测试\n筛选面板加 filterMode 模式切换（主理人订阅/精确参数互斥）\nQueryFormState.filterMode 默认改为 .preciseParams\n新增 ManagerPicker 主理人多选联想控件\nAppModel 加主理人索引，refreshLatest 按 filterMode 分支\nQueryFormState 新增 FilterMode 和 selectedManagerIds 字段\nNativeClient 新增多小组抓取（fetchMultiGroupSnapshot + mergeAndSortPosts）\n新增 ManagerSummary 模型和 fetchManagerIndex 主理人索引\n主理人多选控件实施计划（6 个 Task）\n主理人多选控件设计文档（filterMode 互斥模式）\n主理人调研最终结论（HAR 实测，证伪 manages 接口，确定社区组长方案）",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.5.0",
-  "name" : "QiemanDashboard v3.5.0",
-  "notes" : "同步到巡检按钮在订阅模式禁用 + 多小组抓取测试\n筛选面板加 filterMode 模式切换（主理人订阅/精确参数互斥）\nQueryFormState.filterMode 默认改为 .preciseParams\n新增 ManagerPicker 主理人多选联想控件\nAppModel 加主理人索引，refreshLatest 按 filterMode 分支\nQueryFormState 新增 FilterMode 和 selectedManagerIds 字段\nNativeClient 新增多小组抓取（fetchMultiGroupSnapshot + mergeAndSortPosts）\n新增 ManagerSummary 模型和 fetchManagerIndex 主理人索引\n主理人多选控件实施计划（6 个 Task）\n主理人多选控件设计文档（filterMode 互斥模式）\n主理人调研最终结论（HAR 实测，证伪 manages 接口，确定社区组长方案）",
+  "body" : "菜单栏下拉展示我的关注并支持区块排序\n删除登录态/筛选重构 v1 的废弃设计文档",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.5.1",
+  "name" : "QiemanDashboard v3.5.1",
+  "notes" : "菜单栏下拉展示我的关注并支持区块排序\n删除登录态/筛选重构 v1 的废弃设计文档",
   "published_at" : "",
-  "sha256" : "77727ca9a230c4437c9fd425cebc0f3be2705a0816211661eab87990d97488b2",
-  "tag" : "v3.5.0",
-  "tag_name" : "v3.5.0",
-  "version" : "3.5.0"
+  "sha256" : "e47e3d7c0a9b029b419e9f1eee50220553feb668de15f340ebe038a3f52160ed",
+  "tag" : "v3.5.1",
+  "tag_name" : "v3.5.1",
+  "version" : "3.5.1"
 }
