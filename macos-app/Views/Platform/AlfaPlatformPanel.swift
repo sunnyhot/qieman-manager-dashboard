@@ -59,6 +59,8 @@ struct AlfaPlatformPanel: View {
                             }
                         }
                     }
+
+                    holdingsSection
                     .padding(AppPalette.contentPadding)
                 }
             }
@@ -205,6 +207,26 @@ struct AlfaPlatformPanel: View {
                 )
             }
             .buttonStyle(PressResponsiveButtonStyle())
+        }
+    }
+
+    // MARK: - 当前持仓
+
+    @ViewBuilder
+    private var holdingsSection: some View {
+        let holdings = model.filteredAlfaHoldings
+        if !holdings.isEmpty {
+            SectionCard(
+                title: "当前持仓",
+                subtitle: "投顾组合目标配置占比",
+                icon: "bag"
+            ) {
+                LazyVStack(spacing: 6) {
+                    ForEach(holdings) { part in
+                        AlfaHoldingCard(part: part)
+                    }
+                }
+            }
         }
     }
 

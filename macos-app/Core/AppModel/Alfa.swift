@@ -22,6 +22,13 @@ extension AppModel {
         return actions.filter { codes.contains($0.sourcePoCode ?? "") }
     }
 
+    /// 当前筛选生效的持仓列表（按 selectedAlfaPoCodes 过滤 sourcePoCode）。
+    var filteredAlfaHoldings: [AlfaHoldingPart] {
+        guard !selectedAlfaPoCodes.isEmpty else { return alfaHoldings }
+        let codes = selectedAlfaPoCodes
+        return alfaHoldings.filter { codes.contains($0.sourcePoCode) }
+    }
+
     /// 从磁盘加载已添加的投顾组合列表（首次落盘默认预置晓磊）。
     func loadAlfaPortfolios() {
         guard let url = alfaPortfoliosFileURL else { return }
@@ -40,49 +47,84 @@ extension AppModel {
         let codes = alfaPortfolios.map(\.poCode)
         guard !codes.isEmpty else {
             alfaPayload = nil
+            alfaHoldings = []
             return
         }
         guard !isLoadingAlfa else { return }
         isLoadingAlfa = true
         alfaError = nil
 
-        var payloads: [PlatformPayload] = []
-        var firstError: String?
-        await withTaskGroup(of: PlatformPayload?.self) { group in
-            for code in codes {
-                group.addTask { [weak self] in
-                    guard let self else { return nil }
-                    do {
-                        return try await self.alfaClient.fetchAlfaPayload(poCode: code)
-                    } catch {
-                        return nil
-                    }
-                }
-            }
-            for await result in group {
-                if let p = result {
-                    payloads.append(p)
-                }
-            }
-        }
+        // 并发抓调仓 + 持仓
+        async let adjustmentsResult = fetchAlfaAdjustmentsConcurrent(codes: codes)
+        async let compositionResult = fetchAlfaCompositionConcurrent(codes: codes)
+        let (payloads, adjError) = await adjustmentsResult
+        let holdings = await compositionResult
 
-        if payloads.isEmpty {
+        var finalPayloads = payloads
+        var firstError = adjError
+        if finalPayloads.isEmpty {
             // 全部失败时尝试单独拉一个拿错误信息
             if let first = codes.first {
                 do {
                     let single = try await alfaClient.fetchAlfaPayload(poCode: first)
-                    payloads.append(single)
+                    finalPayloads.append(single)
                 } catch {
-                    firstError = error.localizedDescription
+                    if firstError == nil { firstError = error.localizedDescription }
                 }
             }
         }
 
-        alfaPayload = Self.mergeAlfaPayloads(payloads)
+        alfaPayload = Self.mergeAlfaPayloads(finalPayloads)
+        alfaHoldings = holdings
         if let firstError {
             alfaError = firstError
         }
         isLoadingAlfa = false
+    }
+
+    /// 并发抓取多组合调仓，返回（payloads, 首个错误）。
+    private func fetchAlfaAdjustmentsConcurrent(codes: [String]) async -> ([PlatformPayload], String?) {
+        var payloads: [PlatformPayload] = []
+        var firstError: String?
+        await withTaskGroup(of: (PlatformPayload?, String?).self) { group in
+            for code in codes {
+                group.addTask { [weak self] in
+                    guard let self else { return (nil, nil) }
+                    do {
+                        return (try await self.alfaClient.fetchAlfaPayload(poCode: code), nil)
+                    } catch {
+                        return (nil, error.localizedDescription)
+                    }
+                }
+            }
+            for await (payload, error) in group {
+                if let payload { payloads.append(payload) }
+                else if firstError == nil, let error { firstError = error }
+            }
+        }
+        return (payloads, firstError)
+    }
+
+    /// 并发抓取多组合持仓成分。
+    private func fetchAlfaCompositionConcurrent(codes: [String]) async -> [AlfaHoldingPart] {
+        var allParts: [AlfaHoldingPart] = []
+        await withTaskGroup(of: [AlfaHoldingPart].self) { group in
+            for code in codes {
+                group.addTask { [weak self] in
+                    guard let self else { return [] }
+                    do {
+                        return try await self.alfaClient.fetchAlfaComposition(poCode: code)
+                    } catch {
+                        return []
+                    }
+                }
+            }
+            for await parts in group {
+                allParts.append(contentsOf: parts)
+            }
+        }
+        // 按占比降序
+        return allParts.sorted { $0.percent > $1.percent }
     }
 
     /// 合并多个组合的 payload 为一个汇总 payload。

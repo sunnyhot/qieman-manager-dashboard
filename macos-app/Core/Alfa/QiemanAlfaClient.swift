@@ -84,6 +84,20 @@ final class QiemanAlfaClient {
         return payload
     }
 
+    /// 拉取投顾组合的当前持仓成分（PoFundComposition query）。
+    func fetchAlfaComposition(poCode: String) async throws -> [AlfaHoldingPart] {
+        let target = poCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !target.isEmpty else {
+            throw AlfaClientError.missingPoCode
+        }
+        let data = try await requestGraphQL(
+            operationName: "PoFundComposition",
+            variables: ["poCode": target],
+            query: Self.compositionQuery
+        )
+        return Self.flattenComposition(poCode: target, data: data)
+    }
+
     /// 拉取可选组合目录（数据源：`/m4/hand-picked`，REST，无需签名）。
     func fetchPortfolioCatalog() async throws -> [AlfaPortfolioCatalogItem] {
         let raw = try await requestREST(path: "/m4/hand-picked", params: [:])
@@ -270,7 +284,41 @@ final class QiemanAlfaClient {
         )
     }
 
-    /// 把单个 part（含 beforePercent/afterPercent/fund）映射成调仓动作。
+    /// 将 GraphQL `PoFundComposition` 响应拍平成持仓成分列表。
+    /// groups[].parts[] 两层展开为扁平的 AlfaHoldingPart 列表。
+    static func flattenComposition(poCode: String, data: [String: Any]) -> [AlfaHoldingPart] {
+        let portfolio = (data["portfolio"] as? [String: Any]) ?? [:]
+        let composition = (portfolio["composition"] as? [String: Any]) ?? [:]
+        let groups = (composition["groups"] as? [[String: Any]]) ?? []
+
+        var parts: [AlfaHoldingPart] = []
+        for group in groups {
+            let groupParts = (group["parts"] as? [[String: Any]]) ?? []
+            let categoryCode = normalizedString(group["categoryCode"])
+            for rawPart in groupParts {
+                let fundNode = (rawPart["fund"] as? [String: Any]) ?? [:]
+                let fundCode = normalizedString(fundNode["fundCode"])
+                let fundName = normalizedString(fundNode["fundName"])
+                guard !fundCode.isEmpty || !fundName.isEmpty else { continue }
+                let percent = doubleValue(rawPart["percent"]) ?? 0
+                parts.append(
+                    AlfaHoldingPart(
+                        sourcePoCode: poCode,
+                        fundCode: fundCode,
+                        fundName: fundName,
+                        percent: percent,
+                        nav: doubleValue(fundNode["nav"]),
+                        navDate: formatDate(normalizedString(fundNode["navDate"])),
+                        dailyReturn: doubleValue(fundNode["dailyReturn"]),
+                        categoryCode: categoryCode.isEmpty ? nil : categoryCode,
+                        varietyName: normalizedString(rawPart["varietyName"]).isEmpty ? nil : normalizedString(rawPart["varietyName"])
+                    )
+                )
+            }
+        }
+        // 按占比降序
+        return parts.sorted { $0.percent > $1.percent }
+    }
     private static func makeAction(
         from part: [String: Any],
         poCode: String,
@@ -452,6 +500,60 @@ final class QiemanAlfaClient {
     query PoBasicDetail($poCode: String!, $isLongWin: Boolean) {
       portfolio(poCode: $poCode, isModelPo: $isLongWin) {
         poName
+        __typename
+      }
+    }
+    """
+
+    /// 当前持仓成分查询（来自 HAR 抓包，schema 对完整性敏感，勿删片段）。
+    static let compositionQuery = """
+    query PoFundComposition($poCode: String!) {
+      portfolio(poCode: $poCode) {
+        composition {
+          updatedAt
+          groups {
+            parts {
+              percent
+              categoryCode
+              fund {
+                fundCode
+                fundName
+                nav
+                navDate
+                dailyReturn
+                __typename
+              }
+              candidateFunds {
+                fundCode
+                fundName
+                __typename
+              }
+              latestMovementName
+              latestMovement
+              varietyName
+              __typename
+            }
+            percent
+            categoryCode
+            __typename
+          }
+          __typename
+        }
+        __typename
+      }
+      preferences {
+        portfolio(poCode: $poCode) {
+          hasFundInvestPoolPage
+          hasAdjustmentHistoryPage
+          displayCompositionPieChart
+          displayCompositionDetailList
+          compositionDetailListSeries
+          __typename
+        }
+        __typename
+      }
+      dicts {
+        portfolioCompositionCategoryNames
         __typename
       }
     }
