@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.5.1/QiemanDashboard-3.5.1.zip",
-    "name" : "QiemanDashboard-3.5.1.zip",
-    "sha256" : "e47e3d7c0a9b029b419e9f1eee50220553feb668de15f340ebe038a3f52160ed",
-    "size" : 4714968
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.5.2/QiemanDashboard-3.5.2.zip",
+    "name" : "QiemanDashboard-3.5.2.zip",
+    "sha256" : "e07c0d6050b2979c59a095dbf49e3dc1a903e6369c9f97ba719ef83d0541db4c",
+    "size" : 4718758
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.5.1/QiemanDashboard-3.5.1.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.5.2/QiemanDashboard-3.5.2.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.5.1.zip",
-      "size" : 4714968
+      "name" : "QiemanDashboard-3.5.2.zip",
+      "size" : 4718758
     }
   ],
-  "body" : "菜单栏下拉展示我的关注并支持区块排序\n删除登录态/筛选重构 v1 的废弃设计文档",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.5.1",
-  "name" : "QiemanDashboard v3.5.1",
-  "notes" : "菜单栏下拉展示我的关注并支持区块排序\n删除登录态/筛选重构 v1 的废弃设计文档",
+  "body" : "修复添加关注时基金股票代码无法识别",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.5.2",
+  "name" : "QiemanDashboard v3.5.2",
+  "notes" : "修复添加关注时基金股票代码无法识别",
   "published_at" : "",
-  "sha256" : "e47e3d7c0a9b029b419e9f1eee50220553feb668de15f340ebe038a3f52160ed",
-  "tag" : "v3.5.1",
-  "tag_name" : "v3.5.1",
-  "version" : "3.5.1"
+  "sha256" : "e07c0d6050b2979c59a095dbf49e3dc1a903e6369c9f97ba719ef83d0541db4c",
+  "tag" : "v3.5.2",
+  "tag_name" : "v3.5.2",
+  "version" : "3.5.2"
 }
