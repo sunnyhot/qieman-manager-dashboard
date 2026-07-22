@@ -1,21 +1,5 @@
 import Foundation
 
-enum FilterMode: String, CaseIterable, Identifiable {
-    case managerSubscription = "manager-subscription"
-    case preciseParams = "precise-params"
-
-    var id: String { rawValue }
-
-    var label: String {
-        switch self {
-        case .managerSubscription:
-            return "主理人订阅"
-        case .preciseParams:
-            return "精确参数"
-        }
-    }
-}
-
 enum QueryMode: String, CaseIterable, Identifiable {
     case groupManager = "group-manager"
 
@@ -39,10 +23,6 @@ extension QueryMode {
 }
 
 struct QueryFormState {
-    // 默认 .preciseParams 保留旧行为（默认 prodCode=LONG_WIN 能直接抓长赢发言）。
-    // 主理人订阅模式需用户主动切换并选择主理人，避免冷启动空选刷新报错。
-    var filterMode: FilterMode = .preciseParams
-    var selectedManagerIds: Set<String> = []
     var mode: QueryMode = .groupManager
     var prodCode: String = "LONG_WIN"
     var managerName: String = ""
@@ -59,8 +39,6 @@ struct QueryFormState {
     func fetchPayload(persist: Bool) -> [String: Any] {
         var payload: [String: Any] = [
             "mode": mode.rawValue,
-            "filter_mode": filterMode.rawValue,
-            "selected_manager_ids": selectedManagerIds.sorted(),
             "prod_code": prodCode,
             "manager_name": managerName,
             "group_url": groupURL,

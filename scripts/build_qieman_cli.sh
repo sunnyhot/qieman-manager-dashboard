@@ -12,7 +12,6 @@ SWIFT_SOURCES=(
   "$ROOT_DIR/macos-app/Support/ValueFormatting.swift"
   "$ROOT_DIR/macos-app/Core/Models/AppEnums.swift"
   "$ROOT_DIR/macos-app/Core/Models/Query.swift"
-  "$ROOT_DIR/macos-app/Core/Models/ManagerSummary.swift"
   "$ROOT_DIR/macos-app/Core/Models/ManagerWatchSettings.swift"
   "$ROOT_DIR/macos-app/Core/Models/SnapshotPayloads.swift"
   "$ROOT_DIR/macos-app/Core/Models/PlatformPayloads.swift"
