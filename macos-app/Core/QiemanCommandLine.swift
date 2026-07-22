@@ -75,6 +75,7 @@ struct QiemanCommandLine {
       platform-holdings    查询平台持仓
       platform-timeline    查询标的调仓时间线
       platform-monthly     查询月度调仓汇总
+      alfa-actions         查询投顾组合调仓（alfa 线）
       valuation            查询基金实时估值
       updates-watch        增量巡检调仓与动态
       signal-extract       从 JSON 文件提取交易关键词
@@ -115,6 +116,8 @@ struct QiemanCommandLine {
             return try await platformTimeline()
         case "platform-monthly":
             return try await platformMonthly()
+        case "alfa-actions":
+            return try await alfaActions()
         case "valuation":
             return try await valuation()
         case "updates-watch":
@@ -314,6 +317,24 @@ struct QiemanCommandLine {
                     avgSellPerMonth: monthCount == 0 ? 0 : Double(sellCount) / Double(monthCount)
                 ),
                 items: items
+            )
+        )
+    }
+
+    private func alfaActions() async throws -> Data {
+        let poCode = arguments.string("po-code", default: "SI000192")
+        let payload = try await QiemanAlfaClient().fetchAlfaPayload(poCode: poCode)
+        let rows = Array((payload.actions ?? [])
+            .prefix(max(1, arguments.int("limit", default: 20)))
+            .map(actionRow))
+        return try QiemanCLI.encodeJSON(
+            CLIPlatformActionsOutput(
+                prodCode: poCode,
+                side: arguments.string("side", default: "all"),
+                since: arguments.string("since"),
+                until: arguments.string("until"),
+                count: rows.count,
+                items: rows
             )
         )
     }

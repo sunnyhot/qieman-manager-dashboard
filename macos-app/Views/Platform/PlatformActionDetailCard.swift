@@ -67,13 +67,24 @@ struct PlatformActionDetailCard: View {
                 spacing: 10
             ) {
                 detailMetric("调仓时间", action.txnDate ?? action.createdAt ?? "未知", tint: AppPalette.ink)
-                detailMetric("调仓估值", decimalOptional(action.tradeValuation), tint: AppPalette.ink)
-                detailMetric("当前估值", decimalOptional(action.currentValuation), tint: AppPalette.ink)
-                detailMetric("估值变化", percentOptional(action.valuationChangePct), tint: changeTint)
-                detailMetric("变化金额", signedCurrencyText(action.valuationChangeAmount), tint: changeTint)
-                detailMetric("计划份数", action.postPlanUnit.map(String.init) ?? "—", tint: AppPalette.ink)
-                detailMetric("交易份数", action.tradeUnit.map(String.init) ?? "—", tint: AppPalette.ink)
-                detailMetric("净值", decimalOptional(action.nav), tint: AppPalette.ink)
+                if action.isPercentBased {
+                    detailMetric("调仓前", QiemanAlfaClient.percentText(before: action.beforePercent, after: nil), tint: AppPalette.ink)
+                    detailMetric("调仓后", QiemanAlfaClient.percentText(before: nil, after: action.afterPercent), tint: AppPalette.ink)
+                    detailMetric("仓位变化", percentChangeText(before: action.beforePercent, after: action.afterPercent), tint: changeTint)
+                    detailMetric("动作", action.action ?? "调整", tint: sideColor)
+                    if let group = action.groupName {
+                        detailMetric("分组", group, tint: AppPalette.ink)
+                    }
+                    detailMetric("调仓单", action.adjustmentId.map(String.init) ?? "—", tint: AppPalette.ink)
+                } else {
+                    detailMetric("调仓估值", decimalOptional(action.tradeValuation), tint: AppPalette.ink)
+                    detailMetric("当前估值", decimalOptional(action.currentValuation), tint: AppPalette.ink)
+                    detailMetric("估值变化", percentOptional(action.valuationChangePct), tint: changeTint)
+                    detailMetric("变化金额", signedCurrencyText(action.valuationChangeAmount), tint: changeTint)
+                    detailMetric("计划份数", action.postPlanUnit.map(String.init) ?? "—", tint: AppPalette.ink)
+                    detailMetric("交易份数", action.tradeUnit.map(String.init) ?? "—", tint: AppPalette.ink)
+                    detailMetric("净值", decimalOptional(action.nav), tint: AppPalette.ink)
+                }
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -141,6 +152,13 @@ struct PlatformActionDetailCard: View {
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
                 .stroke(tint.opacity(0.14), lineWidth: 1)
         )
+    }
+
+    /// 百分比调仓的仓位变化（before→after 的差值，百分点）。
+    private func percentChangeText(before: Double?, after: Double?) -> String {
+        guard let before, let after else { return "—" }
+        let diff = (after - before) * 100
+        return String(format: "%+.2f%%", diff)
     }
 
     private func sourceText(_ title: String, source: String?, date: String?) -> String? {

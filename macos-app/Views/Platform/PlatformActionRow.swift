@@ -56,9 +56,13 @@ struct PlatformActionRow: View {
 
                     HStack(spacing: 6) {
                         compactMetricPill(title: "时间", value: compactDateText(action.txnDate ?? action.createdAt), tint: AppPalette.muted)
-                        compactMetricPill(title: "调仓", value: decimalText(action.tradeValuation), tint: AppPalette.ink)
-                        compactMetricPill(title: "当前", value: decimalText(action.currentValuation), tint: AppPalette.ink)
-                        compactMetricPill(title: "变化", value: percentText(action.valuationChangePct), tint: changeTint, isEmphasized: true)
+                        if action.isPercentBased {
+                            compactMetricPill(title: "仓位", value: QiemanAlfaClient.percentText(before: action.beforePercent, after: action.afterPercent), tint: AppPalette.ink, isEmphasized: true)
+                        } else {
+                            compactMetricPill(title: "调仓", value: decimalText(action.tradeValuation), tint: AppPalette.ink)
+                            compactMetricPill(title: "当前", value: decimalText(action.currentValuation), tint: AppPalette.ink)
+                            compactMetricPill(title: "变化", value: percentText(action.valuationChangePct), tint: changeTint, isEmphasized: true)
+                        }
                     }
                 } else {
                     HStack {
@@ -92,9 +96,17 @@ struct PlatformActionRow: View {
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 128), spacing: 12)], spacing: 10) {
                         LabeledValue(title: "调仓时间", value: action.txnDate ?? action.createdAt ?? "未知")
-                        LabeledValue(title: "调仓估值", value: decimalText(action.tradeValuation))
-                        LabeledValue(title: "当前估值", value: decimalText(action.currentValuation))
-                        LabeledValue(title: "变化", value: percentText(action.valuationChangePct), tint: changeTint)
+                        if action.isPercentBased {
+                            LabeledValue(title: "调仓前", value: QiemanAlfaClient.percentText(before: action.beforePercent, after: nil))
+                            LabeledValue(title: "调仓后", value: QiemanAlfaClient.percentText(before: nil, after: action.afterPercent))
+                            if let group = action.groupName {
+                                LabeledValue(title: "分组", value: group)
+                            }
+                        } else {
+                            LabeledValue(title: "调仓估值", value: decimalText(action.tradeValuation))
+                            LabeledValue(title: "当前估值", value: decimalText(action.currentValuation))
+                            LabeledValue(title: "变化", value: percentText(action.valuationChangePct), tint: changeTint)
+                        }
                     }
                 }
             }
