@@ -83,20 +83,19 @@ struct ForumSectionView: View {
                     }
                 }
 
-                LazyVStack(spacing: 8) {
-                    ForEach(model.forumRecords) { record in
-                        let isSelected = model.selectedPostID == record.id
-                        Button {
-                            model.selectedPostID = record.id
-                            if isCompact {
-                                withAnimation(.easeInOut(duration: 0.25)) {
-                                    scrollProxy.scrollTo(detailAnchor, anchor: .top)
-                                }
-                            }
-                        } label: {
-                            ForumSelectableRow(record: record, isSelected: isSelected, isCompact: true)
+                Group {
+                    if isCompact {
+                        LazyVStack(spacing: 8) {
+                            forumRecordButtons(isCompact: true, scrollProxy: scrollProxy)
                         }
-                        .buttonStyle(PressResponsiveButtonStyle())
+                    } else {
+                        ScrollView(.vertical, showsIndicators: true) {
+                            LazyVStack(spacing: 8) {
+                                forumRecordButtons(isCompact: false, scrollProxy: scrollProxy)
+                            }
+                            .padding(.trailing, 4)
+                        }
+                        .frame(height: PlatformWorkspaceLayout.actionListHeight)
                     }
                 }
             }
@@ -214,5 +213,23 @@ struct ForumSectionView: View {
             model.commentSortType,
             model.onlyManagerReplies ? "manager" : "all"
         ].joined(separator: "|")
+    }
+
+    @ViewBuilder
+    private func forumRecordButtons(isCompact: Bool, scrollProxy: ScrollViewProxy) -> some View {
+        ForEach(model.forumRecords) { record in
+            let isSelected = model.selectedPostID == record.id
+            Button {
+                model.selectedPostID = record.id
+                if isCompact {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        scrollProxy.scrollTo(detailAnchor, anchor: .top)
+                    }
+                }
+            } label: {
+                ForumSelectableRow(record: record, isSelected: isSelected, isCompact: true)
+            }
+            .buttonStyle(PressResponsiveButtonStyle())
+        }
     }
 }
