@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.7/QiemanDashboard-3.8.7.zip",
-    "name" : "QiemanDashboard-3.8.7.zip",
-    "sha256" : "8f1d01b0963ea21b3692ad881ac4f9eee4a0a643f6c738535cc8105a3940a5a8",
-    "size" : 4847430
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.8/QiemanDashboard-3.8.8.zip",
+    "name" : "QiemanDashboard-3.8.8.zip",
+    "sha256" : "22e38d29e27d902aee052790899f9f46e353761efbd9fba6f7aebbadea9eb768",
+    "size" : 4846351
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.7/QiemanDashboard-3.8.7.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.8/QiemanDashboard-3.8.8.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.7.zip",
-      "size" : 4847430
+      "name" : "QiemanDashboard-3.8.8.zip",
+      "size" : 4846351
     }
   ],
-  "body" : "重整资产详情 AI 观点层级",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.7",
-  "name" : "QiemanDashboard v3.8.7",
-  "notes" : "重整资产详情 AI 观点层级",
+  "body" : "简化资产详情 AI 文案并统一卡片高度",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.8",
+  "name" : "QiemanDashboard v3.8.8",
+  "notes" : "简化资产详情 AI 文案并统一卡片高度",
   "published_at" : "",
-  "sha256" : "8f1d01b0963ea21b3692ad881ac4f9eee4a0a643f6c738535cc8105a3940a5a8",
-  "tag" : "v3.8.7",
-  "tag_name" : "v3.8.7",
-  "version" : "3.8.7"
+  "sha256" : "22e38d29e27d902aee052790899f9f46e353761efbd9fba6f7aebbadea9eb768",
+  "tag" : "v3.8.8",
+  "tag_name" : "v3.8.8",
+  "version" : "3.8.8"
 }
