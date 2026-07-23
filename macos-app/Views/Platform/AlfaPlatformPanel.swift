@@ -72,6 +72,10 @@ struct AlfaPlatformPanel: View {
             if model.alfaCatalog.isEmpty {
                 Task { await model.loadAlfaCatalog() }
             }
+            // 进入面板时若没有数据则自动加载（调仓 + 持仓）
+            if !model.alfaPortfolios.isEmpty, model.alfaPayload == nil, model.alfaHoldings.isEmpty, !model.isLoadingAlfa {
+                Task { await model.fetchAllAlfaPayloads() }
+            }
         }
     }
 
@@ -181,7 +185,7 @@ struct AlfaPlatformPanel: View {
                         }
                         .padding(.trailing, 4)
                     }
-                    .frame(height: PlatformWorkspaceLayout.actionListHeight)
+                    .frame(maxHeight: PlatformWorkspaceLayout.actionListHeight)
                 }
             }
         }
