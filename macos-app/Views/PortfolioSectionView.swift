@@ -1,3 +1,4 @@
+import Charts
 import SwiftUI
 
 // MARK: - Personal Portfolio
@@ -485,12 +486,16 @@ struct ProfitAttributionPanel: View {
         AppPalette.marketTint(for: summary.totalProfitValue)
     }
 
-    private var chartEntries: [ProfitAttributionEntry] {
-        Array(
-            summary.entries
-                .sorted { abs($0.amountValue) > abs($1.amountValue) }
-                .prefix(6)
-        )
+    private var gainEntries: [ProfitAttributionEntry] {
+        summary.entries
+            .filter { $0.kind == .gain }
+            .sorted { abs($0.amountValue) > abs($1.amountValue) }
+    }
+
+    private var dragEntries: [ProfitAttributionEntry] {
+        summary.entries
+            .filter { $0.kind == .drag }
+            .sorted { abs($0.amountValue) > abs($1.amountValue) }
     }
 
     var body: some View {
@@ -512,7 +517,15 @@ struct ProfitAttributionPanel: View {
                         .padding(12)
                         .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
                 } else {
-                    ProfitAttributionImpactSpectrum(entries: chartEntries)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: 10) {
+                            attributionDonutCharts
+                        }
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            attributionDonutCharts
+                        }
+                    }
 
                     Button {
                         withAnimation(.easeInOut(duration: 0.18)) {
@@ -559,121 +572,168 @@ struct ProfitAttributionPanel: View {
             }
         }
     }
+
+    @ViewBuilder
+    private var attributionDonutCharts: some View {
+        ProfitAttributionDonutCard(
+            title: "收益贡献",
+            entries: gainEntries,
+            tint: AppPalette.marketGain,
+            emptyMessage: "暂无正收益标的"
+        )
+        ProfitAttributionDonutCard(
+            title: "收益拖累",
+            entries: dragEntries,
+            tint: AppPalette.marketLoss,
+            emptyMessage: "暂无负收益标的"
+        )
+    }
 }
 
-struct ProfitAttributionImpactSpectrum: View {
+struct ProfitAttributionDonutSlice: Identifiable {
+    let id: String
+    let title: String
+    let amount: Double
+    let color: Color
+}
+
+struct ProfitAttributionDonutCard: View {
+    let title: String
     let entries: [ProfitAttributionEntry]
+    let tint: Color
+    let emptyMessage: String
 
-    private var maximumMagnitude: Double {
-        max(entries.map { abs($0.amountValue) }.max() ?? 0, 1)
+    private var totalMagnitude: Double {
+        entries.reduce(0) { $0 + abs($1.amountValue) }
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 10) {
-                Text("标的")
-                    .frame(width: 168, alignment: .leading)
+    private var signedTotal: Double {
+        entries.reduce(0) { $0 + $1.amountValue }
+    }
 
-                HStack(spacing: 4) {
-                    Text("拖累")
-                        .foregroundStyle(AppPalette.marketLoss)
-                    Image(systemName: "arrow.left")
-                    Spacer()
-                    Text("0")
-                    Spacer()
-                    Image(systemName: "arrow.right")
-                    Text("贡献")
-                        .foregroundStyle(AppPalette.marketGain)
-                }
-                .frame(maxWidth: .infinity)
+    private var slices: [ProfitAttributionDonutSlice] {
+        let primaryEntries = Array(entries.prefix(4))
+        let opacitySteps = [1.0, 0.78, 0.60, 0.44]
+        var result = primaryEntries.enumerated().map { index, entry in
+            ProfitAttributionDonutSlice(
+                id: entry.id,
+                title: entry.title,
+                amount: abs(entry.amountValue),
+                color: tint.opacity(opacitySteps[index])
+            )
+        }
 
-                Text("影响金额")
-                    .frame(width: 108, alignment: .trailing)
-            }
-            .font(.system(size: 9, weight: .medium))
-            .foregroundStyle(AppPalette.muted)
-            .padding(.horizontal, 4)
-            .padding(.bottom, 6)
-
-            ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                ProfitAttributionImpactBar(
-                    entry: entry,
-                    maximumMagnitude: maximumMagnitude
+        let remaining = Array(entries.dropFirst(4))
+        if !remaining.isEmpty {
+            result.append(
+                ProfitAttributionDonutSlice(
+                    id: "other-\(title)",
+                    title: "其他 \(remaining.count) 项",
+                    amount: remaining.reduce(0) { $0 + abs($1.amountValue) },
+                    color: tint.opacity(0.28)
                 )
-
-                if index < entries.count - 1 {
-                    Divider()
-                        .overlay(AppPalette.line.opacity(0.22))
-                }
-            }
+            )
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("收益影响分布")
-    }
-}
-
-struct ProfitAttributionImpactBar: View {
-    let entry: ProfitAttributionEntry
-    let maximumMagnitude: Double
-    @State private var isHovered = false
-
-    private var magnitudeRatio: Double {
-        min(abs(entry.amountValue) / maximumMagnitude, 1)
+        return result
     }
 
     var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.title)
-                    .font(.system(size: 10, weight: .semibold))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
-                    .lineLimit(1)
-
-                Text(entry.codeText)
-                    .font(.system(size: 8, design: .monospaced))
+                Text("\(entries.count) 项")
+                    .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(AppPalette.muted)
+                Spacer()
             }
-            .frame(width: 168, alignment: .leading)
 
-            GeometryReader { geometry in
-                let center = geometry.size.width / 2
-                let barWidth = max(3, center * magnitudeRatio)
-
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(AppPalette.line.opacity(0.10))
-                        .frame(height: 10)
-
-                    Capsule()
-                        .fill(entry.kind.color.opacity(isHovered ? 1 : 0.82))
-                        .frame(width: barWidth, height: 10)
-                        .offset(x: entry.amountValue >= 0 ? center : center - barWidth)
-
-                    Rectangle()
-                        .fill(AppPalette.line.opacity(0.72))
-                        .frame(width: 1, height: 18)
-                        .offset(x: center)
+            if entries.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "chart.pie")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(tint.opacity(0.72))
+                    Text(emptyMessage)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(AppPalette.muted)
                 }
-                .frame(maxHeight: .infinity)
-            }
-            .frame(height: 18)
+                .frame(maxWidth: .infinity, minHeight: 142, alignment: .center)
+            } else {
+                HStack(alignment: .center, spacing: 16) {
+                    ZStack {
+                        Chart {
+                            ForEach(slices) { slice in
+                                SectorMark(
+                                    angle: .value("影响金额", slice.amount),
+                                    innerRadius: .ratio(0.64),
+                                    angularInset: 1.5
+                                )
+                                .foregroundStyle(slice.color)
+                                .cornerRadius(3)
+                            }
+                        }
+                        .chartLegend(.hidden)
 
-            Text(entry.amountText)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundStyle(entry.kind.color)
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
-                .frame(width: 108, alignment: .trailing)
+                        VStack(spacing: 2) {
+                            Text(compactAttributionAmount(signedTotal))
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(tint)
+                                .monospacedDigit()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
+                            Text("合计")
+                                .font(.system(size: 8, weight: .medium))
+                                .foregroundStyle(AppPalette.muted)
+                        }
+                        .frame(width: 72)
+                    }
+                    .frame(width: 142, height: 142)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(slices) { slice in
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(slice.color)
+                                    .frame(width: 7, height: 7)
+                                Text(slice.title)
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundStyle(AppPalette.ink.opacity(0.84))
+                                    .lineLimit(1)
+                                Spacer(minLength: 4)
+                                Text(percentText(slice.amount))
+                                    .font(.system(size: 8, weight: .medium, design: .rounded))
+                                    .foregroundStyle(AppPalette.muted)
+                                    .monospacedDigit()
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 8)
-        .background(AppPalette.cardStrong.opacity(isHovered ? 0.42 : 0), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-        .contentShape(Rectangle())
-        .onHover { isHovered = $0 }
-        .animation(.easeOut(duration: 0.14), value: isHovered)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(entry.title)，\(entry.kind.label) \(entry.amountText)，影响 \(entry.impactShareText)")
+        .padding(12)
+        .frame(minWidth: 300, maxWidth: .infinity, minHeight: 190, alignment: .topLeading)
+        .background(tint.opacity(0.045), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(title)饼图")
+    }
+
+    private func percentText(_ amount: Double) -> String {
+        guard totalMagnitude > 0 else { return "0%" }
+        return String(format: "%.1f%%", amount / totalMagnitude * 100)
+    }
+
+    private func compactAttributionAmount(_ amount: Double) -> String {
+        let absolute = abs(amount)
+        let sign = amount > 0 ? "+" : amount < 0 ? "-" : ""
+        if absolute >= 10_000 {
+            return "\(sign)¥\(String(format: "%.1f", absolute / 10_000))万"
+        }
+        if absolute >= 1_000 {
+            return "\(sign)¥\(String(format: "%.1f", absolute / 1_000))千"
+        }
+        return "\(sign)¥\(String(format: "%.0f", absolute))"
     }
 }
 
