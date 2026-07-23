@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.8/QiemanDashboard-3.8.8.zip",
-    "name" : "QiemanDashboard-3.8.8.zip",
-    "sha256" : "22e38d29e27d902aee052790899f9f46e353761efbd9fba6f7aebbadea9eb768",
-    "size" : 4846351
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.9/QiemanDashboard-3.8.9.zip",
+    "name" : "QiemanDashboard-3.8.9.zip",
+    "sha256" : "b6eaefaeaa3fab647bb09e8ed5589059199607d9f3cbaae1bf74ee022a57329b",
+    "size" : 4846564
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.8/QiemanDashboard-3.8.8.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.9/QiemanDashboard-3.8.9.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.8.zip",
-      "size" : 4846351
+      "name" : "QiemanDashboard-3.8.9.zip",
+      "size" : 4846564
     }
   ],
-  "body" : "简化资产详情 AI 文案并统一卡片高度",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.8",
-  "name" : "QiemanDashboard v3.8.8",
-  "notes" : "简化资产详情 AI 文案并统一卡片高度",
+  "body" : "优化资产详情字号与小屏表格滚动",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.9",
+  "name" : "QiemanDashboard v3.8.9",
+  "notes" : "优化资产详情字号与小屏表格滚动",
   "published_at" : "",
-  "sha256" : "22e38d29e27d902aee052790899f9f46e353761efbd9fba6f7aebbadea9eb768",
-  "tag" : "v3.8.8",
-  "tag_name" : "v3.8.8",
-  "version" : "3.8.8"
+  "sha256" : "b6eaefaeaa3fab647bb09e8ed5589059199607d9f3cbaae1bf74ee022a57329b",
+  "tag" : "v3.8.9",
+  "tag_name" : "v3.8.9",
+  "version" : "3.8.9"
 }
