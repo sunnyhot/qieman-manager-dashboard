@@ -106,18 +106,18 @@ struct ManagerWatchControlCard: View {
                 Button("保存设置") {
                     model.saveManagerWatchConfiguration()
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.appPrimary)
                 .tint(AppPalette.brand)
 
                 Button("同步当前查询") {
                     model.syncManagerWatchTargetsFromCurrentForm()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
 
                 Button("立即巡检") {
                     model.runManagerWatchNow()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
             }
         }
         .padding(14)

@@ -359,7 +359,7 @@ struct PersonalAssetPriceTrendChart: View {
             Button("重新加载") {
                 loadGeneration += 1
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.appSecondary)
             .controlSize(.small)
         }
         .frame(maxWidth: .infinity, minHeight: 168)

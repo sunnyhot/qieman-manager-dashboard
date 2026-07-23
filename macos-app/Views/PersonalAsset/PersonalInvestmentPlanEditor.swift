@@ -89,7 +89,7 @@ struct PersonalInvestmentPlanAddSheet: View {
                 Button("取消") {
                     dismiss()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
                 .keyboardShortcut(.cancelAction)
 
                 Button("添加") {
@@ -112,7 +112,7 @@ struct PersonalInvestmentPlanAddSheet: View {
                         presentInlineError()
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.appPrimary)
                 .tint(AppPalette.info)
                 .keyboardShortcut(.defaultAction)
             }
@@ -267,7 +267,7 @@ struct PersonalInvestmentPlanEditSheet: View {
                 Button("取消") {
                     dismiss()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
                 .keyboardShortcut(.cancelAction)
 
                 Button("保存") {
@@ -291,7 +291,7 @@ struct PersonalInvestmentPlanEditSheet: View {
                         presentInlineError()
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.appPrimary)
                 .tint(AppPalette.brand)
                 .keyboardShortcut(.defaultAction)
             }

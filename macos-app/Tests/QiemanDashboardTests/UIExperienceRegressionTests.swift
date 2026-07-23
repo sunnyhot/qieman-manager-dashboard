@@ -23,6 +23,42 @@ final class UIExperienceRegressionTests: XCTestCase {
         XCTAssertTrue(source.contains("let onDismiss: (() -> Void)?"))
     }
 
+    func testVisibleActionsUseTheUnifiedAppButtonSystem() throws {
+        let components = try source(at: "Views/SharedComponents.swift")
+        let views = try sourceTree(at: "Views")
+
+        XCTAssertTrue(components.contains("enum AppActionButtonKind: Equatable"))
+        XCTAssertTrue(components.contains("struct AppActionButtonStyle: ButtonStyle"))
+        XCTAssertTrue(components.contains("static var appPrimary"))
+        XCTAssertTrue(components.contains("static var appSecondary"))
+        XCTAssertTrue(components.contains("static var appText"))
+        XCTAssertTrue(components.contains("static var appDanger"))
+        XCTAssertTrue(components.contains("static var appIcon"))
+        XCTAssertTrue(components.contains("static var appMenuItem"))
+
+        XCTAssertFalse(views.contains(".buttonStyle(.borderedProminent)"))
+        XCTAssertFalse(views.contains(".buttonStyle(.bordered)"))
+        XCTAssertFalse(views.contains(".buttonStyle(.link)"))
+        XCTAssertFalse(views.contains(".buttonStyle(.borderless)"))
+    }
+
+    func testAssetAddControlUsesACustomPopoverInsteadOfTheSystemMenu() throws {
+        let source = try source(at: "Views/PersonalAssetCards.swift")
+        let addStart = try XCTUnwrap(source.range(of: "struct PersonalAssetAddButtons"))
+        let emptyStateStart = try XCTUnwrap(
+            source.range(of: "struct PersonalPortfolioEmptyState", range: addStart.upperBound..<source.endIndex)
+        )
+        let addControl = String(source[addStart.lowerBound..<emptyStateStart.lowerBound])
+
+        XCTAssertTrue(addControl.contains("@State private var isShowingAddMenu"))
+        XCTAssertTrue(addControl.contains(".popover(isPresented: $isShowingAddMenu"))
+        XCTAssertTrue(addControl.contains(".buttonStyle(.appPrimary)"))
+        XCTAssertTrue(addControl.contains(".buttonStyle(.appMenuItem)"))
+        XCTAssertTrue(addControl.contains("Text(\"添加资产记录\")"))
+        XCTAssertFalse(addControl.contains("Menu {"))
+        XCTAssertFalse(addControl.contains(".menuStyle(.borderlessButton)"))
+    }
+
     func testPersonalAssetPrimaryContentOpensDetailWithoutRequiringIconButton() throws {
         let source = try source(at: "Views/PersonalAsset/PersonalAssetTableRow.swift")
 
@@ -243,5 +279,46 @@ final class UIExperienceRegressionTests: XCTestCase {
             .deletingLastPathComponent()
             .appendingPathComponent(relativePath)
         return try String(contentsOf: sourceURL, encoding: .utf8)
+    }
+
+    private func sourceTree(at relativePath: String) throws -> String {
+        let rootURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent(relativePath)
+        let fileURLs = try FileManager.default.contentsOfDirectory(
+            at: rootURL,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )
+
+        return try fileURLs
+            .flatMap { url -> [URL] in
+                let values = try url.resourceValues(forKeys: [.isDirectoryKey])
+                if values.isDirectory == true {
+                    let nestedPath = url.path.replacingOccurrences(of: rootURL.path + "/", with: "")
+                    return try sourceFileURLs(at: rootURL.appendingPathComponent(nestedPath))
+                }
+                return url.pathExtension == "swift" ? [url] : []
+            }
+            .sorted { $0.path < $1.path }
+            .map { try String(contentsOf: $0, encoding: .utf8) }
+            .joined(separator: "\n")
+    }
+
+    private func sourceFileURLs(at rootURL: URL) throws -> [URL] {
+        let enumerator = FileManager.default.enumerator(
+            at: rootURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )
+        guard let enumerator else { return [] }
+
+        return try enumerator.compactMap { element in
+            guard let url = element as? URL, url.pathExtension == "swift" else { return nil }
+            let values = try url.resourceValues(forKeys: [.isRegularFileKey])
+            return values.isRegularFile == true ? url : nil
+        }
     }
 }

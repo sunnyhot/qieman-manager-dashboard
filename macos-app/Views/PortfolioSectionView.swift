@@ -82,7 +82,7 @@ struct PortfolioSectionView: View {
                         } label: {
                             Label("添加买入中", systemImage: "plus.circle")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appSecondary)
                         .controlSize(.small)
                     }) {
                         if let summary = model.pendingTradeSummary, !model.pendingTrades.isEmpty {
@@ -115,7 +115,7 @@ struct PortfolioSectionView: View {
                                 } label: {
                                     Label("添加买入中", systemImage: "plus.circle")
                                 }
-                                .buttonStyle(.borderedProminent)
+                                .buttonStyle(.appPrimary)
                                 .tint(AppPalette.warning)
                                 .controlSize(.small)
                             }
@@ -132,7 +132,7 @@ struct PortfolioSectionView: View {
                         } label: {
                             Label("添加计划", systemImage: "plus.circle")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appSecondary)
                         .controlSize(.small)
                     }) {
                         if let summary = model.investmentPlanSummary, !model.investmentPlans.isEmpty {
@@ -179,7 +179,7 @@ struct PortfolioSectionView: View {
                                 } label: {
                                     Label("添加计划", systemImage: "plus.circle")
                                 }
-                                .buttonStyle(.borderedProminent)
+                                .buttonStyle(.appPrimary)
                                 .tint(AppPalette.info)
                                 .controlSize(.small)
                             }

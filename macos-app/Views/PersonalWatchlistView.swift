@@ -29,7 +29,7 @@ struct PersonalWatchlistPanel: View {
                         systemImage: "arrow.clockwise"
                     )
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
                 .controlSize(.small)
                 .disabled(rows.isEmpty || model.isRefreshingPersonalWatchlist)
 
@@ -38,7 +38,7 @@ struct PersonalWatchlistPanel: View {
                 } label: {
                     Label("添加关注", systemImage: "plus.circle")
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.appPrimary)
                 .tint(AppPalette.brand)
                 .controlSize(.small)
             }
@@ -849,11 +849,11 @@ private struct PersonalWatchlistAlertSheet: View {
                     Button("清除全部", role: .destructive) {
                         clearDraft()
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appDanger)
                 }
                 Spacer()
                 Button("取消") { dismiss() }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary)
                     .keyboardShortcut(.cancelAction)
                 Button {
                     Task { await save() }
@@ -867,7 +867,7 @@ private struct PersonalWatchlistAlertSheet: View {
                         Text(hasAnyEnabledRule || !row.record.hasActiveAlerts ? "保存提醒" : "关闭提醒")
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.appPrimary)
                 .tint(categoryTint)
                 .disabled(isSaving || (!hasAnyEnabledRule && !row.record.hasActiveAlerts))
                 .keyboardShortcut(.defaultAction)
@@ -1131,7 +1131,7 @@ struct PersonalWatchlistAddSheet: View {
             HStack(spacing: 10) {
                 Spacer()
                 Button("取消") { dismiss() }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary)
                     .keyboardShortcut(.cancelAction)
 
                 Button {
@@ -1146,7 +1146,7 @@ struct PersonalWatchlistAddSheet: View {
                         Text("开始关注")
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.appPrimary)
                 .tint(categoryTint)
                 .disabled(resolution == nil || isSaving)
                 .keyboardShortcut(.defaultAction)

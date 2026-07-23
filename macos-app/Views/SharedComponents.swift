@@ -131,6 +131,176 @@ struct PressResponsiveButtonStyle: ButtonStyle {
     }
 }
 
+enum AppActionButtonKind: Equatable {
+    case primary
+    case secondary
+    case text
+    case danger
+    case icon
+    case menuItem
+}
+
+struct AppActionButtonStyle: ButtonStyle {
+    let kind: AppActionButtonKind
+
+    func makeBody(configuration: Configuration) -> some View {
+        AppActionButtonLabel(configuration: configuration, kind: kind)
+    }
+}
+
+extension ButtonStyle where Self == AppActionButtonStyle {
+    static var appPrimary: AppActionButtonStyle {
+        AppActionButtonStyle(kind: .primary)
+    }
+
+    static var appSecondary: AppActionButtonStyle {
+        AppActionButtonStyle(kind: .secondary)
+    }
+
+    static var appText: AppActionButtonStyle {
+        AppActionButtonStyle(kind: .text)
+    }
+
+    static var appDanger: AppActionButtonStyle {
+        AppActionButtonStyle(kind: .danger)
+    }
+
+    static var appIcon: AppActionButtonStyle {
+        AppActionButtonStyle(kind: .icon)
+    }
+
+    static var appMenuItem: AppActionButtonStyle {
+        AppActionButtonStyle(kind: .menuItem)
+    }
+}
+
+private struct AppActionButtonLabel: View {
+    let configuration: AppActionButtonStyle.Configuration
+    let kind: AppActionButtonKind
+
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var isHovering = false
+
+    private var isInteractive: Bool {
+        isEnabled && isHovering
+    }
+
+    private var foreground: Color {
+        switch kind {
+        case .primary:
+            return AppPalette.onBrand
+        case .danger:
+            return AppPalette.danger
+        case .secondary, .menuItem:
+            return isInteractive ? AppPalette.ink : AppPalette.ink.opacity(0.90)
+        case .text, .icon:
+            return isInteractive ? AppPalette.brand : AppPalette.muted
+        }
+    }
+
+    private var fill: Color {
+        switch kind {
+        case .primary:
+            return AppPalette.brand.opacity(isInteractive ? 1 : 0.88)
+        case .secondary:
+            return isInteractive ? AppPalette.brandSoft : AppPalette.cardStrong
+        case .danger:
+            return AppPalette.danger.opacity(isInteractive ? 0.16 : 0.09)
+        case .text, .icon:
+            return isInteractive ? AppPalette.brand.opacity(0.10) : Color.clear
+        case .menuItem:
+            return isInteractive ? AppPalette.brand.opacity(0.12) : Color.clear
+        }
+    }
+
+    private var stroke: Color {
+        switch kind {
+        case .primary:
+            return AppPalette.brand.opacity(isInteractive ? 0.96 : 0.72)
+        case .secondary:
+            return isInteractive ? AppPalette.brand.opacity(0.52) : AppPalette.line.opacity(0.50)
+        case .danger:
+            return AppPalette.danger.opacity(isInteractive ? 0.52 : 0.28)
+        case .text, .icon, .menuItem:
+            return Color.clear
+        }
+    }
+
+    private var horizontalPadding: CGFloat {
+        switch kind {
+        case .primary, .secondary, .danger:
+            return 12
+        case .text:
+            return 7
+        case .icon:
+            return 0
+        case .menuItem:
+            return 10
+        }
+    }
+
+    private var verticalPadding: CGFloat {
+        switch kind {
+        case .primary, .secondary, .danger:
+            return 8
+        case .text:
+            return 6
+        case .icon:
+            return 0
+        case .menuItem:
+            return 9
+        }
+    }
+
+    private var minimumHeight: CGFloat {
+        switch kind {
+        case .icon:
+            return 28
+        case .menuItem:
+            return 42
+        default:
+            return 30
+        }
+    }
+
+    var body: some View {
+        configuration.label
+            .font(.system(size: kind == .menuItem ? 11 : 10, weight: .semibold))
+            .foregroundStyle(foreground)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
+            .frame(
+                minWidth: kind == .icon ? 28 : nil,
+                minHeight: minimumHeight,
+                alignment: kind == .menuItem ? .leading : .center
+            )
+            .contentShape(RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+            .background(fill, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                    .stroke(stroke, lineWidth: 1)
+            )
+            .shadow(
+                color: kind == .primary && isInteractive ? AppPalette.brand.opacity(0.18) : .clear,
+                radius: 8,
+                y: 3
+            )
+            .scaleEffect(
+                accessibilityReduceMotion
+                    ? 1
+                    : (configuration.isPressed ? 0.97 : 1)
+            )
+            .offset(y: accessibilityReduceMotion || !isInteractive ? 0 : -0.5)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.86 : 1) : 0.46)
+            .animation(accessibilityReduceMotion ? nil : AppPalette.motionFast, value: configuration.isPressed)
+            .animation(accessibilityReduceMotion ? nil : AppPalette.motionStandard, value: isHovering)
+            .onHover { hovering in
+                isHovering = hovering
+            }
+    }
+}
+
 struct FullRowDisclosureGroupStyle: DisclosureGroupStyle {
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -338,7 +508,7 @@ struct EmptySectionState: View {
                 .foregroundStyle(AppPalette.muted)
                 .fixedSize(horizontal: false, vertical: true)
             Button(actionTitle, action: action)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.appPrimary)
                 .tint(AppPalette.brand)
                 .controlSize(.small)
         }
@@ -422,7 +592,7 @@ struct ToastBar: View {
                 .textSelection(.enabled)
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary)
                     .controlSize(.small)
             }
             if let onDismiss {

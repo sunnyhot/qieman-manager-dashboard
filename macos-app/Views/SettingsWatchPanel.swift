@@ -52,7 +52,7 @@ extension SettingsSectionView {
                     } label: {
                         Label("保存", systemImage: "checkmark.circle")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.appPrimary)
                     .tint(AppPalette.brand)
 
                     Button {
@@ -60,14 +60,14 @@ extension SettingsSectionView {
                     } label: {
                         Label("同步当前查询", systemImage: "arrow.triangle.2.circlepath")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary)
 
                     Button {
                         model.runManagerWatchNow()
                     } label: {
                         Label("立即巡检", systemImage: "play.circle")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary)
                 }
 
                 SettingsDivider()

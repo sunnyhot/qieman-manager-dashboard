@@ -36,7 +36,7 @@ struct OverviewSectionView: View {
                             model.selectedSection = .platform
                         }
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary)
                     .controlSize(.small)
                 }) {
                     if model.latestPlatformActions.isEmpty {
@@ -75,7 +75,7 @@ struct OverviewSectionView: View {
                                 model.selectedSection = .platform
                             }
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appSecondary)
                         .controlSize(.small)
                     }
                 ) {

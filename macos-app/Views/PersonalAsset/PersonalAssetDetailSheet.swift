@@ -117,7 +117,7 @@ struct PersonalAssetDetailSheet: View {
                             .font(.system(size: 11, weight: .bold))
                             .frame(width: 28, height: 28)
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.appIcon)
                     .foregroundStyle(AppPalette.muted)
                     .help("关闭")
                     .accessibilityLabel("关闭资产详情")

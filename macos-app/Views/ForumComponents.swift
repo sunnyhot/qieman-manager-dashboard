@@ -140,7 +140,7 @@ struct InvestmentPlanCard: View {
                         } label: {
                             Label("修改", systemImage: "square.and.pencil")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appSecondary)
                         .controlSize(.small)
                     }
                     if let onDelete {
@@ -149,7 +149,7 @@ struct InvestmentPlanCard: View {
                         } label: {
                             Label("删除", systemImage: "trash")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appDanger)
                         .controlSize(.small)
                     }
                 }
@@ -236,7 +236,7 @@ struct PendingTradeCard: View {
                         } label: {
                             Label("修改", systemImage: "square.and.pencil")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appSecondary)
                         .controlSize(.small)
                     }
                     if let onDelete {
@@ -245,7 +245,7 @@ struct PendingTradeCard: View {
                         } label: {
                             Label("删除", systemImage: "trash")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appDanger)
                         .controlSize(.small)
                     }
                 }

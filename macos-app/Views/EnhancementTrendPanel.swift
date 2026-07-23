@@ -194,7 +194,7 @@ extension EnhancementCenterView {
             } label: {
                 Label(model.trendGenerationState == .generating ? "生成中…" : "立即分析", systemImage: "wand.and.stars")
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.appPrimary)
             .tint(AppPalette.brand)
             .disabled(!model.trendSettings.provider.isConfigured || model.trendGenerationState == .generating)
 
@@ -205,7 +205,7 @@ extension EnhancementCenterView {
             } label: {
                 Label("检测模型", systemImage: "antenna.radiowaves.left.and.right")
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.appSecondary)
             .disabled(!model.trendSettings.provider.isConfigured || model.trendConnectionState == .checking)
         }
     }

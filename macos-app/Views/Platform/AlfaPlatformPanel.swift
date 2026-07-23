@@ -333,9 +333,7 @@ struct AlfaPlatformPanel: View {
                     .foregroundStyle(AppPalette.ink)
                 Spacer()
                 Button("完成") { showingAddSheet = false }
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(AppPalette.brand)
-                    .buttonStyle(.plain)
+                    .buttonStyle(.appText)
             }
 
             Text("从且慢严选组合列表选择，或直接输入组合码（如 ZH157591）。")
@@ -372,7 +370,7 @@ struct AlfaPlatformPanel: View {
                             if ok { manualPoCode = "" }
                         }
                     }
-                    .font(.system(size: 11, weight: .medium))
+                    .buttonStyle(.appPrimary)
                     .disabled(manualPoCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
@@ -411,9 +409,7 @@ struct AlfaPlatformPanel: View {
                                 Button("添加") {
                                     Task { _ = await model.addAlfaPortfolio(item) }
                                 }
-                                .font(.system(size: 10, weight: .medium))
-                                .buttonStyle(.plain)
-                                .foregroundStyle(AppPalette.brand)
+                                .buttonStyle(.appText)
                             }
                         }
                         .padding(.horizontal, 6)

@@ -61,7 +61,7 @@ extension EnhancementCenterView {
                     } label: {
                         Label("保存配置", systemImage: "checkmark.circle")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.appPrimary)
                     .tint(AppPalette.brand)
 
                     Button {
@@ -72,7 +72,7 @@ extension EnhancementCenterView {
                             systemImage: model.trendConnectionState == .checking ? "hourglass" : "antenna.radiowaves.left.and.right"
                         )
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary)
                     .disabled(!model.trendSettings.provider.isConfigured || model.trendConnectionState == .checking)
                 }
 

@@ -90,12 +90,12 @@ struct MenuBarPortfolioView: View {
                 Button("打开主界面") {
                     model.showMainWindow(section: .portfolio)
                 }
-                .buttonStyle(.link)
+                .buttonStyle(.appText)
 
                 Button("配置菜单栏") {
                     model.showMainWindow(section: .settings)
                 }
-                .buttonStyle(.link)
+                .buttonStyle(.appText)
 
                 Spacer()
 
@@ -103,13 +103,13 @@ struct MenuBarPortfolioView: View {
                     model.showMainWindow(section: .settings)
                     Task { await model.checkForUpdates(userInitiated: true) }
                 }
-                .buttonStyle(.link)
+                .buttonStyle(.appText)
                 .disabled(model.isCheckingForUpdates)
 
                 Button("退出应用") {
                     model.quitApplication()
                 }
-                .buttonStyle(.link)
+                .buttonStyle(.appText)
                 .foregroundStyle(AppPalette.muted)
                 .help("退出且慢主理人看板")
             }
@@ -117,6 +117,7 @@ struct MenuBarPortfolioView: View {
         .padding(14)
         .frame(width: 392, height: 720)
         .background(AppPalette.canvasGradient)
+        .buttonStyle(.appSecondary)
         .respectsReducedMotion()
         .task {
             for action in MenuBarPortfolioRefreshDecision.onAppear(
@@ -162,7 +163,7 @@ struct MenuBarPortfolioView: View {
                     }
                 }
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.appPrimary)
             .controlSize(.small)
             .disabled(
                 isRefreshing
@@ -306,7 +307,7 @@ struct MenuBarPortfolioView: View {
                 Button(rows.isEmpty ? "去添加" : "管理") {
                     model.showMainWindow(section: .portfolio)
                 }
-                .buttonStyle(.link)
+                .buttonStyle(.appText)
                 .controlSize(.small)
             }
 

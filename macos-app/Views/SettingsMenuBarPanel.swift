@@ -83,14 +83,14 @@ extension SettingsSectionView {
                         } label: {
                             Label("恢复默认", systemImage: "arrow.counterclockwise")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appSecondary)
 
                         Button {
                             isConfirmingHoldingSelectionClear = true
                         } label: {
                             Label("清空单标的", systemImage: "xmark.circle")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appSecondary)
                         .disabled(!model.menuBarTickerSettings.selections.contains(where: { $0.holdingValue != nil }))
                     }
                 }
@@ -469,7 +469,7 @@ extension SettingsSectionView {
                     } label: {
                         Label(model.isRefreshingMarketIndices ? "刷新中" : "刷新大盘", systemImage: "arrow.clockwise")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary)
                     .controlSize(.small)
                     .disabled(model.isRefreshingMarketIndices)
                 }
@@ -705,7 +705,7 @@ extension SettingsSectionView {
                     } label: {
                         Label("刷新估值", systemImage: "arrow.clockwise")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary)
                     .controlSize(.small)
                     .disabled(!model.hasPersonalPortfolio || model.isRefreshingPortfolio)
                 }

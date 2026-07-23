@@ -72,7 +72,7 @@ extension SettingsSectionView {
                     } label: {
                         Label(model.isCheckingForUpdates ? "检查中…" : "检查更新", systemImage: "arrow.down.circle")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.appPrimary)
                     .tint(AppPalette.brand)
                     .disabled(model.isCheckingForUpdates)
 
@@ -82,7 +82,7 @@ extension SettingsSectionView {
                         } label: {
                             Label(model.isInstallingUpdate ? "安装中…" : "下载并安装", systemImage: "square.and.arrow.down")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appSecondary)
                         .disabled(model.isInstallingUpdate)
 
                         Button {
@@ -90,7 +90,7 @@ extension SettingsSectionView {
                         } label: {
                             Label("Release", systemImage: "safari")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.appSecondary)
                     }
 
                     Spacer()
@@ -100,7 +100,7 @@ extension SettingsSectionView {
                     } label: {
                         Label("退出应用", systemImage: "power")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.appSecondary)
                     .tint(AppPalette.danger)
                     .help("退出且慢主理人看板")
                 }

@@ -106,43 +106,65 @@ struct PersonalAssetOverviewCard: View {
     }
 }
 
+private enum PersonalAssetAddTarget {
+    case holding
+    case pendingTrade
+    case investmentPlan
+}
+
 struct PersonalAssetAddButtons: View {
+    @State private var isShowingAddMenu = false
     @State private var isPresentingAddHoldingSheet = false
     @State private var isPresentingAddPendingTradeSheet = false
     @State private var isPresentingAddInvestmentPlanSheet = false
 
     var body: some View {
-        Menu {
-            Button {
-                isPresentingAddHoldingSheet = true
-            } label: {
-                Label("添加持仓", systemImage: "briefcase")
-            }
-
-            Button {
-                isPresentingAddPendingTradeSheet = true
-            } label: {
-                Label("添加买入中", systemImage: "clock.badge.exclamationmark")
-            }
-
-            Button {
-                isPresentingAddInvestmentPlanSheet = true
-            } label: {
-                Label("添加计划档案", systemImage: "calendar.badge.clock")
+        Button {
+            withAnimation(AppPalette.motionFast) {
+                isShowingAddMenu.toggle()
             }
         } label: {
-            Label("添加", systemImage: "plus")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(AppPalette.brand)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                        .stroke(AppPalette.brand.opacity(0.20), lineWidth: 1)
-                )
+            HStack(spacing: 7) {
+                Image(systemName: "plus")
+                Text("添加")
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .rotationEffect(.degrees(isShowingAddMenu ? 180 : 0))
+            }
         }
-        .menuStyle(.borderlessButton)
+        .buttonStyle(.appPrimary)
+        .accessibilityValue(isShowingAddMenu ? "已展开" : "已折叠")
+        .popover(isPresented: $isShowingAddMenu, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("添加资产记录")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(AppPalette.muted)
+                    .padding(.horizontal, 10)
+                    .padding(.top, 5)
+
+                addMenuItem(
+                    title: "添加持仓",
+                    subtitle: "记录已经持有的基金或股票",
+                    icon: "briefcase",
+                    target: .holding
+                )
+                addMenuItem(
+                    title: "添加买入中",
+                    subtitle: "记录尚未确认份额的交易",
+                    icon: "clock.badge.exclamationmark",
+                    target: .pendingTrade
+                )
+                addMenuItem(
+                    title: "添加计划档案",
+                    subtitle: "创建定投或涨跌幅计划",
+                    icon: "calendar.badge.clock",
+                    target: .investmentPlan
+                )
+            }
+            .padding(8)
+            .frame(width: 256)
+            .background(AppPalette.card)
+        }
         .sheet(isPresented: $isPresentingAddHoldingSheet) {
             PersonalAssetAddHoldingSheet()
         }
@@ -151,6 +173,53 @@ struct PersonalAssetAddButtons: View {
         }
         .sheet(isPresented: $isPresentingAddInvestmentPlanSheet) {
             PersonalInvestmentPlanAddSheet()
+        }
+    }
+
+    private func addMenuItem(
+        title: String,
+        subtitle: String,
+        icon: String,
+        target: PersonalAssetAddTarget
+    ) -> some View {
+        Button {
+            present(target)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppPalette.brand)
+                    .accentIconStyle(tint: AppPalette.brand, size: 28)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .foregroundStyle(AppPalette.ink)
+                    Text(subtitle)
+                        .font(.system(size: 9))
+                        .foregroundStyle(AppPalette.muted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(AppPalette.muted)
+            }
+        }
+        .buttonStyle(.appMenuItem)
+    }
+
+    private func present(_ target: PersonalAssetAddTarget) {
+        isShowingAddMenu = false
+        Task { @MainActor in
+            await Task.yield()
+            switch target {
+            case .holding:
+                isPresentingAddHoldingSheet = true
+            case .pendingTrade:
+                isPresentingAddPendingTradeSheet = true
+            case .investmentPlan:
+                isPresentingAddInvestmentPlanSheet = true
+            }
         }
     }
 }
@@ -183,7 +252,7 @@ struct PersonalPortfolioEmptyState: View {
                 Label("添加第一笔持仓", systemImage: "plus")
                     .font(.system(size: 13, weight: .semibold))
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.appPrimary)
             .tint(AppPalette.brand)
             .controlSize(.large)
             .accessibilityHint("打开持仓录入表单")
@@ -251,7 +320,7 @@ struct PersonalAssetAddHoldingSheet: View {
                 Button("取消") {
                     dismiss()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
                 .keyboardShortcut(.cancelAction)
 
                 Button("添加") {
@@ -278,7 +347,7 @@ struct PersonalAssetAddHoldingSheet: View {
                     }
                 }
                 .disabled(codeResolution == nil || isResolvingName)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.appPrimary)
                 .tint(codeResolution?.assetType == .stock ? AppPalette.info : AppPalette.brand)
                 .keyboardShortcut(.defaultAction)
             }
@@ -466,7 +535,7 @@ struct PersonalAssetEditHoldingSheet: View {
                 Button("取消") {
                     dismiss()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
                 .keyboardShortcut(.cancelAction)
 
                 Button("保存") {
@@ -491,7 +560,7 @@ struct PersonalAssetEditHoldingSheet: View {
                         }
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.appPrimary)
                 .tint(AppPalette.brand)
                 .disabled(holding == nil)
                 .keyboardShortcut(.defaultAction)
@@ -601,7 +670,7 @@ struct PersonalAssetUnitAdjustmentSheet: View {
                 Button("取消") {
                     dismiss()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
                 .keyboardShortcut(.cancelAction)
 
                 Button(mode == .add ? "添加" : "删除") {
@@ -614,7 +683,7 @@ struct PersonalAssetUnitAdjustmentSheet: View {
                         focusedField = adjustmentUnitsText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .units : .netValue
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(mode == .add ? .appPrimary : .appDanger)
                 .tint(mode == .add ? AppPalette.positive : AppPalette.warning)
                 .keyboardShortcut(.defaultAction)
             }

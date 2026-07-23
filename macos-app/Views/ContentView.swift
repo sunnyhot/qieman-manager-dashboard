@@ -51,6 +51,7 @@ struct ContentView: View {
                 )
         }
         .frame(minWidth: 860, idealWidth: 1200, minHeight: 600)
+        .buttonStyle(.appSecondary)
         .respectsReducedMotion()
         .task {
             await model.start()
@@ -205,7 +206,7 @@ struct ContentView: View {
                 Label("刷新", systemImage: "arrow.clockwise")
                     .font(.system(size: 13, weight: .semibold))
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.appPrimary)
             .controlSize(.regular)
             .disabled(model.isRefreshing || (!model.hasLiveService && !model.canRefreshWithoutLiveService))
         }
@@ -494,6 +495,7 @@ private struct AppUpdateSheet: View {
                 Button("稍后") {
                     onDismiss()
                 }
+                .buttonStyle(.appText)
                 .keyboardShortcut(.cancelAction)
                 .disabled(isInstalling)
 
@@ -502,6 +504,7 @@ private struct AppUpdateSheet: View {
                 Button("查看发布页") {
                     onReleasePage()
                 }
+                .buttonStyle(.appSecondary)
                 .disabled(isInstalling)
 
                 Button {
@@ -509,7 +512,7 @@ private struct AppUpdateSheet: View {
                 } label: {
                     Label(isInstalling ? "安装中…" : "下载并重启安装", systemImage: "arrow.triangle.2.circlepath")
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.appPrimary)
                 .keyboardShortcut(.defaultAction)
                 .disabled(isInstalling || release.asset == nil)
             }

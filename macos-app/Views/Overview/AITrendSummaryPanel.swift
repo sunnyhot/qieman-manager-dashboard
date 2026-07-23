@@ -142,7 +142,7 @@ struct AITrendSummaryPanel: View {
             } label: {
                 Label(item.title, systemImage: item.systemImage)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.appPrimary)
             .tint(item.tone.color)
             .controlSize(.small)
             .disabled(item.isDisabled)
@@ -152,7 +152,7 @@ struct AITrendSummaryPanel: View {
             } label: {
                 Label(item.title, systemImage: item.systemImage)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.appSecondary)
             .tint(item.tone.color)
             .controlSize(.small)
             .disabled(item.isDisabled)

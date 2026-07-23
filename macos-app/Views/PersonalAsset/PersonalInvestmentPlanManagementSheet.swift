@@ -41,7 +41,7 @@ struct PersonalInvestmentPlanManagementSheet: View {
                 Button("完成") {
                     dismiss()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
                 .keyboardShortcut(.cancelAction)
             }
 
@@ -199,7 +199,7 @@ private struct PersonalInvestmentPlanManageRow: View {
                 } label: {
                     Label("编辑", systemImage: "square.and.pencil")
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
 
                 Menu {
                     ForEach(PersonalInvestmentPlanStatusOption.allCases) { option in
@@ -217,7 +217,7 @@ private struct PersonalInvestmentPlanManageRow: View {
                 } label: {
                     Label("状态", systemImage: "archivebox")
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
 
                 Spacer()
 
@@ -226,7 +226,7 @@ private struct PersonalInvestmentPlanManageRow: View {
                 } label: {
                     Label("删除", systemImage: "trash")
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appDanger)
             }
             .font(.system(size: 12, weight: .semibold))
         }

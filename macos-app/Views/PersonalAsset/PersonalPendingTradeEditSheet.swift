@@ -93,7 +93,7 @@ struct PersonalPendingTradeEditSheet: View {
                 Button("取消") {
                     dismiss()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.appSecondary)
                 .keyboardShortcut(.cancelAction)
 
                 Button(trade == nil ? "添加" : "保存") {
@@ -133,7 +133,7 @@ struct PersonalPendingTradeEditSheet: View {
                         focusFirstInvalidField()
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.appPrimary)
                 .tint(AppPalette.warning)
                 .keyboardShortcut(.defaultAction)
             }

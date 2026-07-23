@@ -167,6 +167,7 @@ struct ForumSectionView: View {
                                 } label: {
                                     Label(model.isLoadingComments ? "刷新中" : "刷新评论", systemImage: "arrow.clockwise")
                                 }
+                                .buttonStyle(.appSecondary)
                                 .disabled(model.isLoadingComments)
 
                                 Spacer()
@@ -188,6 +189,7 @@ struct ForumSectionView: View {
                                 } label: {
                                     Label(model.isLoadingComments ? "刷新中" : "刷新评论", systemImage: "arrow.clockwise")
                                 }
+                                .buttonStyle(.appSecondary)
                                 .disabled(model.isLoadingComments)
                             }
                         }
