@@ -63,6 +63,8 @@ struct PersonalAssetDetailSheet: View {
                         }
                     }
 
+                    PersonalAssetPriceTrendChart(row: row)
+
                     if let trendSummary {
                         trendAnalysisSection(trendSummary)
                     }

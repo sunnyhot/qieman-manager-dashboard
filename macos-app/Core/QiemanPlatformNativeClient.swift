@@ -347,6 +347,49 @@ final class QiemanPlatformNativeClient {
         )
     }
 
+    func fetchPersonalAssetPriceHistory(
+        for holding: UserPortfolioHolding
+    ) async throws -> [PersonalWatchlistDailyPoint] {
+        let code = holding.normalizedFundCode
+        guard !code.isEmpty else { return [] }
+
+        if holding.assetType == .fund, holding.detectedFundMarket == .offExchange {
+            let history: NativeFundHistory
+            if let cached = await cache.history(for: code, ttl: historyTTL) {
+                history = cached
+            } else {
+                history = try await fetchFundHistorySeries(code)
+                await cache.store(history: history, for: code)
+            }
+            return history.series
+                .suffix(PersonalWatchlistRecord.maximumDailyPointCount)
+                .map {
+                    PersonalWatchlistDailyPoint(
+                        date: $0.date,
+                        price: $0.nav,
+                        quotedAt: $0.date,
+                        sourceLabel: "基金净值"
+                    )
+                }
+        }
+
+        let item = PersonalWatchlistItem(
+            id: holding.id,
+            code: code,
+            displayName: holding.normalizedName,
+            assetType: holding.assetType,
+            stockMarket: holding.detectedMarket,
+            fundMarket: holding.detectedFundMarket,
+            followedAt: ""
+        )
+        if let cached = await cache.stockDailySeries(for: item.identityKey, ttl: stockDailySeriesTTL) {
+            return cached
+        }
+        let series = try await fetchWatchlistMarketDailySeries(item)
+        await cache.store(stockDailySeries: series, for: item.identityKey)
+        return series
+    }
+
     func fetchMarketIndexQuotes(kinds: [MarketIndexKind]) async -> [MarketIndexKind: MarketIndexQuote] {
         let uniqueKinds = Array(Set(kinds)).sorted { $0.rawValue < $1.rawValue }
         guard !uniqueKinds.isEmpty else { return [:] }

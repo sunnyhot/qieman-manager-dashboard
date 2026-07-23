@@ -95,13 +95,32 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertTrue(source.contains("Text(\"数据 \\(summary.dataAsOf)\""))
     }
 
-    func testTableRowKeepsTrendSignalBlockForAssetTags() throws {
+    func testAssetDetailShowsInteractivePriceTrendBeforeSupportingSections() throws {
+        let detailSource = try String(contentsOf: personalAssetDetailSourceURL(), encoding: .utf8)
+        let chartSource = try String(contentsOf: personalAssetTrendChartSourceURL(), encoding: .utf8)
+
+        XCTAssertTrue(detailSource.contains("PersonalAssetPriceTrendChart(row: row)"))
+        XCTAssertTrue(chartSource.contains("import Charts"))
+        XCTAssertTrue(chartSource.contains("Picker(\"走势区间\""))
+        XCTAssertTrue(chartSource.contains(".onContinuousHover"))
+        XCTAssertTrue(chartSource.contains("Label(\"虚线：持仓成本\""))
+        XCTAssertTrue(chartSource.contains("model.platformClient.fetchPersonalAssetPriceHistory"))
+    }
+
+    func testTableRowKeepsOnlyNonRedundantAssetAndTrendMetadata() throws {
         let source = try String(contentsOf: personalAssetTableRowSourceURL(), encoding: .utf8)
 
         XCTAssertTrue(source.contains("if let trendSummary"))
         XCTAssertTrue(source.contains("trendSignalBlock(trendSummary)"))
         XCTAssertTrue(source.contains("summary.tradePlan.label"))
         XCTAssertTrue(source.contains("summary.primaryConfidence.label"))
+        XCTAssertTrue(source.contains("Text(summary.tradePlan.method)"))
+        XCTAssertTrue(source.contains("Text(\"\\(summary.counterSignals.count) 条反证\")"))
+        XCTAssertFalse(source.contains("private func trendTagChip"))
+        XCTAssertFalse(source.contains("ToolbarBadge(title: marketLabel"))
+        XCTAssertFalse(source.contains("ToolbarBadge(title: row.combinedStatusText"))
+        XCTAssertTrue(source.contains("ToolbarBadge(title: \"待确认\""))
+        XCTAssertTrue(source.contains("ToolbarBadge(title: \"计划中\""))
     }
 
     func testPresentationBuildsCountsAndVisibleRowsFromScopeSearchAndSort() {
@@ -167,6 +186,14 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appendingPathComponent("Views/PersonalAsset/PersonalAssetDetailSheet.swift")
+    }
+
+    private func personalAssetTrendChartSourceURL() -> URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Views/PersonalAsset/PersonalAssetPriceTrendChart.swift")
     }
 
     private func personalAssetTableRowSourceURL() -> URL {

@@ -42,10 +42,17 @@ struct PersonalAssetTableRow: View {
                         .foregroundStyle(AppPalette.ink)
                         .lineLimit(1)
                         .help(row.fundName)
-                    if let marketLabel = row.rawHolding?.marketLabel ?? row.holdingRow?.holding.marketLabel ?? row.archivedHolding?.marketLabel {
-                        ToolbarBadge(title: marketLabel, tint: AppPalette.info)
+                    if row.hasArchivedHolding && !row.hasHolding {
+                        ToolbarBadge(title: "已归档", tint: AppPalette.muted)
                     }
-                    ToolbarBadge(title: row.combinedStatusText, tint: row.hasPending ? AppPalette.warning : (row.hasArchivedHolding && !row.hasHolding ? AppPalette.muted : AppPalette.brand))
+                    if row.hasPending {
+                        ToolbarBadge(title: "待确认", tint: AppPalette.warning)
+                    }
+                    if row.activePlanCount > 0 {
+                        ToolbarBadge(title: "计划中", tint: AppPalette.info)
+                    } else if row.pausedPlanCount > 0 {
+                        ToolbarBadge(title: "计划暂停", tint: AppPalette.warning)
+                    }
                     if row.hasDrawdownPlan {
                         ToolbarBadge(title: "涨跌幅 \(row.drawdownPlanCount)", tint: AppPalette.info)
                     }
@@ -342,30 +349,19 @@ struct PersonalAssetTableRow: View {
                     .minimumScaleFactor(0.82)
             }
 
-            HStack(spacing: 5) {
-                ForEach(Array(summary.tags.prefix(isCompact ? 4 : 6))) { tag in
-                    trendTagChip(tag)
+            HStack(spacing: 6) {
+                Text(summary.tradePlan.method)
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                if !summary.counterSignals.isEmpty {
+                    Text("\(summary.counterSignals.count) 条反证")
+                        .foregroundStyle(AppPalette.warning)
+                        .lineLimit(1)
                 }
             }
+            .font(.system(size: 9, weight: .medium))
         }
-    }
-
-    private func trendTagChip(_ tag: TrendAssetInlineTag) -> some View {
-        HStack(spacing: 3) {
-            Text(tag.dimension)
-                .foregroundStyle(AppPalette.muted)
-            Text(tag.text)
-                .foregroundStyle(tag.tone.color)
-        }
-        .font(.system(size: 9, weight: .semibold))
-        .lineLimit(1)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(tag.tone.color.opacity(0.08), in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
-                .stroke(tag.tone.color.opacity(0.18), lineWidth: 1)
-        )
     }
 
     private func primaryTrendText(_ summary: TrendAssetTagSummary) -> String {
