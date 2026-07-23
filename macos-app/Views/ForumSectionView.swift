@@ -95,7 +95,7 @@ struct ForumSectionView: View {
                             }
                             .padding(.trailing, 4)
                         }
-                        .frame(height: PlatformWorkspaceLayout.actionListHeight)
+                        .frame(maxHeight: PlatformWorkspaceLayout.actionListHeight)
                     }
                 }
             }
