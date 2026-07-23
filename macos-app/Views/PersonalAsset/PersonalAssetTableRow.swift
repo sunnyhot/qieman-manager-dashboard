@@ -81,12 +81,6 @@ struct PersonalAssetTableRow: View {
                     trendSignalBlock(trendSummary)
                         .padding(.top, 2)
                 }
-                // In compact mode, show shares inline under the name
-                if isCompact {
-                    Text("\(unitsColumnValue) 份")
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppPalette.muted)
-                }
             }
             .frame(width: labelWidth, alignment: .leading)
             .modifier(AssetTableLabelColumnModifier(isCompact: isCompact, minWidth: labelWidth))
@@ -146,6 +140,12 @@ struct PersonalAssetTableRow: View {
                 Text("成本 \(row.costPrice.map(decimalText) ?? "—")")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
+                if isCompact {
+                    Text("份额 \(unitsColumnValue)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                        .lineLimit(1)
+                }
             }
             .frame(width: priceWidth, alignment: .leading)
 

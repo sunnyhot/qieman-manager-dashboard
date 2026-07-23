@@ -101,6 +101,21 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertFalse(source.contains("LazyVGrid(columns: [GridItem(.adaptive(minimum: 92)"))
     }
 
+    func testAddMenuLivesInAssetSectionHeaderWithoutRedundantStatusActions() throws {
+        let portfolioSource = try String(contentsOf: portfolioSectionSourceURL(), encoding: .utf8)
+        let browserSource = try String(contentsOf: personalAssetBrowserSourceURL(), encoding: .utf8)
+
+        XCTAssertTrue(portfolioSource.contains("SectionCard(title: \"资产全貌总表\""))
+        XCTAssertTrue(portfolioSource.contains("PersonalAssetAddButtons()"))
+        XCTAssertFalse(portfolioSource.contains("Text(\"已录入\")"))
+        XCTAssertFalse(portfolioSource.contains("Button(\"打开设置\")"))
+        XCTAssertFalse(browserSource.contains("PersonalAssetAddButtons()"))
+    }
+
+    func testDrawdownFilterUsesPlainLanguageLabel() {
+        XCTAssertEqual(PersonalAssetFilterScope.drawdownMode.rawValue, "涨跌幅计划")
+    }
+
     func testPersonalAssetTableKeepsHorizontalScrollAvailableOnSmallScreens() throws {
         let source = try String(contentsOf: personalAssetBrowserSourceURL(), encoding: .utf8)
 
@@ -157,6 +172,16 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertEqual(layout.labelWidth, 260)
     }
 
+    func testCompactAssetRowMovesUnitsIntoPriceColumn() throws {
+        let browserSource = try String(contentsOf: personalAssetBrowserSourceURL(), encoding: .utf8)
+        let rowSource = try String(contentsOf: personalAssetTableRowSourceURL(), encoding: .utf8)
+
+        XCTAssertTrue(browserSource.contains("Text(isCompact ? \"价格/份额\" : \"现价 / 成本\")"))
+        XCTAssertTrue(rowSource.contains("Text(\"份额 \\(unitsColumnValue)\")"))
+        XCTAssertFalse(rowSource.contains("Text(\"\\(unitsColumnValue) 份\")"))
+        XCTAssertFalse(rowSource.contains("// In compact mode, show shares inline under the name"))
+    }
+
     func testAssetDetailUsesAIOpinionCopyAndKeepsConditionsVisible() throws {
         let source = try String(contentsOf: personalAssetDetailSourceURL(), encoding: .utf8)
 
@@ -196,6 +221,15 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertTrue(chartSource.contains(".onContinuousHover"))
         XCTAssertTrue(chartSource.contains("Label(\"虚线：持仓成本\""))
         XCTAssertTrue(chartSource.contains("model.platformClient.fetchPersonalAssetPriceHistory"))
+    }
+
+    func testAssetDetailMergesPriceFactsIntoTopMetrics() throws {
+        let source = try String(contentsOf: personalAssetDetailSourceURL(), encoding: .utf8)
+
+        XCTAssertTrue(source.contains("count: 3"))
+        XCTAssertTrue(source.contains("\"总持仓 · \\(unitsText($0)) 份\""))
+        XCTAssertFalse(source.contains("detailSection(title: \"价格与收益\""))
+        XCTAssertFalse(source.contains("private var priceSection"))
     }
 
     func testTableRowKeepsOnlyNonRedundantAssetAndTrendMetadata() throws {

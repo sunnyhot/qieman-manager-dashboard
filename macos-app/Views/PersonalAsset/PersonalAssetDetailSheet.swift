@@ -9,6 +9,8 @@ private extension PersonalAssetDetailTone {
             return AppPalette.info
         case .warning:
             return AppPalette.warning
+        case .neutral:
+            return AppPalette.ink
         case .muted:
             return AppPalette.muted
         case .marketGain:
@@ -27,7 +29,7 @@ private enum AssetDetailLayout {
     static let secondaryColumnWidth: CGFloat = 292
     static let metricColumns = Array(
         repeating: GridItem(.flexible(minimum: 112), spacing: 10),
-        count: 5
+        count: 3
     )
 }
 
@@ -39,14 +41,6 @@ struct PersonalAssetDetailSheet: View {
 
     private var summary: PersonalAssetDetailSummary {
         PersonalAssetDetailSummary.make(row: row)
-    }
-
-    private var changeTint: Color {
-        AppPalette.marketTint(for: row.estimateChangeAmount)
-    }
-
-    private var profitTint: Color {
-        AppPalette.marketTint(for: row.profitAmount)
     }
 
     var body: some View {
@@ -134,7 +128,10 @@ struct PersonalAssetDetailSheet: View {
                         .monospacedDigit()
                         .lineLimit(1)
                         .minimumScaleFactor(0.72)
-                    Text("总持仓")
+                    Text(
+                        row.holdingUnits.map { "总持仓 · \(unitsText($0)) 份" }
+                            ?? "总持仓"
+                    )
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
                 }
@@ -226,19 +223,14 @@ struct PersonalAssetDetailSheet: View {
     private func supportingSections(_ items: [PersonalAssetDetailAttentionItem]) -> some View {
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .top, spacing: 14) {
-                VStack(spacing: 14) {
-                    attentionSection(items)
-                    sourceSection
-                }
-                .frame(width: AssetDetailLayout.secondaryColumnWidth, alignment: .top)
-
-                priceSection
-                    .frame(minWidth: 360, maxWidth: .infinity, alignment: .top)
+                attentionSection(items)
+                    .frame(maxWidth: .infinity, alignment: .top)
+                sourceSection
+                    .frame(width: AssetDetailLayout.secondaryColumnWidth, alignment: .top)
             }
 
             VStack(spacing: 14) {
                 attentionSection(items)
-                priceSection
                 sourceSection
             }
         }
@@ -483,19 +475,6 @@ struct PersonalAssetDetailSheet: View {
         }
         .prefix(4)
         .map(\.self)
-    }
-
-    private var priceSection: some View {
-        detailSection(title: "价格与收益", icon: "chart.xyaxis.line") {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 116), spacing: 10)], spacing: 10) {
-                compactFact(title: row.usesMarketTradeColumns ? "现价" : "净值", value: row.currentPrice.map(decimalText) ?? "—", tint: AppPalette.ink)
-                compactFact(title: "估值", value: row.currentEstimatePrice.map(decimalText) ?? "—", tint: changeTint)
-                compactFact(title: "成本", value: row.costPrice.map(decimalText) ?? "—", tint: AppPalette.ink)
-                compactFact(title: "总收益率", value: percentOptional(row.profitPct), tint: profitTint)
-                compactFact(title: "今日涨跌幅", value: dailyChangePercentText(row.estimateChangePct), tint: changeTint)
-                compactFact(title: "估值时间", value: row.holdingRow?.resolvedPriceTime ?? "—", tint: AppPalette.muted)
-            }
-        }
     }
 
     private var sourceSection: some View {

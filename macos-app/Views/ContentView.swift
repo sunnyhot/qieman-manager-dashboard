@@ -8,7 +8,7 @@ enum PersonalAssetFilterScope: String, CaseIterable, Identifiable {
     case pending = "待确认"
     case activePlan = "进行中计划"
     case archivedPlan = "已暂停/终止"
-    case drawdownMode = "涨跌幅模式"
+    case drawdownMode = "涨跌幅计划"
 
     var id: String { rawValue }
 }

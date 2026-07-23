@@ -125,7 +125,6 @@ struct PersonalAssetBrowser: View {
         includesFlexibleSpace: Bool
     ) -> some View {
         browserSearchField
-        PersonalAssetAddButtons()
 
         Divider()
             .frame(height: 22)
@@ -669,7 +668,7 @@ struct PersonalAssetTable: View {
                     Text("持有份额")
                         .frame(width: unitsColWidth(isCompact: isCompact), alignment: .leading)
                 }
-                Text(isCompact ? "价格" : "现价 / 成本")
+                Text(isCompact ? "价格/份额" : "现价 / 成本")
                     .frame(width: priceColWidth(isCompact: isCompact), alignment: .leading)
                 if usesMarketTradeColumns {
                     Text("涨跌幅")

@@ -68,16 +68,7 @@ struct PortfolioSectionView: View {
                     ProfitAttributionPanel(summary: model.profitAttributionSummary)
 
                     SectionCard(title: "资产全貌总表", subtitle: "把「已持有 + 待确认 + 计划档案」聚合到同一行", icon: "tablecells", trailing: {
-                        Spacer()
-                        Text("已录入")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(AppPalette.positive)
-                        Button("打开设置") {
-                            model.selectedSection = .settings
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(AppPalette.brand)
-                        .controlSize(.small)
+                        PersonalAssetAddButtons()
                     }) {
                         PersonalAssetBrowser(rows: model.personalAssetRows, trendReport: model.trendReport)
                     }

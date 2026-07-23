@@ -10,6 +10,7 @@ enum PersonalAssetDetailTone: Hashable {
     case brand
     case info
     case warning
+    case neutral
     case muted
     case marketGain
     case marketLoss
@@ -60,12 +61,6 @@ struct PersonalAssetDetailSummary: Hashable {
 
         let metrics = [
             PersonalAssetDetailMetric(
-                title: "已持有",
-                value: row.marketValue.map { currencyText($0, market: market) } ?? "—",
-                detail: row.holdingUnits.map { "\(unitsText($0)) 份" },
-                tone: .brand
-            ),
-            PersonalAssetDetailMetric(
                 title: "总收益",
                 value: signedCurrencyText(row.profitAmount, market: market),
                 detail: percentOptional(row.profitPct),
@@ -76,6 +71,17 @@ struct PersonalAssetDetailSummary: Hashable {
                 value: dailyChangeCurrencyText(row.estimateChangeAmount, market: market),
                 detail: dailyChangePercentText(row.estimateChangePct),
                 tone: marketTone(for: row.estimateChangeAmount)
+            ),
+            PersonalAssetDetailMetric(
+                title: row.usesMarketTradeColumns ? "现价 / 估值" : "净值 / 估值",
+                value: "\(decimalOptional(row.currentPrice)) / \(decimalOptional(row.currentEstimatePrice))",
+                detail: row.holdingRow?.resolvedPriceTime.map { "更新于 \($0)" },
+                tone: .neutral
+            ),
+            PersonalAssetDetailMetric(
+                title: "持仓成本",
+                value: decimalOptional(row.costPrice),
+                tone: .neutral
             ),
             PersonalAssetDetailMetric(
                 title: "待确认",
