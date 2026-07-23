@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.12/QiemanDashboard-3.8.12.zip",
-    "name" : "QiemanDashboard-3.8.12.zip",
-    "sha256" : "5ec1883769a346fe8e8f8e447388df87c0616c3cc6de5bd9943b5719345741ad",
-    "size" : 4850681
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.13/QiemanDashboard-3.8.13.zip",
+    "name" : "QiemanDashboard-3.8.13.zip",
+    "sha256" : "3bce66b9cc36793e7989134469a4c849f582d992468900074fda863ed8f59cc4",
+    "size" : 4855566
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.12/QiemanDashboard-3.8.12.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.13/QiemanDashboard-3.8.13.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.12.zip",
-      "size" : 4850681
+      "name" : "QiemanDashboard-3.8.13.zip",
+      "size" : 4855566
     }
   ],
-  "body" : "统一主窗口创建路径避免双窗口",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.12",
-  "name" : "QiemanDashboard v3.8.12",
-  "notes" : "统一主窗口创建路径避免双窗口",
+  "body" : "优化 AI 观点可读性与空持仓引导",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.13",
+  "name" : "QiemanDashboard v3.8.13",
+  "notes" : "优化 AI 观点可读性与空持仓引导",
   "published_at" : "",
-  "sha256" : "5ec1883769a346fe8e8f8e447388df87c0616c3cc6de5bd9943b5719345741ad",
-  "tag" : "v3.8.12",
-  "tag_name" : "v3.8.12",
-  "version" : "3.8.12"
+  "sha256" : "3bce66b9cc36793e7989134469a4c849f582d992468900074fda863ed8f59cc4",
+  "tag" : "v3.8.13",
+  "tag_name" : "v3.8.13",
+  "version" : "3.8.13"
 }
