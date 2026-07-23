@@ -101,10 +101,20 @@ final class UIExperienceRegressionTests: XCTestCase {
         XCTAssertEqual(model.appearance, .dark)
 
         let settings = try source(at: "Views/SettingsSectionView.swift")
+        let appSettings = try source(at: "Views/SettingsAppPanel.swift")
+        let content = try source(at: "Views/ContentView.swift")
+        let menuBar = try source(at: "Views/MenuBarPortfolioView.swift")
+        let appModel = try source(at: "Core/AppModel.swift")
         XCTAssertTrue(settings.contains("title: \"通用\""))
         XCTAssertTrue(settings.contains("detail: \"当前外观 · \\(model.appearance.rawValue)\""))
         XCTAssertFalse(settings.contains("title: \"版本\""))
         XCTAssertFalse(settings.contains("?? \"当前构建\""))
+        XCTAssertTrue(appSettings.contains("model.appearance = mode"))
+        XCTAssertFalse(appSettings.contains("withAnimation(.easeInOut(duration: 0.18))"))
+        XCTAssertTrue(appSettings.contains(".contentShape(Capsule())"))
+        XCTAssertTrue(content.contains(".preferredColorScheme(model.appearance.colorScheme)"))
+        XCTAssertTrue(menuBar.contains(".preferredColorScheme(model.appearance.colorScheme)"))
+        XCTAssertTrue(appModel.contains("appDelegate?.syncWindowAppearances()"))
     }
 
     func testEditorsKeepValidationFeedbackInsideThePresentedSheet() throws {

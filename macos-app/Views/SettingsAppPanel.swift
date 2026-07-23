@@ -16,9 +16,7 @@ extension SettingsSectionView {
                 HStack(spacing: 8) {
                     ForEach(AppAppearance.allCases) { mode in
                         Button {
-                            withAnimation(.easeInOut(duration: 0.18)) {
-                                model.appearance = mode
-                            }
+                            model.appearance = mode
                         } label: {
                             HStack(spacing: 5) {
                                 Image(systemName: mode == .light ? "sun.max.fill" : mode == .dark ? "moon.fill" : "circle.lefthalf.filled")
@@ -31,6 +29,7 @@ extension SettingsSectionView {
                             .padding(.vertical, 5)
                             .background(Capsule().fill(model.appearance == mode ? AppPalette.brand : AppPalette.card))
                             .overlay(Capsule().stroke(model.appearance == mode ? AppPalette.brand : AppPalette.line, lineWidth: 1))
+                            .contentShape(Capsule())
                         }
                         .buttonStyle(PressResponsiveButtonStyle())
                     }

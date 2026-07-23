@@ -70,23 +70,22 @@ struct PersonalAssetPriceTrendChart: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            header
+        VStack(alignment: .leading, spacing: 9) {
+            compactToolbar
 
             if isLoading, series.points.isEmpty {
                 loadingState
             } else if series.points.isEmpty {
                 emptyState
             } else {
-                summaryStrip
                 chart
-                    .frame(height: 214)
+                    .frame(height: 192)
                     .overlay { tooltipOverlay }
                     .transition(.opacity)
                 footer
             }
         }
-        .padding(14)
+        .padding(12)
         .background(AppPalette.card.opacity(0.82), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .panelStroke(opacity: 0.36)
         .animation(AppPalette.motionStandard, value: range)
@@ -99,70 +98,99 @@ struct PersonalAssetPriceTrendChart: View {
         }
     }
 
-    private var header: some View {
-        HStack(spacing: 10) {
+    private var compactToolbar: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                chartIdentity
+                Spacer(minLength: 4)
+                if !series.points.isEmpty {
+                    inlineSummary
+                }
+                loadingIndicator
+                rangePicker
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 10) {
+                    chartIdentity
+                    Spacer(minLength: 8)
+                    loadingIndicator
+                    rangePicker
+                }
+                if !series.points.isEmpty {
+                    inlineSummary
+                }
+            }
+        }
+    }
+
+    private var chartIdentity: some View {
+        HStack(spacing: 8) {
             Image(systemName: "chart.xyaxis.line")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(AppPalette.brand)
                 .accentIconStyle(tint: AppPalette.brand, size: 22)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(priceTitle)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(AppPalette.ink)
-                Text(row.usesMarketTradeColumns ? "按交易日收盘价展示" : "按已确认的单位净值展示")
-                    .font(.system(size: 9))
-                    .foregroundStyle(AppPalette.muted)
-            }
-            Spacer(minLength: 10)
-            if isLoading, !series.points.isEmpty {
-                ProgressView()
-                    .controlSize(.small)
-            }
-            Picker("走势区间", selection: $range) {
-                ForEach(PersonalAssetPriceTrendRange.allCases) { range in
-                    Text(range.rawValue).tag(range)
-                }
-            }
-            .labelsHidden()
-            .pickerStyle(.segmented)
-            .frame(width: 220)
-            .disabled(series.points.isEmpty)
+            Text(priceTitle)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppPalette.ink)
+                .lineLimit(1)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    @ViewBuilder
+    private var loadingIndicator: some View {
+        if isLoading, !series.points.isEmpty {
+            ProgressView()
+                .controlSize(.small)
         }
     }
 
-    private var summaryStrip: some View {
-        HStack(spacing: 14) {
+    private var rangePicker: some View {
+        Picker("走势区间", selection: $range) {
+            ForEach(PersonalAssetPriceTrendRange.allCases) { range in
+                Text(range.rawValue).tag(range)
+            }
+        }
+        .labelsHidden()
+        .pickerStyle(.segmented)
+        .controlSize(.small)
+        .frame(width: 192)
+        .disabled(series.points.isEmpty)
+    }
+
+    private var inlineSummary: some View {
+        HStack(spacing: 10) {
             trendMetric(
                 title: "最新\(priceLabel)",
                 value: visiblePoints.last.map { decimalText($0.price) } ?? "—",
                 tint: AppPalette.ink
             )
             Divider()
-                .frame(height: 30)
+                .frame(height: 26)
             trendMetric(
                 title: "\(range.rawValue)涨跌",
                 value: percentOptional(rangeChangePct),
                 tint: trendTint
             )
             Divider()
-                .frame(height: 30)
+                .frame(height: 26)
             trendMetric(
                 title: "区间",
                 value: visibleRangeText,
                 tint: AppPalette.muted
             )
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 2)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func trendMetric(title: String, value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(AppPalette.muted)
             Text(value)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(tint)
                 .monospacedDigit()
                 .lineLimit(1)

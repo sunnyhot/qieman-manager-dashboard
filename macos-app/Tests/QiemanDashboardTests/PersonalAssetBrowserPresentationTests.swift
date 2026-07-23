@@ -77,7 +77,8 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertTrue(source.contains("ForEach(summary.entries)"))
         XCTAssertFalse(source.contains("ForEach(summary.entries.prefix(6))"))
         XCTAssertTrue(source.contains(".rotationEffect(.degrees(isAttributionDetailExpanded ? 180 : 0))"))
-        XCTAssertTrue(source.contains(".transition(.opacity.combined(with: .move(edge: .top)))"))
+        XCTAssertTrue(source.contains(".clipped()\\n                        .transition(.opacity)"))
+        XCTAssertFalse(source.contains(".move(edge: .top)"))
     }
 
     func testPersonalAssetTableUsesNaturalVerticalHeight() throws {
@@ -218,6 +219,12 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertTrue(detailSource.contains("PersonalAssetPriceTrendChart(row: row)"))
         XCTAssertTrue(chartSource.contains("import Charts"))
         XCTAssertTrue(chartSource.contains("Picker(\"走势区间\""))
+        XCTAssertTrue(chartSource.contains("private var compactToolbar"))
+        XCTAssertTrue(chartSource.contains("private var inlineSummary"))
+        XCTAssertTrue(chartSource.contains("ViewThatFits(in: .horizontal)"))
+        XCTAssertTrue(chartSource.contains(".frame(width: 192)"))
+        XCTAssertFalse(chartSource.contains("private var summaryStrip"))
+        XCTAssertFalse(chartSource.contains("按已确认的单位净值展示"))
         XCTAssertTrue(chartSource.contains(".onContinuousHover"))
         XCTAssertTrue(chartSource.contains("Label(\"虚线：持仓成本\""))
         XCTAssertTrue(chartSource.contains("model.platformClient.fetchPersonalAssetPriceHistory"))
@@ -226,7 +233,11 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
     func testAssetDetailMergesPriceFactsIntoTopMetrics() throws {
         let source = try String(contentsOf: personalAssetDetailSourceURL(), encoding: .utf8)
 
-        XCTAssertTrue(source.contains("count: 3"))
+        XCTAssertTrue(source.contains("detailMetricStrip(summary.metrics)"))
+        XCTAssertTrue(source.contains("private func detailMetricStrip"))
+        XCTAssertTrue(source.contains(".frame(maxWidth: .infinity, minHeight: 48"))
+        XCTAssertFalse(source.contains("metricColumns"))
+        XCTAssertFalse(source.contains("detailMetricCard"))
         XCTAssertTrue(source.contains("\"总持仓 · \\(unitsText($0)) 份\""))
         XCTAssertFalse(source.contains("detailSection(title: \"价格与收益\""))
         XCTAssertFalse(source.contains("private var priceSection"))

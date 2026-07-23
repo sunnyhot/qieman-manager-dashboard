@@ -27,10 +27,6 @@ private enum AssetDetailLayout {
     static let idealHeight: CGFloat = 720
     static let maximumHeight: CGFloat = 780
     static let secondaryColumnWidth: CGFloat = 292
-    static let metricColumns = Array(
-        repeating: GridItem(.flexible(minimum: 112), spacing: 10),
-        count: 3
-    )
 }
 
 struct PersonalAssetDetailSheet: View {
@@ -51,11 +47,7 @@ struct PersonalAssetDetailSheet: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
-                    LazyVGrid(columns: AssetDetailLayout.metricColumns, spacing: 10) {
-                        ForEach(summary.metrics) { metric in
-                            detailMetricCard(metric)
-                        }
-                    }
+                    detailMetricStrip(summary.metrics)
 
                     PersonalAssetPriceTrendChart(row: row)
 
@@ -147,31 +139,43 @@ struct PersonalAssetDetailSheet: View {
         }
     }
 
-    private func detailMetricCard(_ metric: PersonalAssetDetailMetric) -> some View {
+    private func detailMetricStrip(_ metrics: [PersonalAssetDetailMetric]) -> some View {
+        HStack(alignment: .center, spacing: 0) {
+            ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
+                detailMetric(metric)
+                if index < metrics.count - 1 {
+                    Divider()
+                        .frame(height: 46)
+                        .overlay(AppPalette.line.opacity(0.46))
+                }
+            }
+        }
+        .padding(.vertical, 8)
+        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .cardStroke(opacity: 0.32)
+    }
+
+    private func detailMetric(_ metric: PersonalAssetDetailMetric) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(metric.title)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(AppPalette.muted)
             Text(metric.value)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundStyle(metric.tone.color)
                 .monospacedDigit()
                 .lineLimit(1)
-                .minimumScaleFactor(0.72)
+                .minimumScaleFactor(0.64)
             if let detail = metric.detail, !detail.isEmpty {
                 Text(detail)
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                     .foregroundStyle(AppPalette.muted)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.70)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
-        .padding(12)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(metric.tone.color.opacity(0.16), lineWidth: 1)
-        )
+        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+        .padding(.horizontal, 10)
     }
 
     private func attentionSection(_ items: [PersonalAssetDetailAttentionItem]) -> some View {

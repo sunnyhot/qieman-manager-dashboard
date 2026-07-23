@@ -118,6 +118,7 @@ struct MenuBarPortfolioView: View {
         .frame(width: 392, height: 720)
         .background(AppPalette.canvasGradient)
         .buttonStyle(.appSecondary)
+        .preferredColorScheme(model.appearance.colorScheme)
         .respectsReducedMotion()
         .task {
             for action in MenuBarPortfolioRefreshDecision.onAppear(

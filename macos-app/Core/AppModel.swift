@@ -260,6 +260,7 @@ final class AppModel: ObservableObject {
         set {
             guard uiState.appearance != newValue else { return }
             uiState.appearance = newValue
+            appDelegate?.syncWindowAppearances()
             NotificationCenter.default.post(name: .qiemanAppearanceDidChange, object: newValue)
         }
     }

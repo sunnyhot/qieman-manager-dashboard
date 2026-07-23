@@ -557,7 +557,8 @@ struct ProfitAttributionPanel: View {
                                 ProfitAttributionEntryRow(entry: entry)
                             }
                         }
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        .clipped()
+                        .transition(.opacity)
                     }
                 }
             }

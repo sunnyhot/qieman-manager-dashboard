@@ -52,6 +52,7 @@ struct ContentView: View {
         }
         .frame(minWidth: 860, idealWidth: 1200, minHeight: 600)
         .buttonStyle(.appSecondary)
+        .preferredColorScheme(model.appearance.colorScheme)
         .respectsReducedMotion()
         .task {
             await model.start()

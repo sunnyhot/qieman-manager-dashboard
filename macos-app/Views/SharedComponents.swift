@@ -487,6 +487,7 @@ struct SectionCard<Trailing: View, Content: View>: View {
         }
         .padding(14)
         .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
+        .clipShape(RoundedRectangle(cornerRadius: AppPalette.panelRadius))
         .panelStroke()
         .sectionShadow()
     }
