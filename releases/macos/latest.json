@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.19/QiemanDashboard-3.8.19.zip",
-    "name" : "QiemanDashboard-3.8.19.zip",
-    "sha256" : "8af227deeadb580340977c315313a978256c1adc5bb1f0b77e091439a48f3820",
-    "size" : 4908508
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.20/QiemanDashboard-3.8.20.zip",
+    "name" : "QiemanDashboard-3.8.20.zip",
+    "sha256" : "2b8ace7b6a7fbd4a605354b4d94aff5da1450f3f94f6420901dbab55eadebecb",
+    "size" : 4918782
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.19/QiemanDashboard-3.8.19.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.20/QiemanDashboard-3.8.20.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.19.zip",
-      "size" : 4908508
+      "name" : "QiemanDashboard-3.8.20.zip",
+      "size" : 4918782
     }
   ],
-  "body" : "统一应用按钮与添加菜单",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.19",
-  "name" : "QiemanDashboard v3.8.19",
-  "notes" : "统一应用按钮与添加菜单",
+  "body" : "优化基金详情与走势图展示",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.20",
+  "name" : "QiemanDashboard v3.8.20",
+  "notes" : "优化基金详情与走势图展示",
   "published_at" : "",
-  "sha256" : "8af227deeadb580340977c315313a978256c1adc5bb1f0b77e091439a48f3820",
-  "tag" : "v3.8.19",
-  "tag_name" : "v3.8.19",
-  "version" : "3.8.19"
+  "sha256" : "2b8ace7b6a7fbd4a605354b4d94aff5da1450f3f94f6420901dbab55eadebecb",
+  "tag" : "v3.8.20",
+  "tag_name" : "v3.8.20",
+  "version" : "3.8.20"
 }
