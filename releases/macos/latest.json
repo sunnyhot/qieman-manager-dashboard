@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.2/QiemanDashboard-3.8.2.zip",
-    "name" : "QiemanDashboard-3.8.2.zip",
-    "sha256" : "0768708109a70f3f20077bd7fb3611f9be9a56c0a4ae8227b680397c4f2f1daa",
-    "size" : 4771275
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.3/QiemanDashboard-3.8.3.zip",
+    "name" : "QiemanDashboard-3.8.3.zip",
+    "sha256" : "069db671b4f1ad1e3961971c5b805f4fb58a26dc495ab73669557eafdc843824",
+    "size" : 4771286
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.2/QiemanDashboard-3.8.2.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.3/QiemanDashboard-3.8.3.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.2.zip",
-      "size" : 4771275
+      "name" : "QiemanDashboard-3.8.3.zip",
+      "size" : 4771286
     }
   ],
-  "body" : "列表高度自适应 + 投顾面板进入自动加载数据 (#7)\nAGENTS.md 补充投顾持仓说明（PoFundComposition + AlfaHoldingPart/Card）",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.2",
-  "name" : "QiemanDashboard v3.8.2",
-  "notes" : "列表高度自适应 + 投顾面板进入自动加载数据 (#7)\nAGENTS.md 补充投顾持仓说明（PoFundComposition + AlfaHoldingPart/Card）",
+  "body" : "平台长赢调仓列表高度自适应（补漏 maxHeight 修复） (#8)",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.3",
+  "name" : "QiemanDashboard v3.8.3",
+  "notes" : "平台长赢调仓列表高度自适应（补漏 maxHeight 修复） (#8)",
   "published_at" : "",
-  "sha256" : "0768708109a70f3f20077bd7fb3611f9be9a56c0a4ae8227b680397c4f2f1daa",
-  "tag" : "v3.8.2",
-  "tag_name" : "v3.8.2",
-  "version" : "3.8.2"
+  "sha256" : "069db671b4f1ad1e3961971c5b805f4fb58a26dc495ab73669557eafdc843824",
+  "tag" : "v3.8.3",
+  "tag_name" : "v3.8.3",
+  "version" : "3.8.3"
 }
