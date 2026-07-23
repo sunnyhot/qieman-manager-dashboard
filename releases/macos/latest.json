@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.13/QiemanDashboard-3.8.13.zip",
-    "name" : "QiemanDashboard-3.8.13.zip",
-    "sha256" : "3bce66b9cc36793e7989134469a4c849f582d992468900074fda863ed8f59cc4",
-    "size" : 4855566
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.14/QiemanDashboard-3.8.14.zip",
+    "name" : "QiemanDashboard-3.8.14.zip",
+    "sha256" : "6f7e7ba021c76a14f9fe16afb6eadf5df220b2996e66a7fea0e0ed4e54adb450",
+    "size" : 4872566
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.13/QiemanDashboard-3.8.13.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.14/QiemanDashboard-3.8.14.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.13.zip",
-      "size" : 4855566
+      "name" : "QiemanDashboard-3.8.14.zip",
+      "size" : 4872566
     }
   ],
-  "body" : "优化 AI 观点可读性与空持仓引导",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.13",
-  "name" : "QiemanDashboard v3.8.13",
-  "notes" : "优化 AI 观点可读性与空持仓引导",
+  "body" : "合并调仓与论坛为平台动态\n工作台更名为 AI研判\n跟随系统时清除残留深色外观\n论坛发言拉取全部分页数据\n投顾组合改为单选并重做持仓展示",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.14",
+  "name" : "QiemanDashboard v3.8.14",
+  "notes" : "合并调仓与论坛为平台动态\n工作台更名为 AI研判\n跟随系统时清除残留深色外观\n论坛发言拉取全部分页数据\n投顾组合改为单选并重做持仓展示",
   "published_at" : "",
-  "sha256" : "3bce66b9cc36793e7989134469a4c849f582d992468900074fda863ed8f59cc4",
-  "tag" : "v3.8.13",
-  "tag_name" : "v3.8.13",
-  "version" : "3.8.13"
+  "sha256" : "6f7e7ba021c76a14f9fe16afb6eadf5df220b2996e66a7fea0e0ed4e54adb450",
+  "tag" : "v3.8.14",
+  "tag_name" : "v3.8.14",
+  "version" : "3.8.14"
 }
