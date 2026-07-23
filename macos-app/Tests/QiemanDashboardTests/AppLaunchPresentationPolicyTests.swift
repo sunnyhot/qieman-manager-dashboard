@@ -153,4 +153,47 @@ final class AppLaunchPresentationPolicyTests: XCTestCase {
 
         XCTAssertEqual(window.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]), .darkAqua)
     }
+
+    @MainActor
+    func testFollowingSystemClearsDarkAppearanceFromEntireViewHierarchy() throws {
+        let application = NSApplication.shared
+        let originalApplicationAppearance = application.appearance
+        application.appearance = try XCTUnwrap(NSAppearance(named: .aqua))
+        defer { application.appearance = originalApplicationAppearance }
+
+        let model = AppModel()
+        let originalModelAppearance = model.appearance
+        defer { model.appearance = originalModelAppearance }
+        model.appearance = .dark
+
+        let delegate = QiemanApplicationDelegate()
+        delegate.configure(model: model)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 240),
+            styleMask: [.titled, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        let rootView = NSView(frame: window.contentView?.bounds ?? .zero)
+        let nestedView = NSView(frame: rootView.bounds)
+        nestedView.appearance = try XCTUnwrap(NSAppearance(named: .darkAqua))
+        rootView.addSubview(nestedView)
+        window.contentView = rootView
+        defer { window.close() }
+
+        delegate.syncWindowAppearances(in: [window])
+        XCTAssertEqual(nestedView.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]), .darkAqua)
+
+        model.appearance = .system
+        delegate.syncWindowAppearances(in: [window])
+
+        XCTAssertNil(window.appearance)
+        XCTAssertNil(rootView.appearance)
+        XCTAssertNil(nestedView.appearance)
+        XCTAssertEqual(window.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]), .aqua)
+        XCTAssertEqual(rootView.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]), .aqua)
+        XCTAssertEqual(nestedView.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]), .aqua)
+    }
 }

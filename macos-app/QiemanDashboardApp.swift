@@ -159,9 +159,8 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
                 }
                 .store(in: &self.cancellables)
 
-            // Sync NSAppearance on all windows when the user changes appearance setting.
-            // .preferredColorScheme() only affects SwiftUI's Environment; NSColor dynamic
-            // colors (used by AppPalette.adaptive) depend on the window's NSAppearance.
+            // Keep the window appearance as the single source of truth for both
+            // SwiftUI's colorScheme environment and AppPalette's dynamic NSColor values.
             NotificationCenter.default.publisher(for: .qiemanAppearanceDidChange)
                 .receive(on: RunLoop.main)
                 .sink { [weak self] _ in
@@ -174,32 +173,32 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
 
     }
 
-    /// Apply the current appearance setting to every open NSWindow, NSHostingView,
-    /// and the popover — so both NSColor dynamic colors and SwiftUI's
-    /// .preferredColorScheme() stay in sync.
+    /// Apply the current appearance setting at each window boundary.
+    /// Descendant views must inherit from their window; retaining explicit
+    /// NSAppearance overrides there leaves stale dark colors after switching
+    /// back to the light system appearance.
     @MainActor func syncWindowAppearances(in windows: [NSWindow]? = nil) {
         guard let model else { return }
         let target = model.appearance.nsAppearance
         for window in windows ?? NSApplication.shared.windows {
             window.appearance = target
-            // Walk the view hierarchy to find NSHostingView instances and
-            // explicitly set their appearance so SwiftUI picks up the change.
-            setAppearanceRecursively(in: window.contentView, to: target)
+            clearExplicitAppearancesRecursively(in: window.contentView)
         }
-        // Also update the popover's hosting controller
+
+        // The popover can be closed and therefore absent from NSApplication.windows.
+        // Its root hosting view acts as the appearance boundary until it is shown.
         if windows == nil, let popoverVC = popover?.contentViewController {
-            setAppearanceRecursively(in: popoverVC.view, to: target)
+            clearExplicitAppearancesRecursively(in: popoverVC.view)
+            popoverVC.view.appearance = target
         }
     }
 
-    /// Walk an NSView hierarchy and set appearance on all NSHostingView instances.
-    @MainActor private func setAppearanceRecursively(in view: NSView?, to appearance: NSAppearance?) {
+    /// Remove stale per-view overrides so the complete hierarchy follows its window.
+    @MainActor private func clearExplicitAppearancesRecursively(in view: NSView?) {
         guard let view else { return }
-        if String(describing: type(of: view)).contains("NSHostingView") {
-            view.appearance = appearance
-        }
+        view.appearance = nil
         for subview in view.subviews {
-            setAppearanceRecursively(in: subview, to: appearance)
+            clearExplicitAppearancesRecursively(in: subview)
         }
     }
 
@@ -450,7 +449,6 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         let contentView = ContentView()
             .environmentObject(model)
             .tint(AppPalette.brand)
-            .preferredColorScheme(model.appearance.colorScheme)
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
@@ -470,7 +468,6 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
 
         window.appearance = model.appearance.nsAppearance
         let hostingView = NSHostingView(rootView: contentView)
-        hostingView.appearance = model.appearance.nsAppearance
         window.contentView = hostingView
         window.delegate = self
         mainWindow = window
@@ -739,19 +736,9 @@ struct QiemanDashboardApp: App {
             ContentView()
                 .environmentObject(model)
                 .tint(AppPalette.brand)
-                .preferredColorScheme(model.appearance.colorScheme)
                 .onAppear {
                     appDelegate.configure(model: model)
-                    // Sync initial appearance to NSWindow + NSHostingView level so
-                    // NSColor dynamic colors (AppPalette.adaptive) resolve correctly
-                    // from launch.
-                    let target = model.appearance.nsAppearance
-                    for window in NSApplication.shared.windows {
-                        window.appearance = target
-                        for view in window.contentView?.subviews ?? [] {
-                            (view as? NSHostingView<AnyView>)?.appearance = target
-                        }
-                    }
+                    appDelegate.syncWindowAppearances()
                 }
                 .background(MainWindowSceneTracker(appDelegate: appDelegate))
                 .background(MainWindowSceneOpener(appDelegate: appDelegate))
