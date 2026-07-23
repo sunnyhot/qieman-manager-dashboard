@@ -19,6 +19,20 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertFalse(source.contains("SectionCard(title: \"计划模拟\""))
     }
 
+    func testEmptyPortfolioLeadsDirectlyToFirstHoldingForm() throws {
+        let portfolioSource = try String(contentsOf: portfolioSectionSourceURL(), encoding: .utf8)
+        let cardSource = try String(contentsOf: personalAssetCardsSourceURL(), encoding: .utf8)
+
+        XCTAssertTrue(portfolioSource.contains("if hasAnyPersonalData"))
+        XCTAssertTrue(portfolioSource.contains("PersonalPortfolioEmptyState()"))
+        XCTAssertFalse(portfolioSource.contains("还没有可聚合的资产数据"))
+        XCTAssertTrue(cardSource.contains("struct PersonalPortfolioEmptyState"))
+        XCTAssertTrue(cardSource.contains("Text(\"添加第一笔持仓\")"))
+        XCTAssertTrue(cardSource.contains("Label(\"添加第一笔持仓\", systemImage: \"plus\")"))
+        XCTAssertTrue(cardSource.contains("isPresentingAddHoldingSheet = true"))
+        XCTAssertTrue(cardSource.contains("PersonalAssetAddHoldingSheet()"))
+    }
+
     func testPortfolioSectionFillsWideSummaryAndDiagnosticCards() throws {
         let source = try String(contentsOf: portfolioSectionSourceURL(), encoding: .utf8)
 
@@ -105,8 +119,13 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertTrue(source.contains("trendEvidenceBlock(summary)"))
         XCTAssertTrue(source.contains("trendEvidenceTitle(summary)"))
         XCTAssertTrue(source.contains("trendEvidenceDetails(summary)"))
-        XCTAssertTrue(source.contains(".font(.system(size: 11, weight: .semibold))"))
-        XCTAssertTrue(source.contains(".lineSpacing(2)"))
+        XCTAssertTrue(source.contains("let accent = tone.detailAccentColor"))
+        XCTAssertTrue(source.contains("let accent = plan.tone.detailAccentColor"))
+        XCTAssertTrue(source.contains("var detailAccentColor: Color"))
+        XCTAssertTrue(source.contains("self == .muted ? AppPalette.info : color"))
+        XCTAssertTrue(source.contains("Text(trendEvidenceTitle(summary))\n                .font(.system(size: 10))"))
+        XCTAssertTrue(source.contains(".lineSpacing(1)"))
+        XCTAssertFalse(source.contains("Text(trendEvidenceTitle(summary))\n                .font(.system(size: 11, weight: .semibold))"))
         XCTAssertFalse(source.contains("private func trendHorizonRow"))
         let equalHeightFrame = ".frame(maxWidth: .infinity, minHeight: 174, maxHeight: .infinity, alignment: .topLeading)"
         XCTAssertEqual(source.components(separatedBy: equalHeightFrame).count - 1, 2)
@@ -207,6 +226,14 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appendingPathComponent("Views/PersonalAssetBrowser.swift")
+    }
+
+    private func personalAssetCardsSourceURL() -> URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Views/PersonalAssetCards.swift")
     }
 
     private func personalAssetDetailSourceURL() -> URL {

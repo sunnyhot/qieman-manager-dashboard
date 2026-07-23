@@ -148,6 +148,47 @@ struct PersonalAssetAddButtons: View {
     }
 }
 
+struct PersonalPortfolioEmptyState: View {
+    @State private var isPresentingAddHoldingSheet = false
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "briefcase.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(AppPalette.brand)
+                .frame(width: 48, height: 48)
+                .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.iconBoxRadius))
+
+            VStack(spacing: 6) {
+                Text("添加第一笔持仓")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+
+                Text("输入基金或股票代码、份额和成本，系统会自动识别并汇总市值与收益。")
+                    .font(.system(size: 11))
+                    .foregroundStyle(AppPalette.muted)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button {
+                isPresentingAddHoldingSheet = true
+            } label: {
+                Label("添加第一笔持仓", systemImage: "plus")
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(AppPalette.brand)
+            .controlSize(.large)
+            .accessibilityHint("打开持仓录入表单")
+        }
+        .frame(maxWidth: .infinity, minHeight: 360)
+        .padding(20)
+        .sheet(isPresented: $isPresentingAddHoldingSheet) {
+            PersonalAssetAddHoldingSheet()
+        }
+    }
+}
+
 struct PersonalAssetAddHoldingSheet: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss

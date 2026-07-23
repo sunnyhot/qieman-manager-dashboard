@@ -269,10 +269,11 @@ struct PersonalAssetDetailSheet: View {
 
     private func trendDecisionHeader(_ summary: TrendAssetTagSummary) -> some View {
         let tone = summary.primaryDirection?.assetTagTone ?? summary.tradePlan.tone
+        let accent = tone.detailAccentColor
 
         return HStack(alignment: .top, spacing: 12) {
             RoundedRectangle(cornerRadius: 2)
-                .fill(tone.color)
+                .fill(accent)
                 .frame(width: 3, height: 58)
 
             VStack(alignment: .leading, spacing: 5) {
@@ -285,7 +286,7 @@ struct PersonalAssetDetailSheet: View {
                             ?? TrendPlainLanguage.actionLabel(summary.tradePlan.label)
                     )
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(tone.color)
+                        .foregroundStyle(accent)
                     Text(TrendPlainLanguage.confidence(summary.primaryConfidence))
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(AppPalette.muted)
@@ -308,15 +309,17 @@ struct PersonalAssetDetailSheet: View {
     }
 
     private func trendActionBlock(_ plan: TrendAssetTradePlan) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let accent = plan.tone.detailAccentColor
+
+        return VStack(alignment: .leading, spacing: 10) {
             Label("操作建议", systemImage: "arrow.left.arrow.right.circle.fill")
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(plan.tone.color)
+                .foregroundStyle(accent)
 
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(TrendPlainLanguage.actionLabel(plan.label))
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(plan.tone.color)
+                    .foregroundStyle(accent)
                 Text("·")
                     .foregroundStyle(AppPalette.muted)
                 Text(TrendPlainLanguage.actionMethod(plan.method))
@@ -326,7 +329,7 @@ struct PersonalAssetDetailSheet: View {
 
             Text(TrendPlainLanguage.sentence(plan.detail))
                 .font(.system(size: 10))
-                .foregroundStyle(AppPalette.muted)
+                .foregroundStyle(AppPalette.ink.opacity(0.82))
                 .fixedSize(horizontal: false, vertical: true)
 
             if !plan.triggerConditions.isEmpty {
@@ -335,16 +338,16 @@ struct PersonalAssetDetailSheet: View {
                 trendConditionList(
                     title: "执行前确认",
                     items: Array(plan.triggerConditions.prefix(3)),
-                    tint: plan.tone.color
+                    tint: accent
                 )
             }
         }
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 174, maxHeight: .infinity, alignment: .topLeading)
-        .background(plan.tone.color.opacity(0.07), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .background(accent.opacity(0.07), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(plan.tone.color.opacity(0.18), lineWidth: 1)
+                .stroke(accent.opacity(0.18), lineWidth: 1)
         )
     }
 
@@ -355,9 +358,9 @@ struct PersonalAssetDetailSheet: View {
                 .foregroundStyle(AppPalette.info)
 
             Text(trendEvidenceTitle(summary))
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 10))
                 .foregroundStyle(AppPalette.ink)
-                .lineSpacing(2)
+                .lineSpacing(1)
                 .fixedSize(horizontal: false, vertical: true)
 
             VStack(alignment: .leading, spacing: 6) {
@@ -422,7 +425,7 @@ struct PersonalAssetDetailSheet: View {
                         .padding(.top, 5)
                     Text(TrendPlainLanguage.sentence(item))
                         .font(.system(size: 10))
-                        .foregroundStyle(AppPalette.muted)
+                        .foregroundStyle(AppPalette.ink.opacity(0.78))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -458,7 +461,7 @@ struct PersonalAssetDetailSheet: View {
                                 .padding(.top, 5)
                             Text(TrendPlainLanguage.sentence(condition))
                                 .font(.system(size: 10))
-                                .foregroundStyle(AppPalette.muted)
+                                .foregroundStyle(AppPalette.ink.opacity(0.78))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -548,6 +551,10 @@ struct PersonalAssetDetailSheet: View {
 }
 
 private extension TrendAssetTagTone {
+    var detailAccentColor: Color {
+        self == .muted ? AppPalette.info : color
+    }
+
     var color: Color {
         switch self {
         case .brand:
