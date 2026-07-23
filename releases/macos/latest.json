@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.16/QiemanDashboard-3.8.16.zip",
-    "name" : "QiemanDashboard-3.8.16.zip",
-    "sha256" : "041e14b2b62a7477c708697a296090d33e2f1f6386910fcc856c0ea61d46291e",
-    "size" : 4901904
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.17/QiemanDashboard-3.8.17.zip",
+    "name" : "QiemanDashboard-3.8.17.zip",
+    "sha256" : "a4f64ef94c029abc9ae8d24fb30b7cc482cffd281039ec9ea2852586d6767d68",
+    "size" : 4903239
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.16/QiemanDashboard-3.8.16.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.17/QiemanDashboard-3.8.17.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.16.zip",
-      "size" : 4901904
+      "name" : "QiemanDashboard-3.8.17.zip",
+      "size" : 4903239
     }
   ],
-  "body" : "收益归因改为双饼图展示",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.16",
-  "name" : "QiemanDashboard v3.8.16",
-  "notes" : "收益归因改为双饼图展示",
+  "body" : "资产筛选工具栏改为单行布局",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.17",
+  "name" : "QiemanDashboard v3.8.17",
+  "notes" : "资产筛选工具栏改为单行布局",
   "published_at" : "",
-  "sha256" : "041e14b2b62a7477c708697a296090d33e2f1f6386910fcc856c0ea61d46291e",
-  "tag" : "v3.8.16",
-  "tag_name" : "v3.8.16",
-  "version" : "3.8.16"
+  "sha256" : "a4f64ef94c029abc9ae8d24fb30b7cc482cffd281039ec9ea2852586d6767d68",
+  "tag" : "v3.8.17",
+  "tag_name" : "v3.8.17",
+  "version" : "3.8.17"
 }
