@@ -131,11 +131,18 @@ struct PersonalAssetAddButtons: View {
                 Label("添加计划档案", systemImage: "calendar.badge.clock")
             }
         } label: {
-            Label("添加", systemImage: "plus.circle")
-                .font(.system(size: 12, weight: .semibold))
+            Label("添加", systemImage: "plus")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppPalette.brand)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                        .stroke(AppPalette.brand.opacity(0.20), lineWidth: 1)
+                )
         }
         .menuStyle(.borderlessButton)
-        .controlSize(.small)
         .sheet(isPresented: $isPresentingAddHoldingSheet) {
             PersonalAssetAddHoldingSheet()
         }

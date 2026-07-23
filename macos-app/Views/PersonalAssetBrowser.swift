@@ -48,36 +48,24 @@ struct PersonalAssetBrowser: View {
 
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) {
-                    browserSearchField
-                    Spacer()
-                    PersonalAssetAddButtons()
-                    browserSortMenu
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 12) {
-                        browserSearchField
-                        browserSortMenu
-                    }
-                    PersonalAssetAddButtons()
-                }
-            }
-
-            ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) {
-                    ForEach(PersonalAssetFilterScope.allCases) { scope in
-                        filterChip(scope: scope, counts: presentation.filterCounts)
-                    }
+                    browserToolbarContent(
+                        counts: presentation.filterCounts,
+                        includesFlexibleSpace: true
+                    )
                 }
-                .padding(.vertical, 2)
 
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], alignment: .leading, spacing: 8) {
-                    ForEach(PersonalAssetFilterScope.allCases) { scope in
-                        filterChip(scope: scope, counts: presentation.filterCounts)
+                ScrollView(.horizontal, showsIndicators: true) {
+                    HStack(spacing: 8) {
+                        browserToolbarContent(
+                            counts: presentation.filterCounts,
+                            includesFlexibleSpace: false
+                        )
                     }
+                    .padding(.vertical, 2)
                 }
-                .padding(.vertical, 2)
+                .scrollIndicators(.visible, axes: .horizontal)
+                .scrollIndicatorsFlash(onAppear: true)
             }
 
             if !presentation.comparisonSummary.items.isEmpty {
@@ -131,22 +119,57 @@ struct PersonalAssetBrowser: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    @ViewBuilder
+    private func browserToolbarContent(
+        counts: [PersonalAssetFilterScope: Int],
+        includesFlexibleSpace: Bool
+    ) -> some View {
+        browserSearchField
+        PersonalAssetAddButtons()
+
+        Divider()
+            .frame(height: 22)
+            .overlay(AppPalette.line.opacity(0.38))
+            .padding(.horizontal, 2)
+
+        ForEach(PersonalAssetFilterScope.allCases) { scope in
+            filterChip(scope: scope, counts: counts)
+        }
+
+        if includesFlexibleSpace {
+            Spacer(minLength: 12)
+        }
+
+        Divider()
+            .frame(height: 22)
+            .overlay(AppPalette.line.opacity(0.38))
+            .padding(.horizontal, 2)
+
+        browserSortMenu
+    }
+
     private var browserSearchField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
+                .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(AppPalette.muted)
             TextField("搜索名称或代码", text: $searchText)
                 .textFieldStyle(.plain)
+                .font(.system(size: 11))
                 .focused($isSearchFocused)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                .stroke(
+                    isSearchFocused ? AppPalette.brand.opacity(0.72) : AppPalette.line.opacity(0.56),
+                    lineWidth: 1
+                )
         )
-        .frame(maxWidth: 320)
+        .frame(width: 238)
+        .animation(.easeOut(duration: 0.14), value: isSearchFocused)
     }
 
     private var browserSortMenu: some View {
@@ -164,14 +187,15 @@ struct PersonalAssetBrowser: View {
                 }
             }
         } label: {
-            Label("排序：\(sortOption.rawValue)", systemImage: "arrow.up.arrow.down")
-                .font(.system(size: 12, weight: .semibold))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+            Label("排序 \(sortOption.rawValue)", systemImage: "arrow.up.arrow.down")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppPalette.info)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
                 .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: AppPalette.controlRadius)
-                        .stroke(AppPalette.line.opacity(0.7), lineWidth: 1)
+                        .stroke(AppPalette.info.opacity(0.18), lineWidth: 1)
                 )
         }
         .menuStyle(.borderlessButton)
@@ -185,16 +209,16 @@ struct PersonalAssetBrowser: View {
                 filterScope = scope
             }
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 5) {
                 Text(scope.rawValue)
                 Text("\(count)")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundStyle(isSelected ? AppPalette.onBrand.opacity(0.88) : AppPalette.muted)
             }
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.ink)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
                 .interactiveSurface(
                     isSelected: isSelected,
                     tint: AppPalette.brand,

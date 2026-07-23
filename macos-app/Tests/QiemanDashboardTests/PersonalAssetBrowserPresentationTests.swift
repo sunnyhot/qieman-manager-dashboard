@@ -88,6 +88,19 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertFalse(source.contains("PersonalAssetTableLayout"))
     }
 
+    func testPersonalAssetToolbarStaysOnOneLineAndScrollsWhenNarrow() throws {
+        let source = try String(contentsOf: personalAssetBrowserSourceURL(), encoding: .utf8)
+
+        XCTAssertTrue(source.contains("browserToolbarContent(\n                        counts: presentation.filterCounts,\n                        includesFlexibleSpace: true"))
+        XCTAssertTrue(source.contains("browserToolbarContent(\n                            counts: presentation.filterCounts,\n                            includesFlexibleSpace: false"))
+        XCTAssertTrue(source.contains("ScrollView(.horizontal, showsIndicators: true)"))
+        XCTAssertTrue(source.contains(".scrollIndicators(.visible, axes: .horizontal)"))
+        XCTAssertTrue(source.contains(".scrollIndicatorsFlash(onAppear: true)"))
+        XCTAssertTrue(source.contains("private func browserToolbarContent("))
+        XCTAssertTrue(source.contains(".frame(width: 238)"))
+        XCTAssertFalse(source.contains("LazyVGrid(columns: [GridItem(.adaptive(minimum: 92)"))
+    }
+
     func testPersonalAssetTableKeepsHorizontalScrollAvailableOnSmallScreens() throws {
         let source = try String(contentsOf: personalAssetBrowserSourceURL(), encoding: .utf8)
 
