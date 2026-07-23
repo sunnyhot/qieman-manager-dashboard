@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.20/QiemanDashboard-3.8.20.zip",
-    "name" : "QiemanDashboard-3.8.20.zip",
-    "sha256" : "2b8ace7b6a7fbd4a605354b4d94aff5da1450f3f94f6420901dbab55eadebecb",
-    "size" : 4918782
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.21/QiemanDashboard-3.8.21.zip",
+    "name" : "QiemanDashboard-3.8.21.zip",
+    "sha256" : "402b7d7a1928cff0a3acc2c6f5a985d3add9bb56b0598c2da3425f040f28a414",
+    "size" : 4919522
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.20/QiemanDashboard-3.8.20.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.21/QiemanDashboard-3.8.21.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.20.zip",
-      "size" : 4918782
+      "name" : "QiemanDashboard-3.8.21.zip",
+      "size" : 4919522
     }
   ],
-  "body" : "优化基金详情与走势图展示",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.20",
-  "name" : "QiemanDashboard v3.8.20",
-  "notes" : "优化基金详情与走势图展示",
+  "body" : "修复趋势分析截止日期并优化基金详情页头部布局",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.21",
+  "name" : "QiemanDashboard v3.8.21",
+  "notes" : "修复趋势分析截止日期并优化基金详情页头部布局",
   "published_at" : "",
-  "sha256" : "2b8ace7b6a7fbd4a605354b4d94aff5da1450f3f94f6420901dbab55eadebecb",
-  "tag" : "v3.8.20",
-  "tag_name" : "v3.8.20",
-  "version" : "3.8.20"
+  "sha256" : "402b7d7a1928cff0a3acc2c6f5a985d3add9bb56b0598c2da3425f040f28a414",
+  "tag" : "v3.8.21",
+  "tag_name" : "v3.8.21",
+  "version" : "3.8.21"
 }
