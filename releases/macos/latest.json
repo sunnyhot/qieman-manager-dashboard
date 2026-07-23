@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.9/QiemanDashboard-3.8.9.zip",
-    "name" : "QiemanDashboard-3.8.9.zip",
-    "sha256" : "b6eaefaeaa3fab647bb09e8ed5589059199607d9f3cbaae1bf74ee022a57329b",
-    "size" : 4846564
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.10/QiemanDashboard-3.8.10.zip",
+    "name" : "QiemanDashboard-3.8.10.zip",
+    "sha256" : "6c135f579ce0d7366a71b21fb11a67a0407db32c9253be5f7e68bb68e0f76560",
+    "size" : 4848483
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.9/QiemanDashboard-3.8.9.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.10/QiemanDashboard-3.8.10.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.9.zip",
-      "size" : 4846564
+      "name" : "QiemanDashboard-3.8.10.zip",
+      "size" : 4848483
     }
   ],
-  "body" : "优化资产详情字号与小屏表格滚动",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.9",
-  "name" : "QiemanDashboard v3.8.9",
-  "notes" : "优化资产详情字号与小屏表格滚动",
+  "body" : "优化列表布局、更新入口与外观切换",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.10",
+  "name" : "QiemanDashboard v3.8.10",
+  "notes" : "优化列表布局、更新入口与外观切换",
   "published_at" : "",
-  "sha256" : "b6eaefaeaa3fab647bb09e8ed5589059199607d9f3cbaae1bf74ee022a57329b",
-  "tag" : "v3.8.9",
-  "tag_name" : "v3.8.9",
-  "version" : "3.8.9"
+  "sha256" : "6c135f579ce0d7366a71b21fb11a67a0407db32c9253be5f7e68bb68e0f76560",
+  "tag" : "v3.8.10",
+  "tag_name" : "v3.8.10",
+  "version" : "3.8.10"
 }
