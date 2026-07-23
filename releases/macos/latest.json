@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.15/QiemanDashboard-3.8.15.zip",
-    "name" : "QiemanDashboard-3.8.15.zip",
-    "sha256" : "52de07c546c66cf67a179e474ea699aea174bbfa175bcb6e9a12316fc2d5e9b6",
-    "size" : 4899690
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.16/QiemanDashboard-3.8.16.zip",
+    "name" : "QiemanDashboard-3.8.16.zip",
+    "sha256" : "041e14b2b62a7477c708697a296090d33e2f1f6386910fcc856c0ea61d46291e",
+    "size" : 4901904
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.15/QiemanDashboard-3.8.15.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.16/QiemanDashboard-3.8.16.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.15.zip",
-      "size" : 4899690
+      "name" : "QiemanDashboard-3.8.16.zip",
+      "size" : 4901904
     }
   ],
-  "body" : "重做收益归因展示并精简组合诊断",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.15",
-  "name" : "QiemanDashboard v3.8.15",
-  "notes" : "重做收益归因展示并精简组合诊断",
+  "body" : "收益归因改为双饼图展示",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.16",
+  "name" : "QiemanDashboard v3.8.16",
+  "notes" : "收益归因改为双饼图展示",
   "published_at" : "",
-  "sha256" : "52de07c546c66cf67a179e474ea699aea174bbfa175bcb6e9a12316fc2d5e9b6",
-  "tag" : "v3.8.15",
-  "tag_name" : "v3.8.15",
-  "version" : "3.8.15"
+  "sha256" : "041e14b2b62a7477c708697a296090d33e2f1f6386910fcc856c0ea61d46291e",
+  "tag" : "v3.8.16",
+  "tag_name" : "v3.8.16",
+  "version" : "3.8.16"
 }
