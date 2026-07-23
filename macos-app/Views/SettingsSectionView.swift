@@ -176,7 +176,7 @@ struct SettingsSectionView: View {
             SettingsMetric(
                 title: "通用",
                 value: AppUpdateChecker.bundleVersion,
-                detail: model.isCheckingForUpdates ? "正在检查更新" : model.availableUpdate.map { "可更新到 \($0.version)" } ?? "当前构建",
+                detail: "当前外观 · \(model.appearance.rawValue)",
                 icon: "arrow.down.circle",
                 tint: model.availableUpdate == nil ? AppPalette.info : AppPalette.positive,
                 isSelected: selectedSettingsFocus == .version

@@ -66,7 +66,9 @@ final class UIExperienceRegressionTests: XCTestCase {
 
         let settings = try source(at: "Views/SettingsSectionView.swift")
         XCTAssertTrue(settings.contains("title: \"通用\""))
+        XCTAssertTrue(settings.contains("detail: \"当前外观 · \\(model.appearance.rawValue)\""))
         XCTAssertFalse(settings.contains("title: \"版本\""))
+        XCTAssertFalse(settings.contains("?? \"当前构建\""))
     }
 
     func testEditorsKeepValidationFeedbackInsideThePresentedSheet() throws {
