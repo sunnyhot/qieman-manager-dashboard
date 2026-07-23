@@ -73,7 +73,7 @@ final class AppModel: ObservableObject {
     @Published var alfaPortfolios: [AlfaPortfolioCatalogItem] = []
     @Published var alfaPayload: PlatformPayload?
     @Published var alfaHoldings: [AlfaHoldingPart] = []
-    @Published var selectedAlfaPoCodes: Set<String> = []
+    @Published var selectedAlfaPoCode: String?
     @Published var isLoadingAlfa = false
     @Published var alfaError: String?
     @Published var alfaCatalog: [AlfaPortfolioCatalogItem] = []

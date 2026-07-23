@@ -8,156 +8,193 @@ extension AppModel {
         dataDirectoryURL?.appendingPathComponent("alfa-portfolios.json", isDirectory: false)
     }
 
-    /// 所有组合 poCode（用于全选/默认选中）。
-    var allAlfaPoCodes: Set<String> {
-        Set(alfaPortfolios.map(\.poCode))
+    /// 当前单选的投顾组合。
+    var selectedAlfaPortfolio: AlfaPortfolioCatalogItem? {
+        guard let selectedAlfaPoCode else { return nil }
+        return alfaPortfolios.first { $0.poCode == selectedAlfaPoCode }
     }
 
-    /// 当前筛选生效的调仓列表（按 selectedAlfaPoCodes 过滤 prodCode）。
-    /// selectedAlfaPoCodes 为空时视为全选（避免空列表）。
+    /// 当前组合的调仓列表。alfaPayload 不再保存多组合聚合数据。
     var filteredAlfaActions: [PlatformActionPayload] {
-        let actions = alfaPayload?.actions ?? []
-        guard !selectedAlfaPoCodes.isEmpty else { return actions }
-        let codes = selectedAlfaPoCodes
-        return actions.filter { codes.contains($0.sourcePoCode ?? "") }
+        guard let selectedAlfaPoCode,
+              alfaPayload?.prodCode == selectedAlfaPoCode else { return [] }
+        return alfaPayload?.actions ?? []
     }
 
-    /// 当前筛选生效的持仓列表（按 selectedAlfaPoCodes 过滤 sourcePoCode）。
+    /// 当前组合的持仓列表。只有选中单个组合时才返回数据。
     var filteredAlfaHoldings: [AlfaHoldingPart] {
-        guard !selectedAlfaPoCodes.isEmpty else { return alfaHoldings }
-        let codes = selectedAlfaPoCodes
-        return alfaHoldings.filter { codes.contains($0.sourcePoCode) }
+        guard let selectedAlfaPoCode else { return [] }
+        return alfaHoldings.filter { $0.sourcePoCode == selectedAlfaPoCode }
     }
 
-    /// 从磁盘加载已添加的投顾组合列表（首次落盘默认预置晓磊）。
+    /// 从磁盘加载已添加的投顾组合列表（首次落盘预置一个有调仓记录的组合）。
     func loadAlfaPortfolios() {
         guard let url = alfaPortfoliosFileURL else { return }
         let loaded = alfaPortfolioStore.load(from: url)
         alfaPortfolios = loaded
-        // 默认全选
-        selectedAlfaPoCodes = Set(loaded.map(\.poCode))
+        selectedAlfaPoCode = loaded.first?.poCode
         // 首次运行：落盘默认组合
         if !FileManager.default.fileExists(atPath: url.path) {
             try? alfaPortfolioStore.save(loaded, to: url)
         }
     }
 
-    /// 并发抓取所有已添加组合的调仓，合并成一个汇总列表（按 txnDate 降序）。
+    /// 批量验证所有已添加组合，只保留确实存在调仓记录的组合。
+    /// 展示数据始终只取当前选中的一个组合，不再合并多组合。
     func fetchAllAlfaPayloads() async {
-        let codes = alfaPortfolios.map(\.poCode)
-        guard !codes.isEmpty else {
+        let portfolios = alfaPortfolios
+        guard !portfolios.isEmpty else {
+            selectedAlfaPoCode = nil
             alfaPayload = nil
             alfaHoldings = []
             return
         }
         guard !isLoadingAlfa else { return }
         isLoadingAlfa = true
+        defer { isLoadingAlfa = false }
         alfaError = nil
 
-        // 并发抓调仓 + 持仓
-        async let adjustmentsResult = fetchAlfaAdjustmentsConcurrent(codes: codes)
-        async let compositionResult = fetchAlfaCompositionConcurrent(codes: codes)
-        let (payloads, adjError) = await adjustmentsResult
-        let holdings = await compositionResult
-
-        var finalPayloads = payloads
-        var firstError = adjError
-        if finalPayloads.isEmpty {
-            // 全部失败时尝试单独拉一个拿错误信息
-            if let first = codes.first {
-                do {
-                    let single = try await alfaClient.fetchAlfaPayload(poCode: first)
-                    finalPayloads.append(single)
-                } catch {
-                    if firstError == nil { firstError = error.localizedDescription }
-                }
-            }
-        }
-
-        alfaPayload = Self.mergeAlfaPayloads(finalPayloads)
-        alfaHoldings = holdings
-        if let firstError {
-            alfaError = firstError
-        }
-        isLoadingAlfa = false
-    }
-
-    /// 并发抓取多组合调仓，返回（payloads, 首个错误）。
-    private func fetchAlfaAdjustmentsConcurrent(codes: [String]) async -> ([PlatformPayload], String?) {
-        var payloads: [PlatformPayload] = []
-        var firstError: String?
-        await withTaskGroup(of: (PlatformPayload?, String?).self) { group in
-            for code in codes {
-                group.addTask { [weak self] in
-                    guard let self else { return (nil, nil) }
-                    do {
-                        return (try await self.alfaClient.fetchAlfaPayload(poCode: code), nil)
-                    } catch {
-                        return (nil, error.localizedDescription)
-                    }
-                }
-            }
-            for await (payload, error) in group {
-                if let payload { payloads.append(payload) }
-                else if firstError == nil, let error { firstError = error }
-            }
-        }
-        return (payloads, firstError)
-    }
-
-    /// 并发抓取多组合持仓成分。
-    private func fetchAlfaCompositionConcurrent(codes: [String]) async -> [AlfaHoldingPart] {
-        var allParts: [AlfaHoldingPart] = []
-        await withTaskGroup(of: [AlfaHoldingPart].self) { group in
-            for code in codes {
-                group.addTask { [weak self] in
-                    guard let self else { return [] }
-                    do {
-                        return try await self.alfaClient.fetchAlfaComposition(poCode: code)
-                    } catch {
-                        return []
-                    }
-                }
-            }
-            for await parts in group {
-                allParts.append(contentsOf: parts)
-            }
-        }
-        // 按占比降序
-        return allParts.sorted { $0.percent > $1.percent }
-    }
-
-    /// 合并多个组合的 payload 为一个汇总 payload。
-    private static func mergeAlfaPayloads(_ payloads: [PlatformPayload]) -> PlatformPayload {
-        var allActions: [PlatformActionPayload] = []
-        var adjustmentCount = 0
-        for p in payloads {
-            allActions.append(contentsOf: p.actions ?? [])
-            adjustmentCount += p.adjustmentCount ?? 0
-        }
-        allActions.sort { ($0.txnDate ?? "") > ($1.txnDate ?? "") }
-
-        let buyCount = allActions.filter { $0.side == "buy" }.count
-        let sellCount = allActions.filter { $0.side == "sell" }.count
-
-        return PlatformPayload(
-            supported: true,
-            prodCode: "aggregate",
-            count: allActions.count,
-            buyCount: buyCount,
-            sellCount: sellCount,
-            adjustmentCount: adjustmentCount,
-            latest: allActions.first,
-            actions: allActions,
-            holdings: nil,
-            timeline: nil,
-            error: nil
+        let (payloadsByCode, errorsByCode) = await fetchAlfaAdjustmentsConcurrent(
+            codes: portfolios.map(\.poCode)
         )
+        let removedCodes = Self.alfaPortfolioCodesWithoutAdjustments(
+            portfolios: portfolios,
+            successfulPayloads: payloadsByCode
+        )
+
+        if !removedCodes.isEmpty {
+            let removedNames = portfolios
+                .filter { removedCodes.contains($0.poCode) }
+                .map(\.name)
+            alfaPortfolios.removeAll { removedCodes.contains($0.poCode) }
+            persistAlfaPortfolios()
+            noticeMessage = "已移除 \(removedNames.count) 个无调仓记录组合：\(removedNames.joined(separator: "、"))"
+        }
+
+        selectedAlfaPoCode = Self.preferredAlfaPoCode(
+            current: selectedAlfaPoCode,
+            portfolios: alfaPortfolios
+        )
+
+        guard let selectedAlfaPoCode else {
+            alfaPayload = nil
+            alfaHoldings = []
+            return
+        }
+
+        guard let selectedPayload = payloadsByCode[selectedAlfaPoCode] else {
+            alfaPayload = nil
+            alfaHoldings = []
+            alfaError = errorsByCode[selectedAlfaPoCode] ?? "当前组合数据拉取失败，请稍后重试。"
+            return
+        }
+
+        alfaPayload = selectedPayload
+        do {
+            alfaHoldings = try await alfaClient.fetchAlfaComposition(poCode: selectedAlfaPoCode)
+        } catch {
+            alfaHoldings = []
+            alfaError = "当前持仓拉取失败：\(error.localizedDescription)"
+        }
     }
 
-    /// 刷新投顾调仓（抓取所有已添加组合）。
+    /// 并发抓取多组合调仓，按组合码保留成功结果和失败原因。
+    private func fetchAlfaAdjustmentsConcurrent(
+        codes: [String]
+    ) async -> ([String: PlatformPayload], [String: String]) {
+        var payloadsByCode: [String: PlatformPayload] = [:]
+        var errorsByCode: [String: String] = [:]
+        await withTaskGroup(of: (String, PlatformPayload?, String?).self) { group in
+            for code in codes {
+                group.addTask { [weak self] in
+                    guard let self else { return (code, nil, nil) }
+                    do {
+                        return (code, try await self.alfaClient.fetchAlfaPayload(poCode: code), nil)
+                    } catch {
+                        return (code, nil, error.localizedDescription)
+                    }
+                }
+            }
+            for await (code, payload, error) in group {
+                if let payload {
+                    payloadsByCode[code] = payload
+                } else if let error {
+                    errorsByCode[code] = error
+                }
+            }
+        }
+        return (payloadsByCode, errorsByCode)
+    }
+
+    /// 纯函数：只删除“请求成功且动作列表为空”的组合；请求失败的组合保留，避免误删。
+    static func alfaPortfolioCodesWithoutAdjustments(
+        portfolios: [AlfaPortfolioCatalogItem],
+        successfulPayloads: [String: PlatformPayload]
+    ) -> Set<String> {
+        Set(portfolios.compactMap { portfolio in
+            guard let payload = successfulPayloads[portfolio.poCode] else { return nil }
+            return (payload.actions ?? []).isEmpty ? portfolio.poCode : nil
+        })
+    }
+
+    /// 纯函数：维持现有单选；选中项被清理后回落到第一个有效组合。
+    static func preferredAlfaPoCode(
+        current: String?,
+        portfolios: [AlfaPortfolioCatalogItem]
+    ) -> String? {
+        if let current, portfolios.contains(where: { $0.poCode == current }) {
+            return current
+        }
+        return portfolios.first?.poCode
+    }
+
+    /// 刷新全部组合并清理确认无调仓记录的组合。
     func refreshAlfaPayload() async {
         await fetchAllAlfaPayloads()
+    }
+
+    /// 切换到一个组合，仅拉取这个组合的调仓与持仓。
+    func selectAlfaPortfolio(_ poCode: String) async {
+        guard alfaPortfolios.contains(where: { $0.poCode == poCode }) else { return }
+        selectedAlfaPoCode = poCode
+        await fetchSelectedAlfaPortfolio()
+    }
+
+    private func fetchSelectedAlfaPortfolio() async {
+        guard let poCode = selectedAlfaPoCode, !isLoadingAlfa else { return }
+        isLoadingAlfa = true
+        alfaError = nil
+        alfaPayload = nil
+        alfaHoldings = []
+
+        do {
+            let payload = try await alfaClient.fetchAlfaPayload(poCode: poCode)
+            guard !(payload.actions ?? []).isEmpty else {
+                let removedName = alfaPortfolioName(for: poCode) ?? poCode
+                removeAlfaPortfolio(poCode)
+                noticeMessage = "已移除无调仓记录组合：\(removedName)"
+                isLoadingAlfa = false
+                if selectedAlfaPoCode != nil {
+                    await fetchSelectedAlfaPortfolio()
+                }
+                return
+            }
+
+            guard selectedAlfaPoCode == poCode else {
+                isLoadingAlfa = false
+                return
+            }
+            alfaPayload = payload
+            do {
+                alfaHoldings = try await alfaClient.fetchAlfaComposition(poCode: poCode)
+            } catch {
+                alfaHoldings = []
+                alfaError = "当前持仓拉取失败：\(error.localizedDescription)"
+            }
+        } catch {
+            alfaError = error.localizedDescription
+        }
+        isLoadingAlfa = false
     }
 
     /// 拉取可选组合目录（hand-picked），供"添加组合"使用。
@@ -172,30 +209,33 @@ extension AppModel {
         isLoadingAlfaCatalog = false
     }
 
-    /// 切换某组合的筛选选中状态。
-    func toggleAlfaPoCode(_ poCode: String) {
-        if selectedAlfaPoCodes.contains(poCode) {
-            selectedAlfaPoCodes.remove(poCode)
-        } else {
-            selectedAlfaPoCodes.insert(poCode)
-        }
-    }
+    /// 验证并添加组合。无公开调仓记录时不加入本地列表。
+    func addAlfaPortfolio(_ item: AlfaPortfolioCatalogItem) async -> Bool {
+        guard !alfaPortfolios.contains(where: { $0.poCode == item.poCode }),
+              !isLoadingAlfa else { return false }
+        isLoadingAlfa = true
+        alfaError = nil
+        do {
+            let payload = try await alfaClient.fetchAlfaPayload(poCode: item.poCode)
+            guard !(payload.actions ?? []).isEmpty else {
+                noticeMessage = "\(item.name) 暂无公开调仓记录，未添加。"
+                isLoadingAlfa = false
+                return false
+            }
+            let holdings = (try? await alfaClient.fetchAlfaComposition(poCode: item.poCode)) ?? []
 
-    /// 全选 / 全不选切换。
-    func toggleAllAlfaPoCodes() {
-        if selectedAlfaPoCodes.count == allAlfaPoCodes.count {
-            selectedAlfaPoCodes = []
-        } else {
-            selectedAlfaPoCodes = allAlfaPoCodes
+            alfaPortfolios.append(item)
+            selectedAlfaPoCode = item.poCode
+            alfaPayload = payload
+            alfaHoldings = holdings
+            persistAlfaPortfolios()
+            isLoadingAlfa = false
+            return true
+        } catch {
+            alfaError = error.localizedDescription
+            isLoadingAlfa = false
+            return false
         }
-    }
-
-    /// 添加投顾组合到本地列表并落盘（新增的默认选中）。
-    func addAlfaPortfolio(_ item: AlfaPortfolioCatalogItem) {
-        guard !alfaPortfolios.contains(where: { $0.poCode == item.poCode }) else { return }
-        alfaPortfolios.append(item)
-        selectedAlfaPoCodes.insert(item.poCode)
-        persistAlfaPortfolios()
     }
 
     /// 通过组合码添加（校验存在性并拉取名称），用于 catalog 之外的手动添加。
@@ -206,10 +246,9 @@ extension AppModel {
         }
         do {
             let name = try await alfaClient.fetchPortfolioName(poCode: trimmed) ?? trimmed
-            addAlfaPortfolio(
+            return await addAlfaPortfolio(
                 AlfaPortfolioCatalogItem(poCode: trimmed, name: name, author: "", category: "")
             )
-            return true
         } catch {
             return false
         }
@@ -218,7 +257,11 @@ extension AppModel {
     /// 移除投顾组合。
     func removeAlfaPortfolio(_ poCode: String) {
         alfaPortfolios.removeAll { $0.poCode == poCode }
-        selectedAlfaPoCodes.remove(poCode)
+        if selectedAlfaPoCode == poCode {
+            selectedAlfaPoCode = alfaPortfolios.first?.poCode
+            alfaPayload = nil
+            alfaHoldings = []
+        }
         persistAlfaPortfolios()
     }
 

@@ -322,7 +322,7 @@ struct QiemanCommandLine {
     }
 
     private func alfaActions() async throws -> Data {
-        let poCode = arguments.string("po-code", default: "SI000192")
+        let poCode = arguments.string("po-code", default: "ZH157591")
         let payload = try await QiemanAlfaClient().fetchAlfaPayload(poCode: poCode)
         let rows = Array((payload.actions ?? [])
             .prefix(max(1, arguments.int("limit", default: 20)))

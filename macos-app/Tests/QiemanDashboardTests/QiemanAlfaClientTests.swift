@@ -221,10 +221,10 @@ final class QiemanAlfaClientTests: XCTestCase {
 
     // MARK: - AlfaPortfolioStore
 
-    func testStore默认预置晓磊() {
+    func testStore默认预置有公开调仓记录的组合() {
         let defaults = AlfaPortfolioStore.defaultPortfolios
-        XCTAssertTrue(defaults.contains { $0.poCode == "SI000192" })
-        XCTAssertEqual(defaults.first?.name, "基金全磊打之大航海时代")
+        XCTAssertTrue(defaults.contains { $0.poCode == "ZH157591" })
+        XCTAssertEqual(defaults.first?.name, "华夏全自动超级配置")
     }
 
     func testStore读写持久化() throws {
@@ -241,10 +241,101 @@ final class QiemanAlfaClientTests: XCTestCase {
         XCTAssertEqual(loaded.last?.poCode, "ZH032687")
     }
 
+    func testStore空列表保持为空避免默认组合复活() throws {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("alfa-empty-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        let store = AlfaPortfolioStore()
+        try store.save([], to: tmp)
+
+        XCTAssertTrue(store.load(from: tmp).isEmpty)
+    }
+
     func testStore缺失文件返回默认() {
         let nonexistent = FileManager.default.temporaryDirectory.appendingPathComponent("nonexistent-\(UUID().uuidString).json")
         let store = AlfaPortfolioStore()
         let loaded = store.load(from: nonexistent)
         XCTAssertEqual(loaded, AlfaPortfolioStore.defaultPortfolios)
+    }
+
+    // MARK: - 单组合选择与空记录清理
+
+    @MainActor
+    func test批量清理只删除成功拉取且无调仓记录的组合() {
+        let active = AlfaPortfolioCatalogItem(poCode: "ACTIVE", name: "有记录", author: "", category: "")
+        let empty = AlfaPortfolioCatalogItem(poCode: "EMPTY", name: "无记录", author: "", category: "")
+        let failed = AlfaPortfolioCatalogItem(poCode: "FAILED", name: "拉取失败", author: "", category: "")
+        let activePayload = QiemanAlfaClient.flattenAdjustments(poCode: active.poCode, data: mockAdjustmentData())
+        let emptyPayload = QiemanAlfaClient.flattenAdjustments(poCode: empty.poCode, data: ["portfolio": [:]])
+
+        let removed = AppModel.alfaPortfolioCodesWithoutAdjustments(
+            portfolios: [active, empty, failed],
+            successfulPayloads: [
+                active.poCode: activePayload,
+                empty.poCode: emptyPayload,
+                // FAILED 不在成功结果中，必须保留，避免网络错误导致误删。
+            ]
+        )
+
+        XCTAssertEqual(removed, [empty.poCode])
+    }
+
+    @MainActor
+    func test单组合选择在原选择失效后回落到第一个组合() {
+        let first = AlfaPortfolioCatalogItem(poCode: "FIRST", name: "第一", author: "", category: "")
+        let second = AlfaPortfolioCatalogItem(poCode: "SECOND", name: "第二", author: "", category: "")
+
+        XCTAssertEqual(
+            AppModel.preferredAlfaPoCode(current: second.poCode, portfolios: [first, second]),
+            second.poCode
+        )
+        XCTAssertEqual(
+            AppModel.preferredAlfaPoCode(current: "REMOVED", portfolios: [first, second]),
+            first.poCode
+        )
+        XCTAssertNil(AppModel.preferredAlfaPoCode(current: first.poCode, portfolios: []))
+    }
+
+    @MainActor
+    func test调仓与持仓只返回当前单选组合的数据() {
+        let model = AppModel()
+        model.alfaPortfolios = [
+            AlfaPortfolioCatalogItem(poCode: "FIRST", name: "第一", author: "", category: ""),
+            AlfaPortfolioCatalogItem(poCode: "SECOND", name: "第二", author: "", category: ""),
+        ]
+        model.selectedAlfaPoCode = "FIRST"
+        model.alfaPayload = QiemanAlfaClient.flattenAdjustments(poCode: "FIRST", data: mockAdjustmentData())
+        model.alfaHoldings = [
+            AlfaHoldingPart(
+                sourcePoCode: "FIRST",
+                fundCode: "000001",
+                fundName: "第一只基金",
+                percent: 0.6,
+                nav: 1,
+                navDate: "2026-07-23",
+                dailyReturn: 0.01,
+                categoryCode: nil,
+                varietyName: "权益"
+            ),
+            AlfaHoldingPart(
+                sourcePoCode: "SECOND",
+                fundCode: "000002",
+                fundName: "第二只基金",
+                percent: 0.4,
+                nav: 1,
+                navDate: "2026-07-23",
+                dailyReturn: -0.01,
+                categoryCode: nil,
+                varietyName: "债券"
+            ),
+        ]
+
+        XCTAssertEqual(model.filteredAlfaActions.count, 2)
+        XCTAssertEqual(model.filteredAlfaHoldings.map(\.sourcePoCode), ["FIRST"])
+
+        model.selectedAlfaPoCode = "SECOND"
+
+        XCTAssertTrue(model.filteredAlfaActions.isEmpty)
+        XCTAssertEqual(model.filteredAlfaHoldings.map(\.sourcePoCode), ["SECOND"])
     }
 }

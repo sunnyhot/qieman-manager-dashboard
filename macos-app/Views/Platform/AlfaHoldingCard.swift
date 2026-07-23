@@ -6,66 +6,100 @@ import SwiftUI
 /// 与长赢的 `HoldingCard`（份数/市值/收益率口径）不同。
 struct AlfaHoldingCard: View {
     let part: AlfaHoldingPart
+    let rank: Int
 
     private var returnTint: Color {
         AppPalette.marketTint(for: part.dailyReturn)
     }
 
     var body: some View {
-        HStack(spacing: 10) {
-            // 占比条
-            GeometryReader { geo in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(AppPalette.brand.opacity(0.16))
-                    .overlay(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(AppPalette.brand.opacity(0.5))
-                            .frame(width: geo.size.width * CGFloat(min(max(part.percent, 0), 1)))
-                    }
-            }
-            .frame(width: 44, height: 28)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 9) {
+                Text(String(format: "%02d", rank))
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppPalette.brand)
+                    .frame(width: 28, height: 28)
+                    .background(AppPalette.brand.opacity(0.11), in: RoundedRectangle(cornerRadius: 7))
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(part.fundName)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppPalette.ink)
-                    .lineLimit(1)
-                HStack(spacing: 6) {
-                    Text(part.fundCode)
-                        .font(.system(size: 10, design: .monospaced))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(part.fundName)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppPalette.ink)
+                        .lineLimit(2)
+                    HStack(spacing: 5) {
+                        Text(part.fundCode)
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .foregroundStyle(AppPalette.muted)
+                        if let variety = part.varietyName, !variety.isEmpty {
+                            Text(variety)
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(AppPalette.info)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(AppPalette.info.opacity(0.09), in: Capsule())
+                        }
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("目标占比")
+                        .font(.system(size: 9))
                         .foregroundStyle(AppPalette.muted)
-                    if let variety = part.varietyName, !variety.isEmpty {
-                        Text("· \(variety)")
-                            .font(.system(size: 10))
-                            .foregroundStyle(AppPalette.muted)
-                    }
+                    Text(part.percentText)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppPalette.ink)
                 }
             }
 
-            Spacer(minLength: 8)
+            ProgressView(value: min(max(part.percent, 0), 1), total: 1)
+                .progressViewStyle(.linear)
+                .tint(AppPalette.brand)
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(part.percentText)
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-                    .foregroundStyle(AppPalette.ink)
-                HStack(spacing: 8) {
-                    if let nav = part.nav {
-                        Text(String(format: "%.4f", nav))
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(AppPalette.muted)
-                    }
-                    Text(part.dailyReturnText)
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(returnTint)
-                }
+            HStack(spacing: 0) {
+                holdingMetric(
+                    title: "最新净值",
+                    value: part.nav.map { String(format: "%.4f", $0) } ?? "—",
+                    tint: AppPalette.ink
+                )
+                Spacer()
+                holdingMetric(
+                    title: "净值日期",
+                    value: part.navDate ?? "—",
+                    tint: AppPalette.muted
+                )
+                Spacer()
+                holdingMetric(
+                    title: "日涨跌",
+                    value: part.dailyReturnText,
+                    tint: returnTint,
+                    alignment: .trailing
+                )
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(AppPalette.card, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
+        .padding(12)
+        .background(AppPalette.cardStrong.opacity(0.82), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.line.opacity(0.3), lineWidth: 1)
+                .stroke(AppPalette.line.opacity(0.38), lineWidth: 1)
         )
+    }
+
+    private func holdingMetric(
+        title: String,
+        value: String,
+        tint: Color,
+        alignment: HorizontalAlignment = .leading
+    ) -> some View {
+        VStack(alignment: alignment, spacing: 2) {
+            Text(title)
+                .font(.system(size: 8))
+                .foregroundStyle(AppPalette.muted)
+            Text(value)
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+        }
     }
 }

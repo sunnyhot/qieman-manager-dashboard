@@ -16,8 +16,7 @@ struct AlfaPortfolioStore {
         }
         do {
             let data = try Data(contentsOf: fileURL)
-            let decoded = try decoder.decode([AlfaPortfolioCatalogItem].self, from: data)
-            return decoded.isEmpty ? Self.defaultPortfolios : decoded
+            return try decoder.decode([AlfaPortfolioCatalogItem].self, from: data)
         } catch {
             return Self.defaultPortfolios
         }
@@ -28,12 +27,12 @@ struct AlfaPortfolioStore {
         try data.write(to: fileURL, options: .atomic)
     }
 
-    /// 默认预置组合（开箱即用）：晓磊「基金全磊打之大航海时代」。
+    /// 默认预置一个已确认存在公开调仓记录的组合，避免首次启动立即出现空状态。
     static let defaultPortfolios: [AlfaPortfolioCatalogItem] = [
         AlfaPortfolioCatalogItem(
-            poCode: "SI000192",
-            name: "基金全磊打之大航海时代",
-            author: "杨晓磊",
+            poCode: "ZH157591",
+            name: "华夏全自动超级配置",
+            author: "华夏基金",
             category: "长钱"
         ),
     ]

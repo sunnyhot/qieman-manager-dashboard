@@ -123,6 +123,29 @@ final class UIExperienceRegressionTests: XCTestCase {
         XCTAssertFalse(alfa.contains("ScrollView(showsIndicators: false)"))
     }
 
+    func testAlfaPanelUsesSinglePortfolioDataAndAdaptiveHoldingCards() throws {
+        let panel = try source(at: "Views/Platform/AlfaPlatformPanel.swift")
+        let holding = try source(at: "Views/Platform/AlfaHoldingCard.swift")
+        let model = try source(at: "Core/AppModel/Alfa.swift")
+
+        XCTAssertTrue(panel.contains("model.selectedAlfaPoCode == portfolio.poCode"))
+        XCTAssertTrue(panel.contains("await model.selectAlfaPortfolio(portfolio.poCode)"))
+        XCTAssertTrue(panel.contains("if let selectedPortfolio, !holdings.isEmpty"))
+        XCTAssertTrue(panel.contains("LazyVGrid("))
+        XCTAssertTrue(panel.contains(".adaptive(minimum: isCompact ? 280 : 340, maximum: 520)"))
+        XCTAssertFalse(panel.contains("portfolioPrefix(for:"))
+        XCTAssertFalse(panel.contains("selectedAlfaPoCodes"))
+
+        XCTAssertTrue(holding.contains("ProgressView(value:"))
+        XCTAssertTrue(holding.contains("Text(\"目标占比\")"))
+        XCTAssertTrue(holding.contains("title: \"最新净值\""))
+        XCTAssertTrue(holding.contains("title: \"日涨跌\""))
+
+        XCTAssertTrue(model.contains("alfaPortfolioCodesWithoutAdjustments"))
+        XCTAssertFalse(model.contains("mergeAlfaPayloads"))
+        XCTAssertFalse(model.contains("prodCode: \"aggregate\""))
+    }
+
     func testMainNavigationHasKeyboardShortcuts() throws {
         let source = try source(at: "QiemanDashboardApp.swift")
 

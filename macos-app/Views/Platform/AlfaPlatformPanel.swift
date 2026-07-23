@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - AlfaPlatformPanel
 
-/// alfa 投顾组合调仓面板：汇总所有组合调仓 + 按组合 chip 筛选 + 左右 master-detail 布局。
+/// alfa 投顾组合调仓面板：组合单选 + 该组合的调仓与当前持仓。
 /// 复用 `PlatformActionRow` / `PlatformActionDetailCard` 渲染。
 struct AlfaPlatformPanel: View {
     @EnvironmentObject private var model: AppModel
@@ -25,6 +25,10 @@ struct AlfaPlatformPanel: View {
             return matched
         }
         return actions.first
+    }
+
+    private var selectedPortfolio: AlfaPortfolioCatalogItem? {
+        model.selectedAlfaPortfolio
     }
 
     var body: some View {
@@ -59,7 +63,6 @@ struct AlfaPlatformPanel: View {
             }
 
             holdingsSection
-                .padding(AppPalette.contentPadding)
         }
         .sheet(isPresented: $showingAddSheet) {
             addPortfolioSheet
@@ -105,26 +108,34 @@ struct AlfaPlatformPanel: View {
     }
 
     private func portfolioChip(_ portfolio: AlfaPortfolioCatalogItem) -> some View {
-        let selected = model.selectedAlfaPoCodes.contains(portfolio.poCode)
+        let selected = model.selectedAlfaPoCode == portfolio.poCode
         return Button {
-            model.toggleAlfaPoCode(portfolio.poCode)
             selectedActionID = nil
+            Task { await model.selectAlfaPortfolio(portfolio.poCode) }
         } label: {
-            Text(portfolio.name)
-                .font(.system(size: 11, weight: selected ? .semibold : .regular))
-                .foregroundStyle(selected ? .white : AppPalette.ink)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(
-                    RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
-                        .fill(selected ? AppPalette.brand : AppPalette.cardStrong)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
-                        .stroke(selected ? AppPalette.brand : AppPalette.line.opacity(0.4), lineWidth: 1)
-                )
+            HStack(spacing: 6) {
+                if selected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                Text(portfolio.name)
+                    .lineLimit(1)
+            }
+            .font(.system(size: 11, weight: selected ? .semibold : .regular))
+            .foregroundStyle(selected ? AppPalette.onBrand : AppPalette.ink)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
+                    .fill(selected ? AppPalette.brand : AppPalette.cardStrong)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppPalette.badgeRadius)
+                    .stroke(selected ? AppPalette.brand : AppPalette.line.opacity(0.4), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
+        .disabled(model.isLoadingAlfa)
     }
 
     private var actionButtons: some View {
@@ -191,7 +202,6 @@ struct AlfaPlatformPanel: View {
     @ViewBuilder
     private func actionButtons(isCompact: Bool, scrollProxy: ScrollViewProxy) -> some View {
         ForEach(actions.prefix(60)) { action in
-            let prefix = portfolioPrefix(for: action)
             Button {
                 selectedActionID = action.id
                 if isCompact {
@@ -204,7 +214,7 @@ struct AlfaPlatformPanel: View {
                     action: action,
                     isSelected: selectedAction?.id == action.id,
                     isCompact: true,
-                    titlePrefix: prefix
+                    titlePrefix: ""
                 )
             }
             .buttonStyle(PressResponsiveButtonStyle())
@@ -216,27 +226,58 @@ struct AlfaPlatformPanel: View {
     @ViewBuilder
     private var holdingsSection: some View {
         let holdings = model.filteredAlfaHoldings
-        if !holdings.isEmpty {
+        if let selectedPortfolio, !holdings.isEmpty {
             SectionCard(
                 title: "当前持仓",
-                subtitle: "投顾组合目标配置占比",
+                subtitle: "\(selectedPortfolio.name) · 单组合目标配置",
                 icon: "bag"
             ) {
-                LazyVStack(spacing: 6) {
-                    ForEach(holdings) { part in
-                        AlfaHoldingCard(part: part)
+                VStack(alignment: .leading, spacing: 12) {
+                    holdingsSummary(portfolio: selectedPortfolio, holdings: holdings)
+
+                    LazyVGrid(
+                        columns: [
+                            GridItem(
+                                .adaptive(minimum: isCompact ? 280 : 340, maximum: 520),
+                                spacing: 10,
+                                alignment: .top
+                            ),
+                        ],
+                        alignment: .leading,
+                        spacing: 10
+                    ) {
+                        ForEach(Array(holdings.enumerated()), id: \.element.id) { index, part in
+                            AlfaHoldingCard(part: part, rank: index + 1)
+                        }
                     }
                 }
             }
         }
     }
 
-    /// 来源组合名前缀（汇总多组合时区分来源）。
-    private func portfolioPrefix(for action: PlatformActionPayload) -> String {
-        guard let name = model.alfaPortfolioName(for: action.sourcePoCode), !name.isEmpty else {
-            return ""
+    private func holdingsSummary(
+        portfolio: AlfaPortfolioCatalogItem,
+        holdings: [AlfaHoldingPart]
+    ) -> some View {
+        let totalPercent = holdings.reduce(0) { $0 + $1.percent }
+        return HStack(spacing: 8) {
+            Label(portfolio.author.isEmpty ? portfolio.poCode : portfolio.author, systemImage: "person.crop.circle")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppPalette.muted)
+            Spacer()
+            Text("\(holdings.count) 只基金")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppPalette.info)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(AppPalette.info.opacity(0.10), in: Capsule())
+            Text(String(format: "目标配置 %.2f%%", totalPercent * 100))
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(AppPalette.brand)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(AppPalette.brand.opacity(0.10), in: Capsule())
         }
-        return "[\(name)] "
     }
 
     // MARK: - 状态视图
@@ -244,7 +285,7 @@ struct AlfaPlatformPanel: View {
     private var emptyPortfoliosState: some View {
         EmptySectionState(
             title: "还没有添加投顾组合",
-            subtitle: "点右上角「添加」，选择且慢投顾组合（如晓磊「基金全磊打之大航海时代」）。",
+            subtitle: "点右上角「添加」，选择一个有公开调仓记录的且慢投顾组合。",
             actionTitle: "添加组合"
         ) {
             showingAddSheet = true
@@ -297,7 +338,7 @@ struct AlfaPlatformPanel: View {
                     .buttonStyle(.plain)
             }
 
-            Text("从且慢严选组合列表选择，或直接输入组合码（如 SI000192）。")
+            Text("从且慢严选组合列表选择，或直接输入组合码（如 ZH157591）。")
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
 
@@ -319,7 +360,7 @@ struct AlfaPlatformPanel: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(AppPalette.muted)
                 HStack(spacing: 8) {
-                    TextField("如 SI000192", text: $manualPoCode)
+                    TextField("如 ZH157591", text: $manualPoCode)
                         .textFieldStyle(.plain)
                         .font(.system(size: 12))
                         .padding(.horizontal, 8)
@@ -368,7 +409,7 @@ struct AlfaPlatformPanel: View {
                                     .foregroundStyle(AppPalette.muted)
                             } else {
                                 Button("添加") {
-                                    model.addAlfaPortfolio(item)
+                                    Task { _ = await model.addAlfaPortfolio(item) }
                                 }
                                 .font(.system(size: 10, weight: .medium))
                                 .buttonStyle(.plain)
