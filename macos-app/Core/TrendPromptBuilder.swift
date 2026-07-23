@@ -107,6 +107,12 @@ struct TrendPromptBuilder {
         Do not invent sources.
         Do not guarantee returns.
         Do not use mandatory buy/sell language.
+        所有面向用户的中文字段必须使用普通投资者能直接听懂的自然中文。
+        不要使用或堆砌研报术语，包括 Beta、Alpha、动能、量能、产业周期、景气度、基本面寻底、估值修复、风险偏好、中枢、支撑位；确需表达时，改写成日常说法。
+        rationale、impactText、summary、detail、triggerConditions、invalidatingConditions 和 counterSignals 必须写成完整句子，明确说明发生了什么、意味着什么，不要输出“AI产业周期”“行业 Beta 向下”这类名词短语。
+        例如：不要写“纳斯达克科技巨头盈利动能强劲”，应写“纳斯达克大型科技公司的盈利仍在较快增长”；不要写“地产链条基本面仍在寻底”，应写“地产行业还没有明显企稳”。
+        动作标题也要使用自然中文，例如写“继续持有”“先不操作”“考虑减仓”，不要写“买入观察”“减仓复核”“暂停追买”。
+        对 keyAssets 和 assetTrends，首个 horizon.rationale 要用一句简短自然中文概括主要原因，可直接作为小标题；asset rationale 再用一到两句完整的话解释原因和影响。
         Do not perform exhaustive online searches for every asset; use broad market, sector, policy, and clearly material asset-level signals only.
         \(tradeSignalInstruction)
         marketOutlook must summarize 大盘 and major asset classes relevant to the portfolio, such as A-share broad indices, Hong Kong equities, US equities, bonds, commodities, and gold/黄金 when material.

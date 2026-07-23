@@ -92,6 +92,11 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertTrue(source.contains("trendDecisionHeader(summary)"))
         XCTAssertTrue(source.contains("trendActionBlock(summary.tradePlan)"))
         XCTAssertTrue(source.contains("trendEvidenceBlock(summary)"))
+        XCTAssertTrue(source.contains("trendEvidenceTitle(summary)"))
+        XCTAssertTrue(source.contains("trendEvidenceDetails(summary)"))
+        XCTAssertFalse(source.contains("private func trendHorizonRow"))
+        let equalHeightFrame = ".frame(maxWidth: .infinity, minHeight: 174, maxHeight: .infinity, alignment: .topLeading)"
+        XCTAssertEqual(source.components(separatedBy: equalHeightFrame).count - 1, 2)
         XCTAssertTrue(source.contains("trendInvalidationBlock(invalidationConditions)"))
         XCTAssertTrue(source.contains("title: \"执行前确认\""))
         XCTAssertTrue(source.contains("Text(\"什么情况下改变判断\")"))

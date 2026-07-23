@@ -280,17 +280,20 @@ struct PersonalAssetDetailSheet: View {
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(AppPalette.muted)
                 HStack(spacing: 7) {
-                    Text(summary.primaryDirection?.assetTagText ?? summary.tradePlan.label)
+                    Text(
+                        summary.primaryDirection.map(TrendPlainLanguage.direction)
+                            ?? TrendPlainLanguage.actionLabel(summary.tradePlan.label)
+                    )
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(tone.color)
-                    Text("\(summary.primaryConfidence.label)信心")
+                    Text(TrendPlainLanguage.confidence(summary.primaryConfidence))
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(AppPalette.muted)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
                         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
                 }
-                Text(summary.impactText)
+                Text(TrendPlainLanguage.sentence(summary.impactText))
                     .font(.system(size: 11))
                     .foregroundStyle(AppPalette.ink)
                     .fixedSize(horizontal: false, vertical: true)
@@ -311,17 +314,17 @@ struct PersonalAssetDetailSheet: View {
                 .foregroundStyle(plan.tone.color)
 
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(plan.label)
+                Text(TrendPlainLanguage.actionLabel(plan.label))
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(plan.tone.color)
                 Text("·")
                     .foregroundStyle(AppPalette.muted)
-                Text(plan.method)
+                Text(TrendPlainLanguage.actionMethod(plan.method))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
             }
 
-            Text(plan.detail)
+            Text(TrendPlainLanguage.sentence(plan.detail))
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -336,8 +339,8 @@ struct PersonalAssetDetailSheet: View {
                 )
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
         .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 174, maxHeight: .infinity, alignment: .topLeading)
         .background(plan.tone.color.opacity(0.07), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppPalette.cardRadius)
@@ -351,52 +354,58 @@ struct PersonalAssetDetailSheet: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(AppPalette.info)
 
-            if !summary.horizons.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(summary.horizons, id: \.horizon) { horizon in
-                        trendHorizonRow(horizon)
-                    }
-                }
-            }
+            Text(trendEvidenceTitle(summary))
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(AppPalette.ink)
+                .fixedSize(horizontal: false, vertical: true)
 
-            if !summary.rationale.isEmpty {
-                if !summary.horizons.isEmpty {
-                    Divider()
-                        .overlay(AppPalette.line.opacity(0.38))
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(trendEvidenceDetails(summary), id: \.self) { detail in
+                    Text(detail)
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(summary.rationale)
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted)
-                    .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
         .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 174, maxHeight: .infinity, alignment: .topLeading)
         .background(AppPalette.cardStrong.opacity(0.52), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
 
-    private func trendHorizonRow(_ horizon: TrendHorizonView) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text(horizon.horizon.assetTagText)
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(horizon.direction.assetTagTone.color)
-                .frame(width: 28, alignment: .leading)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(horizon.direction.assetTagText)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(horizon.direction.assetTagTone.color)
-                    Text("\(horizon.confidence.label)信心")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(AppPalette.muted)
-                }
-                Text(horizon.rationale)
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+    private func trendEvidenceTitle(_ summary: TrendAssetTagSummary) -> String {
+        if let horizon = primaryEvidenceHorizon(summary), !horizon.rationale.isEmpty {
+            return TrendPlainLanguage.headline(horizon.rationale)
         }
+        if !summary.rationale.isEmpty {
+            return TrendPlainLanguage.headline(summary.rationale)
+        }
+        return "暂时没有足够信息"
+    }
+
+    private func trendEvidenceDetails(_ summary: TrendAssetTagSummary) -> [String] {
+        let title = trendEvidenceTitle(summary)
+        var details: [String] = []
+
+        if !summary.rationale.isEmpty,
+           TrendPlainLanguage.headline(summary.rationale) != title {
+            details.append(TrendPlainLanguage.sentence(summary.rationale))
+        }
+
+        if let horizon = primaryEvidenceHorizon(summary) {
+            details.append(
+                TrendPlainLanguage.outlookSentence(
+                    horizon: horizon.horizon,
+                    direction: horizon.direction,
+                    confidence: horizon.confidence
+                )
+            )
+        }
+        return details
+    }
+
+    private func primaryEvidenceHorizon(_ summary: TrendAssetTagSummary) -> TrendHorizonView? {
+        summary.horizons.first(where: { $0.horizon == .short }) ?? summary.horizons.first
     }
 
     private func trendConditionList(title: String, items: [String], tint: Color) -> some View {
@@ -410,7 +419,7 @@ struct PersonalAssetDetailSheet: View {
                         .fill(tint)
                         .frame(width: 4, height: 4)
                         .padding(.top, 5)
-                    Text(item)
+                    Text(TrendPlainLanguage.sentence(item))
                         .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -446,7 +455,7 @@ struct PersonalAssetDetailSheet: View {
                                 .fill(AppPalette.warning)
                                 .frame(width: 4, height: 4)
                                 .padding(.top, 5)
-                            Text(condition)
+                            Text(TrendPlainLanguage.sentence(condition))
                                 .font(.system(size: 10))
                                 .foregroundStyle(AppPalette.muted)
                                 .fixedSize(horizontal: false, vertical: true)
