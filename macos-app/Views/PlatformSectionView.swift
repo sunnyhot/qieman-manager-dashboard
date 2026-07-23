@@ -294,6 +294,7 @@ struct PlatformSectionView: View {
                         platformActionRows(pageActions, isCompact: false, scrollProxy: scrollProxy)
                             .padding(.trailing, 4)
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxHeight: PlatformWorkspaceLayout.actionListHeight)
                 }
             }

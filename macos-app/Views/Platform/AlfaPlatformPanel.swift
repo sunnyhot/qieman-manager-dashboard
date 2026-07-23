@@ -185,6 +185,7 @@ struct AlfaPlatformPanel: View {
                         }
                         .padding(.trailing, 4)
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxHeight: PlatformWorkspaceLayout.actionListHeight)
                 }
             }
