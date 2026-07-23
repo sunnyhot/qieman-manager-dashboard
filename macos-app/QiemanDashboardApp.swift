@@ -3,6 +3,10 @@ import Combine
 import SwiftUI
 import UserNotifications
 
+private enum AppSceneIdentifier {
+    static let mainWindow = "main-window"
+}
+
 enum AppLaunchPresentationPolicy {
     static func initialActivationPolicy(storedShowsInDock: Bool) -> NSApplication.ActivationPolicy {
         // Keep the first interactive launch regular so SwiftUI can create the
@@ -23,13 +27,6 @@ enum AppRuntimeCapabilities {
 
 enum AppLaunchWindowPolicy {
     static let shouldCreateImmediateManualWindowOnLaunch = false
-
-    static func shouldShowFallbackMainWindow(
-        hasTrackedVisibleMainWindow: Bool,
-        hasReusableMainWindow: Bool
-    ) -> Bool {
-        !hasTrackedVisibleMainWindow && !hasReusableMainWindow
-    }
 }
 
 enum AppMainWindowTrackingPolicy {
@@ -66,6 +63,7 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     private var lastEntryIDs: [String] = []
     private var lastMenuBarRenderState: MenuBarRenderState?
     private var didFinishLaunching = false
+    private var openMainWindowScene: (() -> Void)?
     /// Retains a reference to the main window so it can be re-shown after closing.
     /// Set by both the SwiftUI WindowGroup (onAppear) and createMainWindow().
     fileprivate(set) var mainWindow: NSWindow?
@@ -174,19 +172,6 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
                 .store(in: &self.cancellables)
         }
 
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            guard let self else { return }
-            let hasTrackedVisibleMainWindow = self.mainWindow?.isVisible == true
-            let hasReusableMainWindow = NSApplication.shared.windows.contains { window in
-                self.isReusableMainWindow(window)
-            }
-            guard AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
-                hasTrackedVisibleMainWindow: hasTrackedVisibleMainWindow,
-                hasReusableMainWindow: hasReusableMainWindow
-            ) else { return }
-            self.showMainWindow()
-        }
     }
 
     /// Apply the current appearance setting to every open NSWindow, NSHostingView,
@@ -456,6 +441,10 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
         mainWindow = window
     }
 
+    @MainActor func registerMainWindowSceneOpener(_ action: @escaping () -> Void) {
+        openMainWindowScene = action
+    }
+
     @MainActor func createMainWindow() {
         guard let model else { return }
         let contentView = ContentView()
@@ -521,7 +510,16 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
             NSApplication.shared.activate(ignoringOtherApps: true)
             return
         }
-        // 3. No window at all — create one.
+        // 3. Reopen the single SwiftUI Window scene. Keeping this as the primary
+        //    creation path prevents a manual AppKit window and a delayed SwiftUI
+        //    window from appearing together at different sizes.
+        if let openMainWindowScene {
+            openMainWindowScene()
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            return
+        }
+        // 4. Compatibility fallback used only before SwiftUI has registered its
+        //    scene opener; normal launch and menu-bar reopen never reach this path.
         createMainWindow()
     }
 
@@ -705,6 +703,22 @@ private struct MainWindowSceneTracker: NSViewRepresentable {
     }
 }
 
+private struct MainWindowSceneOpener: View {
+    @Environment(\.openWindow) private var openWindow
+
+    let appDelegate: QiemanApplicationDelegate
+
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .onAppear {
+                appDelegate.registerMainWindowSceneOpener {
+                    openWindow(id: AppSceneIdentifier.mainWindow)
+                }
+            }
+    }
+}
+
 @MainActor
 private enum QiemanAppModelHolder {
     static let shared = AppModel()
@@ -721,7 +735,7 @@ struct QiemanDashboardApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        Window("且慢主理人", id: AppSceneIdentifier.mainWindow) {
             ContentView()
                 .environmentObject(model)
                 .tint(AppPalette.brand)
@@ -740,7 +754,9 @@ struct QiemanDashboardApp: App {
                     }
                 }
                 .background(MainWindowSceneTracker(appDelegate: appDelegate))
+                .background(MainWindowSceneOpener(appDelegate: appDelegate))
         }
+        .defaultSize(width: 1200, height: 800)
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(after: .appInfo) {

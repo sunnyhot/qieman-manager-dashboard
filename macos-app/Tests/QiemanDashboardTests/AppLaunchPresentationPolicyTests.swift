@@ -25,28 +25,6 @@ final class AppLaunchPresentationPolicyTests: XCTestCase {
         ]))
     }
 
-    func testLaunchFallbackShowsMainWindowWhenNoWindowWasRestored() {
-        XCTAssertTrue(AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
-            hasTrackedVisibleMainWindow: false,
-            hasReusableMainWindow: false
-        ))
-        XCTAssertFalse(AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
-            hasTrackedVisibleMainWindow: true,
-            hasReusableMainWindow: false
-        ))
-        XCTAssertFalse(AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
-            hasTrackedVisibleMainWindow: false,
-            hasReusableMainWindow: true
-        ))
-    }
-
-    func testLaunchFallbackSkipsManualWindowWhenReusableMainWindowExists() {
-        XCTAssertFalse(AppLaunchWindowPolicy.shouldShowFallbackMainWindow(
-            hasTrackedVisibleMainWindow: false,
-            hasReusableMainWindow: true
-        ))
-    }
-
     func testSwiftUISceneWindowDeduplicatesDifferentTrackedWindowRegardlessOfVisibility() {
         XCTAssertTrue(AppMainWindowTrackingPolicy.shouldDiscardPreviousTrackedWindow(
             hasPreviousTrackedWindow: true,
@@ -132,6 +110,21 @@ final class AppLaunchPresentationPolicyTests: XCTestCase {
 
     func testDidFinishLaunchingWaitsForSwiftUIWindowBeforeFallbackCreation() {
         XCTAssertFalse(AppLaunchWindowPolicy.shouldCreateImmediateManualWindowOnLaunch)
+    }
+
+    func testAppUsesOneIdentifiedSwiftUIWindowWithoutADelayedManualFallback() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("QiemanDashboardApp.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("Window(\"且慢主理人\", id: AppSceneIdentifier.mainWindow)"))
+        XCTAssertTrue(source.contains(".defaultSize(width: 1200, height: 800)"))
+        XCTAssertTrue(source.contains("registerMainWindowSceneOpener"))
+        XCTAssertFalse(source.contains("WindowGroup {"))
+        XCTAssertFalse(source.contains("Task.sleep(nanoseconds: 500_000_000)"))
     }
 
     @MainActor
