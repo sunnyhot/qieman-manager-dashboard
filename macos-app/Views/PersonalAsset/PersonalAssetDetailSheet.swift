@@ -355,8 +355,9 @@ struct PersonalAssetDetailSheet: View {
                 .foregroundStyle(AppPalette.info)
 
             Text(trendEvidenceTitle(summary))
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(AppPalette.ink)
+                .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
 
             VStack(alignment: .leading, spacing: 6) {

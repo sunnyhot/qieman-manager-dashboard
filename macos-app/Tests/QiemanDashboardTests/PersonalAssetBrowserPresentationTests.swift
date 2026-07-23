@@ -40,6 +40,17 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertFalse(source.contains("PersonalAssetTableLayout"))
     }
 
+    func testPersonalAssetTableKeepsHorizontalScrollAvailableOnSmallScreens() throws {
+        let source = try String(contentsOf: personalAssetBrowserSourceURL(), encoding: .utf8)
+
+        XCTAssertEqual(PersonalAssetTable.compactThreshold, 1_304)
+        XCTAssertTrue(source.contains("ScrollView(.horizontal, showsIndicators: true)"))
+        XCTAssertTrue(source.contains(".scrollIndicators(.visible, axes: .horizontal)"))
+        XCTAssertTrue(source.contains(".scrollIndicatorsFlash(onAppear: true)"))
+        XCTAssertTrue(source.contains(".frame(minWidth: measuredWidth, alignment: .leading)"))
+        XCTAssertFalse(source.contains("if isCompact {\n                ScrollView(.horizontal"))
+    }
+
     func testPersonalAssetTableFillsWideWindows() throws {
         let browserSource = try String(contentsOf: personalAssetBrowserSourceURL(), encoding: .utf8)
         let rowSource = try String(contentsOf: personalAssetTableRowSourceURL(), encoding: .utf8)
@@ -94,6 +105,8 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertTrue(source.contains("trendEvidenceBlock(summary)"))
         XCTAssertTrue(source.contains("trendEvidenceTitle(summary)"))
         XCTAssertTrue(source.contains("trendEvidenceDetails(summary)"))
+        XCTAssertTrue(source.contains(".font(.system(size: 11, weight: .semibold))"))
+        XCTAssertTrue(source.contains(".lineSpacing(2)"))
         XCTAssertFalse(source.contains("private func trendHorizonRow"))
         let equalHeightFrame = ".frame(maxWidth: .infinity, minHeight: 174, maxHeight: .infinity, alignment: .topLeading)"
         XCTAssertEqual(source.components(separatedBy: equalHeightFrame).count - 1, 2)

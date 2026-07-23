@@ -538,8 +538,8 @@ struct PersonalAssetTable: View {
 
     @State private var availableWidth: CGFloat = Self.compactThreshold
 
-    /// Compact threshold — below this width we switch to responsive column widths
-    static let compactThreshold: CGFloat = 780
+    /// 完整列布局的最小宽度；低于此宽度时切换紧凑列，并允许横向滚动。
+    static let compactThreshold: CGFloat = 1_304
 
     init(
         rows: [PersonalAssetAggregateRow],
@@ -565,17 +565,12 @@ struct PersonalAssetTable: View {
         let measuredWidth = max(availableWidth, 1)
         let isCompact = measuredWidth < Self.compactThreshold
 
-        VStack(spacing: 0) {
-            if isCompact {
-                ScrollView(.horizontal, showsIndicators: true) {
-                    tableContent(availableWidth: measuredWidth, isCompact: isCompact)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                tableContent(availableWidth: measuredWidth, isCompact: isCompact)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+        ScrollView(.horizontal, showsIndicators: true) {
+            tableContent(availableWidth: measuredWidth, isCompact: isCompact)
+                .frame(minWidth: measuredWidth, alignment: .leading)
         }
+        .scrollIndicators(.visible, axes: .horizontal)
+        .scrollIndicatorsFlash(onAppear: true)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             GeometryReader { geometry in
