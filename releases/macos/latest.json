@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.1/QiemanDashboard-3.8.1.zip",
-    "name" : "QiemanDashboard-3.8.1.zip",
-    "sha256" : "641fbcaf2af9a419c672e1a543079edd1939765adb3c1be4367d8fa8d17a79f8",
-    "size" : 4770991
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.2/QiemanDashboard-3.8.2.zip",
+    "name" : "QiemanDashboard-3.8.2.zip",
+    "sha256" : "0768708109a70f3f20077bd7fb3611f9be9a56c0a4ae8227b680397c4f2f1daa",
+    "size" : 4771275
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.1/QiemanDashboard-3.8.1.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.2/QiemanDashboard-3.8.2.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.1.zip",
-      "size" : 4770991
+      "name" : "QiemanDashboard-3.8.2.zip",
+      "size" : 4771275
     }
   ],
-  "body" : "投顾组合加当前持仓展示（PoFundComposition） (#6)\nAGENTS.md 更新投顾汇总展示说明（多组合合并 + chip 筛选）",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.1",
-  "name" : "QiemanDashboard v3.8.1",
-  "notes" : "投顾组合加当前持仓展示（PoFundComposition） (#6)\nAGENTS.md 更新投顾汇总展示说明（多组合合并 + chip 筛选）",
+  "body" : "列表高度自适应 + 投顾面板进入自动加载数据 (#7)\nAGENTS.md 补充投顾持仓说明（PoFundComposition + AlfaHoldingPart/Card）",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.2",
+  "name" : "QiemanDashboard v3.8.2",
+  "notes" : "列表高度自适应 + 投顾面板进入自动加载数据 (#7)\nAGENTS.md 补充投顾持仓说明（PoFundComposition + AlfaHoldingPart/Card）",
   "published_at" : "",
-  "sha256" : "641fbcaf2af9a419c672e1a543079edd1939765adb3c1be4367d8fa8d17a79f8",
-  "tag" : "v3.8.1",
-  "tag_name" : "v3.8.1",
-  "version" : "3.8.1"
+  "sha256" : "0768708109a70f3f20077bd7fb3611f9be9a56c0a4ae8227b680397c4f2f1daa",
+  "tag" : "v3.8.2",
+  "tag_name" : "v3.8.2",
+  "version" : "3.8.2"
 }
