@@ -42,6 +42,9 @@ struct PersonalAssetTableRow: View {
                         .foregroundStyle(AppPalette.ink)
                         .lineLimit(1)
                         .help(row.fundName)
+                    if row.assetType == .stock, let stockMarketLabel = row.detectedMarket?.displayName {
+                        ToolbarBadge(title: stockMarketLabel, tint: AppPalette.info)
+                    }
                     if row.hasArchivedHolding && !row.hasHolding {
                         ToolbarBadge(title: "已归档", tint: AppPalette.muted)
                     }
@@ -353,8 +356,9 @@ struct PersonalAssetTableRow: View {
                 Text(summary.tradePlan.method)
                     .foregroundStyle(AppPalette.muted)
                     .lineLimit(1)
-                Spacer(minLength: 4)
                 if !summary.counterSignals.isEmpty {
+                    Text("·")
+                        .foregroundStyle(AppPalette.muted)
                     Text("\(summary.counterSignals.count) 条反证")
                         .foregroundStyle(AppPalette.warning)
                         .lineLimit(1)
