@@ -192,17 +192,17 @@ final class QiemanApplicationDelegate: NSObject, NSApplicationDelegate, UNUserNo
     /// Apply the current appearance setting to every open NSWindow, NSHostingView,
     /// and the popover — so both NSColor dynamic colors and SwiftUI's
     /// .preferredColorScheme() stay in sync.
-    @MainActor private func syncWindowAppearances() {
+    @MainActor func syncWindowAppearances(in windows: [NSWindow]? = nil) {
         guard let model else { return }
         let target = model.appearance.nsAppearance
-        for window in NSApplication.shared.windows {
+        for window in windows ?? NSApplication.shared.windows {
             window.appearance = target
             // Walk the view hierarchy to find NSHostingView instances and
             // explicitly set their appearance so SwiftUI picks up the change.
             setAppearanceRecursively(in: window.contentView, to: target)
         }
         // Also update the popover's hosting controller
-        if let popoverVC = popover.contentViewController {
+        if windows == nil, let popoverVC = popover?.contentViewController {
             setAppearanceRecursively(in: popoverVC.view, to: target)
         }
     }

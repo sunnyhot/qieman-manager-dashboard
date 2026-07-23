@@ -133,4 +133,31 @@ final class AppLaunchPresentationPolicyTests: XCTestCase {
     func testDidFinishLaunchingWaitsForSwiftUIWindowBeforeFallbackCreation() {
         XCTAssertFalse(AppLaunchWindowPolicy.shouldCreateImmediateManualWindowOnLaunch)
     }
+
+    @MainActor
+    func testDarkAppearanceOverridesALightSystemWindow() throws {
+        let model = AppModel()
+        let originalAppearance = model.appearance
+        defer { model.appearance = originalAppearance }
+        model.appearance = .dark
+
+        let delegate = QiemanApplicationDelegate()
+        delegate.configure(model: model)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 240),
+            styleMask: [.titled, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = try XCTUnwrap(NSAppearance(named: .aqua))
+        defer { window.close() }
+
+        XCTAssertEqual(window.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]), .aqua)
+
+        delegate.syncWindowAppearances(in: [window])
+
+        XCTAssertEqual(window.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]), .darkAqua)
+    }
 }
