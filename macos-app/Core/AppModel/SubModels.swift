@@ -88,6 +88,7 @@ final class PlatformState: ObservableObject {
 @MainActor
 final class UIState: ObservableObject {
     @Published var selectedSection: AppSection = .overview
+    @Published var selectedPlatformActivityTab: PlatformActivityTab = .adjustments
     @Published var showsInDock: Bool = (UserDefaults.standard.object(forKey: "qieman.dashboard.showsInDock") as? Bool) ?? true {
         didSet {
             UserDefaults.standard.set(showsInDock, forKey: "qieman.dashboard.showsInDock")

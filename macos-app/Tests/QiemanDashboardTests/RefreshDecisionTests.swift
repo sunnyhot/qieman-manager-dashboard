@@ -53,6 +53,35 @@ final class RefreshDecisionTests: XCTestCase {
         XCTAssertEqual(decision, .refreshLatest)
     }
 
+    func testCombinedPlatformActivityRefreshesWhenEitherChildTabHasNoData() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let missingForum = RefreshDecision.sectionTriggered(
+            section: .platform,
+            now: now,
+            lastLatestRefreshAt: now.addingTimeInterval(-30),
+            hasForumPosts: false,
+            hasPlatformActions: true,
+            hasPersonalPortfolio: false,
+            hasPortfolioSnapshot: false,
+            isRefreshingLatest: false,
+            isRefreshingPortfolio: false
+        )
+        let complete = RefreshDecision.sectionTriggered(
+            section: .platform,
+            now: now,
+            lastLatestRefreshAt: now.addingTimeInterval(-30),
+            hasForumPosts: true,
+            hasPlatformActions: true,
+            hasPersonalPortfolio: false,
+            hasPortfolioSnapshot: false,
+            isRefreshingLatest: false,
+            isRefreshingPortfolio: false
+        )
+
+        XCTAssertEqual(missingForum, .refreshLatest)
+        XCTAssertEqual(complete, .skip(reason: .freshDataAvailable))
+    }
+
     func testPortfolioRefreshesWhenPortfolioSnapshotIsMissingOrStale() {
         let now = Date(timeIntervalSince1970: 1_000)
 

@@ -1,5 +1,62 @@
 import SwiftUI
 
+struct PlatformActivitySectionView: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            activityTabBar
+            Divider()
+
+            switch model.selectedPlatformActivityTab {
+            case .adjustments:
+                PlatformSectionView()
+            case .forum:
+                ForumSectionView()
+            }
+        }
+        .onChange(of: model.selectedPlatformActivityTab) { _, tab in
+            if tab == .forum {
+                model.ensureSelectedForumPost()
+            }
+            model.refreshDataForSectionIfNeeded(.platform)
+        }
+    }
+
+    private var activityTabBar: some View {
+        HStack(spacing: 8) {
+            ForEach(PlatformActivityTab.allCases) { tab in
+                let isSelected = model.selectedPlatformActivityTab == tab
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        model.selectedPlatformActivityTab = tab
+                    }
+                } label: {
+                    Label(tab.rawValue, systemImage: tab.systemImage)
+                        .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
+                        .foregroundStyle(isSelected ? AppPalette.onBrand : AppPalette.muted)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(
+                            isSelected ? AppPalette.brand : AppPalette.cardStrong,
+                            in: RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppPalette.controlRadius)
+                                .stroke(isSelected ? AppPalette.brand : AppPalette.line.opacity(0.45), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+            Spacer()
+        }
+        .padding(.horizontal, AppPalette.contentPadding)
+        .padding(.vertical, 10)
+        .background(AppPalette.card.opacity(0.45))
+    }
+}
+
 struct PlatformWorkspaceLayout {
     static let compactThreshold: CGFloat = 900
     static let actionListHeight: CGFloat = 430

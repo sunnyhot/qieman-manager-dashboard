@@ -781,14 +781,16 @@ struct QiemanDashboardApp: App {
                 }
                 .keyboardShortcut("2")
 
-                Button("平台调仓") {
+                Button("调仓动态") {
+                    model.selectedPlatformActivityTab = .adjustments
                     model.selectedSection = .platform
                     appDelegate.showMainWindow()
                 }
                 .keyboardShortcut("3")
 
                 Button("论坛发言") {
-                    model.selectedSection = .forum
+                    model.selectedPlatformActivityTab = .forum
+                    model.selectedSection = .platform
                     appDelegate.showMainWindow()
                 }
                 .keyboardShortcut("4")
@@ -812,7 +814,7 @@ struct QiemanDashboardApp: App {
                     NotificationCenter.default.post(name: .qiemanFocusSearch, object: nil)
                 }
                 .keyboardShortcut("f")
-                .disabled(![AppSection.portfolio, .platform, .forum].contains(model.selectedSection))
+                .disabled(![AppSection.portfolio, .platform].contains(model.selectedSection))
             }
         }
     }

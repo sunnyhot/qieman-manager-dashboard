@@ -291,10 +291,7 @@ struct ContentView: View {
             SettingsSectionView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .platform:
-            PlatformSectionView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case .forum:
-            ForumSectionView()
+            PlatformActivitySectionView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .enhancement:
             EnhancementCenterView()

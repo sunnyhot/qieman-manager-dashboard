@@ -32,6 +32,7 @@ struct OverviewSectionView: View {
                     Spacer()
                     Button("查看全部") {
                         withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+                            model.selectedPlatformActivityTab = .adjustments
                             model.selectedSection = .platform
                         }
                     }
@@ -70,7 +71,8 @@ struct OverviewSectionView: View {
                         Spacer()
                         Button("查看全部") {
                             withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
-                                model.selectedSection = .forum
+                                model.selectedPlatformActivityTab = .forum
+                                model.selectedSection = .platform
                             }
                         }
                         .buttonStyle(.bordered)
@@ -140,12 +142,14 @@ struct OverviewSectionView: View {
                 if let action = model.latestPlatformActions.first {
                     model.selectPlatformAction(action.id)
                 }
+                model.selectedPlatformActivityTab = .adjustments
                 model.selectedSection = .platform
             case .forum:
                 if let record = model.forumRecords.first {
                     model.selectedPostID = record.id
                 }
-                model.selectedSection = .forum
+                model.selectedPlatformActivityTab = .forum
+                model.selectedSection = .platform
             case .settings:
                 model.selectedSection = .settings
             }
@@ -194,6 +198,7 @@ struct OverviewSectionView: View {
     private func openPlatform(_ action: PlatformActionPayload) {
         model.selectPlatformAction(action.id)
         withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            model.selectedPlatformActivityTab = .adjustments
             model.selectedSection = .platform
         }
     }
@@ -201,7 +206,8 @@ struct OverviewSectionView: View {
     private func openForum(_ record: SnapshotRecordPayload) {
         model.selectedPostID = record.id
         withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
-            model.selectedSection = .forum
+            model.selectedPlatformActivityTab = .forum
+            model.selectedSection = .platform
         }
     }
 }

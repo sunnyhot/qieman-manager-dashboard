@@ -245,6 +245,11 @@ final class AppModel: ObservableObject {
         set { uiState.selectedSection = newValue }
     }
 
+    var selectedPlatformActivityTab: PlatformActivityTab {
+        get { uiState.selectedPlatformActivityTab }
+        set { uiState.selectedPlatformActivityTab = newValue }
+    }
+
     var showsInDock: Bool {
         get { uiState.showsInDock }
         set { uiState.showsInDock = newValue }

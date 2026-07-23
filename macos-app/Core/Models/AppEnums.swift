@@ -3,8 +3,7 @@ import Foundation
 enum AppSection: String, CaseIterable, Identifiable {
     case overview = "总览"
     case portfolio = "我的持仓"
-    case platform = "平台调仓"
-    case forum = "论坛发言"
+    case platform = "平台动态"
     case enhancement = "AI研判"
     case settings = "设置"
 
@@ -19,11 +18,23 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .settings:
             return "gearshape"
         case .platform:
-            return "chart.bar.xaxis"
-        case .forum:
-            return "text.bubble"
+            return "rectangle.stack.badge.play"
         case .enhancement:
             return "sparkles"
+        }
+    }
+}
+
+enum PlatformActivityTab: String, CaseIterable, Identifiable {
+    case adjustments = "调仓动态"
+    case forum = "论坛发言"
+
+    var id: String { rawValue }
+
+    var systemImage: String {
+        switch self {
+        case .adjustments: return "chart.bar.xaxis"
+        case .forum: return "text.bubble"
         }
     }
 }

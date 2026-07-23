@@ -159,6 +159,28 @@ final class UIExperienceRegressionTests: XCTestCase {
         XCTAssertTrue(source.contains(".keyboardShortcut(\"f\")"))
     }
 
+    func testPlatformAdjustmentsAndForumShareOneTopLevelActivityTab() throws {
+        let content = try source(at: "Views/ContentView.swift")
+        let activity = try source(at: "Views/PlatformSectionView.swift")
+        let overview = try source(at: "Views/Overview/OverviewSectionView.swift")
+        let managerWatch = try source(at: "Core/AppModel/ManagerWatch.swift")
+
+        XCTAssertEqual(
+            AppSection.allCases.map(\.rawValue),
+            ["总览", "我的持仓", "平台动态", "AI研判", "设置"]
+        )
+        XCTAssertEqual(PlatformActivityTab.allCases.map(\.rawValue), ["调仓动态", "论坛发言"])
+        XCTAssertTrue(content.contains("PlatformActivitySectionView()"))
+        XCTAssertFalse(content.contains("case .forum:"))
+        XCTAssertTrue(activity.contains("struct PlatformActivitySectionView"))
+        XCTAssertTrue(activity.contains("PlatformSectionView()"))
+        XCTAssertTrue(activity.contains("ForumSectionView()"))
+        XCTAssertTrue(overview.contains("model.selectedPlatformActivityTab = .forum"))
+        XCTAssertTrue(managerWatch.contains("selectedPlatformActivityTab = .forum"))
+        XCTAssertFalse(overview.contains("model.selectedSection = .forum"))
+        XCTAssertFalse(managerWatch.contains("selectedSection = .forum"))
+    }
+
     func testQuitApplicationIsReachableFromMenuBarPopoverAndSettings() throws {
         let appModel = try source(at: "Core/AppModel/Auth.swift")
         let menuBar = try source(at: "Views/MenuBarPortfolioView.swift")

@@ -87,7 +87,9 @@ extension AppModel {
 
         switch decision {
         case .skip:
-            if section == .forum, hasForumPosts {
+            if section == .platform,
+               selectedPlatformActivityTab == .forum,
+               hasForumPosts {
                 ensureSelectedForumPost()
             }
             return

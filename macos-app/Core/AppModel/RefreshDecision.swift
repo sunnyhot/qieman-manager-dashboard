@@ -38,13 +38,9 @@ enum RefreshDecision: Equatable {
             return .refreshLatest
         case .platform:
             guard !isRefreshingLatest else { return .skip(reason: .alreadyRefreshing) }
-            if hasPlatformActions, hasFreshData(since: lastLatestRefreshAt, now: now, interval: latestFreshnessInterval) {
-                return .skip(reason: .freshDataAvailable)
-            }
-            return .refreshLatest
-        case .forum:
-            guard !isRefreshingLatest else { return .skip(reason: .alreadyRefreshing) }
-            if hasForumPosts, hasFreshData(since: lastLatestRefreshAt, now: now, interval: latestFreshnessInterval) {
+            if hasForumPosts,
+               hasPlatformActions,
+               hasFreshData(since: lastLatestRefreshAt, now: now, interval: latestFreshnessInterval) {
                 return .skip(reason: .freshDataAvailable)
             }
             return .refreshLatest

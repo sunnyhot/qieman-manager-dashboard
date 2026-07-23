@@ -382,6 +382,7 @@ extension AppModel {
     }
 
     func openPlatformAction(_ payload: NotificationDeepLinkPayload) {
+        selectedPlatformActivityTab = .adjustments
         selectedSection = .platform
         selectedPlatformActionID = payload.targetID
 
@@ -414,7 +415,8 @@ extension AppModel {
     }
 
     func openForumRecord(_ payload: NotificationDeepLinkPayload) {
-        selectedSection = .forum
+        selectedPlatformActivityTab = .forum
+        selectedSection = .platform
         selectedPostID = payload.targetID
 
         if forumRecords.contains(where: { $0.id == payload.targetID }) {
