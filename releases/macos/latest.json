@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.17/QiemanDashboard-3.8.17.zip",
-    "name" : "QiemanDashboard-3.8.17.zip",
-    "sha256" : "a4f64ef94c029abc9ae8d24fb30b7cc482cffd281039ec9ea2852586d6767d68",
-    "size" : 4903239
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.18/QiemanDashboard-3.8.18.zip",
+    "name" : "QiemanDashboard-3.8.18.zip",
+    "sha256" : "022514f3947a79e4d475e0020e48b27be38d0ba7820dc2ccc2710faa89533f03",
+    "size" : 4896306
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.17/QiemanDashboard-3.8.17.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.18/QiemanDashboard-3.8.18.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.17.zip",
-      "size" : 4903239
+      "name" : "QiemanDashboard-3.8.18.zip",
+      "size" : 4896306
     }
   ],
-  "body" : "资产筛选工具栏改为单行布局",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.17",
-  "name" : "QiemanDashboard v3.8.17",
-  "notes" : "资产筛选工具栏改为单行布局",
+  "body" : "优化资产管理与详情展示",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.18",
+  "name" : "QiemanDashboard v3.8.18",
+  "notes" : "优化资产管理与详情展示",
   "published_at" : "",
-  "sha256" : "a4f64ef94c029abc9ae8d24fb30b7cc482cffd281039ec9ea2852586d6767d68",
-  "tag" : "v3.8.17",
-  "tag_name" : "v3.8.17",
-  "version" : "3.8.17"
+  "sha256" : "022514f3947a79e4d475e0020e48b27be38d0ba7820dc2ccc2710faa89533f03",
+  "tag" : "v3.8.18",
+  "tag_name" : "v3.8.18",
+  "version" : "3.8.18"
 }
