@@ -793,7 +793,7 @@ struct QiemanDashboardApp: App {
                 }
                 .keyboardShortcut("4")
 
-                Button("工作台") {
+                Button("AI研判") {
                     model.selectedSection = .enhancement
                     appDelegate.showMainWindow()
                 }

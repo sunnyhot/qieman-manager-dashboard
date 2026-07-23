@@ -149,6 +149,9 @@ final class UIExperienceRegressionTests: XCTestCase {
     func testMainNavigationHasKeyboardShortcuts() throws {
         let source = try source(at: "QiemanDashboardApp.swift")
 
+        XCTAssertEqual(AppSection.enhancement.rawValue, "AI研判")
+        XCTAssertTrue(source.contains("Button(\"AI研判\")"))
+        XCTAssertFalse(source.contains("Button(\"工作台\")"))
         XCTAssertTrue(source.contains("CommandMenu(\"导航\")"))
         XCTAssertTrue(source.contains(".keyboardShortcut(\"1\")"))
         XCTAssertTrue(source.contains(".keyboardShortcut(\"6\")"))

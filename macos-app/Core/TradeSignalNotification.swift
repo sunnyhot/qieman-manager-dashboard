@@ -64,7 +64,7 @@ struct TradeSignalNotificationDecision {
 
     private static func notificationBody(for item: TradeSignalItem) -> String {
         let stale = item.isBasedOnStaleAnalysis ? "基于上次 AI 分析。" : ""
-        return "\(item.action.displayText)：\(item.triggerSummary)。\(stale)打开工作台查看完整条件。"
+        return "\(item.action.displayText)：\(item.triggerSummary)。\(stale)打开 AI研判查看完整条件。"
     }
 }
 

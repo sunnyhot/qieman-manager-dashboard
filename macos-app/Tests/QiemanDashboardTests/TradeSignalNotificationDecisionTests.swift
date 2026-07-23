@@ -78,6 +78,7 @@ final class TradeSignalNotificationDecisionTests: XCTestCase {
 
         XCTAssertEqual(requests.count, 1)
         XCTAssertTrue(requests.first?.body.contains("基于上次 AI 分析") == true)
+        XCTAssertTrue(requests.first?.body.contains("打开 AI研判") == true)
     }
 
     func testDecisionSkipsWhenNotificationsDisabled() {
