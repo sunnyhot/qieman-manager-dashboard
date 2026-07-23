@@ -3,6 +3,43 @@ import XCTest
 @testable import QiemanDashboard
 
 final class QiemanCommandLineTests: XCTestCase {
+    func testForumQueryDefaultsToUnboundedPaginationWithLargerPages() {
+        let form = QueryFormState()
+
+        XCTAssertTrue(form.pages.isEmpty)
+        XCTAssertEqual(form.pageSize, "50")
+    }
+
+    func testForumPaginationContinuesUntilShortPageWhenUnbounded() {
+        XCTAssertTrue(
+            QiemanNativeClient.shouldContinueForumPagination(
+                itemCount: 50,
+                pageSize: 50,
+                currentPage: 1,
+                pageLimit: nil
+            )
+        )
+        XCTAssertFalse(
+            QiemanNativeClient.shouldContinueForumPagination(
+                itemCount: 49,
+                pageSize: 50,
+                currentPage: 2,
+                pageLimit: nil
+            )
+        )
+    }
+
+    func testForumPaginationHonorsExplicitPageLimitForLightweightWatchRequests() {
+        XCTAssertFalse(
+            QiemanNativeClient.shouldContinueForumPagination(
+                itemCount: 10,
+                pageSize: 10,
+                currentPage: 1,
+                pageLimit: 1
+            )
+        )
+    }
+
     func testArgumentParserKeepsRepeatedValuesAndFlags() throws {
         let arguments = try QiemanCommandArguments([
             "valuation",

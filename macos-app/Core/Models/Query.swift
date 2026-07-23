@@ -32,8 +32,9 @@ struct QueryFormState {
     var keyword: String = ""
     var since: String = ""
     var until: String = ""
-    var pages: String = "5"
-    var pageSize: String = "10"
+    /// 留空表示持续翻页直到接口没有更多记录。
+    var pages: String = ""
+    var pageSize: String = "50"
     var autoRefresh: String = ""
 
     func fetchPayload(persist: Bool) -> [String: Any] {

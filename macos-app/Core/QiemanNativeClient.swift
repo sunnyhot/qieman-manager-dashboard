@@ -84,12 +84,13 @@ final class QiemanNativeClient {
     private func fetchGroupManagerSnapshot(form: QueryFormState, persist: Bool, outputDirectory: URL?) async throws -> SnapshotPayload {
         let groupID = try await resolveGroupID(form: form)
         let group = try await fetchGroupInfo(groupID: groupID, source: resolvedGroupSource(form: form, groupID: groupID))
-        let pageSize = positiveInt(form.pageSize, fallback: 10)
-        let pages = positiveInt(form.pages, fallback: 5)
+        let pageSize = positiveInt(form.pageSize, fallback: 50)
+        let pageLimit = optionalPositiveInt(form.pages)
         let targetUserID = group.managerBrokerUserId
 
         var posts: [[String: Any]] = []
-        for pageNum in 1...pages {
+        var pageNum = 1
+        while true {
             let payload = try await requestJSON(
                 path: "/community/post/list",
                 params: [
@@ -116,9 +117,14 @@ final class QiemanNativeClient {
                 }
                 posts.append(post)
             }
-            if pageNum < pages {
-                try await Task.sleep(nanoseconds: 200_000_000)
-            }
+            guard Self.shouldContinueForumPagination(
+                itemCount: items.count,
+                pageSize: pageSize,
+                currentPage: pageNum,
+                pageLimit: pageLimit
+            ) else { break }
+            pageNum += 1
+            try await Task.sleep(nanoseconds: 200_000_000)
         }
 
         if posts.isEmpty {
@@ -149,6 +155,17 @@ final class QiemanNativeClient {
         return try buildSnapshot(raw: raw, fileStem: fileStem, suffix: "community", persist: persist, outputDirectory: outputDirectory)
     }
 
+    /// 未设置页数上限时，只要接口仍返回完整一页，就继续拉取下一页。
+    static func shouldContinueForumPagination(
+        itemCount: Int,
+        pageSize: Int,
+        currentPage: Int,
+        pageLimit: Int?
+    ) -> Bool {
+        guard itemCount >= pageSize else { return false }
+        guard let pageLimit else { return true }
+        return currentPage < pageLimit
+    }
 
     private func buildSnapshot(raw: [String: Any], fileStem: String, suffix: String, persist _: Bool, outputDirectory _: URL?) throws -> SnapshotPayload {
         let timestamp = timestampString()
@@ -635,4 +652,3 @@ private struct NativeGroupInfo {
     let managerAvatarURL: String
     let source: String
 }
-
