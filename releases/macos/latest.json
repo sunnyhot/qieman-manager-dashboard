@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.10/QiemanDashboard-3.8.10.zip",
-    "name" : "QiemanDashboard-3.8.10.zip",
-    "sha256" : "6c135f579ce0d7366a71b21fb11a67a0407db32c9253be5f7e68bb68e0f76560",
-    "size" : 4848483
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.11/QiemanDashboard-3.8.11.zip",
+    "name" : "QiemanDashboard-3.8.11.zip",
+    "sha256" : "056bcf4f93215bc01d27fd301714067aa82c75294b1bb520e8a6f2bed36a3ca8",
+    "size" : 4848136
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.10/QiemanDashboard-3.8.10.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.11/QiemanDashboard-3.8.11.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.10.zip",
-      "size" : 4848483
+      "name" : "QiemanDashboard-3.8.11.zip",
+      "size" : 4848136
     }
   ],
-  "body" : "优化列表布局、更新入口与外观切换",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.10",
-  "name" : "QiemanDashboard v3.8.10",
-  "notes" : "优化列表布局、更新入口与外观切换",
+  "body" : "覆盖浅色系统下的深色切换\n通用设置显示当前外观",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.11",
+  "name" : "QiemanDashboard v3.8.11",
+  "notes" : "覆盖浅色系统下的深色切换\n通用设置显示当前外观",
   "published_at" : "",
-  "sha256" : "6c135f579ce0d7366a71b21fb11a67a0407db32c9253be5f7e68bb68e0f76560",
-  "tag" : "v3.8.10",
-  "tag_name" : "v3.8.10",
-  "version" : "3.8.10"
+  "sha256" : "056bcf4f93215bc01d27fd301714067aa82c75294b1bb520e8a6f2bed36a3ca8",
+  "tag" : "v3.8.11",
+  "tag_name" : "v3.8.11",
+  "version" : "3.8.11"
 }
