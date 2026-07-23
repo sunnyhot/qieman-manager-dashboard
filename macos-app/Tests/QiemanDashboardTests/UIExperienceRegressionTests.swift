@@ -51,6 +51,24 @@ final class UIExperienceRegressionTests: XCTestCase {
         XCTAssertFalse(menuBar.contains(".frame(width: 18, height: 18)"))
     }
 
+    @MainActor
+    func testAppearanceSelectionBroadcastsNativeWindowRefreshAndUsesAGeneralSettingsLabel() throws {
+        let model = AppModel()
+        let originalAppearance = model.appearance
+        defer { model.appearance = originalAppearance }
+        model.appearance = .system
+
+        let notification = expectation(forNotification: .qiemanAppearanceDidChange, object: nil)
+        model.appearance = .dark
+        wait(for: [notification], timeout: 1)
+
+        XCTAssertEqual(model.appearance, .dark)
+
+        let settings = try source(at: "Views/SettingsSectionView.swift")
+        XCTAssertTrue(settings.contains("title: \"通用\""))
+        XCTAssertFalse(settings.contains("title: \"版本\""))
+    }
+
     func testEditorsKeepValidationFeedbackInsideThePresentedSheet() throws {
         let sources = try [
             source(at: "Views/PersonalAsset/PersonalPendingTradeEditSheet.swift"),
@@ -69,6 +87,38 @@ final class UIExperienceRegressionTests: XCTestCase {
 
         XCTAssertFalse(content.contains("ScrollView(.horizontal, showsIndicators: false)"))
         XCTAssertFalse(forum.contains("ScrollView(.horizontal, showsIndicators: false)"))
+    }
+
+    func testWorkspaceListsUseBoundedScrollViewportsWithoutDrawingPastTheirCards() throws {
+        let fixedViewportSources = try [
+            source(at: "Views/PlatformSectionView.swift"),
+            source(at: "Views/Platform/AlfaPlatformPanel.swift"),
+        ]
+
+        for source in fixedViewportSources {
+            XCTAssertFalse(source.contains(".fixedSize(horizontal: false, vertical: true)"))
+            XCTAssertTrue(source.contains(".frame(height: PlatformWorkspaceLayout.actionListHeight)"))
+            XCTAssertTrue(source.contains(".clipped()"))
+        }
+
+        let forum = try source(at: "Views/ForumSectionView.swift")
+        XCTAssertFalse(forum.contains(".fixedSize(horizontal: false, vertical: true)"))
+        XCTAssertTrue(forum.contains("availableHeight: proxy.size.height"))
+        XCTAssertTrue(forum.contains(".frame(height: PlatformWorkspaceLayout.forumListHeight(for: availableHeight))"))
+        XCTAssertTrue(forum.contains(".clipped()"))
+    }
+
+    func testAlfaPanelUsesThePlatformWorkspaceScrollAndWidthContext() throws {
+        let platform = try source(at: "Views/PlatformSectionView.swift")
+        let alfa = try source(at: "Views/Platform/AlfaPlatformPanel.swift")
+
+        XCTAssertTrue(platform.contains("AlfaPlatformPanel("))
+        XCTAssertTrue(platform.contains("isCompact: isCompact"))
+        XCTAssertTrue(platform.contains("availableWidth: proxy.size.width"))
+        XCTAssertTrue(platform.contains("scrollProxy: scrollProxy"))
+        XCTAssertFalse(alfa.contains("GeometryReader { proxy in"))
+        XCTAssertFalse(alfa.contains("ScrollViewReader { scrollProxy in"))
+        XCTAssertFalse(alfa.contains("ScrollView(showsIndicators: false)"))
     }
 
     func testMainNavigationHasKeyboardShortcuts() throws {
@@ -106,6 +156,23 @@ final class UIExperienceRegressionTests: XCTestCase {
         XCTAssertTrue(menuBar.contains("@AppStorage(\"menu.bar.popover.top-section\")"))
         XCTAssertTrue(menuBar.contains("Text(\"\\(section.title)在上\")"))
         XCTAssertTrue(menuBar.contains("ForEach(orderedSections)"))
+    }
+
+    func testMenuBarPopoverChecksForUpdatesInsteadOfOpeningTheDataDirectory() throws {
+        let menuBar = try source(at: "Views/MenuBarPortfolioView.swift")
+        let updateButtonStart = try XCTUnwrap(
+            menuBar.range(of: "Button(model.isCheckingForUpdates ? \"检测中…\" : \"检测更新\")")
+        )
+        let quitButtonStart = try XCTUnwrap(
+            menuBar.range(of: "Button(\"退出应用\")", range: updateButtonStart.upperBound..<menuBar.endIndex)
+        )
+        let updateButton = String(menuBar[updateButtonStart.lowerBound..<quitButtonStart.lowerBound])
+
+        XCTAssertTrue(updateButton.contains("model.showMainWindow(section: .settings)"))
+        XCTAssertTrue(updateButton.contains("await model.checkForUpdates(userInitiated: true)"))
+        XCTAssertTrue(updateButton.contains(".disabled(model.isCheckingForUpdates)"))
+        XCTAssertFalse(menuBar.contains("Button(\"数据目录\")"))
+        XCTAssertFalse(menuBar.contains("model.openDataDirectory()"))
     }
 
     func testWatchlistLookupKeepsLocalResolutionWhileRefreshingTheName() throws {

@@ -10,7 +10,10 @@ struct AlfaPlatformPanel: View {
     @State private var showingAddSheet = false
     @State private var manualPoCode = ""
 
-    private let compactThreshold: CGFloat = 900
+    let isCompact: Bool
+    let availableWidth: CGFloat
+    let scrollProxy: ScrollViewProxy
+
     private let detailAnchor = "alfa-detail-panel"
 
     private var actions: [PlatformActionPayload] {
@@ -25,45 +28,38 @@ struct AlfaPlatformPanel: View {
     }
 
     var body: some View {
-        GeometryReader { proxy in
-            let isCompact = proxy.size.width < compactThreshold
-            ScrollViewReader { scrollProxy in
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        filterBar
+        VStack(alignment: .leading, spacing: 10) {
+            filterBar
 
-                        if model.alfaPortfolios.isEmpty {
-                            emptyPortfoliosState
-                        } else if model.isLoadingAlfa {
-                            loadingState
-                        } else if let error = model.alfaError, actions.isEmpty {
-                            errorState(error)
-                        } else if actions.isEmpty {
-                            emptyActionsState
-                        } else if isCompact {
-                            VStack(alignment: .leading, spacing: 8) {
-                                actionsList(isCompact: true, scrollProxy: scrollProxy)
-                                if let selected = selectedAction {
-                                    PlatformActionDetailCard(action: selected)
-                                        .id(detailAnchor)
-                                }
-                            }
-                        } else {
-                            HStack(alignment: .top, spacing: 10) {
-                                actionsList(isCompact: false, scrollProxy: scrollProxy)
-                                    .frame(width: min(max(proxy.size.width * 0.36, 320), 420), alignment: .top)
-                                if let selected = selectedAction {
-                                    PlatformActionDetailCard(action: selected)
-                                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                                }
-                            }
-                        }
+            if model.alfaPortfolios.isEmpty {
+                emptyPortfoliosState
+            } else if model.isLoadingAlfa {
+                loadingState
+            } else if let error = model.alfaError, actions.isEmpty {
+                errorState(error)
+            } else if actions.isEmpty {
+                emptyActionsState
+            } else if isCompact {
+                VStack(alignment: .leading, spacing: 8) {
+                    actionsList(isCompact: true, scrollProxy: scrollProxy)
+                    if let selected = selectedAction {
+                        PlatformActionDetailCard(action: selected)
+                            .id(detailAnchor)
                     }
-
-                    holdingsSection
-                    .padding(AppPalette.contentPadding)
+                }
+            } else {
+                HStack(alignment: .top, spacing: 10) {
+                    actionsList(isCompact: false, scrollProxy: scrollProxy)
+                        .frame(width: min(max(availableWidth * 0.36, 320), 420), alignment: .top)
+                    if let selected = selectedAction {
+                        PlatformActionDetailCard(action: selected)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                    }
                 }
             }
+
+            holdingsSection
+                .padding(AppPalette.contentPadding)
         }
         .sheet(isPresented: $showingAddSheet) {
             addPortfolioSheet
@@ -185,8 +181,8 @@ struct AlfaPlatformPanel: View {
                         }
                         .padding(.trailing, 4)
                     }
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxHeight: PlatformWorkspaceLayout.actionListHeight)
+                    .frame(height: PlatformWorkspaceLayout.actionListHeight)
+                    .clipped()
                 }
             }
         }

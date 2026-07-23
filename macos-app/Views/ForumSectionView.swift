@@ -30,14 +30,22 @@ struct ForumSectionView: View {
                         ScrollView(showsIndicators: false) {
                             if isCompact {
                                 VStack(alignment: .leading, spacing: 14) {
-                                    forumListPanel(isCompact: true, scrollProxy: scrollProxy)
+                                    forumListPanel(
+                                        isCompact: true,
+                                        availableHeight: proxy.size.height,
+                                        scrollProxy: scrollProxy
+                                    )
                                     forumDetailPanel
                                         .id(detailAnchor)
                                 }
                                 .padding(16)
                             } else {
                                 HStack(alignment: .top, spacing: 14) {
-                                    forumListPanel(isCompact: false, scrollProxy: scrollProxy)
+                                    forumListPanel(
+                                        isCompact: false,
+                                        availableHeight: proxy.size.height,
+                                        scrollProxy: scrollProxy
+                                    )
                                         .frame(width: min(max(proxy.size.width * 0.34, 320), 420), alignment: .top)
 
                                     forumDetailPanel
@@ -58,7 +66,11 @@ struct ForumSectionView: View {
         }
     }
 
-    private func forumListPanel(isCompact: Bool, scrollProxy: ScrollViewProxy) -> some View {
+    private func forumListPanel(
+        isCompact: Bool,
+        availableHeight: CGFloat,
+        scrollProxy: ScrollViewProxy
+    ) -> some View {
         SectionCard(
             title: "发言列表",
             subtitle: isCompact ? "窄窗口先选发言，再自动跳到下面看详情" : "宽窗口左侧快速切换发言",
@@ -95,8 +107,8 @@ struct ForumSectionView: View {
                             }
                             .padding(.trailing, 4)
                         }
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxHeight: PlatformWorkspaceLayout.actionListHeight)
+                        .frame(height: PlatformWorkspaceLayout.forumListHeight(for: availableHeight))
+                        .clipped()
                     }
                 }
             }

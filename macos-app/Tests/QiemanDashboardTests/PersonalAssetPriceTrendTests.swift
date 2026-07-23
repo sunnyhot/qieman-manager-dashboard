@@ -18,11 +18,11 @@ final class PersonalAssetPriceTrendTests: XCTestCase {
     }
 
     func testRangeReturnsLatestTradingDaysAndCalculatesChange() throws {
-        let points = (1...120).map { day in
-            PersonalWatchlistDailyPoint(
-                date: String(format: "2026-%02d-%02d", ((day - 1) / 28) + 1, ((day - 1) % 28) + 1),
-                price: Double(day)
-            )
+        let points: [PersonalWatchlistDailyPoint] = (1...120).map { day in
+            let month = ((day - 1) / 28) + 1
+            let dayOfMonth = ((day - 1) % 28) + 1
+            let date = String(format: "2026-%02d-%02d", month, dayOfMonth)
+            return PersonalWatchlistDailyPoint(date: date, price: Double(day))
         }
         let series = PersonalAssetPriceTrendSeries(dailyPoints: points)
 

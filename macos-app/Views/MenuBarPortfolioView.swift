@@ -99,10 +99,12 @@ struct MenuBarPortfolioView: View {
 
                 Spacer()
 
-                Button("数据目录") {
-                    model.openDataDirectory()
+                Button(model.isCheckingForUpdates ? "检测中…" : "检测更新") {
+                    model.showMainWindow(section: .settings)
+                    Task { await model.checkForUpdates(userInitiated: true) }
                 }
                 .buttonStyle(.link)
+                .disabled(model.isCheckingForUpdates)
 
                 Button("退出应用") {
                     model.quitApplication()

@@ -174,7 +174,7 @@ struct SettingsSectionView: View {
             }
         } label: {
             SettingsMetric(
-                title: "版本",
+                title: "通用",
                 value: AppUpdateChecker.bundleVersion,
                 detail: model.isCheckingForUpdates ? "正在检查更新" : model.availableUpdate.map { "可更新到 \($0.version)" } ?? "当前构建",
                 icon: "arrow.down.circle",

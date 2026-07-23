@@ -252,7 +252,11 @@ final class AppModel: ObservableObject {
 
     var appearance: AppAppearance {
         get { uiState.appearance }
-        set { uiState.appearance = newValue }
+        set {
+            guard uiState.appearance != newValue else { return }
+            uiState.appearance = newValue
+            NotificationCenter.default.post(name: .qiemanAppearanceDidChange, object: newValue)
+        }
     }
 
     var showAdvancedParams: Bool {

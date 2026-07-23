@@ -3,9 +3,14 @@ import SwiftUI
 struct PlatformWorkspaceLayout {
     static let compactThreshold: CGFloat = 900
     static let actionListHeight: CGFloat = 430
+    private static let forumListChromeHeight: CGFloat = 124
 
     static func listWidth(for availableWidth: CGFloat) -> CGFloat {
         min(max(availableWidth * 0.30, 400), 520)
+    }
+
+    static func forumListHeight(for availableHeight: CGFloat) -> CGFloat {
+        max(actionListHeight, availableHeight - forumListChromeHeight)
     }
 }
 
@@ -40,7 +45,11 @@ struct PlatformSectionView: View {
                         viewModePicker
 
                         if viewMode == .alfa {
-                            AlfaPlatformPanel()
+                            AlfaPlatformPanel(
+                                isCompact: isCompact,
+                                availableWidth: proxy.size.width,
+                                scrollProxy: scrollProxy
+                            )
                         } else {
                             longWinContent(isCompact: isCompact, availableWidth: proxy.size.width, scrollProxy: scrollProxy)
                         }
@@ -294,8 +303,8 @@ struct PlatformSectionView: View {
                         platformActionRows(pageActions, isCompact: false, scrollProxy: scrollProxy)
                             .padding(.trailing, 4)
                     }
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxHeight: PlatformWorkspaceLayout.actionListHeight)
+                    .frame(height: PlatformWorkspaceLayout.actionListHeight)
+                    .clipped()
                 }
             }
 

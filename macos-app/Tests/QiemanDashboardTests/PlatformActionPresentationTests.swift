@@ -9,6 +9,12 @@ final class PlatformActionPresentationTests: XCTestCase {
         XCTAssertEqual(PlatformWorkspaceLayout.actionListHeight, 430)
     }
 
+    func testForumListHeightFillsTallWorkspacesAndPreservesTheMinimumViewport() {
+        XCTAssertEqual(PlatformWorkspaceLayout.forumListHeight(for: 500), 430)
+        XCTAssertEqual(PlatformWorkspaceLayout.forumListHeight(for: 900), 776)
+        XCTAssertEqual(PlatformWorkspaceLayout.forumListHeight(for: 1_200), 1_076)
+    }
+
     func testCountsUseProvidedValuesWhenBothSidesAreKnown() {
         let actions = [
             action(id: "sell-1", side: "sell", fundName: "债券基金", fundCode: "000001", title: "卖出债券"),
