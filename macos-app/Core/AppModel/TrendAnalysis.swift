@@ -130,7 +130,11 @@ extension AppModel {
         appendTrendProgress("输入摘要", detail: trendContextSummary(context))
 
         do {
-            let report = try await generateTrendReport(context: context, settings: trendSettings)
+            var report = try await generateTrendReport(context: context, settings: trendSettings)
+            // 模型经常把 generatedAt / dataAsOf 回填成它自己的训练截止日期（例如 2024-05），
+            // 这两个字段统一以客户端时间为准，不采用模型返回值。
+            report.generatedAt = generatedAt
+            report.dataAsOf = generatedAt
             appendTrendProgress("校验模型报告")
             let validation = TrendAnalysisValidator().validate(
                 report,

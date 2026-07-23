@@ -235,10 +235,13 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
 
         XCTAssertTrue(source.contains("detailMetricStrip(summary.metrics)"))
         XCTAssertTrue(source.contains("private func detailMetricStrip"))
-        XCTAssertTrue(source.contains(".frame(maxWidth: .infinity, minHeight: 48"))
+        XCTAssertTrue(source.contains("HStack(alignment: .top, spacing: 0)"))
+        XCTAssertTrue(source.contains(".frame(maxWidth: .infinity, minHeight: 48, alignment: .topLeading)"))
         XCTAssertFalse(source.contains("metricColumns"))
         XCTAssertFalse(source.contains("detailMetricCard"))
         XCTAssertTrue(source.contains("\"总持仓 · \\(unitsText($0)) 份\""))
+        XCTAssertTrue(source.contains("HStack(alignment: .top, spacing: 10)"))
+        XCTAssertTrue(source.contains(".padding(.vertical, 14)"))
         XCTAssertFalse(source.contains("detailSection(title: \"价格与收益\""))
         XCTAssertFalse(source.contains("private var priceSection"))
     }

@@ -747,8 +747,8 @@ struct TrendWarning: Codable, Identifiable, Hashable {
 
 struct TrendAnalysisReport: Codable, Identifiable, Hashable {
     let id: UUID
-    let generatedAt: String
-    let dataAsOf: String
+    var generatedAt: String
+    var dataAsOf: String
     let privacyMode: TrendPrivacyMode
     let externalSignalStatus: TrendExternalSignalStatus
     let portfolio: TrendPortfolioSummary
@@ -802,8 +802,8 @@ struct TrendAnalysisReport: Codable, Identifiable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
-        generatedAt = try container.decode(String.self, forKey: .generatedAt)
-        dataAsOf = try container.decode(String.self, forKey: .dataAsOf)
+        generatedAt = try container.decodeIfPresent(String.self, forKey: .generatedAt) ?? ""
+        dataAsOf = try container.decodeIfPresent(String.self, forKey: .dataAsOf) ?? ""
         privacyMode = try container.decode(TrendPrivacyMode.self, forKey: .privacyMode)
         externalSignalStatus = try container.decode(TrendExternalSignalStatus.self, forKey: .externalSignalStatus)
         portfolio = try container.decode(TrendPortfolioSummary.self, forKey: .portfolio)

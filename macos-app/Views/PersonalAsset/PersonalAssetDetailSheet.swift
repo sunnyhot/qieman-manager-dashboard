@@ -69,51 +69,39 @@ struct PersonalAssetDetailSheet: View {
     }
 
     private func header(_ summary: PersonalAssetDetailSummary) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 14) {
-                Image(systemName: row.assetType == .stock ? "chart.line.uptrend.xyaxis" : "chart.pie")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(row.assetType == .stock ? AppPalette.info : AppPalette.brand)
-                    .frame(width: 44, height: 44)
-                    .background((row.assetType == .stock ? AppPalette.info : AppPalette.brand).opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: row.assetType == .stock ? "chart.line.uptrend.xyaxis" : "chart.pie")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(row.assetType == .stock ? AppPalette.info : AppPalette.brand)
+                .frame(width: 44, height: 44)
+                .background((row.assetType == .stock ? AppPalette.info : AppPalette.brand).opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(summary.title)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(AppPalette.ink)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(summary.title)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                    HStack(spacing: 6) {
-                        if let codeText = summary.codeText, !codeText.isEmpty {
-                            Text(codeText)
-                                .font(.system(size: 10, design: .monospaced))
-                                .foregroundStyle(AppPalette.muted)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
-                        }
-                        if let marketText = summary.marketText {
-                            ToolbarBadge(title: marketText, tint: AppPalette.info)
-                        }
-                        ToolbarBadge(title: summary.statusText, tint: row.hasPending ? AppPalette.warning : AppPalette.brand)
+                HStack(spacing: 6) {
+                    if let codeText = summary.codeText, !codeText.isEmpty {
+                        Text(codeText)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(AppPalette.muted)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.badgeRadius))
                     }
+                    if let marketText = summary.marketText {
+                        ToolbarBadge(title: marketText, tint: AppPalette.info)
+                    }
+                    ToolbarBadge(title: summary.statusText, tint: row.hasPending ? AppPalette.warning : AppPalette.brand)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
+            HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .trailing, spacing: 4) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .bold))
-                            .frame(width: 28, height: 28)
-                    }
-                    .buttonStyle(.appIcon)
-                    .foregroundStyle(AppPalette.muted)
-                    .help("关闭")
-                    .accessibilityLabel("关闭资产详情")
-
                     Text(summary.effectiveAmountText)
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(AppPalette.ink)
@@ -124,13 +112,26 @@ struct PersonalAssetDetailSheet: View {
                         row.holdingUnits.map { "总持仓 · \(unitsText($0)) 份" }
                             ?? "总持仓"
                     )
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppPalette.muted)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
                 }
+
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.appIcon)
+                .foregroundStyle(AppPalette.muted)
+                .help("关闭")
+                .accessibilityLabel("关闭资产详情")
             }
         }
         .padding(.horizontal, 18)
-        .padding(.vertical, 16)
+        .padding(.vertical, 14)
         .background(AppPalette.card, in: Rectangle())
         .overlay(alignment: .bottom) {
             Rectangle()
@@ -140,7 +141,7 @@ struct PersonalAssetDetailSheet: View {
     }
 
     private func detailMetricStrip(_ metrics: [PersonalAssetDetailMetric]) -> some View {
-        HStack(alignment: .center, spacing: 0) {
+        HStack(alignment: .top, spacing: 0) {
             ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
                 detailMetric(metric)
                 if index < metrics.count - 1 {
@@ -171,10 +172,10 @@ struct PersonalAssetDetailSheet: View {
                     .font(.system(size: 9))
                     .foregroundStyle(AppPalette.muted)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.70)
+                .minimumScaleFactor(0.70)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 48, alignment: .topLeading)
         .padding(.horizontal, 10)
     }
 
