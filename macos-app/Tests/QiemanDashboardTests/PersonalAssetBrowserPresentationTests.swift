@@ -46,6 +46,41 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertFalse(source.contains("LazyVGrid(columns: [GridItem(.adaptive(minimum: 168)"))
     }
 
+    func testPortfolioDiagnosticsHeaderDoesNotRepeatPortfolioAmount() throws {
+        let source = try String(contentsOf: portfolioSectionSourceURL(), encoding: .utf8)
+
+        XCTAssertTrue(source.contains("SectionCard(title: \"组合诊断\", subtitle: summary.headline"))
+        XCTAssertTrue(source.contains("Text(summary.headline)"))
+        XCTAssertFalse(source.contains("ToolbarBadge(title: summary.totalExposureText"))
+    }
+
+    func testProfitAttributionUsesImpactSpectrumAndKeepsDetailsCollapsible() throws {
+        let source = try String(contentsOf: portfolioSectionSourceURL(), encoding: .utf8)
+
+        XCTAssertFalse(source.contains("import Charts"))
+        XCTAssertTrue(source.contains("@State private var isAttributionDetailExpanded = false"))
+        XCTAssertTrue(source.contains("struct ProfitAttributionImpactSpectrum: View"))
+        XCTAssertTrue(source.contains("struct ProfitAttributionImpactBar: View"))
+        XCTAssertTrue(source.contains("ProfitAttributionImpactSpectrum(entries: chartEntries)"))
+        XCTAssertTrue(source.contains("summary.entries\n                .sorted { abs($0.amountValue) > abs($1.amountValue) }\n                .prefix(6)"))
+        XCTAssertTrue(source.contains("let center = geometry.size.width / 2"))
+        XCTAssertTrue(source.contains("entry.amountValue >= 0 ? center : center - barWidth"))
+        XCTAssertTrue(source.contains("Text(\"拖累\")"))
+        XCTAssertTrue(source.contains("Text(\"贡献\")"))
+        XCTAssertTrue(source.contains(".accessibilityLabel(\"收益影响分布\")"))
+        XCTAssertFalse(source.contains("Chart {"))
+        XCTAssertFalse(source.contains("BarMark("))
+        XCTAssertFalse(source.contains("AxisMarks("))
+        XCTAssertTrue(source.contains("isAttributionDetailExpanded ? \"收起明细\" : \"查看全部明细\""))
+        XCTAssertFalse(source.contains("Image(systemName: \"list.bullet.rectangle\")"))
+        XCTAssertTrue(source.contains("isAttributionDetailExpanded.toggle()"))
+        XCTAssertTrue(source.contains("if isAttributionDetailExpanded"))
+        XCTAssertTrue(source.contains("ForEach(summary.entries)"))
+        XCTAssertFalse(source.contains("ForEach(summary.entries.prefix(6))"))
+        XCTAssertTrue(source.contains(".rotationEffect(.degrees(isAttributionDetailExpanded ? 180 : 0))"))
+        XCTAssertTrue(source.contains(".transition(.opacity.combined(with: .move(edge: .top)))"))
+    }
+
     func testPersonalAssetTableUsesNaturalVerticalHeight() throws {
         let source = try String(contentsOf: personalAssetBrowserSourceURL(), encoding: .utf8)
 

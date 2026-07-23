@@ -357,16 +357,11 @@ struct PortfolioDiagnosticsPanel: View {
     var body: some View {
         SectionCard(title: "组合诊断", subtitle: summary.headline, icon: "stethoscope") {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text(summary.headline)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(AppPalette.ink)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-
-                    ToolbarBadge(title: summary.totalExposureText, tint: AppPalette.brand)
-                    Spacer(minLength: 0)
-                }
+                Text(summary.headline)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
 
                 ViewThatFits(in: .horizontal) {
                     LazyVGrid(columns: portfolioDiagnosticWideColumns(count: summary.items.count), alignment: .leading, spacing: 10) {
@@ -484,9 +479,18 @@ private extension ProfitAttributionKind {
 
 struct ProfitAttributionPanel: View {
     let summary: ProfitAttributionSummary
+    @State private var isAttributionDetailExpanded = false
 
     private var totalTint: Color {
         AppPalette.marketTint(for: summary.totalProfitValue)
+    }
+
+    private var chartEntries: [ProfitAttributionEntry] {
+        Array(
+            summary.entries
+                .sorted { abs($0.amountValue) > abs($1.amountValue) }
+                .prefix(6)
+        )
     }
 
     var body: some View {
@@ -508,14 +512,168 @@ struct ProfitAttributionPanel: View {
                         .padding(12)
                         .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
                 } else {
-                    VStack(spacing: 8) {
-                        ForEach(summary.entries.prefix(6)) { entry in
-                            ProfitAttributionEntryRow(entry: entry)
+                    ProfitAttributionImpactSpectrum(entries: chartEntries)
+
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            isAttributionDetailExpanded.toggle()
                         }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Label(
+                                isAttributionDetailExpanded ? "收起明细" : "查看全部明细",
+                                systemImage: "list.bullet"
+                            )
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(AppPalette.info)
+
+                            Spacer()
+
+                            Text("\(summary.entries.count) 项")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(AppPalette.muted)
+
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(AppPalette.muted)
+                                .rotationEffect(.degrees(isAttributionDetailExpanded ? 180 : 0))
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .background(AppPalette.cardStrong.opacity(0.42), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                    .accessibilityLabel("归因明细")
+                    .accessibilityValue(isAttributionDetailExpanded ? "已展开，共 \(summary.entries.count) 项" : "已收起，共 \(summary.entries.count) 项")
+
+                    if isAttributionDetailExpanded {
+                        VStack(spacing: 8) {
+                            ForEach(summary.entries) { entry in
+                                ProfitAttributionEntryRow(entry: entry)
+                            }
+                        }
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
             }
         }
+    }
+}
+
+struct ProfitAttributionImpactSpectrum: View {
+    let entries: [ProfitAttributionEntry]
+
+    private var maximumMagnitude: Double {
+        max(entries.map { abs($0.amountValue) }.max() ?? 0, 1)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                Text("标的")
+                    .frame(width: 168, alignment: .leading)
+
+                HStack(spacing: 4) {
+                    Text("拖累")
+                        .foregroundStyle(AppPalette.marketLoss)
+                    Image(systemName: "arrow.left")
+                    Spacer()
+                    Text("0")
+                    Spacer()
+                    Image(systemName: "arrow.right")
+                    Text("贡献")
+                        .foregroundStyle(AppPalette.marketGain)
+                }
+                .frame(maxWidth: .infinity)
+
+                Text("影响金额")
+                    .frame(width: 108, alignment: .trailing)
+            }
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(AppPalette.muted)
+            .padding(.horizontal, 4)
+            .padding(.bottom, 6)
+
+            ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                ProfitAttributionImpactBar(
+                    entry: entry,
+                    maximumMagnitude: maximumMagnitude
+                )
+
+                if index < entries.count - 1 {
+                    Divider()
+                        .overlay(AppPalette.line.opacity(0.22))
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("收益影响分布")
+    }
+}
+
+struct ProfitAttributionImpactBar: View {
+    let entry: ProfitAttributionEntry
+    let maximumMagnitude: Double
+    @State private var isHovered = false
+
+    private var magnitudeRatio: Double {
+        min(abs(entry.amountValue) / maximumMagnitude, 1)
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.title)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                    .lineLimit(1)
+
+                Text(entry.codeText)
+                    .font(.system(size: 8, design: .monospaced))
+                    .foregroundStyle(AppPalette.muted)
+            }
+            .frame(width: 168, alignment: .leading)
+
+            GeometryReader { geometry in
+                let center = geometry.size.width / 2
+                let barWidth = max(3, center * magnitudeRatio)
+
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(AppPalette.line.opacity(0.10))
+                        .frame(height: 10)
+
+                    Capsule()
+                        .fill(entry.kind.color.opacity(isHovered ? 1 : 0.82))
+                        .frame(width: barWidth, height: 10)
+                        .offset(x: entry.amountValue >= 0 ? center : center - barWidth)
+
+                    Rectangle()
+                        .fill(AppPalette.line.opacity(0.72))
+                        .frame(width: 1, height: 18)
+                        .offset(x: center)
+                }
+                .frame(maxHeight: .infinity)
+            }
+            .frame(height: 18)
+
+            Text(entry.amountText)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(entry.kind.color)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .frame(width: 108, alignment: .trailing)
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 8)
+        .background(AppPalette.cardStrong.opacity(isHovered ? 0.42 : 0), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+        .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.14), value: isHovered)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(entry.title)，\(entry.kind.label) \(entry.amountText)，影响 \(entry.impactShareText)")
     }
 }
 

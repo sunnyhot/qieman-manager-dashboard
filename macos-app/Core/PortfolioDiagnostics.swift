@@ -28,7 +28,6 @@ struct PortfolioDiagnosticItem: Identifiable, Hashable {
 
 struct PortfolioDiagnosticsSummary: Hashable {
     let headline: String
-    let totalExposureText: String
     let items: [PortfolioDiagnosticItem]
 
     static func make(rows: [PersonalAssetAggregateRow]) -> PortfolioDiagnosticsSummary {
@@ -36,7 +35,6 @@ struct PortfolioDiagnosticsSummary: Hashable {
         guard totalExposure > 0 else {
             return PortfolioDiagnosticsSummary(
                 headline: "等待资产数据",
-                totalExposureText: "—",
                 items: [
                     PortfolioDiagnosticItem(
                         kind: .quoteCoverage,
@@ -94,7 +92,6 @@ struct PortfolioDiagnosticsSummary: Hashable {
 
         return PortfolioDiagnosticsSummary(
             headline: headline,
-            totalExposureText: currencyText(totalExposure),
             items: items
         )
     }
