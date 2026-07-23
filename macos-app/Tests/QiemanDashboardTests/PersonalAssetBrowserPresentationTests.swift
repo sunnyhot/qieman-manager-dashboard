@@ -89,10 +89,17 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         let source = try String(contentsOf: personalAssetDetailSourceURL(), encoding: .utf8)
 
         XCTAssertTrue(source.contains("detailSection(title: \"AI 观点\", icon: \"sparkles\")"))
-        XCTAssertTrue(source.contains("trendTradePlanCard(summary.tradePlan)"))
-        XCTAssertTrue(source.contains("trendTradePlanList(title: \"触发\""))
-        XCTAssertTrue(source.contains("trendTradePlanList(title: \"反证\""))
-        XCTAssertTrue(source.contains("Text(\"数据 \\(summary.dataAsOf)\""))
+        XCTAssertTrue(source.contains("trendDecisionHeader(summary)"))
+        XCTAssertTrue(source.contains("trendActionBlock(summary.tradePlan)"))
+        XCTAssertTrue(source.contains("trendEvidenceBlock(summary)"))
+        XCTAssertTrue(source.contains("trendInvalidationBlock(invalidationConditions)"))
+        XCTAssertTrue(source.contains("title: \"执行前确认\""))
+        XCTAssertTrue(source.contains("Text(\"什么情况下改变判断\")"))
+        XCTAssertTrue(source.contains("summary.tradePlan.invalidatingConditions + summary.counterSignals"))
+        XCTAssertTrue(source.contains("Text(\"数据截至 \\(summary.dataAsOf)\""))
+        XCTAssertFalse(source.contains("Text(\"核心依据\")"))
+        XCTAssertFalse(source.contains("ForEach(summary.tags)"))
+        XCTAssertFalse(source.contains("trendListBlock(title: \"反证条件\""))
     }
 
     func testAssetDetailShowsInteractivePriceTrendBeforeSupportingSections() throws {
