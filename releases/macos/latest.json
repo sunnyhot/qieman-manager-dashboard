@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.11/QiemanDashboard-3.8.11.zip",
-    "name" : "QiemanDashboard-3.8.11.zip",
-    "sha256" : "056bcf4f93215bc01d27fd301714067aa82c75294b1bb520e8a6f2bed36a3ca8",
-    "size" : 4848136
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.12/QiemanDashboard-3.8.12.zip",
+    "name" : "QiemanDashboard-3.8.12.zip",
+    "sha256" : "5ec1883769a346fe8e8f8e447388df87c0616c3cc6de5bd9943b5719345741ad",
+    "size" : 4850681
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.11/QiemanDashboard-3.8.11.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.12/QiemanDashboard-3.8.12.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.11.zip",
-      "size" : 4848136
+      "name" : "QiemanDashboard-3.8.12.zip",
+      "size" : 4850681
     }
   ],
-  "body" : "覆盖浅色系统下的深色切换\n通用设置显示当前外观",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.11",
-  "name" : "QiemanDashboard v3.8.11",
-  "notes" : "覆盖浅色系统下的深色切换\n通用设置显示当前外观",
+  "body" : "统一主窗口创建路径避免双窗口",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.12",
+  "name" : "QiemanDashboard v3.8.12",
+  "notes" : "统一主窗口创建路径避免双窗口",
   "published_at" : "",
-  "sha256" : "056bcf4f93215bc01d27fd301714067aa82c75294b1bb520e8a6f2bed36a3ca8",
-  "tag" : "v3.8.11",
-  "tag_name" : "v3.8.11",
-  "version" : "3.8.11"
+  "sha256" : "5ec1883769a346fe8e8f8e447388df87c0616c3cc6de5bd9943b5719345741ad",
+  "tag" : "v3.8.12",
+  "tag_name" : "v3.8.12",
+  "version" : "3.8.12"
 }
