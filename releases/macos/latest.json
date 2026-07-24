@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.22/QiemanDashboard-3.8.22.zip",
-    "name" : "QiemanDashboard-3.8.22.zip",
-    "sha256" : "c682b80b093e3c2f6db701489c74360b82875fa59e311c1ab0b38ad0ed5d841e",
-    "size" : 4909871
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.23/QiemanDashboard-3.8.23.zip",
+    "name" : "QiemanDashboard-3.8.23.zip",
+    "sha256" : "93b854be40f9f82c02dd69ff6359b25b639d75990adf651fd2ae0f8d6b1d22a8",
+    "size" : 4900974
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.22/QiemanDashboard-3.8.22.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.23/QiemanDashboard-3.8.23.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.22.zip",
-      "size" : 4909871
+      "name" : "QiemanDashboard-3.8.23.zip",
+      "size" : 4900974
     }
   ],
-  "body" : "重构 AI 研判为今日研判/跟踪清单并统一置信度展示",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.22",
-  "name" : "QiemanDashboard v3.8.22",
-  "notes" : "重构 AI 研判为今日研判/跟踪清单并统一置信度展示",
+  "body" : "菜单栏轮播顺序移入资产项选择",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.23",
+  "name" : "QiemanDashboard v3.8.23",
+  "notes" : "菜单栏轮播顺序移入资产项选择",
   "published_at" : "",
-  "sha256" : "c682b80b093e3c2f6db701489c74360b82875fa59e311c1ab0b38ad0ed5d841e",
-  "tag" : "v3.8.22",
-  "tag_name" : "v3.8.22",
-  "version" : "3.8.22"
+  "sha256" : "93b854be40f9f82c02dd69ff6359b25b639d75990adf651fd2ae0f8d6b1d22a8",
+  "tag" : "v3.8.23",
+  "tag_name" : "v3.8.23",
+  "version" : "3.8.23"
 }
