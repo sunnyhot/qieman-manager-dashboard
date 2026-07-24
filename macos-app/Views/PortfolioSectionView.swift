@@ -489,16 +489,35 @@ struct ProfitAttributionPanel: View {
             .sorted { abs($0.amountValue) > abs($1.amountValue) }
     }
 
+    private struct ProfitMetricItem: Identifiable {
+        let id: Int
+        let title: String
+        let value: String
+        let tint: Color
+    }
+
+    private var metricItems: [ProfitMetricItem] {
+        [
+            .init(id: 0, title: "总收益", value: summary.totalProfitText, tint: totalTint),
+            .init(id: 1, title: "总收益率", value: summary.totalProfitRateText, tint: totalTint),
+            .init(id: 2, title: "收益覆盖", value: summary.coverageText, tint: AppPalette.info),
+            .init(id: 3, title: "待确认", value: summary.pendingExposureText, tint: AppPalette.warning),
+            .init(id: 4, title: "下次计划", value: summary.plannedExposureText, tint: AppPalette.info)
+        ]
+    }
+
+    private func metricGrid() -> some View {
+        ViewThatFits(in: .horizontal) {
+            EqualHeightGrid(items: metricItems, columnsCount: 5) { ProfitAttributionMetric(title: $0.title, value: $0.value, tint: $0.tint) }
+            EqualHeightGrid(items: metricItems, columnsCount: 3) { ProfitAttributionMetric(title: $0.title, value: $0.value, tint: $0.tint) }
+            EqualHeightGrid(items: metricItems, columnsCount: 2) { ProfitAttributionMetric(title: $0.title, value: $0.value, tint: $0.tint) }
+        }
+    }
+
     var body: some View {
         SectionCard(title: "收益归因", subtitle: summary.headline, icon: "chart.pie") {
             VStack(alignment: .leading, spacing: 12) {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 136), spacing: 10)], spacing: 10) {
-                    ProfitAttributionMetric(title: "总收益", value: summary.totalProfitText, tint: totalTint)
-                    ProfitAttributionMetric(title: "总收益率", value: summary.totalProfitRateText, tint: totalTint)
-                    ProfitAttributionMetric(title: "收益覆盖", value: summary.coverageText, tint: AppPalette.info)
-                    ProfitAttributionMetric(title: "待确认", value: summary.pendingExposureText, tint: AppPalette.warning)
-                    ProfitAttributionMetric(title: "下次计划", value: summary.plannedExposureText, tint: AppPalette.info)
-                }
+                metricGrid()
 
                 if summary.entries.isEmpty {
                     Text("等待收益数据")
@@ -747,7 +766,7 @@ struct ProfitAttributionMetric: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.66)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(AppPalette.cardStrong.opacity(0.72), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))

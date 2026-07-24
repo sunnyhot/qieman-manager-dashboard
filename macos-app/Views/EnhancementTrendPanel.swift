@@ -218,20 +218,7 @@ extension EnhancementCenterView {
         columnsCount: Int = 3,
         @ViewBuilder card: @escaping (Item) -> Card
     ) -> some View {
-        let count = max(1, columnsCount)
-        let rows = stride(from: 0, to: items.count, by: count).map {
-            Array(items[$0..<min($0 + count, items.count)])
-        }
-        return Grid(alignment: .topLeading, horizontalSpacing: AppPalette.spaceS, verticalSpacing: AppPalette.spaceS) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                GridRow {
-                    ForEach(row) { item in
-                        card(item)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    }
-                }
-            }
-        }
+        EqualHeightGrid(items: items, columnsCount: columnsCount, horizontalSpacing: AppPalette.spaceS, verticalSpacing: AppPalette.spaceS, card: card)
     }
 
     @ViewBuilder
@@ -508,37 +495,8 @@ extension EnhancementCenterView {
         .background(AppPalette.info.opacity(AppPalette.accentSubtle), in: Capsule())
     }
 
-    /// 统一置信度组件：胶囊进度条，「置信度+数字」写在胶囊里，按高/中/低用同色系浅深渐变
     func trendConfidenceMeter(_ confidence: TrendConfidence) -> some View {
-        let score = confidence.normalizedScore
-        let width: CGFloat = 58
-        let height: CGFloat = 14
-        let fill = max(height, width * CGFloat(score) / 100)
-        return ZStack(alignment: .leading) {
-            Capsule()
-                .fill(AppPalette.muted.opacity(0.20))
-                .frame(width: width, height: height)
-            Capsule()
-                .fill(trendConfidenceGradient(score))
-                .frame(width: fill, height: height)
-            Text("置信度\(score)")
-                .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: width, height: height)
-        }
-        .frame(width: width, height: height)
-    }
-
-    private func trendConfidenceGradient(_ score: Int) -> LinearGradient {
-        let base: Color
-        if score >= 75 {
-            base = AppPalette.positive
-        } else if score >= 45 {
-            base = AppPalette.warning
-        } else {
-            base = AppPalette.danger
-        }
-        return LinearGradient(colors: [base.opacity(0.7), base], startPoint: .leading, endPoint: .trailing)
+        TrendConfidenceMeter(confidence: confidence)
     }
 
     func trendCounterSignalsRow(_ signals: [String]) -> some View {

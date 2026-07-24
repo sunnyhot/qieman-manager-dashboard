@@ -41,6 +41,7 @@ struct TrendDashboardHorizonItem: Identifiable, Hashable {
     let title: String
     let directionText: String
     let confidenceText: String
+    let confidence: TrendConfidence
     let rationale: String
     let tone: TrendDashboardTone
 }
@@ -51,6 +52,7 @@ struct TrendDashboardSectorItem: Identifiable, Hashable {
     let exposureText: String
     let directionText: String
     let confidenceText: String
+    let confidence: TrendConfidence
     let rationale: String
     let tone: TrendDashboardTone
 }
@@ -226,6 +228,7 @@ struct TrendDashboardSummary: Hashable {
                     title: horizon.dashboardText,
                     directionText: item.direction.dashboardText,
                     confidenceText: "\(item.confidence.label)信心",
+                    confidence: item.confidence,
                     rationale: clipped(item.rationale, fallback: "暂无判断依据", maxLength: 72),
                     tone: item.direction.dashboardTone
                 )
@@ -235,6 +238,7 @@ struct TrendDashboardSummary: Hashable {
                 title: horizon.dashboardText,
                 directionText: "暂无判断",
                 confidenceText: "低信心",
+                confidence: TrendConfidence(score: 0, label: "低"),
                 rationale: "本次报告没有返回\(horizon.dashboardText)观点。",
                 tone: .muted
             )
@@ -249,6 +253,7 @@ struct TrendDashboardSummary: Hashable {
                 exposureText: sector.exposureText,
                 directionText: sector.direction.dashboardText,
                 confidenceText: "\(sector.confidence.label)信心",
+                confidence: sector.confidence,
                 rationale: clipped(sector.rationale, fallback: "暂无板块依据", maxLength: 72),
                 tone: sector.direction.dashboardTone
             )

@@ -48,7 +48,7 @@ extension EnhancementCenterView {
     private func todayActionCard(_ action: TrendActionCandidate, report: TrendAnalysisReport) -> some View {
         let tracked = model.hasActiveTrackingItem(for: action)
         let tint = todayActionTint(action.kind)
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(action.title)
                     .font(.system(size: 12, weight: .bold))
@@ -81,7 +81,7 @@ extension EnhancementCenterView {
                 .fixedSize(horizontal: false, vertical: true)
 
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: AppPalette.spaceM) {
+                HStack(alignment: .top, spacing: AppPalette.spaceS) {
                     todayConditionLine("触发", action.triggerConditions, tint: AppPalette.info)
                     todayConditionLine("失效", action.invalidatingConditions, tint: AppPalette.warning)
                 }
@@ -117,6 +117,9 @@ extension EnhancementCenterView {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(8)
+            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(tint.opacity(0.35), lineWidth: 1))
         }
     }
 
