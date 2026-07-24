@@ -59,7 +59,9 @@ final class QiemanAlfaClientTests: XCTestCase {
     // MARK: - 拍平映射
 
     /// 构造模拟的 GraphQL Adjustment 响应（含 1 个调仓批次、1 个 group、2 个 parts）。
-    private func mockAdjustmentData() -> [String: Any] {
+    private func mockAdjustmentData(
+        date: String = "2026-07-06T00:00:00+08:00"
+    ) -> [String: Any] {
         let part1: [String: Any] = [
             "fund": ["fundCode": "019125", "fundName": "博道红利智航股票"],
             "beforePercent": 0,
@@ -76,7 +78,7 @@ final class QiemanAlfaClientTests: XCTestCase {
         ]
         let adjustment: [String: Any] = [
             "adjustmentId": 1726519,
-            "date": "2026-07-06T00:00:00+08:00",
+            "date": date,
             "comment": "按照资产性价比模型最新数据，小幅提升红利资产仓位",
             "article": ["text": "调仓说明", "link": "https://qieman.com/content/123"],
             "groups": [group],
@@ -89,6 +91,15 @@ final class QiemanAlfaClientTests: XCTestCase {
                 ],
             ],
         ]
+    }
+
+    private static func testDate(_ value: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: value)
     }
 
     func testFlattenAdjustments拍平groups和Parts() {
@@ -258,26 +269,50 @@ final class QiemanAlfaClientTests: XCTestCase {
         XCTAssertEqual(loaded, AlfaPortfolioStore.defaultPortfolios)
     }
 
-    // MARK: - 单组合选择与空记录清理
+    // MARK: - 单组合选择与不活跃组合清理
 
     @MainActor
-    func test批量清理只删除成功拉取且无调仓记录的组合() {
-        let active = AlfaPortfolioCatalogItem(poCode: "ACTIVE", name: "有记录", author: "", category: "")
+    func test批量清理删除空记录和一年以上未调仓的组合() throws {
+        let active = AlfaPortfolioCatalogItem(poCode: "ACTIVE", name: "近期有记录", author: "", category: "")
+        let inactive = AlfaPortfolioCatalogItem(poCode: "INACTIVE", name: "过期记录", author: "", category: "")
         let empty = AlfaPortfolioCatalogItem(poCode: "EMPTY", name: "无记录", author: "", category: "")
         let failed = AlfaPortfolioCatalogItem(poCode: "FAILED", name: "拉取失败", author: "", category: "")
         let activePayload = QiemanAlfaClient.flattenAdjustments(poCode: active.poCode, data: mockAdjustmentData())
+        let inactivePayload = QiemanAlfaClient.flattenAdjustments(
+            poCode: inactive.poCode,
+            data: mockAdjustmentData(date: "2025-07-23T00:00:00+08:00")
+        )
         let emptyPayload = QiemanAlfaClient.flattenAdjustments(poCode: empty.poCode, data: ["portfolio": [:]])
+        let referenceDate = try XCTUnwrap(Self.testDate("2026-07-24")) + 12 * 60 * 60
 
-        let removed = AppModel.alfaPortfolioCodesWithoutAdjustments(
-            portfolios: [active, empty, failed],
+        let removed = AppModel.inactiveAlfaPortfolioCodes(
+            portfolios: [active, inactive, empty, failed],
             successfulPayloads: [
                 active.poCode: activePayload,
+                inactive.poCode: inactivePayload,
                 empty.poCode: emptyPayload,
                 // FAILED 不在成功结果中，必须保留，避免网络错误导致误删。
-            ]
+            ],
+            referenceDate: referenceDate
         )
 
-        XCTAssertEqual(removed, [empty.poCode])
+        XCTAssertEqual(removed, [inactive.poCode, empty.poCode])
+    }
+
+    @MainActor
+    func test最近一年临界日仍视为活跃且日期异常保守保留() throws {
+        let referenceDate = try XCTUnwrap(Self.testDate("2026-07-24")) + 12 * 60 * 60
+        let boundaryPayload = QiemanAlfaClient.flattenAdjustments(
+            poCode: "BOUNDARY",
+            data: mockAdjustmentData(date: "2025-07-24T00:00:00+08:00")
+        )
+        let malformedPayload = QiemanAlfaClient.flattenAdjustments(
+            poCode: "MALFORMED",
+            data: mockAdjustmentData(date: "unknown")
+        )
+
+        XCTAssertTrue(AppModel.isAlfaPayloadActive(boundaryPayload, referenceDate: referenceDate))
+        XCTAssertTrue(AppModel.isAlfaPayloadActive(malformedPayload, referenceDate: referenceDate))
     }
 
     @MainActor

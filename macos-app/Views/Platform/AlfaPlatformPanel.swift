@@ -285,7 +285,7 @@ struct AlfaPlatformPanel: View {
     private var emptyPortfoliosState: some View {
         EmptySectionState(
             title: "还没有添加投顾组合",
-            subtitle: "点右上角「添加」，选择一个有公开调仓记录的且慢投顾组合。",
+            subtitle: "点右上角「添加」，选择一个近一年有公开调仓记录的且慢投顾组合。",
             actionTitle: "添加组合"
         ) {
             showingAddSheet = true

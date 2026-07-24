@@ -188,7 +188,7 @@ final class UIExperienceRegressionTests: XCTestCase {
         XCTAssertTrue(holding.contains("title: \"最新净值\""))
         XCTAssertTrue(holding.contains("title: \"日涨跌\""))
 
-        XCTAssertTrue(model.contains("alfaPortfolioCodesWithoutAdjustments"))
+        XCTAssertTrue(model.contains("inactiveAlfaPortfolioCodes"))
         XCTAssertFalse(model.contains("mergeAlfaPayloads"))
         XCTAssertFalse(model.contains("prodCode: \"aggregate\""))
     }

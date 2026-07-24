@@ -39,7 +39,7 @@ extension AppModel {
         }
     }
 
-    /// 批量验证所有已添加组合，只保留确实存在调仓记录的组合。
+    /// 批量验证所有已添加组合，只保留近一年有调仓记录的活跃组合。
     /// 展示数据始终只取当前选中的一个组合，不再合并多组合。
     func fetchAllAlfaPayloads() async {
         let portfolios = alfaPortfolios
@@ -57,9 +57,10 @@ extension AppModel {
         let (payloadsByCode, errorsByCode) = await fetchAlfaAdjustmentsConcurrent(
             codes: portfolios.map(\.poCode)
         )
-        let removedCodes = Self.alfaPortfolioCodesWithoutAdjustments(
+        let removedCodes = Self.inactiveAlfaPortfolioCodes(
             portfolios: portfolios,
-            successfulPayloads: payloadsByCode
+            successfulPayloads: payloadsByCode,
+            referenceDate: Date()
         )
 
         if !removedCodes.isEmpty {
@@ -68,7 +69,7 @@ extension AppModel {
                 .map(\.name)
             alfaPortfolios.removeAll { removedCodes.contains($0.poCode) }
             persistAlfaPortfolios()
-            noticeMessage = "已移除 \(removedNames.count) 个无调仓记录组合：\(removedNames.joined(separator: "、"))"
+            noticeMessage = "已移除 \(removedNames.count) 个不活跃组合：\(removedNames.joined(separator: "、"))"
         }
 
         selectedAlfaPoCode = Self.preferredAlfaPoCode(
@@ -126,15 +127,45 @@ extension AppModel {
         return (payloadsByCode, errorsByCode)
     }
 
-    /// 纯函数：只删除“请求成功且动作列表为空”的组合；请求失败的组合保留，避免误删。
-    static func alfaPortfolioCodesWithoutAdjustments(
+    /// 纯函数：删除“请求成功但近一年无调仓”的组合；请求失败或日期异常的组合保留，避免误删。
+    static func inactiveAlfaPortfolioCodes(
         portfolios: [AlfaPortfolioCatalogItem],
-        successfulPayloads: [String: PlatformPayload]
+        successfulPayloads: [String: PlatformPayload],
+        referenceDate: Date
     ) -> Set<String> {
         Set(portfolios.compactMap { portfolio in
             guard let payload = successfulPayloads[portfolio.poCode] else { return nil }
-            return (payload.actions ?? []).isEmpty ? portfolio.poCode : nil
+            return isAlfaPayloadActive(payload, referenceDate: referenceDate) ? nil : portfolio.poCode
         })
+    }
+
+    /// 最近一年内（含临界日）至少有一笔调仓即视为活跃。
+    /// 有动作但日期不可解析时保守保留，避免接口字段异常导致误删。
+    static func isAlfaPayloadActive(
+        _ payload: PlatformPayload,
+        referenceDate: Date
+    ) -> Bool {
+        let actions = payload.actions ?? []
+        guard !actions.isEmpty else { return false }
+
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        let datedActions = actions.compactMap { action in
+            action.txnDate.flatMap(formatter.date(from:))
+        }
+        guard !datedActions.isEmpty else { return true }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let referenceDay = calendar.startOfDay(for: referenceDate)
+        guard let cutoff = calendar.date(byAdding: .year, value: -1, to: referenceDay) else {
+            return true
+        }
+        return datedActions.contains { $0 >= cutoff }
     }
 
     /// 纯函数：维持现有单选；选中项被清理后回落到第一个有效组合。
@@ -148,7 +179,7 @@ extension AppModel {
         return portfolios.first?.poCode
     }
 
-    /// 刷新全部组合并清理确认无调仓记录的组合。
+    /// 刷新全部组合并清理确认近一年无调仓记录的组合。
     func refreshAlfaPayload() async {
         await fetchAllAlfaPayloads()
     }
@@ -169,10 +200,10 @@ extension AppModel {
 
         do {
             let payload = try await alfaClient.fetchAlfaPayload(poCode: poCode)
-            guard !(payload.actions ?? []).isEmpty else {
+            guard Self.isAlfaPayloadActive(payload, referenceDate: Date()) else {
                 let removedName = alfaPortfolioName(for: poCode) ?? poCode
                 removeAlfaPortfolio(poCode)
-                noticeMessage = "已移除无调仓记录组合：\(removedName)"
+                noticeMessage = "已移除不活跃组合：\(removedName)"
                 isLoadingAlfa = false
                 if selectedAlfaPoCode != nil {
                     await fetchSelectedAlfaPortfolio()
@@ -209,7 +240,7 @@ extension AppModel {
         isLoadingAlfaCatalog = false
     }
 
-    /// 验证并添加组合。无公开调仓记录时不加入本地列表。
+    /// 验证并添加组合。近一年无公开调仓记录时不加入本地列表。
     func addAlfaPortfolio(_ item: AlfaPortfolioCatalogItem) async -> Bool {
         guard !alfaPortfolios.contains(where: { $0.poCode == item.poCode }),
               !isLoadingAlfa else { return false }
@@ -217,8 +248,8 @@ extension AppModel {
         alfaError = nil
         do {
             let payload = try await alfaClient.fetchAlfaPayload(poCode: item.poCode)
-            guard !(payload.actions ?? []).isEmpty else {
-                noticeMessage = "\(item.name) 暂无公开调仓记录，未添加。"
+            guard Self.isAlfaPayloadActive(payload, referenceDate: Date()) else {
+                noticeMessage = "\(item.name) 近一年无公开调仓记录，未添加。"
                 isLoadingAlfa = false
                 return false
             }
