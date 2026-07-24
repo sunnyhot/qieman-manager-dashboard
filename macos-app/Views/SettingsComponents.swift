@@ -14,36 +14,50 @@ struct SettingsPanel<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
-                    .frame(width: 24, height: 24)
-                VStack(alignment: .leading, spacing: 2) {
+                    .frame(width: 36, height: 36)
+                    .background(
+                        AppPalette.brandSoft,
+                        in: RoundedRectangle(cornerRadius: AppPalette.iconBoxRadius)
+                    )
+                VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.system(size: 17, weight: .bold))
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(AppPalette.ink)
                     Text(subtitle)
-                        .font(.system(size: 10))
+                        .font(.system(size: 11))
                         .foregroundStyle(AppPalette.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
             }
+            .padding(18)
+
+            Divider()
+                .overlay(AppPalette.hairline.opacity(AppPalette.strokeSubtle))
 
             content
-                .padding(.horizontal, 16)
-                .background(
-                    AppPalette.panelBackground.opacity(AppPalette.bgSettings),
-                    in: RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                        .stroke(AppPalette.hairline.opacity(AppPalette.strokeSubtle), lineWidth: 1)
-                )
+                .padding(.horizontal, 18)
+                .padding(.bottom, 6)
         }
-        .frame(maxWidth: 840, alignment: .leading)
+        .frame(maxWidth: 1_080, alignment: .leading)
+        .background(
+            AppPalette.panelBackground.opacity(AppPalette.bgSettings),
+            in: RoundedRectangle(cornerRadius: AppPalette.panelRadius)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
+                .stroke(AppPalette.hairline.opacity(AppPalette.strokeSubtle), lineWidth: 1)
+        )
+        .shadow(
+            color: AppPalette.panelShadowColor,
+            radius: AppPalette.panelShadowRadius,
+            y: AppPalette.panelShadowY
+        )
     }
 }
 

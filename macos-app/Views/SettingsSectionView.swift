@@ -98,57 +98,97 @@ struct SettingsSectionView: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            settingsNavigation
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: AppPalette.spaceL) {
+                settingsNavigation
 
-            Divider()
-
-            ScrollView(showsIndicators: false) {
                 selectedSettingsPanel
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .id(selectedSettingsFocus)
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 20)
             }
-            .scrollIndicators(.hidden)
+            .frame(maxWidth: 1_080, alignment: .topLeading)
+            .padding(.horizontal, 28)
+            .padding(.vertical, 24)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+        .scrollIndicators(.hidden)
         .animation(AppPalette.motionSection, value: selectedSettingsFocus)
     }
 
     private var settingsNavigation: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("功能与偏好")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(AppPalette.muted)
-                .padding(.horizontal, 10)
-                .padding(.bottom, 6)
-
-            ForEach(SettingsFocus.allCases) { focus in
-                Button {
-                    selectedSettingsFocus = focus
-                } label: {
-                    SettingsNavigationRow(
-                        title: focus.title,
-                        subtitle: focus.subtitle,
-                        status: settingsStatus(for: focus),
-                        icon: focus.systemImage,
-                        tint: settingsStatusTint(for: focus),
-                        isSelected: selectedSettingsFocus == focus
-                    )
+        VStack(alignment: .leading, spacing: AppPalette.spaceM) {
+            HStack(alignment: .firstTextBaseline, spacing: AppPalette.spaceM) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("设置中心")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text("按功能快速切换，当前状态一目了然")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppPalette.muted)
                 }
-                .buttonStyle(PressResponsiveButtonStyle())
+
+                Spacer(minLength: AppPalette.spaceM)
+
+                Text("\(SettingsFocus.allCases.count) 个分区")
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AppPalette.brand)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(AppPalette.brandSoft, in: Capsule())
             }
 
-            Spacer(minLength: 20)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    ForEach(SettingsFocus.allCases) { focus in
+                        settingsNavigationButton(for: focus)
+                            .frame(minWidth: 158, maxWidth: .infinity)
+                    }
+                }
+
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(minimum: 170), spacing: 10),
+                        GridItem(.flexible(minimum: 170), spacing: 10),
+                    ],
+                    spacing: 10
+                ) {
+                    ForEach(SettingsFocus.allCases) { focus in
+                        settingsNavigationButton(for: focus)
+                    }
+                }
+            }
         }
-        .padding(12)
-        .frame(width: 194)
-        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .padding(16)
         .background(
-            MaterialPanel(material: .underWindowBackground, blendingMode: .withinWindow)
-                .opacity(0.36)
+            AppPalette.panelBackground.opacity(0.56),
+            in: RoundedRectangle(cornerRadius: AppPalette.panelRadius)
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
+                .stroke(AppPalette.hairline.opacity(AppPalette.borderFaint), lineWidth: 1)
+        )
+        .shadow(
+            color: AppPalette.panelShadowColor,
+            radius: AppPalette.panelShadowRadius,
+            y: AppPalette.panelShadowY
+        )
+    }
+
+    private func settingsNavigationButton(for focus: SettingsFocus) -> some View {
+        Button {
+            selectedSettingsFocus = focus
+        } label: {
+            SettingsNavigationRow(
+                title: focus.title,
+                subtitle: focus.subtitle,
+                status: settingsStatus(for: focus),
+                icon: focus.systemImage,
+                tint: settingsStatusTint(for: focus),
+                isSelected: selectedSettingsFocus == focus
+            )
+        }
+        .buttonStyle(PressResponsiveButtonStyle())
     }
 
     private func settingsStatus(for focus: SettingsFocus) -> String {
@@ -208,49 +248,85 @@ private struct SettingsNavigationRow: View {
     let tint: Color
     let isSelected: Bool
 
+    @State private var isHovering = false
+
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(isSelected ? AppPalette.brand : AppPalette.muted)
-                .frame(width: 18)
+                .foregroundStyle(isSelected ? AppPalette.brand : tint)
+                .frame(width: 32, height: 32)
+                .background(
+                    (isSelected ? AppPalette.brandSoft : tint.opacity(0.09)),
+                    in: RoundedRectangle(cornerRadius: AppPalette.iconBoxRadius)
+                )
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppPalette.ink)
-                Text(subtitle)
-                    .font(.system(size: 9))
-                    .foregroundStyle(AppPalette.muted)
-                    .lineLimit(1)
+            VStack(alignment: .leading, spacing: 7) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(AppPalette.ink)
+                    Text(subtitle)
+                        .font(.system(size: 9))
+                        .foregroundStyle(AppPalette.muted)
+                        .lineLimit(1)
+                }
+
+                HStack(spacing: 5) {
+                    Circle()
+                        .fill(tint)
+                        .frame(width: 5, height: 5)
+                    Text(status)
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundStyle(tint)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                .padding(.horizontal, 7)
+                .padding(.vertical, 4)
+                .background(tint.opacity(0.08), in: Capsule())
             }
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 0)
 
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(tint)
-                    .frame(width: 5, height: 5)
-                Text(status)
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .foregroundStyle(AppPalette.muted)
-                    .lineLimit(1)
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.brand)
             }
         }
-        .padding(.horizontal, 10)
-        .frame(height: 48)
+        .padding(11)
+        .frame(maxWidth: .infinity, minHeight: 76, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: AppPalette.sidebarRowRadius)
-                .fill(isSelected ? AppPalette.selectionFill.opacity(0.82) : .clear)
+                .fill(
+                    isSelected
+                        ? AppPalette.selectionFill.opacity(0.82)
+                        : (isHovering ? AppPalette.cardHover.opacity(0.72) : AppPalette.card.opacity(0.54))
+                )
         )
-        .overlay(alignment: .leading) {
-            if isSelected {
-                Capsule()
-                    .fill(AppPalette.brand)
-                    .frame(width: AppPalette.selectionRailWidth, height: 22)
-                    .padding(.leading, 1)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppPalette.sidebarRowRadius)
+                .stroke(
+                    isSelected
+                        ? AppPalette.selectionStroke.opacity(AppPalette.selectionStrokeOpacity)
+                        : AppPalette.hairline.opacity(AppPalette.borderFaint),
+                    lineWidth: 1
+                )
+        )
+        .shadow(
+            color: isSelected ? AppPalette.selectionGlow.opacity(0.10) : .clear,
+            radius: 8,
+            y: 2
+        )
+        .contentShape(RoundedRectangle(cornerRadius: AppPalette.sidebarRowRadius))
+        .onHover { hovering in
+            withAnimation(AppPalette.motionFast) {
+                isHovering = hovering
             }
         }
-        .contentShape(RoundedRectangle(cornerRadius: AppPalette.sidebarRowRadius))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title)，\(status)")
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
