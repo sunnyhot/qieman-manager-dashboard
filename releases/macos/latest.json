@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.23/QiemanDashboard-3.8.23.zip",
-    "name" : "QiemanDashboard-3.8.23.zip",
-    "sha256" : "93b854be40f9f82c02dd69ff6359b25b639d75990adf651fd2ae0f8d6b1d22a8",
-    "size" : 4900974
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.24/QiemanDashboard-3.8.24.zip",
+    "name" : "QiemanDashboard-3.8.24.zip",
+    "sha256" : "a72327a660c710dff77e2e4d66ad830844b16e7c6dc8dc4183f72f17c9a5046d",
+    "size" : 4891901
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.23/QiemanDashboard-3.8.23.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.24/QiemanDashboard-3.8.24.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.23.zip",
-      "size" : 4900974
+      "name" : "QiemanDashboard-3.8.24.zip",
+      "size" : 4891901
     }
   ],
-  "body" : "菜单栏轮播顺序移入资产项选择",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.23",
-  "name" : "QiemanDashboard v3.8.23",
-  "notes" : "菜单栏轮播顺序移入资产项选择",
+  "body" : "统一卡片样式与等高网格，抽取共享组件",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.24",
+  "name" : "QiemanDashboard v3.8.24",
+  "notes" : "统一卡片样式与等高网格，抽取共享组件",
   "published_at" : "",
-  "sha256" : "93b854be40f9f82c02dd69ff6359b25b639d75990adf651fd2ae0f8d6b1d22a8",
-  "tag" : "v3.8.23",
-  "tag_name" : "v3.8.23",
-  "version" : "3.8.23"
+  "sha256" : "a72327a660c710dff77e2e4d66ad830844b16e7c6dc8dc4183f72f17c9a5046d",
+  "tag" : "v3.8.24",
+  "tag_name" : "v3.8.24",
+  "version" : "3.8.24"
 }
