@@ -35,9 +35,6 @@ struct ContentView: View {
         NavigationSplitView {
             sidebarNavigation
                 .navigationSplitViewColumnWidth(min: 200, ideal: 232)
-                .safeAreaInset(edge: .bottom) {
-                    sidebarFooter
-                }
                 .modifier(SidebarFloatingCompatModifier())
         } detail: {
             mainContent
@@ -102,36 +99,6 @@ struct ContentView: View {
             .padding(.vertical, AppPalette.spaceL)
         }
         .scrollIndicators(.hidden)
-    }
-
-    // MARK: - Sidebar Footer
-
-    private var sidebarFooter: some View {
-        VStack(alignment: .leading, spacing: AppPalette.spaceS + 2) {
-            HStack(spacing: AppPalette.spaceS) {
-                Spacer(minLength: 0)
-                Button {
-                    model.openDataDirectory()
-                } label: {
-                    Image(systemName: "folder")
-                        .font(.system(size: 12, weight: .medium))
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(AppPalette.muted)
-                .help("打开数据目录")
-                .accessibilityLabel("打开数据目录")
-            }
-
-            if let logURL = model.logFileURL {
-                Text(logURL.lastPathComponent)
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted.opacity(AppPalette.textDimmed))
-                    .lineLimit(1)
-            }
-        }
-        .padding(.horizontal, AppPalette.spaceXL - 2)
-        .padding(.bottom, AppPalette.spaceXL - 2)
     }
 
     // MARK: - Main Content

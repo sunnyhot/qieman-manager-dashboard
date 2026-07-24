@@ -141,16 +141,6 @@ struct SettingsSectionView: View {
             }
 
             Spacer(minLength: 20)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text("且慢主理人")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(AppPalette.ink)
-                Text("版本 \(AppUpdateChecker.bundleVersion)")
-                    .font(.system(size: 9, design: .rounded))
-                    .foregroundStyle(AppPalette.muted)
-            }
-            .padding(.horizontal, 10)
         }
         .padding(12)
         .frame(width: 194)

@@ -67,6 +67,11 @@ extension SettingsSectionView {
 
                     SettingsDivider()
 
+                    if model.menuBarTickerSettings.selections.count > model.menuBarTickerSettings.maxVisibleItems {
+                        SettingsDivider()
+                        menuBarCarouselOrder
+                    }
+
                     SettingsActionRow {
                         Button {
                             isConfirmingMenuBarReset = true
@@ -244,10 +249,6 @@ extension SettingsSectionView {
                     }
                 }
             }
-
-            if model.menuBarTickerSettings.selections.count > model.menuBarTickerSettings.maxVisibleItems {
-                menuBarCarouselOrder
-            }
         }
     }
 
@@ -258,21 +259,26 @@ extension SettingsSectionView {
         let rows = model.userPortfolioSnapshot?.rows ?? []
         let rowsByID = Dictionary(rows.map { ($0.holding.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        return menuBarStyleRow(icon: "arrow.up.arrow.down", title: "轮播顺序") {
-            HStack(spacing: 6) {
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 7) {
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.info)
+                    .frame(width: 24, height: 24)
+                    .background(AppPalette.info.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
+                Text("轮播顺序")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
                 Text("拖拽或按钮排序")
                     .font(.system(size: 10))
                     .foregroundStyle(AppPalette.muted)
-                    .fixedSize()
-
-                FlowLayout(spacing: 6) {
-                    ForEach(selections) { selection in
-                        carouselOrderPill(selection: selection, selections: selections, rowsByID: rowsByID)
-                    }
+            }
+            FlowLayout(spacing: 6) {
+                ForEach(selections) { selection in
+                    carouselOrderPill(selection: selection, selections: selections, rowsByID: rowsByID)
                 }
             }
         }
-        .padding(.top, menuBarStyleRowSpacing)
     }
 
     private func selectionLabel(_ selection: MenuBarTickerSelection, rowsByID: [UUID: UserPortfolioValuationRow]) -> String {
