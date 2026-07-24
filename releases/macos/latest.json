@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.24/QiemanDashboard-3.8.24.zip",
-    "name" : "QiemanDashboard-3.8.24.zip",
-    "sha256" : "a72327a660c710dff77e2e4d66ad830844b16e7c6dc8dc4183f72f17c9a5046d",
-    "size" : 4891901
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.25/QiemanDashboard-3.8.25.zip",
+    "name" : "QiemanDashboard-3.8.25.zip",
+    "sha256" : "54df30bc0111404b8d38613038d20b84410b6bd0b0f8981ac6a8f8dc9df3cae4",
+    "size" : 4893895
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.24/QiemanDashboard-3.8.24.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.25/QiemanDashboard-3.8.25.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.24.zip",
-      "size" : 4891901
+      "name" : "QiemanDashboard-3.8.25.zip",
+      "size" : 4893895
     }
   ],
-  "body" : "统一卡片样式与等高网格，抽取共享组件",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.24",
-  "name" : "QiemanDashboard v3.8.24",
-  "notes" : "统一卡片样式与等高网格，抽取共享组件",
+  "body" : "同步界面重构后的回归断言\n清理不活跃的投顾组合",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.25",
+  "name" : "QiemanDashboard v3.8.25",
+  "notes" : "同步界面重构后的回归断言\n清理不活跃的投顾组合",
   "published_at" : "",
-  "sha256" : "a72327a660c710dff77e2e4d66ad830844b16e7c6dc8dc4183f72f17c9a5046d",
-  "tag" : "v3.8.24",
-  "tag_name" : "v3.8.24",
-  "version" : "3.8.24"
+  "sha256" : "54df30bc0111404b8d38613038d20b84410b6bd0b0f8981ac6a8f8dc9df3cae4",
+  "tag" : "v3.8.25",
+  "tag_name" : "v3.8.25",
+  "version" : "3.8.25"
 }
