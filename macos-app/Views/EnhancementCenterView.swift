@@ -9,6 +9,7 @@ struct EnhancementCenterView: View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: AppPalette.spaceL) {
                 workbenchSegmentBar
+                TrendLiveLogPanel()
                 workbenchSegmentContent
             }
             .padding(18)

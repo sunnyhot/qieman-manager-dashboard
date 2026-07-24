@@ -235,6 +235,15 @@ struct AgentCompletionResult: Sendable, Hashable {
     let finishReason: String?
 }
 
+/// OpenAI-compatible SSE 响应的传输进度。
+///
+/// 只暴露时序和分片数量，不把模型正文或工具参数写入运行日志。
+enum AgentStreamProgress: Sendable, Hashable {
+    case firstChunk(elapsed: Double)
+    case active(chunkCount: Int, elapsed: Double)
+    case finished(chunkCount: Int, elapsed: Double, finishReason: String?)
+}
+
 enum AgentStopReason: Sendable, Hashable {
     case stop
     case toolCalls

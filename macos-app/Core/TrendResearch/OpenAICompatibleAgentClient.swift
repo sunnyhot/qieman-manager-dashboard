@@ -4,7 +4,7 @@ import Foundation
 //
 // OpenAICompatibleAgentClient 只负责请求/响应协议：
 //   - 发送 messages / tools / tool_choice / temperature
-//   - 解析 assistant 消息及其 tool_calls（content 为 null 也合法）
+//   - 解析流式 SSE 或普通 JSON assistant 消息及其 tool_calls（content 为 null 也合法）
 //   - 把 HTTP 错误、超时、限流映射成用户可读说明
 //   - 提供真实工具调用能力探测，决定是否允许启动内嵌 Agent
 //
@@ -96,7 +96,8 @@ struct OpenAICompatibleAgentClient: Sendable {
         toolChoice: AgentToolChoice = .auto,
         temperature: Double = 0.2,
         settings: TrendAIProviderSettings,
-        timeout: Double? = nil
+        timeout: Double? = nil,
+        streamProgress: (@Sendable (AgentStreamProgress) async -> Void)? = nil
     ) async throws -> AgentCompletionResult {
         guard settings.isConfigured else {
             throw OpenAICompatibleAgentClientError.missingConfiguration
@@ -109,53 +110,60 @@ struct OpenAICompatibleAgentClient: Sendable {
         request.timeoutInterval = effectiveTimeout
         request.setValue("Bearer \(settings.apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("text/event-stream, application/json", forHTTPHeaderField: "Accept")
         request.httpBody = try encoder.encode(
             AgentChatCompletionRequest(
                 model: settings.model,
                 messages: messages,
                 tools: tools.isEmpty ? nil : tools,
                 toolChoice: tools.isEmpty ? nil : toolChoice,
-                temperature: temperature
+                temperature: temperature,
+                stream: true
             )
         )
+        let requestStartedAt = Date()
 
-        let data: Data
-        let response: URLResponse
         do {
-            (data, response) = try await session.data(for: request)
+            let (bytes, response) = try await session.bytes(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                throw OpenAICompatibleAgentClientError.requestFailed(statusCode: nil, detail: nil)
+            }
+
+            guard (200..<300).contains(http.statusCode) else {
+                let data = try await Self.collect(bytes)
+                throw OpenAICompatibleAgentClientError.requestFailed(
+                    statusCode: http.statusCode,
+                    detail: Self.providerErrorMessage(from: data, decoder: decoder)
+                )
+            }
+
+            let contentType = http.value(forHTTPHeaderField: "Content-Type")?.lowercased() ?? ""
+            if contentType.contains("text/event-stream") {
+                return try await Self.decodeStreamingResponse(
+                    bytes,
+                    statusCode: http.statusCode,
+                    startedAt: requestStartedAt,
+                    progressHandler: streamProgress
+                )
+            }
+
+            // 部分 OpenAI-compatible 服务会忽略 stream=true，仍返回普通 JSON；
+            // 也有代理漏写 text/event-stream。完整收集后同时兼容这两类响应。
+            let data = try await Self.collect(bytes)
+            if Self.looksLikeEventStream(data) {
+                return try Self.decodeBufferedEventStream(data, statusCode: http.statusCode)
+            }
+            return try Self.decodeCompletion(data, decoder: decoder)
         } catch let error as URLError where error.code == .timedOut {
             throw OpenAICompatibleAgentClientError.timedOut(effectiveTimeout)
-        }
-
-        guard let http = response as? HTTPURLResponse else {
-            throw OpenAICompatibleAgentClientError.requestFailed(statusCode: nil, detail: nil)
-        }
-        guard (200..<300).contains(http.statusCode) else {
+        } catch let error as OpenAICompatibleAgentClientError {
+            throw error
+        } catch {
             throw OpenAICompatibleAgentClientError.requestFailed(
-                statusCode: http.statusCode,
-                detail: Self.providerErrorMessage(from: data, decoder: decoder)
+                statusCode: nil,
+                detail: error.localizedDescription
             )
         }
-
-        let completion: AgentChatCompletionResponse
-        do {
-            completion = try decoder.decode(AgentChatCompletionResponse.self, from: data)
-        } catch {
-            throw OpenAICompatibleAgentClientError.invalidResponse(Self.decodingSummary(error, data: data))
-        }
-
-        guard let choice = completion.choices.first else {
-            throw OpenAICompatibleAgentClientError.invalidResponse("响应缺少 choices")
-        }
-
-        let message = choice.message
-        let toolCalls = message.toolCalls ?? []
-        return AgentCompletionResult(
-            assistantMessage: message,
-            toolCalls: toolCalls,
-            stopReason: AgentStopReason(finishReason: choice.finishReason),
-            finishReason: choice.finishReason
-        )
     }
 
     /// 真实工具调用能力探测。
@@ -237,6 +245,239 @@ struct OpenAICompatibleAgentClient: Sendable {
         return url
     }
 
+    private static func collect(_ bytes: URLSession.AsyncBytes) async throws -> Data {
+        var data = Data()
+        for try await byte in bytes {
+            data.append(byte)
+        }
+        return data
+    }
+
+    private static func decodeCompletion(
+        _ data: Data,
+        decoder: JSONDecoder = JSONDecoder()
+    ) throws -> AgentCompletionResult {
+        let completion: AgentChatCompletionResponse
+        do {
+            completion = try decoder.decode(AgentChatCompletionResponse.self, from: data)
+        } catch {
+            throw OpenAICompatibleAgentClientError.invalidResponse(decodingSummary(error, data: data))
+        }
+
+        guard let choice = completion.choices.first else {
+            throw OpenAICompatibleAgentClientError.invalidResponse("响应缺少 choices")
+        }
+
+        let message = choice.message
+        let toolCalls = message.toolCalls ?? []
+        return AgentCompletionResult(
+            assistantMessage: message,
+            toolCalls: toolCalls,
+            stopReason: AgentStopReason(finishReason: choice.finishReason),
+            finishReason: choice.finishReason
+        )
+    }
+
+    private static func decodeStreamingResponse(
+        _ bytes: URLSession.AsyncBytes,
+        statusCode: Int,
+        startedAt: Date,
+        progressHandler: (@Sendable (AgentStreamProgress) async -> Void)?
+    ) async throws -> AgentCompletionResult {
+        var accumulator = AgentStreamingResponseAccumulator()
+        var eventDataLines: [String] = []
+        var lineBuffer = Data()
+        var reachedDone = false
+        var lastReportedChunkCount = 0
+        var lastProgressReportedAt = startedAt
+
+        // 不使用 AsyncBytes.lines：它会忽略 SSE 事件之间的空行，进而把相邻
+        // `data: {...}\n\ndata: {...}` 错误拼成同一个 JSON。这里直接按原始字节
+        // 分行，保留空行作为事件边界。
+        for try await byte in bytes {
+            guard byte == 0x0A else {
+                lineBuffer.append(byte)
+                continue
+            }
+
+            let rawLine = String(decoding: lineBuffer, as: UTF8.self)
+            lineBuffer.removeAll(keepingCapacity: true)
+            reachedDone = try consumeSSELine(
+                rawLine,
+                eventDataLines: &eventDataLines,
+                accumulator: &accumulator,
+                statusCode: statusCode
+            )
+            if accumulator.receivedChunkCount > lastReportedChunkCount {
+                let now = Date()
+                if accumulator.receivedChunkCount == 1 {
+                    await progressHandler?(
+                        .firstChunk(elapsed: now.timeIntervalSince(startedAt))
+                    )
+                    lastProgressReportedAt = now
+                    lastReportedChunkCount = accumulator.receivedChunkCount
+                } else if now.timeIntervalSince(lastProgressReportedAt) >= 10 {
+                    await progressHandler?(
+                        .active(
+                            chunkCount: accumulator.receivedChunkCount,
+                            elapsed: now.timeIntervalSince(startedAt)
+                        )
+                    )
+                    lastProgressReportedAt = now
+                    lastReportedChunkCount = accumulator.receivedChunkCount
+                }
+            }
+            if reachedDone {
+                break
+            }
+        }
+
+        if !reachedDone, !lineBuffer.isEmpty {
+            let rawLine = String(decoding: lineBuffer, as: UTF8.self)
+            reachedDone = try consumeSSELine(
+                rawLine,
+                eventDataLines: &eventDataLines,
+                accumulator: &accumulator,
+                statusCode: statusCode
+            )
+        }
+        if !reachedDone, !eventDataLines.isEmpty {
+            reachedDone = try consumeSSEEvent(
+                eventDataLines,
+                accumulator: &accumulator,
+                statusCode: statusCode
+            )
+        }
+        if reachedDone {
+            await progressHandler?(
+                .finished(
+                    chunkCount: accumulator.receivedChunkCount,
+                    elapsed: Date().timeIntervalSince(startedAt),
+                    finishReason: accumulator.finishReason
+                )
+            )
+        }
+        return try accumulator.result()
+    }
+
+    private static func consumeSSELine(
+        _ rawLine: String,
+        eventDataLines: inout [String],
+        accumulator: inout AgentStreamingResponseAccumulator,
+        statusCode: Int
+    ) throws -> Bool {
+        let line = rawLine.hasSuffix("\r") ? String(rawLine.dropLast()) : rawLine
+        if line.isEmpty {
+            let reachedDone = try consumeSSEEvent(
+                eventDataLines,
+                accumulator: &accumulator,
+                statusCode: statusCode
+            )
+            eventDataLines.removeAll(keepingCapacity: true)
+            return reachedDone
+        }
+
+        // SSE 注释/心跳以及 event/id/retry 字段不属于模型内容。
+        guard !line.hasPrefix(":"), line.hasPrefix("data:") else {
+            return false
+        }
+        var value = String(line.dropFirst(5))
+        if value.first == " " {
+            value.removeFirst()
+        }
+        eventDataLines.append(value)
+        return false
+    }
+
+    private static func decodeBufferedEventStream(
+        _ data: Data,
+        statusCode: Int
+    ) throws -> AgentCompletionResult {
+        guard let text = String(data: data, encoding: .utf8) else {
+            throw OpenAICompatibleAgentClientError.invalidResponse("流式响应不是有效 UTF-8。")
+        }
+
+        var accumulator = AgentStreamingResponseAccumulator()
+        var eventDataLines: [String] = []
+        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
+
+        for line in normalized.split(separator: "\n", omittingEmptySubsequences: false).map(String.init) {
+            if line.isEmpty {
+                if try consumeSSEEvent(
+                    eventDataLines,
+                    accumulator: &accumulator,
+                    statusCode: statusCode
+                ) {
+                    return try accumulator.result()
+                }
+                eventDataLines.removeAll(keepingCapacity: true)
+                continue
+            }
+            if line.hasPrefix(":") || !line.hasPrefix("data:") {
+                continue
+            }
+            var value = String(line.dropFirst(5))
+            if value.first == " " {
+                value.removeFirst()
+            }
+            eventDataLines.append(value)
+        }
+
+        if !eventDataLines.isEmpty {
+            _ = try consumeSSEEvent(
+                eventDataLines,
+                accumulator: &accumulator,
+                statusCode: statusCode
+            )
+        }
+        return try accumulator.result()
+    }
+
+    /// 返回 true 表示收到 `[DONE]`，或已收到带 finish_reason 的语义终包。
+    private static func consumeSSEEvent(
+        _ dataLines: [String],
+        accumulator: inout AgentStreamingResponseAccumulator,
+        statusCode: Int
+    ) throws -> Bool {
+        guard !dataLines.isEmpty else { return false }
+        let payload = dataLines.joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !payload.isEmpty else { return false }
+        if payload == "[DONE]" {
+            return true
+        }
+
+        let data = Data(payload.utf8)
+        let decoder = JSONDecoder()
+        if let envelope = try? decoder.decode(AgentProviderErrorEnvelope.self, from: data) {
+            let detail = [envelope.error.code, envelope.error.type, envelope.error.message]
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .joined(separator: " · ")
+            throw OpenAICompatibleAgentClientError.requestFailed(
+                statusCode: statusCode,
+                detail: detail.isEmpty ? "服务商在流中返回错误。" : detail
+            )
+        }
+
+        do {
+            let chunk = try decoder.decode(AgentChatCompletionStreamChunk.self, from: data)
+            accumulator.append(chunk)
+            // finish_reason 已经代表本轮语义响应结束。部分兼容服务不会及时补
+            // `[DONE]` 或关闭连接，继续等待只会触发无意义的空闲超时。
+            return accumulator.isFinished
+        } catch {
+            throw OpenAICompatibleAgentClientError.invalidResponse(
+                "无法解析流式数据块。\(decodingSummary(error, data: data))"
+            )
+        }
+    }
+
+    private static func looksLikeEventStream(_ data: Data) -> Bool {
+        guard let prefix = String(data: data.prefix(64), encoding: .utf8) else { return false }
+        return prefix.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("data:")
+    }
+
     private static func providerErrorMessage(from data: Data, decoder: JSONDecoder) -> String? {
         if let envelope = try? decoder.decode(AgentProviderErrorEnvelope.self, from: data) {
             let parts = [envelope.error.code, envelope.error.type, envelope.error.message]
@@ -304,6 +545,7 @@ private struct AgentChatCompletionRequest: Encodable {
     let tools: [AgentToolDefinition]?
     let toolChoice: AgentToolChoice?
     let temperature: Double
+    let stream: Bool
 
     enum CodingKeys: String, CodingKey {
         case model
@@ -311,6 +553,7 @@ private struct AgentChatCompletionRequest: Encodable {
         case tools
         case toolChoice = "tool_choice"
         case temperature
+        case stream
     }
 }
 
@@ -325,6 +568,144 @@ private struct AgentChatChoice: Decodable {
     enum CodingKeys: String, CodingKey {
         case message
         case finishReason = "finish_reason"
+    }
+}
+
+private struct AgentChatCompletionStreamChunk: Decodable {
+    let choices: [Choice]
+
+    struct Choice: Decodable {
+        let index: Int?
+        let delta: Delta?
+        let finishReason: String?
+
+        enum CodingKeys: String, CodingKey {
+            case index
+            case delta
+            case finishReason = "finish_reason"
+        }
+    }
+
+    struct Delta: Decodable {
+        let role: AgentChatRole?
+        let content: String?
+        let toolCalls: [ToolCallDelta]?
+
+        enum CodingKeys: String, CodingKey {
+            case role
+            case content
+            case toolCalls = "tool_calls"
+        }
+    }
+
+    struct ToolCallDelta: Decodable {
+        let index: Int?
+        let id: String?
+        let type: String?
+        let function: FunctionDelta?
+    }
+
+    struct FunctionDelta: Decodable {
+        let name: String?
+        let arguments: String?
+    }
+}
+
+private struct AgentStreamingResponseAccumulator {
+    private struct PendingToolCall {
+        var id = ""
+        var type = "function"
+        var name = ""
+        var arguments = ""
+    }
+
+    private var role: AgentChatRole = .assistant
+    private var content = ""
+    private var receivedContent = false
+    private var pendingToolCalls: [Int: PendingToolCall] = [:]
+    private(set) var finishReason: String?
+    private var receivedChoice = false
+    private(set) var receivedChunkCount = 0
+
+    var isFinished: Bool {
+        finishReason != nil
+    }
+
+    mutating func append(_ chunk: AgentChatCompletionStreamChunk) {
+        // choices 为空通常是 include_usage 的尾包，直接忽略。
+        guard let choice = chunk.choices.first(where: { $0.index == 0 }) ?? chunk.choices.first else {
+            return
+        }
+        receivedChunkCount += 1
+        receivedChoice = true
+        if let finishReason = choice.finishReason {
+            self.finishReason = finishReason
+        }
+        guard let delta = choice.delta else { return }
+
+        if let role = delta.role {
+            self.role = role
+        }
+        if let fragment = delta.content {
+            content += fragment
+            receivedContent = true
+        }
+        for (position, fragment) in (delta.toolCalls ?? []).enumerated() {
+            let index = fragment.index ?? position
+            var pending = pendingToolCalls[index] ?? PendingToolCall()
+            if let id = fragment.id {
+                pending.id += id
+            }
+            if let type = fragment.type, !type.isEmpty {
+                pending.type = type
+            }
+            if let name = fragment.function?.name {
+                pending.name += name
+            }
+            if let arguments = fragment.function?.arguments {
+                pending.arguments += arguments
+            }
+            pendingToolCalls[index] = pending
+        }
+    }
+
+    func result() throws -> AgentCompletionResult {
+        guard receivedChoice else {
+            throw OpenAICompatibleAgentClientError.invalidResponse("流式响应缺少 choices 数据块。")
+        }
+
+        let toolCalls = try pendingToolCalls.keys.sorted().map { index -> AgentToolCall in
+            guard let pending = pendingToolCalls[index] else {
+                throw OpenAICompatibleAgentClientError.invalidResponse("流式工具调用索引 \(index) 丢失。")
+            }
+            guard !pending.id.isEmpty else {
+                throw OpenAICompatibleAgentClientError.invalidResponse("流式工具调用 \(index) 缺少 id。")
+            }
+            guard !pending.name.isEmpty else {
+                throw OpenAICompatibleAgentClientError.invalidResponse("流式工具调用 \(index) 缺少 function.name。")
+            }
+            return AgentToolCall(
+                id: pending.id,
+                function: AgentToolFunctionCall(
+                    name: pending.name,
+                    arguments: pending.arguments.isEmpty ? "{}" : pending.arguments
+                ),
+                type: pending.type
+            )
+        }
+
+        let resolvedFinishReason = finishReason ?? (toolCalls.isEmpty ? nil : "tool_calls")
+        let message = AgentChatMessage(
+            role: role,
+            content: receivedContent ? content : nil,
+            toolCalls: toolCalls.isEmpty ? nil : toolCalls
+        )
+        return AgentCompletionResult(
+            assistantMessage: message,
+            toolCalls: toolCalls,
+            stopReason: AgentStopReason(finishReason: resolvedFinishReason),
+            finishReason: resolvedFinishReason
+        )
     }
 }
 

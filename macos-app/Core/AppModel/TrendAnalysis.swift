@@ -54,6 +54,33 @@ extension AppModel {
                 lastTrendError = error.localizedDescription
             }
         }
+
+        if let trendAgentRunLogFileURL {
+            do {
+                let logs = try TrendAgentRunLogStore().load(from: trendAgentRunLogFileURL)
+                if let last = logs.last {
+                    trendProgressLogs = logs
+                    switch last.level {
+                    case .error, .warning:
+                        trendGenerationState = .failed
+                        if lastTrendError.isEmpty {
+                            lastTrendError = last.detail ?? last.message
+                        }
+                    case .success where last.message == "趋势分析完成":
+                        trendGenerationState = .succeeded
+                    case .info, .activity, .success:
+                        trendGenerationState = .failed
+                        if lastTrendError.isEmpty {
+                            lastTrendError = "上次趋势分析未正常结束，最后阶段：\(last.message)"
+                        }
+                    }
+                }
+            } catch {
+                if lastTrendError.isEmpty {
+                    lastTrendError = "读取上次 Agent 日志失败：\(error.localizedDescription)"
+                }
+            }
+        }
     }
 
     func saveTrendAnalysisSettings() {
@@ -127,36 +154,63 @@ extension AppModel {
         lastTrendError = ""
         trendProgressLogs = []
         trendSettings.defaultPrivacyMode = trendPrivacyMode
+        let triggerText = userInitiated ? "手动分析" : "定时自动分析"
+        if let trendAgentRunLogFileURL {
+            try? TrendAgentRunLogStore().beginRun(
+                at: trendAgentRunLogFileURL,
+                trigger: userInitiated ? "manual" : "scheduled",
+                model: provider.model,
+                startedAt: generatedAt
+            )
+        }
+        appendTrendProgress(
+            "\(triggerText)已启动",
+            detail: "模型：\(provider.model)；隐私：\(trendPrivacyMode.rawValue)；Tavily：\(trendSettings.webSearch.isConfigured ? "已配置" : "未配置")",
+            level: .activity
+        )
 
         // 能力检测 fail-closed：仅当「当前 Provider 指纹对应 supportsToolCalls==true」才启动；
         // 指纹不符（首次或改了 Base URL/模型/Key）或尚无结果时，先自动探测一次。
         if trendProviderCapabilities?.providerFingerprint != provider.fingerprint
             || trendProviderCapabilities?.supportsToolCalls != true {
-            appendTrendProgress("检测 \(provider.model) 的工具调用能力...")
+            appendTrendProgress("检测 \(provider.model) 的工具调用能力", level: .activity)
             do {
                 let capabilities = try await trendCapabilityProbe(provider)
                 trendProviderCapabilities = capabilities
                 guard capabilities.supportsToolCalls else {
                     trendGenerationState = .failed
                     lastTrendError = "该模型不支持工具调用，无法启动趋势 Agent。\(capabilities.detail)"
-                    appendTrendProgress("趋势分析失败：\(lastTrendError)")
+                    appendTrendProgress("模型不支持 Agent 工具调用", detail: lastTrendError, level: .error)
                     return
                 }
+                appendTrendProgress(
+                    "模型工具调用能力可用",
+                    detail: capabilities.detail,
+                    level: .success
+                )
             } catch {
                 trendGenerationState = .failed
                 lastTrendError = "工具调用能力检测失败：\(error.localizedDescription)"
-                appendTrendProgress("趋势分析失败：\(lastTrendError)")
+                appendTrendProgress("工具调用能力检测失败", detail: lastTrendError, level: .error)
                 return
             }
         }
 
-        appendTrendProgress("开始内嵌趋势 Agent：\(provider.model)")
+        appendTrendProgress("开始内嵌趋势 Agent：\(provider.model)", level: .activity)
 
         let snapshot = makeTrendResearchSnapshot(generatedAt: generatedAt)
         let searchText = trendSettings.webSearch.isConfigured ? "Tavily 联网搜索已配置" : "未配置联网搜索"
-        appendTrendProgress("冻结分析快照：\(snapshot.assets.count) 个标的、\(snapshot.marketQuotes.count) 条行情、\(searchText)、隐私 \(snapshot.privacyMode.rawValue)")
+        appendTrendProgress(
+            "分析快照已冻结",
+            detail: "\(snapshot.assets.count) 个标的；\(snapshot.marketQuotes.count) 条行情；\(searchText)；隐私 \(snapshot.privacyMode.rawValue)",
+            level: .success
+        )
 
-        appendTrendProgress("启动模型：\(provider.model) · 单次超时 \(trendTimeoutText(provider))")
+        appendTrendProgress(
+            "准备请求模型：\(provider.model)",
+            detail: "单次超时 \(trendTimeoutText(provider))",
+            level: .activity
+        )
 
         do {
             let report = try await trendResearchAgent.run(
@@ -164,28 +218,32 @@ extension AppModel {
                 settings: provider,
                 webSearchSettings: trendSettings.webSearch,
                 eventHandler: { [weak self] event in
-                    Task { @MainActor in self?.handleTrendAgentEvent(event) }
+                    self?.handleTrendAgentEvent(event)
                 }
             )
             trendReport = report
             lastTrendGeneratedAt = report.generatedAt
-            trendGenerationState = .succeeded
             if !userInitiated {
                 trendSettings.lastAutoAnalysisDay = trendDayString(from: generatedAt)
                 trendSettings.lastAutoAnalysisSlotKey = autoAnalysisSlot?.key
             }
-            appendTrendProgress("保存趋势报告")
+            appendTrendProgress("保存趋势报告", level: .activity)
             saveTrendAnalysisReport(report)
             saveTrendAnalysisSettings()
-            appendTrendProgress("趋势分析完成")
+            trendGenerationState = .succeeded
+            appendTrendProgress("趋势分析完成", level: .success)
         } catch is CancellationError {
             trendGenerationState = .failed
             lastTrendError = "趋势分析已取消。"
-            appendTrendProgress("趋势分析已取消，保留上一次报告")
+            appendTrendProgress("趋势分析已取消，保留上一次报告", level: .warning)
         } catch {
             trendGenerationState = .failed
             lastTrendError = error.localizedDescription
-            appendTrendProgress("趋势分析失败：\(error.localizedDescription)")
+            appendTrendProgress(
+                "趋势分析失败",
+                detail: error.localizedDescription,
+                level: .error
+            )
         }
     }
 
@@ -266,25 +324,81 @@ extension AppModel {
     private func handleTrendAgentEvent(_ event: TrendResearchAgentEvent) {
         switch event {
         case .started:
-            appendTrendProgress("内嵌趋势 Agent 已启动")
+            appendTrendProgress("内嵌趋势 Agent 已启动", level: .activity)
+        case .harnessConfigured(
+            let maxTurns,
+            let maxToolCalls,
+            let preferredWebSearches,
+            let maxWebSearches
+        ):
+            appendTrendProgress(
+                "Agent Harness 预算已配置",
+                detail: "最多 \(maxTurns) 轮、\(maxToolCalls) 次工具调用；Tavily 建议 \(preferredWebSearches) 次、硬上限 \(maxWebSearches) 次；提交与修复预算已预留。",
+                level: .info
+            )
+        case .harnessGuidance(let message):
+            appendTrendProgress("Harness 正在收敛研究", detail: message, level: .warning)
         case .turnStarted(let turn):
-            appendTrendProgress("第 \(turn) 轮")
+            appendTrendProgress("进入第 \(turn) 轮", level: .info)
         case .modelRequestStarted:
-            appendTrendProgress("请求模型")
+            appendTrendProgress("正在等待模型响应", level: .activity)
+        case .modelStreamProgress(let turn, let progress):
+            switch progress {
+            case .firstChunk(let elapsed):
+                appendTrendProgress(
+                    "已收到首个流式分片",
+                    detail: "第 \(turn) 轮；首包耗时 \(String(format: "%.1f", elapsed)) 秒",
+                    level: .info
+                )
+            case .active(let chunkCount, let elapsed):
+                appendTrendProgress(
+                    "模型仍在流式生成",
+                    detail: "第 \(turn) 轮；已收到 \(chunkCount) 个分片；耗时 \(String(format: "%.1f", elapsed)) 秒",
+                    level: .activity
+                )
+            case .finished(let chunkCount, let elapsed, let finishReason):
+                appendTrendProgress(
+                    "模型流式输出已结束",
+                    detail: "第 \(turn) 轮；\(chunkCount) 个分片；耗时 \(String(format: "%.1f", elapsed)) 秒；结束原因 \(finishReason ?? "未提供")",
+                    level: .success
+                )
+            }
         case .modelResponseReceived(_, let duration):
-            appendTrendProgress("收到模型响应（\(String(format: "%.1f", duration))s）")
+            appendTrendProgress(
+                "已收到模型响应",
+                detail: "耗时 \(String(format: "%.1f", duration)) 秒",
+                level: .success
+            )
+        case .modelCorrection(let message):
+            appendTrendProgress("模型输出需要修正", detail: message, level: .warning)
         case .toolStarted(let name):
-            appendTrendProgress("调用工具：\(name)")
+            appendTrendProgress(
+                "开始：\(trendToolDisplayName(name))",
+                detail: "工具：\(name)",
+                level: .activity
+            )
         case .toolFinished(let name, let summary):
-            appendTrendProgress("工具完成：\(name)（\(summary)）")
+            appendTrendProgress(
+                "完成：\(trendToolDisplayName(name))",
+                detail: "工具：\(name)\n结果：\(summary)",
+                level: summary.hasPrefix("失败") ? .warning : .success
+            )
         case .reportValidationFailed(let errors, let remaining):
-            appendTrendProgress("报告校验失败，自动修正（剩余 \(remaining) 次）", detail: errors.joined(separator: "\n"))
+            appendTrendProgress(
+                "报告校验失败，正在自动修正",
+                detail: "剩余 \(remaining) 次\n\(errors.joined(separator: "\n"))",
+                level: .warning
+            )
         case .completed(let duration):
-            appendTrendProgress("Agent 完成（\(String(format: "%.1f", duration))s）")
+            appendTrendProgress(
+                "Agent 已生成有效报告",
+                detail: "总耗时 \(String(format: "%.1f", duration)) 秒",
+                level: .success
+            )
         case .failed(let message):
-            appendTrendProgress("Agent 失败：\(message)")
+            appendTrendProgress("Agent 执行失败", detail: message, level: .error)
         case .cancelled:
-            appendTrendProgress("Agent 取消")
+            appendTrendProgress("Agent 已取消", level: .warning)
         }
     }
 
@@ -296,11 +410,40 @@ extension AppModel {
         return String(trimmed.prefix(10))
     }
 
-    private func appendTrendProgress(_ message: String, detail: String? = nil) {
-        let entry = TrendProgressLog(timestamp: Self.timestampString(), message: message, detail: detail)
+    private func appendTrendProgress(
+        _ message: String,
+        detail: String? = nil,
+        level: TrendProgressLog.Level = .info
+    ) {
+        let entry = TrendProgressLog(
+            timestamp: Self.timestampString(),
+            message: message,
+            detail: detail,
+            level: level
+        )
         trendProgressLogs.append(entry)
         if trendProgressLogs.count > 50 {
             trendProgressLogs.removeFirst(trendProgressLogs.count - 50)
+        }
+        if let trendAgentRunLogFileURL {
+            try? TrendAgentRunLogStore().append(entry, to: trendAgentRunLogFileURL)
+        }
+    }
+
+    private func trendToolDisplayName(_ name: String) -> String {
+        switch name {
+        case "get_portfolio_overview":
+            return "读取组合概览"
+        case "get_portfolio_assets":
+            return "读取持仓明细"
+        case "get_market_snapshot":
+            return "读取市场快照"
+        case "web_search":
+            return "Tavily 搜索行业与政策"
+        case "submit_trend_report":
+            return "校验并提交趋势报告"
+        default:
+            return name
         }
     }
 

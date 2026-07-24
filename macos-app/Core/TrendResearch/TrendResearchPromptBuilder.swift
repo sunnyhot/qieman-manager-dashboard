@@ -26,6 +26,12 @@ struct TrendResearchPromptBuilder: Sendable {
 4. web_search：通过 Tavily 搜索最新行业、宏观和政策信息。已配置时至少搜索一次，并优先使用最近一周或一个月的权威来源；查询中不得包含组合名称、个人信息或金额。
 5. submit_trend_report：提交完整报告，结束本次分析。report 必须是下述完整结构的对象。
 
+每个工具结果都包含 harness 字段，记录持仓覆盖度、去重后的网页证据数和剩余工具/搜索预算。必须遵循 harness.next_step_hint：
+- 搜索前先检查已有网页证据，避免只改写措辞的重复查询；只有存在明确行业、政策或宏观证据缺口时才继续搜索。
+- web_searches_remaining 是真实 Tavily 请求余额，缓存命中不消耗该余额。
+- ready_for_submission=true 且证据足够时应及时提交，不要为了耗尽预算继续调用工具。
+- 若下一轮只提供 submit_trend_report，表示 Harness 已进入提交与修复预留阶段，必须立即提交完整报告。
+
 【submit_trend_report 的 report 完整 JSON 契约】
 所有字段名区分大小写；中文枚举值必须与下方完全一致。confidence 为对象 {\"score\":0~100, \"label\":\"高\"|\"中\"|\"低\"}，label 规则：score≥75→高、≥45→中、否则低。
 
@@ -38,8 +44,10 @@ struct TrendResearchPromptBuilder: Sendable {
       \"direction\": \"bullish\"|\"neutralPositive\"|\"neutral\"|\"neutralNegative\"|\"bearish\"|\"uncertain\",
       \"confidence\": {\"score\":0,\"label\":\"低\"}, \"rationale\": \"判断依据\", \"counterSignals\": [\"反证条件\"] }
   ],
-  \"marketOutlook\": [ { \"id\":\"\",\"name\":\"\",\"category\":\"\",\"direction\":\"\",\"confidence\":{},\"rationale\":\"\",\"evidenceIDs\":[],\"counterSignals\":[] } ],
-  \"sectors\":        [ { \"id\":\"\",\"name\":\"\",\"exposureText\":\"\",\"direction\":\"\",\"confidence\":{},\"rationale\":\"\",\"evidenceIDs\":[],\"counterSignals\":[] } ],
+  \"marketOutlook\": [ // 宏观/大盘指数 与 大类资产 的整体方向；只放指数和资产类别，严禁放行业。例：沪深300、上证、创业板、恒生、纳斯达克；股票、债券、黄金、原油
+    { \"id\":\"\",\"name\":\"\",\"category\":\"index\"|\"assetClass\",\"direction\":\"\",\"confidence\":{},\"rationale\":\"\",\"evidenceIDs\":[],\"counterSignals\":[] } ],
+  \"sectors\":        [ // 行业/主题板块 的方向与组合暴露；只放行业板块，严禁放指数或大类资产。例：消费、医药、科技、新能源、半导体、A股、港股
+    { \"id\":\"\",\"name\":\"\",\"exposureText\":\"仓位占比\",\"direction\":\"\",\"confidence\":{},\"rationale\":\"\",\"evidenceIDs\":[],\"counterSignals\":[] } ],
   \"opportunities\":  [ { \"id\":\"\",\"name\":\"\",\"category\":\"\",\"direction\":\"\",\"confidence\":{},\"rationale\":\"\",\"triggerConditions\":[],\"invalidatingConditions\":[],\"evidenceIDs\":[],\"counterSignals\":[] } ],
   \"keyAssets\":     [ { \"id\":\"\",\"name\":\"\",\"code\":\"\",\"sector\":\"\",\"impactText\":\"\",\"horizons\":[同 horizons 元素],\"rationale\":\"\",\"counterSignals\":[] } ],
   \"assetTrends\":   [ { \"id\":\"\",\"name\":\"\",\"code\":\"\",\"sector\":\"\",\"impactText\":\"\",\"horizons\":[同 horizons 元素],\"rationale\":\"\",\"counterSignals\":[] } ],
@@ -54,6 +62,7 @@ struct TrendResearchPromptBuilder: Sendable {
 - evidenceIDs 只能填工具返回的 evidence_ids；不要凭空创造。evidence 数组的来源字段（sourceName/title/url/publishedAt/retrievedAt/summary）会被 App 用账本规范对象覆盖，你只需保证 evidenceIDs 引用的 id 真实来自工具返回。
 - 最新行业、宏观和政策判断必须引用 web_search 返回的 web:tavily:* evidence id；不要把模型记忆当作最新事实。
 - horizons/sectors/marketOutlook/opportunities/keyAssets/assetTrends 的 rationale 必须非空，且都要带 counterSignals（actions 只需 triggerConditions + invalidatingConditions）。
+- marketOutlook 与 sectors 互斥：同一主题只能出现在其中一个数组。指数/大类资产（沪深300、黄金、债券、原油…）只放 marketOutlook；行业板块（消费、科技、医药、新能源…）只放 sectors。不要在两边写同一个主题（例如「消费」不能同时出现在两个数组里）。
 - keyAssets 与 actions 建议各不超过 5 条。
 - confidence.score 必须在 0~100。
 

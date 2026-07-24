@@ -24,16 +24,32 @@ enum TrendConnectionState: String, Codable, Hashable {
 }
 
 struct TrendProgressLog: Identifiable, Hashable {
+    enum Level: String, Hashable {
+        case info
+        case activity
+        case success
+        case warning
+        case error
+    }
+
     let id: UUID
     let timestamp: String
     let message: String
     let detail: String?
+    let level: Level
 
-    init(id: UUID = UUID(), timestamp: String, message: String, detail: String? = nil) {
+    init(
+        id: UUID = UUID(),
+        timestamp: String,
+        message: String,
+        detail: String? = nil,
+        level: Level = .info
+    ) {
         self.id = id
         self.timestamp = timestamp
         self.message = message
         self.detail = detail
+        self.level = level
     }
 }
 

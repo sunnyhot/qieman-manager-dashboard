@@ -23,6 +23,7 @@ final class OpenAICompatibleAgentClientTests: XCTestCase {
             XCTAssertEqual(json["model"] as? String, "glm-5.2")
             XCTAssertEqual(json["temperature"] as? Double, 0.2)
             XCTAssertEqual(json["tool_choice"] as? String, "auto")
+            XCTAssertEqual(json["stream"] as? Bool, true)
             let tools = try XCTUnwrap(json["tools"] as? [[String: Any]])
             XCTAssertEqual(tools.count, 1)
             let function = try XCTUnwrap(tools.first?["function"] as? [String: Any])
@@ -83,6 +84,71 @@ final class OpenAICompatibleAgentClientTests: XCTestCase {
         XCTAssertEqual(result.stopReason, .toolCalls)
         XCTAssertEqual(result.finishReason, "tool_calls")
         XCTAssertNil(result.assistantMessage.content)
+    }
+
+    func testClientDecodesStreamingContentAndFragmentedToolCalls() async throws {
+        let stream = """
+        : keep-alive
+
+        data: {"choices":[{"index":0,"delta":{"role":"assistant","content":"先读取"},"finish_reason":null}]}
+
+        data: {"choices":[{"index":0,"delta":{"content":"数据","tool_calls":[{"index":0,"id":"call_stream_1","type":"function","function":{"name":"web_","arguments":"{\\\"query\\\":"}}]},"finish_reason":null}]}
+
+        data: {"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"name":"search","arguments":"\\\"最新政策\\\"}"}}]},"finish_reason":null}]}
+
+        data: {"choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}
+
+        data: {"choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}
+
+        data: [DONE]
+
+        """
+
+        MockAgentURLProtocol.requestHandler = { request in
+            (
+                Self.okResponse(for: request, contentType: "text/event-stream; charset=utf-8"),
+                Data(stream.utf8)
+            )
+        }
+
+        let client = OpenAICompatibleAgentClient(session: Self.mockSession())
+        let result = try await client.complete(
+            messages: [AgentChatMessage(role: .user, content: "u")],
+            tools: [],
+            toolChoice: .auto,
+            settings: providerSettings()
+        )
+
+        XCTAssertEqual(result.assistantMessage.content, "先读取数据")
+        XCTAssertEqual(result.toolCalls.count, 1)
+        XCTAssertEqual(result.toolCalls.first?.id, "call_stream_1")
+        XCTAssertEqual(result.toolCalls.first?.function.name, "web_search")
+        XCTAssertEqual(result.toolCalls.first?.function.arguments, #"{"query":"最新政策"}"#)
+        XCTAssertEqual(result.stopReason, .toolCalls)
+        XCTAssertEqual(result.finishReason, "tool_calls")
+    }
+
+    func testClientDetectsEventStreamWhenProxyOmitsSSEContentType() async throws {
+        let stream = """
+        data: {"choices":[{"index":0,"delta":{"role":"assistant","content":"兼容成功"},"finish_reason":"stop"}]}
+
+        data: [DONE]
+
+        """
+        MockAgentURLProtocol.requestHandler = { request in
+            (Self.okResponse(for: request), Data(stream.utf8))
+        }
+
+        let client = OpenAICompatibleAgentClient(session: Self.mockSession())
+        let result = try await client.complete(
+            messages: [AgentChatMessage(role: .user, content: "u")],
+            tools: [],
+            toolChoice: .auto,
+            settings: providerSettings()
+        )
+
+        XCTAssertEqual(result.assistantMessage.content, "兼容成功")
+        XCTAssertEqual(result.stopReason, .stop)
     }
 
     func testClientEncodesAssistantToolCallAndToolResultMessages() async throws {
@@ -262,8 +328,16 @@ final class OpenAICompatibleAgentClientTests: XCTestCase {
         return URLSession(configuration: configuration)
     }
 
-    private static func okResponse(for request: URLRequest) -> HTTPURLResponse {
-        HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+    private static func okResponse(
+        for request: URLRequest,
+        contentType: String = "application/json"
+    ) -> HTTPURLResponse {
+        HTTPURLResponse(
+            url: request.url!,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: ["Content-Type": contentType]
+        )!
     }
 
     private static func textMessageResponse(content: String) -> Data {

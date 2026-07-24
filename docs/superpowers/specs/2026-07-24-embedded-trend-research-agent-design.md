@@ -572,8 +572,12 @@ user prompt 只包含：
 
 ```swift
 struct TrendResearchRunPolicy: Sendable {
-    let maxTurns: Int                 // 8
-    let maxToolCalls: Int             // 16
+    let maxTurns: Int                 // 基础 12；按每 20 个标的一页动态扩展，硬上限 24
+    let maxToolCalls: Int             // 基础 32；按额外持仓页动态扩展，硬上限 64
+    let preferredWebSearches: Int     // 基础 6，达到后提示 Agent 先评估已有证据
+    let maxWebSearches: Int           // 基础 10；按板块数量缓慢扩展，硬上限 12
+    let reservedSubmitToolCalls: Int  // 3，保留给首次提交和最多两次修复
+    let reservedSubmitTurns: Int      // 2
     let maxInvalidSubmissions: Int    // 2
     let maxPlainTextResponses: Int    // 2
     let perRequestTimeoutSeconds: Double // 90
@@ -582,25 +586,50 @@ struct TrendResearchRunPolicy: Sendable {
 }
 ```
 
+### Harness 治理层
+
+仍由 Agent 自主决定读取哪些工具、搜索哪些主题以及何时继续追查，不把研究过程改成固定流水线。Harness 只提供确定性治理：
+
+- 记录组合概览、持仓分页、行情和联网搜索覆盖度。
+- 在每个工具结果的 `harness` 字段回传剩余轮次、工具预算、真实 Tavily 请求预算和下一步缺口。
+- 同参数工具调用复用本次运行缓存；Tavily 响应在 App 生命周期内缓存 6 小时，缓存命中不消耗真实搜索预算。
+- 按稳定 evidence ID 去除本次运行中重复出现的网页结果，但保留 Agent 对不同主题继续搜索的能力。
+- 达到建议搜索次数时提示模型先评估已有证据；达到硬上限后，后续轮次不再暴露 `web_search`。
+- 必需数据已覆盖且进入提交预留区时，只向模型暴露 `submit_trend_report`。仍保留多轮校验与修复，不改成一次性 completion。
+
 ### 伪代码
 
 ```swift
 func run(snapshot: TrendResearchSnapshot) async throws -> TrendAnalysisReport {
     var messages = promptBuilder.initialMessages(snapshot: snapshot)
     var state = TrendResearchRunState()
+    var coverage = TrendResearchHarnessState(snapshot: snapshot)
+    let runLimits = policy.effectiveLimits(
+        assetCount: snapshot.assets.count,
+        sectorCount: snapshot.sectors.count
+    )
+    let webGovernor = TrendWebSearchGovernor(
+        maxNetworkSearches: runLimits.maxWebSearches,
+        cache: sharedWebSearchCache
+    )
 
     emit(.started)
 
-    while state.turnCount < policy.maxTurns {
+    while state.turnCount < runLimits.maxTurns {
         try Task.checkCancellation()
         try totalDeadline.check()
 
         state.turnCount += 1
         emit(.turnStarted(state.turnCount))
 
+        let tools = harness.availableTools(
+            coverage: coverage,
+            webStatus: await webGovernor.status(),
+            runState: state
+        )
         let response = try await client.complete(
             messages: messages,
-            tools: registry.definitions,
+            tools: tools,
             timeout: policy.perRequestTimeoutSeconds
         )
 
@@ -625,13 +654,22 @@ func run(snapshot: TrendResearchSnapshot) async throws -> TrendAnalysisReport {
         }
 
         for call in response.toolCalls {
-            guard state.toolCallCount < policy.maxToolCalls else {
+            guard state.toolCallCount < runLimits.maxToolCalls else {
                 throw TrendResearchAgentError.toolCallLimitExceeded
             }
             state.toolCallCount += 1
 
-            let result = await registry.execute(call, snapshot: snapshot)
-            messages.append(toolMessage(callID: call.id, result: result))
+            let result = await registry.execute(
+                call,
+                context: .init(
+                    snapshot: snapshot,
+                    evidenceLedger: evidenceLedger,
+                    webSearchGovernor: webGovernor
+                )
+            )
+            let processed = coverage.process(toolName: call.function.name, result: result)
+            let enriched = coverage.attachingHarnessMetadata(to: processed, runState: state)
+            messages.append(toolMessage(callID: call.id, result: enriched))
 
             if case .report(let report) = result.completion {
                 emit(.completed)

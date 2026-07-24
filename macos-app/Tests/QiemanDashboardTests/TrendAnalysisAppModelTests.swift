@@ -36,6 +36,35 @@ final class TrendAnalysisAppModelTests: XCTestCase {
         XCTAssertFalse(model.lastTrendError.isEmpty)
     }
 
+    func testFailedGenerationPersistsAndRestoresDiagnosticLog() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("trend-agent-log-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let model = AppModel()
+        model.dataDirectoryURL = directory
+        model.trendSettings = makeProviderSettings()
+        installSupportingProbe(model)
+        model.trendResearchAgent = FakeTrendResearchAgent(
+            result: .failure(TrendResearchAgentError.turnLimitExceeded)
+        )
+
+        await model.generateTrendAnalysis(userInitiated: true, createdAt: "2026-06-22 12:00:00")
+
+        let logURL = try XCTUnwrap(model.trendAgentRunLogFileURL)
+        let content = try String(contentsOf: logURL, encoding: .utf8)
+        XCTAssertTrue(content.contains("[error] 趋势分析失败"))
+        XCTAssertTrue(content.contains("最大轮次"))
+
+        let restored = AppModel()
+        restored.dataDirectoryURL = directory
+        restored.loadTrendAnalysisState()
+        XCTAssertEqual(restored.trendGenerationState, .failed)
+        XCTAssertEqual(restored.trendProgressLogs.last?.level, .error)
+        XCTAssertTrue(restored.lastTrendError.contains("最大轮次"))
+    }
+
     func testCancelledGenerationKeepsLastReport() async {
         let model = AppModel()
         let previous = TrendAnalysisReport.fixture(generatedAt: "2026-06-21 12:00:00", externalSignalStatus: .partial)
@@ -90,6 +119,7 @@ final class TrendAnalysisAppModelTests: XCTestCase {
         XCTAssertEqual(agent.runCount, 2)
         XCTAssertEqual(model.trendSettings.lastAutoAnalysisDay, "2026-06-22")
         XCTAssertEqual(model.trendSettings.lastAutoAnalysisSlotKey, "2026-06-22 14:30")
+        XCTAssertEqual(model.trendProgressLogs.first?.message, "定时自动分析已启动")
     }
 
     func testProgressLogsReflectAgentEvents() async {
@@ -102,8 +132,19 @@ final class TrendAnalysisAppModelTests: XCTestCase {
         await model.generateTrendAnalysis(userInitiated: true, createdAt: "2026-06-22 12:00:00")
 
         let messages = model.trendProgressLogs.map(\.message)
+        XCTAssertEqual(messages.first, "手动分析已启动")
         XCTAssertTrue(messages.contains { $0.contains("内嵌趋势 Agent") })
         XCTAssertTrue(messages.contains { $0.contains("趋势分析完成") })
+        let startedIndex = messages.firstIndex(of: "内嵌趋势 Agent 已启动")
+        let turnIndex = messages.firstIndex(of: "进入第 1 轮")
+        let completedIndex = messages.firstIndex(of: "Agent 已生成有效报告")
+        XCTAssertNotNil(startedIndex)
+        XCTAssertNotNil(turnIndex)
+        XCTAssertNotNil(completedIndex)
+        if let startedIndex, let turnIndex, let completedIndex {
+            XCTAssertLessThan(startedIndex, turnIndex)
+            XCTAssertLessThan(turnIndex, completedIndex)
+        }
     }
 
     // MARK: - 辅助
@@ -151,14 +192,14 @@ private final class FakeTrendResearchAgent: TrendResearchAgentProtocol, @uncheck
         snapshot: TrendResearchSnapshot,
         settings: TrendAIProviderSettings,
         webSearchSettings: TavilySearchSettings = .empty,
-        eventHandler: @escaping @Sendable (TrendResearchAgentEvent) -> Void
+        eventHandler: @escaping @MainActor @Sendable (TrendResearchAgentEvent) async -> Void
     ) async throws -> TrendAnalysisReport {
         lock.lock()
         runCount += 1
         lock.unlock()
-        eventHandler(.started(runID: snapshot.runID))
-        eventHandler(.turnStarted(1))
-        eventHandler(.completed(duration: 0.1))
+        await eventHandler(.started(runID: snapshot.runID))
+        await eventHandler(.turnStarted(1))
+        await eventHandler(.completed(duration: 0.1))
         switch result {
         case .success(let report):
             return report

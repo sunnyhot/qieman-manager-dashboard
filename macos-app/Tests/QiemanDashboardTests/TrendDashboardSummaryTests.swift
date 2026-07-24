@@ -246,21 +246,41 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertFalse(source.contains("数据状态"))
     }
 
-    func testTrendPanelSourceUsesRoomierReportLayoutAndCompactProgressLog() throws {
-        let sourceURL = URL(fileURLWithPath: #filePath)
+    func testTrendPanelUsesPageScopedAutoScrollingRealtimeLog() throws {
+        let viewsURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appendingPathComponent("Views/EnhancementTrendPanel.swift")
-        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+            .appendingPathComponent("Views", isDirectory: true)
+        let trendSource = try String(
+            contentsOf: viewsURL.appendingPathComponent("EnhancementTrendPanel.swift"),
+            encoding: .utf8
+        )
+        let liveLogSource = try String(
+            contentsOf: viewsURL.appendingPathComponent("TrendLiveLogPanel.swift"),
+            encoding: .utf8
+        )
+        let contentSource = try String(
+            contentsOf: viewsURL.appendingPathComponent("ContentView.swift"),
+            encoding: .utf8
+        )
+        let centerSource = try String(
+            contentsOf: viewsURL.appendingPathComponent("EnhancementCenterView.swift"),
+            encoding: .utf8
+        )
 
-        XCTAssertTrue(source.contains("trendReportBalancedLayout"))
-        XCTAssertTrue(source.contains("trendReportSectionGrid"))
-        XCTAssertTrue(source.contains("trendReportWideColumns"))
-        XCTAssertTrue(source.contains("trendProgressSummaryCard"))
-        XCTAssertTrue(source.contains("model.trendProgressLogs.suffix(6)"))
-        XCTAssertFalse(source.contains(".frame(width: 360"))
-        XCTAssertFalse(source.contains("model.trendProgressLogs.suffix(16)"))
+        XCTAssertTrue(trendSource.contains("trendReportBalancedLayout"))
+        XCTAssertTrue(trendSource.contains("trendReportSectionGrid"))
+        XCTAssertTrue(trendSource.contains("trendReportWideColumns"))
+        XCTAssertFalse(trendSource.contains("trendProgressSummaryCard"))
+        XCTAssertFalse(contentSource.contains("TrendLiveLogPanel()"))
+        XCTAssertTrue(centerSource.contains("TrendLiveLogPanel()"))
+        XCTAssertTrue(liveLogSource.contains("AI 分析实时日志"))
+        XCTAssertTrue(liveLogSource.contains("ScrollViewReader"))
+        XCTAssertTrue(liveLogSource.contains("scrollToBottom"))
+        XCTAssertTrue(liveLogSource.contains(".onChange(of: latestLog?.id)"))
+        XCTAssertTrue(liveLogSource.contains("model.trendProgressLogs"))
+        XCTAssertFalse(liveLogSource.contains(".suffix(6)"))
     }
 
     func testWorkbenchUsesSegmentedConfigReportSignalsLayout() throws {

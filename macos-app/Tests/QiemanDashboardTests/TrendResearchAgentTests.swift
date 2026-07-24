@@ -136,6 +136,118 @@ final class TrendResearchAgentTests: XCTestCase {
         XCTAssertEqual(client.responsesConsumed, 3)
     }
 
+    func testWebSearchFailureTripsCircuitBreakerForRemainingRun() async throws {
+        let snapshot = makeEmptySnapshot()
+        let report = TrendAnalysisReport.fixture(generatedAt: "2026-07-24 10:00:00", externalSignalStatus: .partial)
+        let reportJSON = try XCTUnwrap(String(data: JSONEncoder().encode(report), encoding: .utf8))
+        let webClient = FailingCountingTavilyClient()
+
+        let client = ScriptedTrendAgentClient([
+            .success(toolCallResponse([
+                AgentToolCall(id: "o1", function: AgentToolFunctionCall(name: "get_portfolio_overview", arguments: "{}"))
+            ])),
+            .success(toolCallResponse([
+                AgentToolCall(id: "w1", function: AgentToolFunctionCall(name: "web_search", arguments: #"{"query":"最新产业政策"}"#))
+            ])),
+            .success(toolCallResponse([
+                AgentToolCall(id: "w2", function: AgentToolFunctionCall(name: "web_search", arguments: #"{"query":"最新行业动态"}"#))
+            ])),
+            .success(toolCallResponse([
+                AgentToolCall(id: "s1", function: AgentToolFunctionCall(name: "submit_trend_report", arguments: "{\"report\":\(reportJSON)}"))
+            ]))
+        ])
+        let agent = TrendResearchAgent(client: client, webSearchClient: webClient)
+
+        _ = try await agent.run(
+            snapshot: snapshot,
+            settings: testSettings(),
+            webSearchSettings: TavilySearchSettings(apiKey: "tvly-test")
+        ) { _ in }
+
+        let callCount = await webClient.callCount()
+        XCTAssertEqual(callCount, 1)
+    }
+
+    func testRunPolicyExpandsBudgetForPaginatedAssetsWithinHardCap() {
+        let policy = TrendResearchRunPolicy()
+
+        let small = policy.effectiveLimits(assetCount: 13)
+        XCTAssertEqual(small.maxTurns, 12)
+        XCTAssertEqual(small.maxToolCalls, 32)
+        XCTAssertEqual(small.preferredWebSearches, 6)
+        XCTAssertEqual(small.maxWebSearches, 10)
+
+        let oneHundred = policy.effectiveLimits(assetCount: 100, sectorCount: 9)
+        XCTAssertEqual(oneHundred.maxTurns, 16)
+        XCTAssertEqual(oneHundred.maxToolCalls, 36)
+        XCTAssertEqual(oneHundred.preferredWebSearches, 8)
+        XCTAssertEqual(oneHundred.maxWebSearches, 12)
+
+        let veryLarge = policy.effectiveLimits(assetCount: 2_000, sectorCount: 30)
+        XCTAssertEqual(veryLarge.maxTurns, 24)
+        XCTAssertEqual(veryLarge.maxToolCalls, 64)
+        XCTAssertEqual(veryLarge.maxWebSearches, 12)
+    }
+
+    func testHarnessReservesFinalBudgetAndOnlyExposesSubmitTool() async throws {
+        let snapshot = makeEmptySnapshot()
+        let report = TrendAnalysisReport.fixture(generatedAt: "2026-07-24 10:00:00", externalSignalStatus: .partial)
+        let reportJSON = try XCTUnwrap(String(data: JSONEncoder().encode(report), encoding: .utf8))
+        let client = ScriptedTrendAgentClient([
+            .success(toolCallResponse([
+                AgentToolCall(id: "o1", function: AgentToolFunctionCall(name: "get_portfolio_overview", arguments: "{}"))
+            ])),
+            .success(toolCallResponse([
+                AgentToolCall(id: "s1", function: AgentToolFunctionCall(name: "submit_trend_report", arguments: "{\"report\":\(reportJSON)}"))
+            ]))
+        ])
+        var policy = TrendResearchRunPolicy()
+        policy.maxTurns = 4
+        policy.expandedMaxTurns = 4
+        policy.maxToolCalls = 3
+        policy.expandedMaxToolCalls = 3
+        policy.reservedSubmitTurns = 2
+        policy.reservedSubmitToolCalls = 2
+        let agent = TrendResearchAgent(client: client, policy: policy)
+
+        _ = try await agent.run(snapshot: snapshot, settings: testSettings()) { _ in }
+
+        XCTAssertEqual(client.requestedToolNames(at: 0).count, 4)
+        XCTAssertEqual(client.requestedToolNames(at: 1), ["submit_trend_report"])
+    }
+
+    func testHarnessRemovesRepeatedWebEvidenceFromLaterToolResult() throws {
+        var harness = TrendResearchHarnessState(snapshot: makeEmptySnapshot())
+        let content = TrendResearchToolEnvelope.success(
+            [
+                "query": "测试",
+                "results": [[
+                    "evidence_id": "web:tavily:same",
+                    "title": "同一来源",
+                    "url": "https://example.com/same"
+                ]],
+                "count": 1
+            ],
+            evidenceIDs: ["web:tavily:same"]
+        )
+        let result = TrendResearchToolResult.content(content)
+
+        let first = harness.process(toolName: "web_search", result: result)
+        let second = harness.process(toolName: "web_search", result: result)
+        let firstObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(first.contentJSON.utf8)) as? [String: Any]
+        )
+        let secondObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(second.contentJSON.utf8)) as? [String: Any]
+        )
+        let firstData = try XCTUnwrap(firstObject["data"] as? [String: Any])
+        let secondData = try XCTUnwrap(secondObject["data"] as? [String: Any])
+
+        XCTAssertEqual(firstData["count"] as? Int, 1)
+        XCTAssertEqual(secondData["count"] as? Int, 0)
+        XCTAssertEqual(harness.duplicateWebEvidenceCount, 1)
+    }
+
     func testTurnLimitExceeded() async throws {
         let snapshot = makeEmptySnapshot()
         // 每轮只调用只读工具、从不 submit，2 轮后触发 turnLimitExceeded。
@@ -209,10 +321,28 @@ final class TrendResearchAgentTests: XCTestCase {
     }
 }
 
+private actor FailingCountingTavilyClient: TavilySearchClientProtocol {
+    private var count = 0
+
+    func search(
+        _ searchRequest: TavilySearchRequest,
+        apiKey: String,
+        timeoutSeconds: Double
+    ) async throws -> TavilySearchResponse {
+        count += 1
+        throw TavilySearchClientError.invalidResponse("测试响应格式错误")
+    }
+
+    func callCount() -> Int {
+        count
+    }
+}
+
 /// 按入队顺序逐条返回预设响应的假客户端，用于驱动 Agent 循环测试。
 final class ScriptedTrendAgentClient: TrendResearchAgentClient, @unchecked Sendable {
     private let lock = NSLock()
     private var responses: [Result<AgentCompletionResult, Error>]
+    private var requestToolNames: [[String]] = []
     private(set) var responsesConsumed = 0
 
     init(_ responses: [Result<AgentCompletionResult, Error>]) {
@@ -225,10 +355,12 @@ final class ScriptedTrendAgentClient: TrendResearchAgentClient, @unchecked Senda
         toolChoice: AgentToolChoice,
         temperature: Double,
         settings: TrendAIProviderSettings,
-        timeout: Double?
+        timeout: Double?,
+        streamProgress: (@Sendable (AgentStreamProgress) async -> Void)?
     ) async throws -> AgentCompletionResult {
         lock.lock()
         responsesConsumed += 1
+        requestToolNames.append(tools.map(\.function.name))
         let next = responses.isEmpty
             ? Result<AgentCompletionResult, Error>.failure(URLError(.badServerResponse))
             : responses.removeFirst()
@@ -239,5 +371,12 @@ final class ScriptedTrendAgentClient: TrendResearchAgentClient, @unchecked Senda
         case .failure(let error):
             throw error
         }
+    }
+
+    func requestedToolNames(at index: Int) -> [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        guard requestToolNames.indices.contains(index) else { return [] }
+        return requestToolNames[index]
     }
 }

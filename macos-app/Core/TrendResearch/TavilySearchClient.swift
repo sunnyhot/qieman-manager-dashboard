@@ -44,6 +44,26 @@ struct TavilySearchResponse: Decodable, Hashable, Sendable {
         case responseTime = "response_time"
         case requestID = "request_id"
     }
+
+    init(
+        query: String?,
+        results: [TavilySearchResult],
+        responseTime: String?,
+        requestID: String?
+    ) {
+        self.query = query
+        self.results = results
+        self.responseTime = responseTime
+        self.requestID = requestID
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        query = try container.decodeIfPresent(String.self, forKey: .query)
+        results = try container.decode([TavilySearchResult].self, forKey: .results)
+        responseTime = try container.decodeStringOrNumberIfPresent(forKey: .responseTime)
+        requestID = try container.decodeStringOrNumberIfPresent(forKey: .requestID)
+    }
 }
 
 struct TavilySearchResult: Decodable, Hashable, Sendable {
@@ -59,6 +79,30 @@ struct TavilySearchResult: Decodable, Hashable, Sendable {
         case content
         case score
         case publishedDate = "published_date"
+    }
+
+    init(
+        title: String,
+        url: String,
+        content: String,
+        score: Double?,
+        publishedDate: String?
+    ) {
+        self.title = title
+        self.url = url
+        self.content = content
+        self.score = score
+        self.publishedDate = publishedDate
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        // 单条结果字段异常不应让整次搜索失败；下游会过滤空标题、空正文和非法 URL。
+        title = (try? container.decodeIfPresent(String.self, forKey: .title)) ?? ""
+        url = (try? container.decodeIfPresent(String.self, forKey: .url)) ?? ""
+        content = (try? container.decodeIfPresent(String.self, forKey: .content)) ?? ""
+        score = try container.decodeDoubleOrStringIfPresent(forKey: .score)
+        publishedDate = (try? container.decodeIfPresent(String.self, forKey: .publishedDate)) ?? nil
     }
 }
 
@@ -94,7 +138,6 @@ struct TavilySearchClient: TavilySearchClientProtocol, Sendable {
 
     let session: URLSession
     private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
 
     init(session: URLSession = .shared) {
         self.session = session
@@ -136,9 +179,78 @@ struct TavilySearchClient: TavilySearchClientProtocol, Sendable {
         }
 
         do {
-            return try decoder.decode(TavilySearchResponse.self, from: data)
+            return try JSONDecoder().decode(TavilySearchResponse.self, from: data)
         } catch {
-            throw TavilySearchClientError.invalidResponse(error.localizedDescription)
+            throw TavilySearchClientError.invalidResponse(
+                Self.decodingErrorDetail(
+                    error,
+                    data: data,
+                    contentType: http.value(forHTTPHeaderField: "Content-Type")
+                )
+            )
+        }
+    }
+
+    private static func decodingErrorDetail(
+        _ error: Error,
+        data: Data,
+        contentType: String?
+    ) -> String {
+        let detail: String
+        switch error {
+        case DecodingError.typeMismatch(let type, let context):
+            detail = "\(codingPath(context.codingPath)) 类型不匹配，期望 \(type)：\(context.debugDescription)"
+        case DecodingError.valueNotFound(let type, let context):
+            detail = "\(codingPath(context.codingPath)) 缺少 \(type) 值：\(context.debugDescription)"
+        case DecodingError.keyNotFound(let key, let context):
+            detail = "\(codingPath(context.codingPath + [key])) 缺少必需字段：\(context.debugDescription)"
+        case DecodingError.dataCorrupted(let context):
+            detail = "\(codingPath(context.codingPath)) 数据损坏：\(context.debugDescription)"
+        default:
+            detail = error.localizedDescription
+        }
+
+        var metadata = ["\(data.count) 字节"]
+        if let contentType, !contentType.isEmpty {
+            metadata.append("Content-Type=\(contentType)")
+        }
+        if let object = try? JSONSerialization.jsonObject(with: data),
+           let dictionary = object as? [String: Any] {
+            let shape = dictionary.keys.sorted().map {
+                "\($0)=\(jsonTypeName(dictionary[$0]))"
+            }.joined(separator: ", ")
+            metadata.append("顶层字段：\(shape)")
+        }
+        return "\(detail)（\(metadata.joined(separator: "；"))）"
+    }
+
+    private static func codingPath(_ path: [any CodingKey]) -> String {
+        guard !path.isEmpty else { return "响应根节点" }
+        return path.reduce(into: "$") { value, key in
+            if let index = key.intValue {
+                value += "[\(index)]"
+            } else {
+                value += ".\(key.stringValue)"
+            }
+        }
+    }
+
+    private static func jsonTypeName(_ value: Any?) -> String {
+        switch value {
+        case nil:
+            return "missing"
+        case is NSNull:
+            return "null"
+        case is String:
+            return "string"
+        case is NSNumber:
+            return "number"
+        case is [Any]:
+            return "array"
+        case is [String: Any]:
+            return "object"
+        default:
+            return String(describing: type(of: value as Any))
         }
     }
 
@@ -152,6 +264,37 @@ struct TavilySearchClient: TavilySearchClientProtocol, Sendable {
             return error
         }
         if let message = object["message"] as? String { return message }
+        return nil
+    }
+}
+
+private extension KeyedDecodingContainer {
+    func decodeStringOrNumberIfPresent(forKey key: Key) throws -> String? {
+        guard contains(key), try !decodeNil(forKey: key) else { return nil }
+        if let value = try? decode(String.self, forKey: key) {
+            return value
+        }
+        if let value = try? decode(Double.self, forKey: key) {
+            return String(value)
+        }
+        throw DecodingError.typeMismatch(
+            String.self,
+            DecodingError.Context(
+                codingPath: codingPath + [key],
+                debugDescription: "应为字符串或数字"
+            )
+        )
+    }
+
+    func decodeDoubleOrStringIfPresent(forKey key: Key) throws -> Double? {
+        guard contains(key), try !decodeNil(forKey: key) else { return nil }
+        if let value = try? decode(Double.self, forKey: key) {
+            return value
+        }
+        if let value = try? decode(String.self, forKey: key),
+           let number = Double(value) {
+            return number
+        }
         return nil
     }
 }

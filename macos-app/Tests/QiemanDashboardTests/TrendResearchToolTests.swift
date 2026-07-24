@@ -121,6 +121,85 @@ final class TrendResearchToolTests: XCTestCase {
         XCTAssertEqual(evidence?.url, "https://www.gov.cn/zhengce/example")
     }
 
+    func testWebSearchCacheIsSharedAcrossRunsAndDoesNotConsumeSecondBudget() async throws {
+        let response = TavilySearchResponse(
+            query: "China AI policy",
+            results: [
+                TavilySearchResult(
+                    title: "Policy",
+                    url: "https://example.com/policy",
+                    content: "Latest policy summary.",
+                    score: 0.8,
+                    publishedDate: "2026-07-24"
+                )
+            ],
+            responseTime: "0.2",
+            requestID: "cache-test"
+        )
+        let client = CountingTavilySearchClient(response: response)
+        let registry = TrendResearchToolRegistry(webSearchClient: client)
+        let cache = TrendWebSearchResponseCache(ttlSeconds: 600)
+        let firstGovernor = TrendWebSearchGovernor(maxNetworkSearches: 1, cache: cache)
+        let secondGovernor = TrendWebSearchGovernor(maxNetworkSearches: 1, cache: cache)
+
+        let first = await runWebSearch(
+            registry: registry,
+            arguments: ["query": "China AI Policy"],
+            context: makeContext(
+                snapshot: makeSnapshot(),
+                webSearchSettings: TavilySearchSettings(apiKey: "tvly-test"),
+                webSearchGovernor: firstGovernor
+            )
+        )
+        XCTAssertFalse(first.isError)
+
+        let second = await runWebSearch(
+            registry: registry,
+            arguments: ["query": "  china, ai policy  "],
+            context: makeContext(
+                snapshot: makeSnapshot(),
+                webSearchSettings: TavilySearchSettings(apiKey: "tvly-test"),
+                webSearchGovernor: secondGovernor
+            )
+        )
+        let secondData = try parseData(second)
+        XCTAssertEqual(secondData["cache_hit"] as? Bool, true)
+        XCTAssertEqual(secondData["remaining_search_budget"] as? Int, 1)
+        let callCount = await client.callCount()
+        XCTAssertEqual(callCount, 1)
+    }
+
+    func testWebSearchGovernorRejectsNewQueryAfterNetworkBudgetIsExhausted() async {
+        let client = CountingTavilySearchClient(response: .empty)
+        let registry = TrendResearchToolRegistry(webSearchClient: client)
+        let governor = TrendWebSearchGovernor(
+            maxNetworkSearches: 1,
+            cache: TrendWebSearchResponseCache(ttlSeconds: 600)
+        )
+        let context = makeContext(
+            snapshot: makeSnapshot(),
+            webSearchSettings: TavilySearchSettings(apiKey: "tvly-test"),
+            webSearchGovernor: governor
+        )
+
+        let first = await runWebSearch(
+            registry: registry,
+            arguments: ["query": "第一条行业查询"],
+            context: context
+        )
+        XCTAssertFalse(first.isError)
+
+        let second = await runWebSearch(
+            registry: registry,
+            arguments: ["query": "第二条政策查询"],
+            context: context
+        )
+        XCTAssertTrue(second.isError)
+        XCTAssertTrue(second.contentJSON.contains("web_search_budget_exhausted"))
+        let callCount = await client.callCount()
+        XCTAssertEqual(callCount, 1)
+    }
+
     // MARK: - 证据账本
 
     func testToolsRecordStableEvidenceIDs() async throws {
@@ -243,12 +322,14 @@ final class TrendResearchToolTests: XCTestCase {
 
     private func makeContext(
         snapshot: TrendResearchSnapshot,
-        webSearchSettings: TavilySearchSettings = .empty
+        webSearchSettings: TavilySearchSettings = .empty,
+        webSearchGovernor: TrendWebSearchGovernor = TrendWebSearchGovernor(maxNetworkSearches: 10)
     ) -> TrendResearchToolContext {
         TrendResearchToolContext(
             snapshot: snapshot,
             evidenceLedger: TrendEvidenceLedger(),
-            webSearchSettings: webSearchSettings
+            webSearchSettings: webSearchSettings,
+            webSearchGovernor: webSearchGovernor
         )
     }
 
@@ -360,6 +441,28 @@ private struct FakeTavilySearchClient: TavilySearchClientProtocol {
         timeoutSeconds: Double
     ) async throws -> TavilySearchResponse {
         response
+    }
+}
+
+private actor CountingTavilySearchClient: TavilySearchClientProtocol {
+    let response: TavilySearchResponse
+    private var count = 0
+
+    init(response: TavilySearchResponse) {
+        self.response = response
+    }
+
+    func search(
+        _ searchRequest: TavilySearchRequest,
+        apiKey: String,
+        timeoutSeconds: Double
+    ) async throws -> TavilySearchResponse {
+        count += 1
+        return response
+    }
+
+    func callCount() -> Int {
+        count
     }
 }
 

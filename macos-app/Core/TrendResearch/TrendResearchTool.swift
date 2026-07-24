@@ -23,6 +23,7 @@ struct TrendResearchToolContext: Sendable {
     let snapshot: TrendResearchSnapshot
     let evidenceLedger: TrendEvidenceLedger
     let webSearchSettings: TavilySearchSettings
+    let webSearchGovernor: TrendWebSearchGovernor
     /// 整次运行允许的无效提交次数上限（来自 Agent 运行策略，默认 2）。
     var invalidSubmissionBudget: Int = 2
     /// 本次 submit 之前已经发生的无效提交次数，由 Agent 循环按轮更新。
@@ -31,11 +32,13 @@ struct TrendResearchToolContext: Sendable {
     init(
         snapshot: TrendResearchSnapshot,
         evidenceLedger: TrendEvidenceLedger,
-        webSearchSettings: TavilySearchSettings = .empty
+        webSearchSettings: TavilySearchSettings = .empty,
+        webSearchGovernor: TrendWebSearchGovernor = TrendWebSearchGovernor(maxNetworkSearches: 10)
     ) {
         self.snapshot = snapshot
         self.evidenceLedger = evidenceLedger
         self.webSearchSettings = webSearchSettings
+        self.webSearchGovernor = webSearchGovernor
     }
 }
 

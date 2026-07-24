@@ -30,11 +30,12 @@ final class TavilySearchClientTests: XCTestCase {
                         "title": "政策发布",
                         "url": "https://www.gov.cn/zhengce/example",
                         "content": "国务院发布最新产业政策。",
-                        "score": 0.92,
+                        "score": "0.92",
                         "published_date": "2026-07-23"
                     ]
                 ],
-                "response_time": "0.45",
+                // Tavily 的接口 schema 定义为 number，文档示例曾显示为 string，两种都要兼容。
+                "response_time": 0.45,
                 "request_id": "request-1"
             ])
             return (Self.response(for: request, statusCode: 200), data)
@@ -58,8 +59,44 @@ final class TavilySearchClientTests: XCTestCase {
         )
 
         XCTAssertEqual(response.requestID, "request-1")
+        XCTAssertEqual(response.responseTime, "0.45")
         XCTAssertEqual(response.results.first?.title, "政策发布")
+        XCTAssertEqual(response.results.first?.score, 0.92)
         XCTAssertEqual(response.results.first?.publishedDate, "2026-07-23")
+    }
+
+    func testSearchReportsPreciseFieldWhenSuccessfulResponseShapeIsInvalid() async throws {
+        MockTavilyURLProtocol.requestHandler = { request in
+            let data = try JSONSerialization.data(withJSONObject: [
+                "query": "测试",
+                "results": "unexpected",
+                "response_time": 0.2
+            ])
+            return (Self.response(for: request, statusCode: 200), data)
+        }
+
+        let client = TavilySearchClient(session: Self.mockSession())
+        do {
+            _ = try await client.search(
+                TavilySearchRequest(
+                    query: "测试",
+                    topic: "news",
+                    searchDepth: "basic",
+                    maxResults: 5,
+                    timeRange: "week",
+                    includeDomains: nil,
+                    includeAnswer: false,
+                    includeRawContent: false,
+                    includeImages: false
+                ),
+                apiKey: "tvly-test",
+                timeoutSeconds: 10
+            )
+            XCTFail("Expected invalid response")
+        } catch let error as TavilySearchClientError {
+            XCTAssertTrue(error.localizedDescription.contains("$.results"))
+            XCTAssertTrue(error.localizedDescription.contains("results=string"))
+        }
     }
 
     func testSearchMapsAuthenticationAndRateLimitErrors() async throws {

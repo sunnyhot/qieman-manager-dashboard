@@ -108,15 +108,30 @@ struct TavilyWebSearchTool: TrendResearchTool {
         )
 
         do {
-            let response = try await client.search(
+            let outcome = try await context.webSearchGovernor.search(
                 request,
                 apiKey: context.webSearchSettings.apiKey,
-                timeoutSeconds: 30
+                timeoutSeconds: 30,
+                client: client
             )
-            return await makeResult(response: response, query: query, context: context)
+            return await makeResult(
+                response: outcome.response,
+                query: query,
+                cacheHit: outcome.cacheHit,
+                remainingSearchBudget: outcome.remainingNetworkSearches,
+                context: context
+            )
         } catch is CancellationError {
             return .content(
                 TrendResearchToolEnvelope.error(code: "web_search_cancelled", message: "Tavily 搜索已取消"),
+                isError: true
+            )
+        } catch let error as TrendWebSearchGovernorError {
+            return .content(
+                TrendResearchToolEnvelope.error(
+                    code: "web_search_budget_exhausted",
+                    message: error.localizedDescription
+                ),
                 isError: true
             )
         } catch {
@@ -130,6 +145,8 @@ struct TavilyWebSearchTool: TrendResearchTool {
     private func makeResult(
         response: TavilySearchResponse,
         query: String,
+        cacheHit: Bool,
+        remainingSearchBudget: Int,
         context: TrendResearchToolContext
     ) async -> TrendResearchToolResult {
         var seenURLs = Set<String>()
@@ -188,7 +205,9 @@ struct TavilyWebSearchTool: TrendResearchTool {
                     "query": query,
                     "results": payload,
                     "count": results.count,
-                    "request_id": response.requestID ?? NSNull()
+                    "request_id": response.requestID ?? NSNull(),
+                    "cache_hit": cacheHit,
+                    "remaining_search_budget": remainingSearchBudget
                 ],
                 warnings: warnings,
                 evidenceIDs: results.map(\.evidenceID)

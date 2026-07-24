@@ -2,6 +2,54 @@ import XCTest
 @testable import QiemanDashboard
 
 final class TrendAnalysisStoreTests: XCTestCase {
+    func testAgentRunLogStorePersistsOrderedFailureDetailsWithRestrictedPermissions() throws {
+        let directory = try temporaryDirectory()
+        let url = directory.appendingPathComponent("trend-agent.log")
+        let store = TrendAgentRunLogStore()
+
+        try store.beginRun(
+            at: url,
+            trigger: "scheduled",
+            model: "glm-5.2",
+            startedAt: "2026-07-24 14:30:00"
+        )
+        try store.append(
+            TrendProgressLog(
+                timestamp: "2026-07-24 14:30:01",
+                message: "正在等待模型响应",
+                level: .activity
+            ),
+            to: url
+        )
+        try store.append(
+            TrendProgressLog(
+                timestamp: "2026-07-24 14:30:03",
+                message: "Agent 执行失败",
+                detail: "HTTP 429",
+                level: .error
+            ),
+            to: url
+        )
+
+        let content = try String(contentsOf: url, encoding: .utf8)
+        XCTAssertTrue(content.contains("trigger: scheduled"))
+        XCTAssertTrue(content.contains("[activity] 正在等待模型响应"))
+        XCTAssertTrue(content.contains("[error] Agent 执行失败"))
+        XCTAssertTrue(content.contains("    HTTP 429"))
+        XCTAssertLessThan(
+            try XCTUnwrap(content.range(of: "正在等待模型响应")?.lowerBound),
+            try XCTUnwrap(content.range(of: "Agent 执行失败")?.lowerBound)
+        )
+        let loaded = try store.load(from: url)
+        XCTAssertEqual(loaded.map(\.message), ["正在等待模型响应", "Agent 执行失败"])
+        XCTAssertEqual(loaded.last?.level, .error)
+        XCTAssertEqual(loaded.last?.detail, "HTTP 429")
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        let permissions = try XCTUnwrap(attributes[.posixPermissions] as? NSNumber)
+        XCTAssertEqual(permissions.intValue & 0o777, 0o600)
+    }
+
     func testSettingsStoreReturnsEmptyProviderWhenFileIsMissing() throws {
         let directory = try temporaryDirectory()
         let url = directory.appendingPathComponent("trend-settings.json")

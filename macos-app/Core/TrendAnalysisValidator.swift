@@ -58,6 +58,13 @@ struct TrendAnalysisValidator {
             messages.append("privacyMode 必须与本次分析快照一致（\(expectedPrivacyMode.rawValue)）。")
         }
 
+        // marketOutlook（大盘/大类资产）与 sectors（行业板块）互斥：不得出现同名主题。
+        let marketNames = Set(report.marketOutlook.map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines) })
+        let sectorNames = Set(report.sectors.map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines) })
+        for name in marketNames.intersection(sectorNames).sorted() where !name.isEmpty {
+            messages.append("「\(name)」同时出现在 marketOutlook 与 sectors：两者互斥，指数/大类资产只放 marketOutlook，行业板块只放 sectors，请只保留一处。")
+        }
+
         for sector in report.sectors {
             if sector.rationale.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 messages.append("板块缺少 rationale/判断依据：\(sector.name)")

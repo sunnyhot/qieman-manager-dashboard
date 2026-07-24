@@ -29,106 +29,6 @@ extension EnhancementCenterView {
         }
     }
 
-    @ViewBuilder
-    var trendProgressLogView: some View {
-        if !model.trendProgressLogs.isEmpty {
-            trendBlock("分析过程", icon: "list.bullet.rectangle") {
-                trendProgressSummaryCard
-            }
-        }
-    }
-
-    var trendProgressSummaryCard: some View {
-        let latest = model.trendProgressLogs.last
-        return DisclosureGroup {
-            VStack(spacing: AppPalette.spaceS) {
-                ForEach(model.trendProgressLogs.suffix(6)) { item in
-                    trendProgressRow(item)
-                }
-            }
-            .padding(.top, AppPalette.spaceS)
-        } label: {
-            HStack(alignment: .center, spacing: AppPalette.spaceS) {
-                Image(systemName: model.trendGenerationState == .generating ? "clock.arrow.circlepath" : "checkmark.seal")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(trendStateTint)
-                    .frame(width: 26, height: 26)
-                    .background(trendStateTint.opacity(AppPalette.accentFill), in: RoundedRectangle(cornerRadius: AppPalette.iconBoxRadius))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(latest?.message ?? "暂无过程")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(AppPalette.ink)
-                        .lineLimit(1)
-                    Text("\(model.trendProgressLogs.count) 条记录 · 最近 \(latest.map { trendLogTime($0.timestamp) } ?? "--")")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(AppPalette.muted)
-                }
-
-                Spacer(minLength: AppPalette.spaceS)
-
-                Text("最近 6 条")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(AppPalette.info)
-                    .padding(.horizontal, AppPalette.spaceS)
-                    .padding(.vertical, AppPalette.spaceXS)
-                    .background(AppPalette.info.opacity(AppPalette.accentFill), in: Capsule())
-            }
-        }
-        .disclosureGroupStyle(FullRowDisclosureGroupStyle())
-        .font(.system(size: 11))
-        .tint(AppPalette.info)
-        .padding(AppPalette.spaceS)
-        .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.hairline.opacity(AppPalette.borderFaint), lineWidth: 1)
-        )
-    }
-
-    @ViewBuilder
-    func trendProgressRow(_ item: TrendProgressLog) -> some View {
-        let detail = item.detail?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let detail, !detail.isEmpty {
-            DisclosureGroup {
-                Text(detail)
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(AppPalette.muted)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 7)
-            } label: {
-                trendProgressRowHeader(item)
-            }
-            .disclosureGroupStyle(FullRowDisclosureGroupStyle())
-            .font(.system(size: 11))
-            .tint(AppPalette.info)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(AppPalette.paper.opacity(0.68), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        } else {
-            trendProgressRowHeader(item)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(AppPalette.paper.opacity(0.62), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        }
-    }
-
-    func trendProgressRowHeader(_ item: TrendProgressLog) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text(trendLogTime(item.timestamp))
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(AppPalette.info)
-                .frame(width: 56, alignment: .leading)
-            Text(item.message)
-                .font(.system(size: 11, weight: item.detail == nil ? .regular : .semibold))
-                .foregroundStyle(item.detail == nil ? AppPalette.muted : AppPalette.ink)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-    }
-
     var trendStatusStrip: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
             trendFact(
@@ -278,7 +178,7 @@ extension EnhancementCenterView {
             Text(outlook.rationale)
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -348,7 +248,7 @@ extension EnhancementCenterView {
             Text(report.portfolio.summary)
                 .font(.system(size: 12))
                 .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: AppPalette.spaceS) {
                 trendMetaTag("数据时点", report.dataAsOf, tint: AppPalette.info)
@@ -380,7 +280,7 @@ extension EnhancementCenterView {
         Text(report.portfolio.headline)
             .font(.system(size: 16, weight: .bold))
             .foregroundStyle(AppPalette.ink)
-            .fixedSize(horizontal: false, vertical: true)
+            .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
     }
 
     func trendRiskBadge(_ riskLevel: TrendRiskLevel) -> some View {
@@ -416,7 +316,7 @@ extension EnhancementCenterView {
             Text(horizon.rationale)
                 .font(.system(size: 11))
                 .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
             if !horizon.counterSignals.isEmpty {
                 trendCounterSignalsRow(horizon.counterSignals)
             }
@@ -454,7 +354,7 @@ extension EnhancementCenterView {
             Text(sector.rationale)
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
             if !sector.counterSignals.isEmpty {
                 trendCounterSignalsRow(sector.counterSignals)
             }
@@ -515,7 +415,7 @@ extension EnhancementCenterView {
             Text("反证：\(signals.prefix(2).joined(separator: "；"))")
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.warning)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -556,11 +456,11 @@ extension EnhancementCenterView {
             Text(asset.impactText)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(AppPalette.ink)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
             Text(asset.rationale)
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
                 .lineLimit(3)
             if !asset.counterSignals.isEmpty {
                 trendCounterSignalsRow(asset.counterSignals)
@@ -653,7 +553,7 @@ extension EnhancementCenterView {
                 Text(item.reason)
                     .font(.system(size: 11))
                     .foregroundStyle(AppPalette.muted)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
 
                 // 触发 / 反证条件
                 VStack(alignment: .leading, spacing: 5) {
@@ -733,7 +633,7 @@ extension EnhancementCenterView {
             Text(text)
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -771,17 +671,17 @@ extension EnhancementCenterView {
             if let urlText = item.url, let url = URL(string: urlText) {
                 Link(item.title, destination: url)
                     .font(.system(size: 12, weight: .semibold))
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
             } else {
                 Text(item.title)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
             }
             Text(item.summary)
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -809,7 +709,7 @@ extension EnhancementCenterView {
                             Text(warning.detail)
                                 .font(.system(size: 10))
                                 .foregroundStyle(AppPalette.muted)
-                                .fixedSize(horizontal: false, vertical: true)
+                                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
@@ -817,7 +717,7 @@ extension EnhancementCenterView {
             Text(report.disclaimer)
                 .font(.system(size: 9))
                 .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 2)
         }
     }
@@ -891,7 +791,7 @@ extension EnhancementCenterView {
             Text(detail)
                 .font(.system(size: 11))
                 .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
@@ -903,12 +803,6 @@ extension EnhancementCenterView {
             return "\(report.dataAsOf) · \(report.externalSignalStatus.displayText)"
         }
         return model.trendSettings.provider.isConfigured ? "已配置模型，等待生成" : "需要配置趋势分析模型"
-    }
-
-    func trendLogTime(_ timestamp: String) -> String {
-        let trimmed = timestamp.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 16 else { return trimmed }
-        return String(trimmed.dropFirst(11).prefix(5))
     }
 
     var trendStateText: String {

@@ -69,6 +69,10 @@ extension AppModel {
         dataDirectoryURL?.appendingPathComponent("trend-analysis-report.json", isDirectory: false)
     }
 
+    var trendAgentRunLogFileURL: URL? {
+        dataDirectoryURL?.appendingPathComponent("trend-agent.log", isDirectory: false)
+    }
+
     var tradeSignalSettingsFileURL: URL? {
         dataDirectoryURL?.appendingPathComponent("trade-signal-settings.json", isDirectory: false)
     }

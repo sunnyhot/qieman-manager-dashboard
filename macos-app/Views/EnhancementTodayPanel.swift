@@ -53,7 +53,7 @@ extension EnhancementCenterView {
                 Text(action.title)
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(AppPalette.ink)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
                 Text(action.kind.displayText)
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(tint)
@@ -78,7 +78,7 @@ extension EnhancementCenterView {
             Text(action.detail)
                 .font(.system(size: 10))
                 .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
 
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: AppPalette.spaceS) {
@@ -114,7 +114,7 @@ extension EnhancementCenterView {
                 Text(trimmed.joined(separator: "；"))
                     .font(.system(size: 9))
                     .foregroundStyle(AppPalette.muted)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(8)
