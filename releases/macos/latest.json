@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.26/QiemanDashboard-3.8.26.zip",
-    "name" : "QiemanDashboard-3.8.26.zip",
-    "sha256" : "6754a09ac64df8b856abe2fd8300f75b023eb131adf266ce2bef2190735d9e65",
-    "size" : 4910858
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.9.0/QiemanDashboard-3.9.0.zip",
+    "name" : "QiemanDashboard-3.9.0.zip",
+    "sha256" : "e12e42e5ad2d5ac60db10b7b5c1270c5d0befe1610c7444c9e171c2e835caa4f",
+    "size" : 5561683
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.26/QiemanDashboard-3.8.26.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.9.0/QiemanDashboard-3.9.0.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.26.zip",
-      "size" : 4910858
+      "name" : "QiemanDashboard-3.9.0.zip",
+      "size" : 5561683
     }
   ],
-  "body" : "设置面板改为卡片式分区导航",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.26",
-  "name" : "QiemanDashboard v3.8.26",
-  "notes" : "设置面板改为卡片式分区导航",
+  "body" : "内嵌式趋势研究 Agent：流式输出、Tavily 联网搜索收敛、实时日志面板；趋势分析改为进程内 Agent 多轮只读工具循环并自动纠错。",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.9.0",
+  "name" : "QiemanDashboard v3.9.0",
+  "notes" : "内嵌式趋势研究 Agent：流式输出、Tavily 联网搜索收敛、实时日志面板；趋势分析改为进程内 Agent 多轮只读工具循环并自动纠错。",
   "published_at" : "",
-  "sha256" : "6754a09ac64df8b856abe2fd8300f75b023eb131adf266ce2bef2190735d9e65",
-  "tag" : "v3.8.26",
-  "tag_name" : "v3.8.26",
-  "version" : "3.8.26"
+  "sha256" : "e12e42e5ad2d5ac60db10b7b5c1270c5d0befe1610c7444c9e171c2e835caa4f",
+  "tag" : "v3.9.0",
+  "tag_name" : "v3.9.0",
+  "version" : "3.9.0"
 }
