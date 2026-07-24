@@ -295,8 +295,8 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertTrue(centerSource.contains("workbenchSegmentButton"))
         XCTAssertTrue(centerSource.contains("interactiveSurface"))
 
-        // EnhancementTrendPanel 提供三个分段
-        XCTAssertTrue(trendSource.contains("var configSegment"))
+        // 分析设置已迁至设置页；趋势面板只保留报告与信号内容
+        XCTAssertFalse(trendSource.contains("var configSegment"))
         XCTAssertTrue(trendSource.contains("var reportSegment"))
         XCTAssertTrue(trendSource.contains("var signalsSegment"))
         // AI 操作建议从报告网格移出，独立成段

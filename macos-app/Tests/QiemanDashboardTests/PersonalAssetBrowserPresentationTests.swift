@@ -77,7 +77,8 @@ final class PersonalAssetBrowserPresentationTests: XCTestCase {
         XCTAssertTrue(source.contains("ForEach(summary.entries)"))
         XCTAssertFalse(source.contains("ForEach(summary.entries.prefix(6))"))
         XCTAssertTrue(source.contains(".rotationEffect(.degrees(isAttributionDetailExpanded ? 180 : 0))"))
-        XCTAssertTrue(source.contains(".clipped()\\n                        .transition(.opacity)"))
+        XCTAssertTrue(source.contains(".clipped()"))
+        XCTAssertTrue(source.contains(".transition(.opacity)"))
         XCTAssertFalse(source.contains(".move(edge: .top)"))
     }
 

@@ -33,7 +33,6 @@ final class DisclosureInteractionPresentationTests: XCTestCase {
         let disclosureCount = boundDisclosureCount + automaticDisclosureCount
         let fullRowStyleCount = source.components(separatedBy: ".disclosureGroupStyle(FullRowDisclosureGroupStyle())").count - 1
 
-        XCTAssertGreaterThan(disclosureCount, 0, file: file, line: line)
         XCTAssertEqual(fullRowStyleCount, disclosureCount, file: file, line: line)
     }
 

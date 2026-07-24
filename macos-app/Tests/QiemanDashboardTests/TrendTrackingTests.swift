@@ -40,7 +40,7 @@ final class TrendTrackingTests: XCTestCase {
     func testStatusHistoryRecordedOnChange() {
         let model = AppModel()
         model.dataDirectoryURL = temporaryDirectory()
-        addOne(to: model, name: "基金B", action: .watchSell)
+        addOne(to: model, name: "基金B", action: .considerReduce)
         let id = model.trendTrackingItems[0].id
         XCTAssertEqual(model.trendTrackingItems[0].statusHistory.count, 1)
         model.markTrackingItem(id, status: .triggered, note: "手动标记已触发")
@@ -53,7 +53,7 @@ final class TrendTrackingTests: XCTestCase {
     func testSnoozeAndRecover() {
         let model = AppModel()
         model.dataDirectoryURL = temporaryDirectory()
-        addOne(to: model, name: "基金C", action: .watchBuy)
+        addOne(to: model, name: "基金C", action: .considerIncrease)
         let id = model.trendTrackingItems[0].id
         model.snoozeTrackingItem(id, days: 1)
         XCTAssertEqual(model.trendTrackingItems[0].status, .processed)

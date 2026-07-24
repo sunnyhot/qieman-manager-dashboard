@@ -239,7 +239,8 @@ final class UIExperienceRegressionTests: XCTestCase {
         XCTAssertTrue(menuBar.contains("Button(\"退出应用\")"))
         XCTAssertTrue(menuBar.contains("model.quitApplication()"))
 
-        XCTAssertTrue(settings.contains("Label(\"退出应用\", systemImage: \"power\")"))
+        XCTAssertTrue(settings.contains("title: \"退出且慢主理人\""))
+        XCTAssertTrue(settings.contains("Button(\"退出应用\")"))
         XCTAssertTrue(settings.contains("model.quitApplication()"))
     }
 
