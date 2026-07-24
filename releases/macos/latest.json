@@ -1,26 +1,26 @@
 {
   "asset" : {
     "content_type" : "application/zip",
-    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.25/QiemanDashboard-3.8.25.zip",
-    "name" : "QiemanDashboard-3.8.25.zip",
-    "sha256" : "54df30bc0111404b8d38613038d20b84410b6bd0b0f8981ac6a8f8dc9df3cae4",
-    "size" : 4893895
+    "download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.26/QiemanDashboard-3.8.26.zip",
+    "name" : "QiemanDashboard-3.8.26.zip",
+    "sha256" : "6754a09ac64df8b856abe2fd8300f75b023eb131adf266ce2bef2190735d9e65",
+    "size" : 4910858
   },
   "assets" : [
     {
-      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.25/QiemanDashboard-3.8.25.zip",
+      "browser_download_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/download/v3.8.26/QiemanDashboard-3.8.26.zip",
       "content_type" : "application/zip",
-      "name" : "QiemanDashboard-3.8.25.zip",
-      "size" : 4893895
+      "name" : "QiemanDashboard-3.8.26.zip",
+      "size" : 4910858
     }
   ],
-  "body" : "同步界面重构后的回归断言\n清理不活跃的投顾组合",
-  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.25",
-  "name" : "QiemanDashboard v3.8.25",
-  "notes" : "同步界面重构后的回归断言\n清理不活跃的投顾组合",
+  "body" : "设置面板改为卡片式分区导航",
+  "html_url" : "https://github.com/sunnyhot/qieman-manager-dashboard/releases/tag/v3.8.26",
+  "name" : "QiemanDashboard v3.8.26",
+  "notes" : "设置面板改为卡片式分区导航",
   "published_at" : "",
-  "sha256" : "54df30bc0111404b8d38613038d20b84410b6bd0b0f8981ac6a8f8dc9df3cae4",
-  "tag" : "v3.8.25",
-  "tag_name" : "v3.8.25",
-  "version" : "3.8.25"
+  "sha256" : "6754a09ac64df8b856abe2fd8300f75b023eb131adf266ce2bef2190735d9e65",
+  "tag" : "v3.8.26",
+  "tag_name" : "v3.8.26",
+  "version" : "3.8.26"
 }
