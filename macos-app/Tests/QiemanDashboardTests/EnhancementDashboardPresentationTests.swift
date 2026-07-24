@@ -137,7 +137,7 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
                 exportedAt: "2026-06-17 10:30:00"
             ),
             tradeSignals: TradeSignalSummary(
-                headline: "2 条 AI 操作观察",
+                headline: "2 条 AI 操作建议",
                 generatedAt: "2026-07-03 09:30:00",
                 dataAsOf: "2026-07-03 15:00:00",
                 triggeredCount: 2,
@@ -163,7 +163,7 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
         )
 
         XCTAssertEqual(summary.actionQueue.first?.id, "trade-signals")
-        XCTAssertEqual(summary.actionQueue.first?.title, "AI 操作观察")
+        XCTAssertEqual(summary.actionQueue.first?.title, "AI 操作建议")
         XCTAssertEqual(summary.actionQueue.first?.detail, "红利低波：继续回撤")
         XCTAssertEqual(summary.actionQueue.first?.metric, "2 条")
         XCTAssertEqual(summary.actionQueue.first?.targetTab, .trend)
@@ -282,7 +282,7 @@ final class EnhancementDashboardPresentationTests: XCTestCase {
         snapshotCount: Int = 0,
         trendStatus: EnhancementTrendStatus = .ready,
         tradeSignals: TradeSignalSummary = TradeSignalSummary(
-            headline: "暂无 AI 操作观察",
+            headline: "暂无 AI 操作建议",
             generatedAt: nil,
             dataAsOf: nil,
             triggeredCount: 0,

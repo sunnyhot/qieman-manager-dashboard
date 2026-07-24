@@ -124,7 +124,7 @@ struct TradeSignalSummary: Hashable {
             return left.title.localizedStandardCompare(right.title) == .orderedAscending
         }
 
-        let headline = items.isEmpty ? "暂无 AI 操作观察" : "\(items.count) 条 AI 操作观察"
+        let headline = items.isEmpty ? "暂无 AI 操作建议" : "\(items.count) 条 AI 操作建议"
         let triggeredCount = items.filter { $0.status == .approaching || $0.status == .triggered || $0.status == .upgraded }.count
         return TradeSignalSummary(
             headline: headline,

@@ -14,19 +14,18 @@ struct SettingsPanel<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(AppPalette.brand)
-                    .frame(width: 30, height: 30)
-                    .background(AppPalette.brand.opacity(AppPalette.accentSubtle), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                    .frame(width: 24, height: 24)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(AppPalette.ink)
                     Text(subtitle)
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundStyle(AppPalette.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -34,70 +33,17 @@ struct SettingsPanel<Content: View>: View {
             }
 
             content
+                .padding(.horizontal, 16)
+                .background(
+                    AppPalette.panelBackground.opacity(AppPalette.bgSettings),
+                    in: RoundedRectangle(cornerRadius: AppPalette.panelRadius)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppPalette.panelRadius)
+                        .stroke(AppPalette.hairline.opacity(AppPalette.strokeSubtle), lineWidth: 1)
+                )
         }
-        .padding(15)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppPalette.panelBackground.opacity(AppPalette.bgSettings), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.panelRadius)
-                .stroke(AppPalette.hairline.opacity(AppPalette.strokeStrong), lineWidth: 1)
-        )
-        .panelShadow()
-    }
-}
-
-struct SettingsMetric: View {
-    let title: String
-    let value: String
-    let detail: String
-    let icon: String
-    let tint: Color
-    let isSelected: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(tint)
-                .frame(width: 30, height: 30)
-                .background(tint.opacity(AppPalette.accentOnFill), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(AppPalette.muted)
-                Text(value)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(AppPalette.ink)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-                Text(detail)
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppPalette.muted)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
-
-            Spacer(minLength: 6)
-
-            if isSelected {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(tint)
-            }
-        }
-        .padding(11)
-        .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
-        .interactiveSurface(
-            isSelected: isSelected,
-            tint: tint,
-            fill: AppPalette.cardStrong.opacity(AppPalette.bgDefault),
-            hoverFill: AppPalette.cardHover,
-            selectedFill: AppPalette.cardStrong.opacity(AppPalette.bgSelected),
-            strokeOpacity: AppPalette.strokeSubtle,
-            activeStrokeOpacity: 0.72,
-            lift: 0.8
-        )
+        .frame(maxWidth: 840, alignment: .leading)
     }
 }
 
@@ -113,8 +59,7 @@ struct SettingsRow: View {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(tint)
-                .frame(width: 28, height: 28)
-                .background(tint.opacity(AppPalette.accentOnFill), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .frame(width: 24, height: 28)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -152,8 +97,7 @@ struct SettingsToggleRow: View {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(tint)
-                .frame(width: 28, height: 28)
-                .background(tint.opacity(AppPalette.accentOnFill), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
+                .frame(width: 24, height: 28)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -177,30 +121,61 @@ struct SettingsToggleRow: View {
     }
 }
 
-struct SettingsStatePill: View {
+struct SettingsControlRow<Control: View>: View {
     let title: String
-    let state: String
+    let detail: String
+    let icon: String
     let tint: Color
+    let control: Control
+
+    init(
+        title: String,
+        detail: String,
+        icon: String,
+        tint: Color,
+        @ViewBuilder control: () -> Control
+    ) {
+        self.title = title
+        self.detail = detail
+        self.icon = icon
+        self.tint = tint
+        self.control = control()
+    }
 
     var body: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(tint)
-                .frame(width: 6, height: 6)
-            Text(title)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(AppPalette.muted)
-            Text(state)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(AppPalette.ink)
+        HStack(alignment: .center, spacing: 11) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 24, height: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                Text(detail)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppPalette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 16)
+
+            control
         }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(0.62), in: Capsule())
-        .overlay(
-            Capsule()
-                .stroke(AppPalette.hairline.opacity(0.45), lineWidth: 1)
-        )
+        .frame(minHeight: 56)
+    }
+}
+
+struct SettingsGroupHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(AppPalette.muted)
+            .padding(.top, 14)
+            .padding(.bottom, 4)
     }
 }
 
@@ -232,6 +207,6 @@ struct SettingsDivider: View {
     var body: some View {
         Divider()
             .overlay(AppPalette.hairline.opacity(AppPalette.strokeSubtle))
-            .padding(.leading, isInset ? 39 : 0)
+            .padding(.leading, isInset ? 35 : 0)
     }
 }

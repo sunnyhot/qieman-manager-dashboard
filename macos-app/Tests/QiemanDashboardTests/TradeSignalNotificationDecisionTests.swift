@@ -6,7 +6,7 @@ final class TradeSignalNotificationDecisionTests: XCTestCase {
         var state = TradeSignalNotificationState()
         let item = signal(status: .approaching, stale: false)
         let summary = TradeSignalSummary(
-            headline: "1 条 AI 操作观察",
+            headline: "1 条 AI 操作建议",
             generatedAt: "2026-07-03 09:30:00",
             dataAsOf: "2026-07-03 15:00:00",
             triggeredCount: 1,
@@ -40,7 +40,7 @@ final class TradeSignalNotificationDecisionTests: XCTestCase {
         state.markSent("2026-07-03|000001|watchBuy|approaching")
         let upgraded = signal(status: .triggered, stale: false)
         let summary = TradeSignalSummary(
-            headline: "1 条 AI 操作观察",
+            headline: "1 条 AI 操作建议",
             generatedAt: "2026-07-03 09:30:00",
             dataAsOf: "2026-07-03 15:00:00",
             triggeredCount: 1,
@@ -61,7 +61,7 @@ final class TradeSignalNotificationDecisionTests: XCTestCase {
     func testStaleAnalysisNotificationMentionsPreviousAnalysis() {
         let item = signal(status: .approaching, stale: true)
         let summary = TradeSignalSummary(
-            headline: "1 条 AI 操作观察",
+            headline: "1 条 AI 操作建议",
             generatedAt: "2026-07-02 09:30:00",
             dataAsOf: "2026-07-03 15:00:00",
             triggeredCount: 1,
@@ -83,7 +83,7 @@ final class TradeSignalNotificationDecisionTests: XCTestCase {
 
     func testDecisionSkipsWhenNotificationsDisabled() {
         let summary = TradeSignalSummary(
-            headline: "1 条 AI 操作观察",
+            headline: "1 条 AI 操作建议",
             generatedAt: "2026-07-03 09:30:00",
             dataAsOf: "2026-07-03 15:00:00",
             triggeredCount: 1,

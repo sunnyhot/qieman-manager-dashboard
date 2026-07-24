@@ -4,7 +4,7 @@ import SwiftUI
 
 extension SettingsSectionView {
     var watchPanel: some View {
-        SettingsPanel(title: "主理人提醒", subtitle: "通知巡检、监控目标与启动项", icon: "bell.badge") {
+        SettingsPanel(title: "提醒与巡检", subtitle: "设置主理人动态的监控目标、频率与通知范围", icon: "bell.badge") {
             VStack(alignment: .leading, spacing: 0) {
                 SettingsToggleRow(
                     title: "通知巡检",
@@ -50,7 +50,7 @@ extension SettingsSectionView {
                     Button {
                         model.saveManagerWatchConfiguration()
                     } label: {
-                        Label("保存", systemImage: "checkmark.circle")
+                        Label("保存配置", systemImage: "checkmark.circle")
                     }
                     .buttonStyle(.appPrimary)
                     .tint(AppPalette.brand)
@@ -69,16 +69,6 @@ extension SettingsSectionView {
                     }
                     .buttonStyle(.appSecondary)
                 }
-
-                SettingsDivider()
-
-                SettingsToggleRow(
-                    title: "开机自启",
-                    detail: model.launchAtLoginStatusText,
-                    icon: "power",
-                    tint: model.launchAtLoginEnabled ? AppPalette.positive : AppPalette.muted,
-                    isOn: launchAtLoginBinding
-                )
 
                 if let error = model.managerWatchSettings.lastErrorMessage, !error.isEmpty {
                     ToastBar(
@@ -124,13 +114,6 @@ extension SettingsSectionView {
         Binding(
             get: { model.managerWatchSettings.managerName },
             set: { model.managerWatchSettings.managerName = $0 }
-        )
-    }
-
-    private var launchAtLoginBinding: Binding<Bool> {
-        Binding(
-            get: { model.launchAtLoginEnabled },
-            set: { model.updateLaunchAtLoginEnabled($0) }
         )
     }
 

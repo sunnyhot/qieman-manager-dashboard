@@ -2,10 +2,29 @@ import SwiftUI
 
 // MARK: - Trend Analysis Settings
 
-extension EnhancementCenterView {
-    var trendConfigurationPanel: some View {
-        DisclosureGroup(isExpanded: $isTrendConfigurationExpanded) {
-            VStack(alignment: .leading, spacing: 0) {
+struct TrendSettingsPanel: View {
+    @EnvironmentObject var model: AppModel
+    @State var trendAutoAnalysisTimesDraft = ""
+
+    var body: some View {
+        SettingsPanel(
+            title: "AI 研判",
+            subtitle: "配置模型连接、每日自动分析与操作建议偏好",
+            icon: "sparkles"
+        ) {
+            configurationContent
+        }
+        .onAppear {
+            if trendAutoAnalysisTimesDraft.isEmpty {
+                trendAutoAnalysisTimesDraft = model.trendSettings.dailyAutoAnalysisTimesText
+            }
+        }
+    }
+
+    private var configurationContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SettingsGroupHeader(title: "自动分析")
+
                 SettingsRow(
                     title: "当前状态",
                     value: model.enhancementTrendStatus.valueText,
@@ -31,7 +50,13 @@ extension EnhancementCenterView {
                         .disabled(!model.trendSettings.dailyAutoAnalysisEnabled)
                         .opacity(model.trendSettings.dailyAutoAnalysisEnabled ? 1 : 0.55)
 
+                    SettingsDivider()
+                    SettingsGroupHeader(title: "操作建议")
+
                     tradeSignalPreferenceControls
+
+                    SettingsDivider()
+                    SettingsGroupHeader(title: "模型连接")
 
                     Picker("隐私模式", selection: trendPrivacyModeBinding) {
                         ForEach(TrendPrivacyMode.allCases) { mode in
@@ -94,50 +119,6 @@ extension EnhancementCenterView {
                         .padding(.top, 12)
                 }
             }
-            .onAppear {
-                if trendAutoAnalysisTimesDraft.isEmpty {
-                    trendAutoAnalysisTimesDraft = model.trendSettings.dailyAutoAnalysisTimesText
-                }
-                if !model.trendSettings.provider.isConfigured {
-                    isTrendConfigurationExpanded = true
-                }
-            }
-            .padding(.top, AppPalette.spaceM)
-        } label: {
-            HStack(alignment: .center, spacing: AppPalette.spaceS) {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppPalette.brand)
-                    .accentIconStyle(tint: AppPalette.brand, size: 28)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("模型与自动化配置")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(AppPalette.ink)
-                    Text(model.trendSettings.provider.isConfigured ? model.trendSettings.provider.model : "填写模型地址、模型名称和 API Key")
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppPalette.muted)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.78)
-                }
-
-                Spacer(minLength: AppPalette.spaceS)
-
-                Text(model.enhancementTrendStatus.valueText)
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(model.enhancementTrendStatus.severity.settingsTint)
-                    .lineLimit(1)
-            }
-        }
-        .disclosureGroupStyle(FullRowDisclosureGroupStyle())
-        .font(.system(size: 11))
-        .tint(AppPalette.info)
-        .padding(AppPalette.spaceM)
-        .background(AppPalette.cardStrong.opacity(0.86), in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppPalette.cardRadius)
-                .stroke(AppPalette.hairline.opacity(AppPalette.borderSubtle), lineWidth: 1)
-        )
     }
 
     private var tradeSignalPreferenceControls: some View {
@@ -152,7 +133,7 @@ extension EnhancementCenterView {
                     )
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("AI 操作观察")
+                    Text("AI 操作建议")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(AppPalette.ink)
                     Text(model.tradeSignalSummary.headline)

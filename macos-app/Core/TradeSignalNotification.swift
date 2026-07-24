@@ -37,7 +37,7 @@ struct TradeSignalNotificationDecision {
             guard !state.hasSent(key) else { return nil }
             return TradeSignalNotificationRequest(
                 key: key,
-                title: "AI 操作观察：\(item.assetName)\(item.status.displayText)",
+                title: "AI 操作建议：\(item.assetName)\(item.status.displayText)",
                 body: notificationBody(for: item),
                 item: item
             )

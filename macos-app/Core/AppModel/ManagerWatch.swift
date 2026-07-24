@@ -370,15 +370,26 @@ extension AppModel {
         case .forumRecord:
             openForumRecord(payload)
         case .workbenchTrend:
-            openWorkbenchTrend()
+            openWorkbenchTrend(targetID: payload.targetID)
         case .personalWatchlist:
             selectedSection = .portfolio
         }
     }
 
-    func openWorkbenchTrend() {
+    func openWorkbenchTrend(targetID: String? = nil) {
         selectedSection = .enhancement
         selectedEnhancementTab = .trend
+        if let targetID {
+            if targetID == "trade-signals" {
+                // 旧深链：打开跟踪清单
+                selectedWorkbenchSegment = .tracking
+            } else if selectTrackingItem(forTargetID: targetID) {
+                // 新深链：跟踪项 UUID → 跟踪清单并选中
+                selectedWorkbenchSegment = .tracking
+            } else {
+                selectedWorkbenchSegment = .today
+            }
+        }
     }
 
     func openPlatformAction(_ payload: NotificationDeepLinkPayload) {

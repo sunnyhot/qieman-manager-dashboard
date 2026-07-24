@@ -4,7 +4,6 @@ struct EnhancementCenterView: View {
     @EnvironmentObject var model: AppModel
     @State var trendAutoAnalysisTimesDraft = ""
     @State var isTrendConfigurationExpanded = false
-    @State var selectedWorkbenchSegment: WorkbenchSegment = .config
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -22,30 +21,13 @@ struct EnhancementCenterView: View {
 
     // MARK: - Workbench Segments
 
-    enum WorkbenchSegment: String, CaseIterable, Identifiable {
-        case config = "分析配置"
-        case report = "趋势报告"
-        case signals = "AI操作观察"
-
-        var id: String { rawValue }
-        var systemImage: String {
-            switch self {
-            case .config: return "slider.horizontal.3"
-            case .report: return "sparkles"
-            case .signals: return "bell.badge"
-            }
-        }
-    }
-
     @ViewBuilder
     private var workbenchSegmentContent: some View {
-        switch selectedWorkbenchSegment {
-        case .config:
-            configSegment
-        case .report:
-            reportSegment
-        case .signals:
-            signalsSegment
+        switch model.selectedWorkbenchSegment {
+        case .today:
+            todayContent
+        case .tracking:
+            trackingContent
         }
     }
 
@@ -54,15 +36,26 @@ struct EnhancementCenterView: View {
             ForEach(WorkbenchSegment.allCases) { segment in
                 workbenchSegmentButton(segment)
             }
+            Spacer(minLength: AppPalette.spaceS)
+            Button {
+                Task { await model.generateTrendAnalysis(userInitiated: true) }
+            } label: {
+                Label(model.trendGenerationState == .generating ? "生成中…" : "立即分析", systemImage: "wand.and.stars")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .buttonStyle(.appPrimary)
+            .tint(AppPalette.brand)
+            .disabled(!model.trendSettings.provider.isConfigured || model.trendGenerationState == .generating)
+            .help(model.trendSettings.provider.isConfigured ? "生成 AI 趋势分析" : "先在「设置」里配置模型")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func workbenchSegmentButton(_ segment: WorkbenchSegment) -> some View {
-        let isSelected = selectedWorkbenchSegment == segment
+        let isSelected = model.selectedWorkbenchSegment == segment
         return Button {
             withAnimation(AppPalette.motionSpring) {
-                selectedWorkbenchSegment = segment
+                model.selectedWorkbenchSegment = segment
             }
         } label: {
             HStack(spacing: 8) {
@@ -91,12 +84,8 @@ struct EnhancementCenterView: View {
     }
 
     private func normalizeDefaultSegment() {
-        if model.trendReport != nil {
-            if selectedWorkbenchSegment == .config {
-                selectedWorkbenchSegment = .report
-            }
-        } else if selectedWorkbenchSegment == .report {
-            selectedWorkbenchSegment = .config
+        if model.trendReport == nil, model.selectedWorkbenchSegment == .tracking {
+            model.selectedWorkbenchSegment = .today
         }
     }
 
@@ -105,5 +94,4 @@ struct EnhancementCenterView: View {
             model.selectedEnhancementTab = .trend
         }
     }
-
 }

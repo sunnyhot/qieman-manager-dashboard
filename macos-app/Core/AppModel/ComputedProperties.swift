@@ -77,6 +77,10 @@ extension AppModel {
         dataDirectoryURL?.appendingPathComponent("trade-signal-notification-state.json", isDirectory: false)
     }
 
+    var trendTrackingItemsFileURL: URL? {
+        dataDirectoryURL?.appendingPathComponent("trend-tracking-items.json", isDirectory: false)
+    }
+
     var hasLiveService: Bool {
         true
     }

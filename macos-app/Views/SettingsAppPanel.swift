@@ -4,39 +4,69 @@ import SwiftUI
 
 extension SettingsSectionView {
     var appPanel: some View {
-        SettingsPanel(title: "通用", subtitle: "外观、版本与更新", icon: "slider.horizontal.3") {
+        SettingsPanel(title: "通用", subtitle: "应用外观、启动方式、本地数据与软件更新", icon: "gearshape") {
             VStack(alignment: .leading, spacing: 0) {
-                SettingsRow(
+                SettingsGroupHeader(title: "外观与启动")
+
+                SettingsControlRow(
                     title: "外观",
-                    value: model.appearance.rawValue,
-                    detail: "浅色 / 深色 / 跟随系统",
+                    detail: "选择浅色、深色或跟随系统",
                     icon: "circle.lefthalf.filled",
                     tint: AppPalette.info
-                )
-                HStack(spacing: 8) {
-                    ForEach(AppAppearance.allCases) { mode in
-                        Button {
-                            model.appearance = mode
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: mode == .light ? "sun.max.fill" : mode == .dark ? "moon.fill" : "circle.lefthalf.filled")
-                                    .font(.system(size: 11))
-                                Text(mode.rawValue)
-                                    .font(.system(size: 11, weight: .medium))
-                            }
-                            .foregroundStyle(model.appearance == mode ? AppPalette.onBrand : AppPalette.muted)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Capsule().fill(model.appearance == mode ? AppPalette.brand : AppPalette.card))
-                            .overlay(Capsule().stroke(model.appearance == mode ? AppPalette.brand : AppPalette.line, lineWidth: 1))
-                            .contentShape(Capsule())
+                ) {
+                    Picker("外观", selection: $model.appearance) {
+                        ForEach(AppAppearance.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
                         }
-                        .buttonStyle(PressResponsiveButtonStyle())
                     }
-                    Spacer()
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(width: 220)
                 }
-                .padding(.vertical, 6)
+
                 SettingsDivider()
+
+                SettingsToggleRow(
+                    title: "开机时启动",
+                    detail: model.launchAtLoginStatusText,
+                    icon: "power",
+                    tint: model.launchAtLoginEnabled ? AppPalette.positive : AppPalette.muted,
+                    isOn: launchAtLoginBinding
+                )
+
+                SettingsDivider()
+
+                SettingsToggleRow(
+                    title: "在 Dock 中显示",
+                    detail: "关闭后仍可从系统菜单栏打开应用",
+                    icon: "dock.rectangle",
+                    tint: model.showsInDock ? AppPalette.info : AppPalette.muted,
+                    isOn: $model.showsInDock
+                )
+
+                SettingsDivider()
+
+                SettingsGroupHeader(title: "本地数据")
+
+                SettingsControlRow(
+                    title: "数据目录",
+                    detail: dataDirectoryDescription,
+                    icon: "folder",
+                    tint: AppPalette.brand
+                ) {
+                    Button {
+                        model.openDataDirectory()
+                    } label: {
+                        Label("在访达中打开", systemImage: "arrow.up.forward.app")
+                    }
+                    .buttonStyle(.appSecondary)
+                    .disabled(model.dataDirectoryURL == nil)
+                }
+
+                SettingsDivider()
+
+                SettingsGroupHeader(title: "软件更新")
+
                 SettingsToggleRow(
                     title: "启动时检查更新",
                     detail: "每次打开应用自动检测新版本",
@@ -44,14 +74,17 @@ extension SettingsSectionView {
                     tint: AppPalette.brand,
                     isOn: $model.autoCheckForUpdatesOnLaunch
                 )
+
                 SettingsDivider()
+
                 SettingsRow(
-                    title: "更新状态",
-                    value: model.isCheckingForUpdates ? "检查中" : (model.availableUpdate == nil ? "暂无更新" : "发现更新"),
-                    detail: model.isCheckingForUpdates ? "正在检查 GitHub Release" : (model.availableUpdate == nil ? "可手动检查 GitHub Release" : "可下载并安装"),
-                    icon: "app.badge",
+                    title: "当前版本",
+                    value: AppUpdateChecker.bundleVersion,
+                    detail: updateStatusDetail,
+                    icon: "info.circle",
                     tint: model.availableUpdate == nil ? AppPalette.info : AppPalette.positive
                 )
+
                 if let update = model.availableUpdate {
                     SettingsDivider()
                     SettingsRow(
@@ -62,8 +95,6 @@ extension SettingsSectionView {
                         tint: AppPalette.positive
                     )
                 }
-
-                SettingsDivider()
 
                 SettingsActionRow {
                     Button {
@@ -91,17 +122,6 @@ extension SettingsSectionView {
                         }
                         .buttonStyle(.appSecondary)
                     }
-
-                    Spacer()
-
-                    Button {
-                        model.quitApplication()
-                    } label: {
-                        Label("退出应用", systemImage: "power")
-                    }
-                    .buttonStyle(.appSecondary)
-                    .tint(AppPalette.danger)
-                    .help("退出且慢主理人看板")
                 }
 
                 if !model.updateInstallProgress.isEmpty {
@@ -115,7 +135,45 @@ extension SettingsSectionView {
                     }
                     .padding(.top, 12)
                 }
+
+                SettingsDivider()
+
+                SettingsGroupHeader(title: "应用")
+
+                SettingsControlRow(
+                    title: "退出且慢主理人",
+                    detail: "结束菜单栏组件和所有后台巡检",
+                    icon: "power",
+                    tint: AppPalette.danger
+                ) {
+                    Button("退出应用") {
+                        model.quitApplication()
+                    }
+                    .buttonStyle(.appSecondary)
+                    .tint(AppPalette.danger)
+                }
             }
         }
+    }
+
+    private var launchAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: { model.launchAtLoginEnabled },
+            set: { model.updateLaunchAtLoginEnabled($0) }
+        )
+    }
+
+    private var dataDirectoryDescription: String {
+        model.dataDirectoryURL?.path ?? "应用启动后会在这里准备本地数据目录"
+    }
+
+    private var updateStatusDetail: String {
+        if model.isCheckingForUpdates {
+            return "正在检查 GitHub Release"
+        }
+        if model.availableUpdate != nil {
+            return "发现新版本，可在下方下载并安装"
+        }
+        return "当前已是最新版本，也可手动检查"
     }
 }

@@ -143,6 +143,9 @@ final class EnhancementState: ObservableObject {
     @Published var trendProgressLogs: [TrendProgressLog] = []
     @Published var tradeSignalSettings: TradeSignalSettings = .default
     @Published var tradeSignalNotificationState = TradeSignalNotificationState()
+    @Published var selectedWorkbenchSegment: WorkbenchSegment = .today
+    @Published var trendTrackingItems: [TrendTrackingItem] = []
+    @Published var selectedTrendTrackingItemID: UUID?
 }
 
 enum EnhancementCenterTab: String, CaseIterable, Identifiable {
@@ -158,5 +161,22 @@ enum EnhancementCenterTab: String, CaseIterable, Identifiable {
 
     var isVisibleInWorkbench: Bool {
         Self.workbenchTabs.contains(self)
+    }
+}
+
+/// 「AI 研判」内部分段（原 config/report/signals 重构为 today/tracking）
+enum WorkbenchSegment: String, CaseIterable, Identifiable, Hashable {
+    case today = "今日研判"
+    case tracking = "跟踪清单"
+
+    var id: String { rawValue }
+
+    var systemImage: String {
+        switch self {
+        case .today:
+            return "sparkles"
+        case .tracking:
+            return "bell.badge"
+        }
     }
 }

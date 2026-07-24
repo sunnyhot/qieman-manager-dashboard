@@ -41,7 +41,7 @@ final class TradeSignalSummaryTests: XCTestCase {
             now: "2026-07-03 15:00:00"
         )
 
-        XCTAssertEqual(summary.headline, "2 条 AI 操作观察")
+        XCTAssertEqual(summary.headline, "2 条 AI 操作建议")
         XCTAssertEqual(summary.triggeredCount, 2)
         XCTAssertFalse(summary.staleAnalysis)
         XCTAssertEqual(summary.items.map(\.action), [.watchBuy, .watchSell])
@@ -129,7 +129,7 @@ final class TradeSignalSummaryTests: XCTestCase {
         )
 
         XCTAssertTrue(summary.items.isEmpty)
-        XCTAssertEqual(summary.headline, "暂无 AI 操作观察")
+        XCTAssertEqual(summary.headline, "暂无 AI 操作建议")
     }
 
     private func makeReport(

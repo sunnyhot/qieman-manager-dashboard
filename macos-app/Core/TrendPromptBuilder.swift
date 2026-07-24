@@ -252,7 +252,7 @@ struct TrendPromptBuilder {
         }
 
         return """
-        AI 操作观察偏好：
+        AI 操作建议偏好：
         - 启用：\(settings.enabled ? "是" : "否")
         - 风险偏好：\(settings.riskPreference.displayText)
         - 主要观察周期：\(settings.primaryHorizon.displayText)

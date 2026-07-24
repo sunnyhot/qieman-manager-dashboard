@@ -159,7 +159,6 @@ extension AppModel {
             appendTrendProgress("保存趋势报告")
             saveTrendAnalysisReport(report)
             saveTrendAnalysisSettings()
-            await evaluateTradeSignalNotifications(now: report.generatedAt)
             appendTrendProgress("趋势分析完成")
         } catch {
             trendGenerationState = .failed

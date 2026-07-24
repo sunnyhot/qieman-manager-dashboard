@@ -277,13 +277,12 @@ final class TrendDashboardSummaryTests: XCTestCase {
             encoding: .utf8
         )
 
-        // EnhancementCenterView holds a segmented control driving per-segment content
-        XCTAssertTrue(centerSource.contains("enum WorkbenchSegment"))
-        XCTAssertTrue(centerSource.contains("@State var selectedWorkbenchSegment"))
+        // 分段状态由 AppModel 持有（selectedWorkbenchSegment 迁至 EnhancementState，支持通知深链直达）
+        XCTAssertTrue(centerSource.contains("model.selectedWorkbenchSegment"))
         XCTAssertTrue(centerSource.contains("workbenchSegmentBar"))
         XCTAssertTrue(centerSource.contains("workbenchSegmentContent"))
-        XCTAssertTrue(centerSource.contains("selectedWorkbenchSegment = .report"))
-        XCTAssertTrue(centerSource.contains("selectedWorkbenchSegment = .config"))
+        XCTAssertTrue(centerSource.contains("case .today"))
+        XCTAssertTrue(centerSource.contains("case .tracking"))
         // 巨型 trendPanel 已拆分为三个独立分段
         XCTAssertFalse(centerSource.contains("trendPanel"))
         // 顶部「理财工作台」标题卡与运行时 chips 已删除，分段栏直接作为工作台入口
@@ -300,7 +299,7 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertTrue(trendSource.contains("var configSegment"))
         XCTAssertTrue(trendSource.contains("var reportSegment"))
         XCTAssertTrue(trendSource.contains("var signalsSegment"))
-        // AI 操作观察从报告网格移出，独立成段
+        // AI 操作建议从报告网格移出，独立成段
         XCTAssertFalse(trendSource.contains("SectionCard(title: \"趋势\""))
         // 信号卡片重做：左侧状态色条 + 图标盒 + 状态徽章 + 置信度进度条 + 圆点条件
         XCTAssertTrue(trendSource.contains("tradeSignalStatusBadge"))
@@ -311,14 +310,13 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertTrue(trendSource.contains("trendConfidenceBar(item.confidence)"))
         // 旧版平铺胶囊（裸文字置信度）已替换为带框徽章 + 进度条
         XCTAssertFalse(trendSource.contains("置信度 \\(item.confidence.normalizedScore)"))
-        // 趋势报告：整页重构为三分区聚拢骨架（市场视图/操作建议/核验）
+        // 趋势报告：整页重构为三分区聚拢骨架（市场视图/重点标的/核验）
         XCTAssertTrue(trendSource.contains("marketSection"))
         XCTAssertTrue(trendSource.contains("actionSection"))
         XCTAssertTrue(trendSource.contains("verificationSection"))
         XCTAssertTrue(trendSource.contains("trendReportSectionTitle"))
         XCTAssertTrue(trendSource.contains("trendDirectionDot"))
         XCTAssertTrue(trendSource.contains("trendDirectionBadge"))
-        XCTAssertTrue(trendSource.contains("trendActionCard"))
         XCTAssertTrue(trendSource.contains("trendAssetCard"))
         XCTAssertTrue(trendSource.contains("trendEvidenceCard"))
         // 子模块标题已上移到分区级，不再各自带 subHeader
@@ -362,7 +360,7 @@ final class TrendDashboardSummaryTests: XCTestCase {
         XCTAssertFalse(source.contains("待办"))
     }
 
-    func testTrendSettingsMoveFromSettingsCenterIntoWorkbench() throws {
+    func testTrendPreferencesLiveInSettingsCenterInsteadOfTheWorkbench() throws {
         let rootURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -380,12 +378,13 @@ final class TrendDashboardSummaryTests: XCTestCase {
             encoding: .utf8
         )
 
-        XCTAssertFalse(settingsSource.contains("case trend"))
-        XCTAssertFalse(settingsSource.contains("selectedSettingsFocus = .trend"))
-        XCTAssertFalse(settingsSource.contains("trendSettingsPanel"))
-        XCTAssertTrue(trendSettingsSource.contains("extension EnhancementCenterView"))
-        XCTAssertTrue(trendPanelSource.contains("trendConfigurationPanel"))
-        XCTAssertTrue(trendPanelSource.contains("model.checkTrendAIConnection()"))
+        XCTAssertTrue(settingsSource.contains("case trend"))
+        XCTAssertTrue(settingsSource.contains("TrendSettingsPanel()"))
+        XCTAssertTrue(trendSettingsSource.contains("struct TrendSettingsPanel: View"))
+        XCTAssertTrue(trendSettingsSource.contains("model.checkTrendAIConnection()"))
+        XCTAssertFalse(trendSettingsSource.contains("DisclosureGroup(isExpanded: $isTrendConfigurationExpanded)"))
+        XCTAssertFalse(trendPanelSource.contains("trendConfigurationPanel"))
+        XCTAssertTrue(trendPanelSource.contains("设置 > AI 研判"))
     }
 }
 

@@ -407,6 +407,21 @@ final class AppModel: ObservableObject {
         set { enhancementState.tradeSignalNotificationState = newValue }
     }
 
+    var selectedWorkbenchSegment: WorkbenchSegment {
+        get { enhancementState.selectedWorkbenchSegment }
+        set { enhancementState.selectedWorkbenchSegment = newValue }
+    }
+
+    var trendTrackingItems: [TrendTrackingItem] {
+        get { enhancementState.trendTrackingItems }
+        set { enhancementState.trendTrackingItems = newValue }
+    }
+
+    var selectedTrendTrackingItemID: UUID? {
+        get { enhancementState.selectedTrendTrackingItemID }
+        set { enhancementState.selectedTrendTrackingItemID = newValue }
+    }
+
     // MARK: Cache proxies (forwarding to portfolioState)
 
     var _cachedAssetRows: [PersonalAssetAggregateRow]? {

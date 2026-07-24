@@ -4,16 +4,56 @@ import SwiftUI
 // MARK: - Settings
 
 enum SettingsFocus: CaseIterable, Identifiable {
+    case general
     case watch
+    case trend
     case menuBar
-    case version
 
     var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .general:
+            return "通用"
+        case .watch:
+            return "提醒与巡检"
+        case .trend:
+            return "AI 研判"
+        case .menuBar:
+            return "菜单栏"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .general:
+            return "外观、启动与更新"
+        case .watch:
+            return "主理人动态通知"
+        case .trend:
+            return "模型与自动分析"
+        case .menuBar:
+            return "摘要样式与内容"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .general:
+            return "gearshape"
+        case .watch:
+            return "bell.badge"
+        case .trend:
+            return "sparkles"
+        case .menuBar:
+            return "menubar.rectangle"
+        }
+    }
 }
 
 struct SettingsSectionView: View {
     @EnvironmentObject var model: AppModel
-    @State var selectedSettingsFocus: SettingsFocus = .menuBar
+    @State var selectedSettingsFocus: SettingsFocus = .general
     @State var isMenuBarHoldingOptionsExpanded = false
     @State var isMenuBarMarketIndexExpanded = false
     @State var isMenuBarFundMarketExpanded = false
@@ -58,142 +98,169 @@ struct SettingsSectionView: View {
     }
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 14) {
-                overviewBand
+        HStack(spacing: 0) {
+            settingsNavigation
+
+            Divider()
+
+            ScrollView(showsIndicators: false) {
                 selectedSettingsPanel
                     .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .id(selectedSettingsFocus)
+                    .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 20)
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .padding(16)
+            .scrollIndicators(.hidden)
         }
-        .scrollIndicators(.hidden)
+        .animation(AppPalette.motionSection, value: selectedSettingsFocus)
     }
 
-    private var overviewBand: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            overviewIntro
-            overviewMetrics
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppPalette.paper.opacity(0.94), in: RoundedRectangle(cornerRadius: AppPalette.panelRadius))
-        .overlay(
-            AppPalette.borderOverlay(radius: AppPalette.panelRadius, opacity: AppPalette.borderHeavy)
-        )
-        .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
-    }
+    private var settingsNavigation: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("功能与偏好")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppPalette.muted)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 6)
 
-    private var overviewIntro: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(AppPalette.brand)
-                    .frame(width: 30, height: 30)
-                    .background(AppPalette.brand.opacity(0.10), in: RoundedRectangle(cornerRadius: AppPalette.controlRadius))
-                Text("设置中心")
-                    .font(.system(size: 18, weight: .bold))
+            ForEach(SettingsFocus.allCases) { focus in
+                Button {
+                    selectedSettingsFocus = focus
+                } label: {
+                    SettingsNavigationRow(
+                        title: focus.title,
+                        subtitle: focus.subtitle,
+                        status: settingsStatus(for: focus),
+                        icon: focus.systemImage,
+                        tint: settingsStatusTint(for: focus),
+                        isSelected: selectedSettingsFocus == focus
+                    )
+                }
+                .buttonStyle(PressResponsiveButtonStyle())
+            }
+
+            Spacer(minLength: 20)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("且慢主理人")
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(AppPalette.ink)
+                Text("版本 \(AppUpdateChecker.bundleVersion)")
+                    .font(.system(size: 9, design: .rounded))
+                    .foregroundStyle(AppPalette.muted)
             }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 7) {
-                    overviewBadges
-                }
+            .padding(.horizontal, 10)
+        }
+        .padding(12)
+        .frame(width: 194)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .background(
+            MaterialPanel(material: .underWindowBackground, blendingMode: .withinWindow)
+                .opacity(0.36)
+        )
+    }
 
-                VStack(alignment: .leading, spacing: 7) {
-                    overviewBadges
-                }
-            }
+    private func settingsStatus(for focus: SettingsFocus) -> String {
+        switch focus {
+        case .general:
+            return model.appearance.rawValue
+        case .watch:
+            return model.managerWatchSettings.isEnabled
+                ? model.managerWatchSettings.intervalLabel
+                : "已关闭"
+        case .trend:
+            let modelName = model.trendSettings.provider.model
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return model.trendSettings.provider.isConfigured && !modelName.isEmpty
+                ? modelName
+                : "未配置"
+        case .menuBar:
+            return model.menuBarTickerSettings.isEnabled
+                ? "\(model.menuBarTickerVisibleEntries.count) 项"
+                : "已关闭"
         }
     }
 
-    private var overviewBadges: some View {
-        Group {
-            ToolbarBadge(title: model.liveModeLabel, tint: model.hasLiveService ? AppPalette.brand : AppPalette.muted)
-            ToolbarBadge(title: model.managerWatchSettings.isEnabled ? "巡检已开" : "巡检关闭", tint: model.managerWatchSettings.isEnabled ? AppPalette.positive : AppPalette.muted)
-            ToolbarBadge(title: model.menuBarTickerSettings.isEnabled ? "菜单栏已显" : "菜单栏关闭", tint: model.menuBarTickerSettings.isEnabled ? AppPalette.info : AppPalette.muted)
+    private func settingsStatusTint(for focus: SettingsFocus) -> Color {
+        switch focus {
+        case .general:
+            return AppPalette.brand
+        case .watch:
+            return model.managerWatchSettings.isEnabled ? AppPalette.positive : AppPalette.muted
+        case .trend:
+            return model.trendSettings.provider.isConfigured ? AppPalette.brand : AppPalette.muted
+        case .menuBar:
+            return model.menuBarTickerSettings.isEnabled ? AppPalette.info : AppPalette.muted
         }
-    }
-
-    private var overviewMetrics: some View {
-        let tickerEntries = model.menuBarTickerVisibleEntries
-
-        return ViewThatFits {
-            LazyVGrid(columns: settingsMetricWideColumns, spacing: 12) {
-                overviewMetricButtons(tickerEntries: tickerEntries)
-            }
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 176), spacing: 12)], spacing: 12) {
-                overviewMetricButtons(tickerEntries: tickerEntries)
-            }
-        }
-    }
-
-    private var settingsMetricWideColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: 176), spacing: 12)]
-    }
-
-    @ViewBuilder
-    private func overviewMetricButtons(tickerEntries: [MenuBarTickerEntry]) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.16)) {
-                selectedSettingsFocus = .watch
-            }
-        } label: {
-            SettingsMetric(
-                title: "巡检",
-                value: model.managerWatchStatusText,
-                detail: model.managerWatchScopeText,
-                icon: "bell.and.waves.left.and.right",
-                tint: model.managerWatchSettings.isEnabled ? AppPalette.positive : AppPalette.muted,
-                isSelected: selectedSettingsFocus == .watch
-            )
-        }
-        .buttonStyle(PressResponsiveButtonStyle())
-
-        Button {
-            withAnimation(.easeInOut(duration: 0.16)) {
-                selectedSettingsFocus = .menuBar
-            }
-        } label: {
-            SettingsMetric(
-                title: "菜单栏",
-                value: model.menuBarTickerSettings.isEnabled ? "\(tickerEntries.count) 项显示" : "已关闭",
-                detail: "最多 \(model.menuBarTickerSettings.maxVisibleItems) 项 · 已选 \(model.menuBarTickerConfiguredItemCount)",
-                icon: "menubar.rectangle",
-                tint: model.menuBarTickerSettings.isEnabled ? AppPalette.info : AppPalette.muted,
-                isSelected: selectedSettingsFocus == .menuBar
-            )
-        }
-        .buttonStyle(PressResponsiveButtonStyle())
-
-        Button {
-            withAnimation(.easeInOut(duration: 0.16)) {
-                selectedSettingsFocus = .version
-            }
-        } label: {
-            SettingsMetric(
-                title: "通用",
-                value: AppUpdateChecker.bundleVersion,
-                detail: "当前外观 · \(model.appearance.rawValue)",
-                icon: "arrow.down.circle",
-                tint: model.availableUpdate == nil ? AppPalette.info : AppPalette.positive,
-                isSelected: selectedSettingsFocus == .version
-            )
-        }
-        .buttonStyle(PressResponsiveButtonStyle())
     }
 
     @ViewBuilder
     private var selectedSettingsPanel: some View {
         switch selectedSettingsFocus {
+        case .general:
+            appPanel
         case .watch:
             watchPanel
+        case .trend:
+            TrendSettingsPanel()
         case .menuBar:
             menuBarPanel
-        case .version:
-            appPanel
         }
+    }
+}
+
+private struct SettingsNavigationRow: View {
+    let title: String
+    let subtitle: String
+    let status: String
+    let icon: String
+    let tint: Color
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(isSelected ? AppPalette.brand : AppPalette.muted)
+                .frame(width: 18)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppPalette.ink)
+                Text(subtitle)
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 4)
+
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(tint)
+                    .frame(width: 5, height: 5)
+                Text(status)
+                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 48)
+        .background(
+            RoundedRectangle(cornerRadius: AppPalette.sidebarRowRadius)
+                .fill(isSelected ? AppPalette.selectionFill.opacity(0.82) : .clear)
+        )
+        .overlay(alignment: .leading) {
+            if isSelected {
+                Capsule()
+                    .fill(AppPalette.brand)
+                    .frame(width: AppPalette.selectionRailWidth, height: 22)
+                    .padding(.leading, 1)
+            }
+        }
+        .contentShape(RoundedRectangle(cornerRadius: AppPalette.sidebarRowRadius))
     }
 }

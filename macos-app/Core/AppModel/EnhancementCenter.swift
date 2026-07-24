@@ -20,6 +20,7 @@ extension AppModel {
         loadPortfolioInsightSnapshots()
         loadTrendAnalysisState()
         loadTradeSignalState()
+        loadTrendTrackingState()
     }
 
     func loadMonthlyReportExportMetadata() {

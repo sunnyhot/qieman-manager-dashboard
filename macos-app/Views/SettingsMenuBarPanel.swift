@@ -6,7 +6,7 @@ extension SettingsSectionView {
     var menuBarPanel: some View {
         let tickerEntries = model.menuBarTickerVisibleEntries
 
-        return SettingsPanel(title: "菜单栏摘要", subtitle: "不用点开菜单栏，也能直接看到你选中的关键数据", icon: "menubar.rectangle") {
+        return SettingsPanel(title: "菜单栏", subtitle: "选择常驻系统菜单栏的资产摘要、外观与轮播顺序", icon: "menubar.rectangle") {
             VStack(alignment: .leading, spacing: 0) {
                 // 开关
                 SettingsToggleRow(
@@ -15,16 +15,6 @@ extension SettingsSectionView {
                     icon: "eye",
                     tint: model.menuBarTickerSettings.isEnabled ? AppPalette.info : AppPalette.muted,
                     isOn: menuBarTickerEnabledBinding
-                )
-
-                SettingsDivider()
-
-                SettingsToggleRow(
-                    title: "在 Dock 中显示",
-                    detail: "关闭后仅通过菜单栏图标访问应用",
-                    icon: "dock.rectangle",
-                    tint: model.showsInDock ? AppPalette.info : AppPalette.muted,
-                    isOn: $model.showsInDock
                 )
 
                 SettingsDivider()

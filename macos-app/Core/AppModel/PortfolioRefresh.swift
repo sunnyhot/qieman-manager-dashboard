@@ -48,7 +48,6 @@ extension AppModel {
                 noticeMessage = snapshot.refreshNoticeMessage
             }
             await refreshMarketIndicesIfNeeded()
-            await evaluateTradeSignalNotifications(now: snapshot.refreshedAt)
         } catch {
             telemetryResult = "failed"
             throw error

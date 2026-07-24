@@ -413,7 +413,7 @@ struct EnhancementDashboardSummary: Hashable {
             let staleSuffix = tradeSignals.staleAnalysis ? "（基于上次分析）" : ""
             items.append(EnhancementActionItem(
                 id: "trade-signals",
-                title: "AI 操作观察",
+                title: "AI 操作建议",
                 detail: "\(signal.assetName)：\(signal.triggerSummary)\(staleSuffix)",
                 metric: "\(count) 条",
                 targetTab: .trend,

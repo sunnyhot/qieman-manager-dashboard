@@ -84,7 +84,7 @@ final class TrendPromptBuilderTests: XCTestCase {
             tradeSignalSettings: tradeSettings
         )
 
-        XCTAssertTrue(prompt.system.contains("AI 操作观察偏好"))
+        XCTAssertTrue(prompt.system.contains("AI 操作建议偏好"))
         XCTAssertTrue(prompt.system.contains("风险偏好：保守"))
         XCTAssertTrue(prompt.system.contains("主要观察周期：长期"))
         XCTAssertTrue(prompt.system.contains("最低关注置信度：72"))

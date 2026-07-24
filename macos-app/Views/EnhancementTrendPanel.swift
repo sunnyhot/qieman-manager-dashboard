@@ -3,22 +3,6 @@ import SwiftUI
 // MARK: - Workbench Segments
 
 extension EnhancementCenterView {
-    // ① 分析配置：状态条、操作栏、模型配置、进度日志、错误
-    var configSegment: some View {
-        SectionCard(title: "分析与配置", subtitle: configSegmentSubtitle, icon: "slider.horizontal.3") {
-            VStack(alignment: .leading, spacing: AppPalette.spaceM) {
-                trendStatusStrip
-                trendActionBar
-                trendConfigurationPanel
-                trendProgressLogView
-
-                if !model.lastTrendError.isEmpty {
-                    trendEmptyState("最近错误", detail: model.lastTrendError)
-                }
-            }
-        }
-    }
-
     // ② 趋势报告：组合头 + 周期/板块/重点标的/行动候选/证据/边界（AI观察移至独立分段）
     var reportSegment: some View {
         SectionCard(title: "趋势报告", subtitle: trendPanelSubtitle, icon: "sparkles") {
@@ -28,7 +12,7 @@ extension EnhancementCenterView {
                 } else if model.trendSettings.provider.isConfigured {
                     trendEmptyState("等待生成", detail: "趋势分析会结合本地持仓、平台动态和模型可用的外部信号，输出条件式判断和反证条件。")
                 } else {
-                    trendEmptyState("未配置模型", detail: "在「分析配置」填写模型地址、模型名称和 API Key 后即可生成。")
+                    trendEmptyState("未配置模型", detail: "请先前往「设置 > AI 研判」填写模型地址、模型名称和 API Key。")
                 }
 
                 if !model.lastTrendError.isEmpty {
@@ -38,22 +22,15 @@ extension EnhancementCenterView {
         }
     }
 
-    // ③ AI 操作观察：基于趋势分析衍生的交易信号
+    // ③ AI 操作建议：基于趋势分析衍生的交易信号
     var signalsSegment: some View {
-        SectionCard(title: "AI 操作观察", subtitle: model.tradeSignalSummary.headline, icon: "bell.badge") {
+        SectionCard(title: "AI 操作建议", subtitle: model.tradeSignalSummary.headline, icon: "bell.badge") {
             tradeSignalDetailList(model.tradeSignalSummary)
         }
     }
 
-    private var configSegmentSubtitle: String {
-        if model.trendSettings.provider.isConfigured {
-            return "已配置 · \(model.trendSettings.provider.model)"
-        }
-        return "填写模型地址、模型名称和 API Key"
-    }
-
     @ViewBuilder
-    private var trendProgressLogView: some View {
+    var trendProgressLogView: some View {
         if !model.trendProgressLogs.isEmpty {
             trendBlock("分析过程", icon: "list.bullet.rectangle") {
                 trendProgressSummaryCard
@@ -61,7 +38,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private var trendProgressSummaryCard: some View {
+    var trendProgressSummaryCard: some View {
         let latest = model.trendProgressLogs.last
         return DisclosureGroup {
             VStack(spacing: AppPalette.spaceS) {
@@ -110,7 +87,7 @@ extension EnhancementCenterView {
     }
 
     @ViewBuilder
-    private func trendProgressRow(_ item: TrendProgressLog) -> some View {
+    func trendProgressRow(_ item: TrendProgressLog) -> some View {
         let detail = item.detail?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let detail, !detail.isEmpty {
             DisclosureGroup {
@@ -138,7 +115,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private func trendProgressRowHeader(_ item: TrendProgressLog) -> some View {
+    func trendProgressRowHeader(_ item: TrendProgressLog) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Text(trendLogTime(item.timestamp))
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
@@ -152,7 +129,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private var trendStatusStrip: some View {
+    var trendStatusStrip: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: AppPalette.spaceS)], spacing: AppPalette.spaceS) {
             trendFact(
                 "模型",
@@ -165,7 +142,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private var trendActionBar: some View {
+    var trendActionBar: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: AppPalette.spaceS) {
                 trendActionButtons
@@ -177,7 +154,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private var trendActionButtons: some View {
+    var trendActionButtons: some View {
         Group {
             Picker("隐私模式", selection: trendPrivacyModeBinding) {
                 ForEach(TrendPrivacyMode.allCases) { mode in
@@ -210,18 +187,18 @@ extension EnhancementCenterView {
         }
     }
 
-    private func trendReportView(_ report: TrendAnalysisReport) -> some View {
+    func trendReportView(_ report: TrendAnalysisReport) -> some View {
         trendReportBalancedLayout(report)
     }
 
-    private func trendReportBalancedLayout(_ report: TrendAnalysisReport) -> some View {
+    func trendReportBalancedLayout(_ report: TrendAnalysisReport) -> some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceM) {
             trendPortfolioHeader(report)
             trendReportSectionGrid(report)
         }
     }
 
-    private func trendReportSectionGrid(_ report: TrendAnalysisReport) -> some View {
+    func trendReportSectionGrid(_ report: TrendAnalysisReport) -> some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceL) {
             marketSection(report)
             actionSection(report)
@@ -229,39 +206,112 @@ extension EnhancementCenterView {
         }
     }
 
-    private var trendReportWideColumns: [GridItem] {
+    var trendReportWideColumns: [GridItem] {
         [GridItem(.adaptive(minimum: 340), spacing: AppPalette.spaceM, alignment: .top)]
     }
 
     // MARK: - Report Sections
 
     // ① 市场视图：周期判断 + 板块
-    private func marketSection(_ report: TrendAnalysisReport) -> some View {
+    private func trendEqualHeightGrid<Item: Identifiable, Card: View>(
+        _ items: [Item],
+        columnsCount: Int = 3,
+        @ViewBuilder card: @escaping (Item) -> Card
+    ) -> some View {
+        let count = max(1, columnsCount)
+        let rows = stride(from: 0, to: items.count, by: count).map {
+            Array(items[$0..<min($0 + count, items.count)])
+        }
+        return Grid(alignment: .topLeading, horizontalSpacing: AppPalette.spaceS, verticalSpacing: AppPalette.spaceS) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                GridRow {
+                    ForEach(row) { item in
+                        card(item)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func trendMarketSubsection<C: View>(_ title: String, @ViewBuilder content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: AppPalette.spaceS) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(AppPalette.muted)
+            content()
+        }
+    }
+
+    func marketSection(_ report: TrendAnalysisReport) -> some View {
         let columns = marketCardColumns
         return VStack(alignment: .leading, spacing: AppPalette.spaceM) {
             trendReportSectionTitle("市场视图", icon: "chart.line.uptrend.xyaxis")
-            trendHorizonGrid(report.horizons, columns: columns)
-            trendSectorGrid(report.sectors, columns: columns)
+            if !report.marketOutlook.isEmpty {
+                trendMarketSubsection("大盘与大类资产") {
+                    trendMarketOutlookGrid(report.marketOutlook, columns: columns)
+                }
+            }
+            if !report.sectors.isEmpty {
+                trendMarketSubsection("板块") {
+                    trendSectorGrid(report.sectors, columns: columns)
+                }
+            }
         }
+    }
+
+    func trendMarketOutlookGrid(_ outlooks: [TrendMarketOutlook], columns: [GridItem]) -> some View {
+        trendEqualHeightGrid(outlooks, columnsCount: max(1, columns.count)) { trendMarketOutlookCard($0) }
+    }
+
+    func trendMarketOutlookCard(_ outlook: TrendMarketOutlook) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                trendDirectionDot(outlook.direction)
+                Text(outlook.name)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(AppPalette.ink)
+                    .lineLimit(1)
+                trendDirectionBadge(outlook.direction)
+                Spacer(minLength: 4)
+                trendConfidenceMeter(outlook.confidence)
+                Text(outlook.category)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(AppPalette.muted)
+                    .lineLimit(1)
+            }
+            Text(outlook.rationale)
+                .font(.system(size: 10))
+                .foregroundStyle(AppPalette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .staticSurface(
+            tint: outlook.direction.tint,
+            fill: AppPalette.cardStrong,
+            strokeOpacity: 0.18,
+            activeStrokeOpacity: 0.40
+        )
     }
 
     /// 市场视图共用三列定义：周期判断与板块判断沿同一列线对齐，
     /// 宽屏时三列共同分配空间，消除 adaptive 在周期区右侧产生的空列。
-    private var marketCardColumns: [GridItem] {
+    var marketCardColumns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: AppPalette.spaceS), count: 3)
     }
 
-    // ② 操作建议：重点标的 + 行动候选
-    private func actionSection(_ report: TrendAnalysisReport) -> some View {
+    // ② 重点标的：对组合趋势判断有实质影响的标的（行动候选已移至「AI 操作建议」分段）
+    func actionSection(_ report: TrendAnalysisReport) -> some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceM) {
-            trendReportSectionTitle("操作建议", icon: "checklist")
+            trendReportSectionTitle("重点标的", icon: "star")
             trendAssetList(report.keyAssets)
-            trendActionList(report.actions)
         }
     }
 
     // ③ 核验：证据来源 + 边界与提示
-    private func verificationSection(_ report: TrendAnalysisReport) -> some View {
+    func verificationSection(_ report: TrendAnalysisReport) -> some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceM) {
             trendReportSectionTitle("核验", icon: "shield.checkered")
             trendEvidenceList(report.evidence)
@@ -269,7 +319,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private func trendReportSectionTitle(_ title: String, icon: String) -> some View {
+    func trendReportSectionTitle(_ title: String, icon: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 7) {
                 Image(systemName: icon)
@@ -286,7 +336,7 @@ extension EnhancementCenterView {
         .padding(.top, 2)
     }
 
-    private func trendPortfolioHeader(_ report: TrendAnalysisReport) -> some View {
+    func trendPortfolioHeader(_ report: TrendAnalysisReport) -> some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceS) {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .firstTextBaseline, spacing: AppPalette.spaceS) {
@@ -320,7 +370,7 @@ extension EnhancementCenterView {
         )
     }
 
-    private func trendMetaTag(_ title: String, _ value: String, tint: Color) -> some View {
+    func trendMetaTag(_ title: String, _ value: String, tint: Color) -> some View {
         HStack(spacing: 4) {
             Text(title)
                 .font(.system(size: 10, weight: .medium))
@@ -332,14 +382,14 @@ extension EnhancementCenterView {
         .lineLimit(1)
     }
 
-    private func trendPortfolioHeadline(_ report: TrendAnalysisReport) -> some View {
+    func trendPortfolioHeadline(_ report: TrendAnalysisReport) -> some View {
         Text(report.portfolio.headline)
             .font(.system(size: 16, weight: .bold))
             .foregroundStyle(AppPalette.ink)
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    private func trendRiskBadge(_ riskLevel: TrendRiskLevel) -> some View {
+    func trendRiskBadge(_ riskLevel: TrendRiskLevel) -> some View {
         Text(riskLevel.displayText)
             .font(.system(size: 11, weight: .bold, design: .rounded))
             .foregroundStyle(riskLevel.tint)
@@ -349,25 +399,26 @@ extension EnhancementCenterView {
             .background(riskLevel.tint.opacity(AppPalette.accentOnFill), in: Capsule())
     }
 
-    private func trendHorizonGrid(_ horizons: [TrendHorizonView], columns: [GridItem]) -> some View {
-        LazyVGrid(columns: columns, spacing: AppPalette.spaceS) {
+    func trendHorizonGrid(_ horizons: [TrendHorizonView]) -> some View {
+        // 用 HStack 让短/中/长期卡片同行等高（LazyVGrid 同行 cell 高度独立，rationale 长短不一会高低不齐）
+        HStack(alignment: .top, spacing: AppPalette.spaceS) {
             ForEach(horizons, id: \.horizon) { horizon in
                 trendHorizonCard(horizon)
             }
         }
     }
 
-    private func trendHorizonCard(_ horizon: TrendHorizonView) -> some View {
+    func trendHorizonCard(_ horizon: TrendHorizonView) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 trendDirectionDot(horizon.direction)
                 Text(horizon.horizon.displayText)
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(AppPalette.ink)
-                Spacer(minLength: 4)
                 trendDirectionBadge(horizon.direction)
+                Spacer(minLength: 4)
+                trendConfidenceMeter(horizon.confidence)
             }
-            trendConfidenceBar(horizon.confidence)
             Text(horizon.rationale)
                 .font(.system(size: 11))
                 .foregroundStyle(AppPalette.muted)
@@ -377,7 +428,7 @@ extension EnhancementCenterView {
             }
         }
         .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .staticSurface(
             tint: horizon.direction.tint,
             fill: AppPalette.cardStrong,
@@ -386,15 +437,11 @@ extension EnhancementCenterView {
         )
     }
 
-    private func trendSectorGrid(_ sectors: [TrendSectorView], columns: [GridItem]) -> some View {
-        LazyVGrid(columns: columns, spacing: AppPalette.spaceS) {
-            ForEach(sectors) { sector in
-                trendSectorCard(sector)
-            }
-        }
+    func trendSectorGrid(_ sectors: [TrendSectorView], columns: [GridItem]) -> some View {
+        trendEqualHeightGrid(sectors, columnsCount: max(1, columns.count)) { trendSectorCard($0) }
     }
 
-    private func trendSectorCard(_ sector: TrendSectorView) -> some View {
+    func trendSectorCard(_ sector: TrendSectorView) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 6) {
                 trendDirectionDot(sector.direction)
@@ -402,15 +449,13 @@ extension EnhancementCenterView {
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(AppPalette.ink)
                     .lineLimit(1)
+                trendDirectionBadge(sector.direction)
                 Spacer(minLength: 4)
+                trendConfidenceMeter(sector.confidence)
                 Text(sector.exposureText)
                     .font(.system(size: 10, weight: .bold, design: .rounded))
                     .foregroundStyle(AppPalette.info)
                     .lineLimit(1)
-            }
-            HStack(spacing: AppPalette.spaceS) {
-                trendDirectionBadge(sector.direction)
-                trendConfidencePill(sector.confidence)
             }
             Text(sector.rationale)
                 .font(.system(size: 10))
@@ -421,7 +466,7 @@ extension EnhancementCenterView {
             }
         }
         .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .staticSurface(
             tint: sector.direction.tint,
             fill: AppPalette.cardStrong,
@@ -432,13 +477,13 @@ extension EnhancementCenterView {
 
     // MARK: - Report helpers
 
-    private func trendDirectionDot(_ direction: TrendDirection) -> some View {
+    func trendDirectionDot(_ direction: TrendDirection) -> some View {
         Circle()
             .fill(direction.tint)
             .frame(width: 7, height: 7)
     }
 
-    private func trendDirectionBadge(_ direction: TrendDirection) -> some View {
+    func trendDirectionBadge(_ direction: TrendDirection) -> some View {
         Text(direction.displayText)
             .font(.system(size: 10, weight: .bold))
             .foregroundStyle(direction.tint)
@@ -449,7 +494,7 @@ extension EnhancementCenterView {
             .overlay(Capsule().stroke(direction.tint.opacity(AppPalette.accentBorder), lineWidth: 1))
     }
 
-    private func trendConfidencePill(_ confidence: TrendConfidence) -> some View {
+    func trendConfidencePill(_ confidence: TrendConfidence) -> some View {
         HStack(spacing: 3) {
             Text("置信")
                 .font(.system(size: 10, weight: .medium))
@@ -463,7 +508,40 @@ extension EnhancementCenterView {
         .background(AppPalette.info.opacity(AppPalette.accentSubtle), in: Capsule())
     }
 
-    private func trendCounterSignalsRow(_ signals: [String]) -> some View {
+    /// 统一置信度组件：胶囊进度条，「置信度+数字」写在胶囊里，按高/中/低用同色系浅深渐变
+    func trendConfidenceMeter(_ confidence: TrendConfidence) -> some View {
+        let score = confidence.normalizedScore
+        let width: CGFloat = 58
+        let height: CGFloat = 14
+        let fill = max(height, width * CGFloat(score) / 100)
+        return ZStack(alignment: .leading) {
+            Capsule()
+                .fill(AppPalette.muted.opacity(0.20))
+                .frame(width: width, height: height)
+            Capsule()
+                .fill(trendConfidenceGradient(score))
+                .frame(width: fill, height: height)
+            Text("置信度\(score)")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: width, height: height)
+        }
+        .frame(width: width, height: height)
+    }
+
+    private func trendConfidenceGradient(_ score: Int) -> LinearGradient {
+        let base: Color
+        if score >= 75 {
+            base = AppPalette.positive
+        } else if score >= 45 {
+            base = AppPalette.warning
+        } else {
+            base = AppPalette.danger
+        }
+        return LinearGradient(colors: [base.opacity(0.7), base], startPoint: .leading, endPoint: .trailing)
+    }
+
+    func trendCounterSignalsRow(_ signals: [String]) -> some View {
         HStack(alignment: .top, spacing: 5) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 8))
@@ -477,7 +555,7 @@ extension EnhancementCenterView {
     }
 
     @ViewBuilder
-    private func trendAssetList(_ assets: [TrendAssetView]) -> some View {
+    func trendAssetList(_ assets: [TrendAssetView]) -> some View {
         if assets.isEmpty {
             trendEmptyState("暂无重点标的", detail: "模型没有给出需要单独关注的基金或股票。")
         } else {
@@ -489,7 +567,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private func trendAssetCard(_ asset: TrendAssetView) -> some View {
+    func trendAssetCard(_ asset: TrendAssetView) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(asset.name)
@@ -534,82 +612,7 @@ extension EnhancementCenterView {
     }
 
     @ViewBuilder
-    private func trendActionList(_ actions: [TrendActionCandidate]) -> some View {
-        if actions.isEmpty {
-            trendEmptyState("暂无行动候选", detail: "当前报告没有建议新增观察、调仓复核或计划调整动作。")
-        } else {
-            VStack(spacing: AppPalette.spaceS) {
-                ForEach(actions.prefix(8)) { action in
-                    trendActionCard(action)
-                }
-            }
-        }
-    }
-
-    private func trendActionCard(_ action: TrendActionCandidate) -> some View {
-        let tint = trendActionTint(action.kind)
-        return VStack(alignment: .leading, spacing: 7) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(action.title)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(AppPalette.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 4)
-                Text(action.kind.displayText)
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(tint)
-                    .lineLimit(1)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(tint.opacity(AppPalette.accentFill), in: Capsule())
-                    .overlay(Capsule().stroke(tint.opacity(AppPalette.accentBorder), lineWidth: 1))
-            }
-
-            if let target = action.targetName?.trimmingCharacters(in: .whitespacesAndNewlines), !target.isEmpty {
-                Text("标的：\(target)")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(AppPalette.muted)
-                    .lineLimit(1)
-            }
-
-            Text(action.detail)
-                .font(.system(size: 11))
-                .foregroundStyle(AppPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: AppPalette.spaceS) {
-                trendConfidencePill(action.confidence)
-                Spacer(minLength: 0)
-            }
-
-            trendConditionRow(title: "触发", values: action.triggerConditions)
-            trendConditionRow(title: "反证", values: action.invalidatingConditions)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .staticSurface(
-            tint: trendActionTint(action.kind),
-            fill: AppPalette.cardStrong,
-            strokeOpacity: 0.18,
-            activeStrokeOpacity: 0.40
-        )
-    }
-
-    private func trendActionTint(_ kind: TrendActionKind) -> Color {
-        switch kind {
-        case .watch, .waitForConfirmation:
-            return AppPalette.info
-        case .observeInBatches, .rebalanceReview:
-            return AppPalette.brand
-        case .pausePlan, .considerReduce:
-            return AppPalette.warning
-        case .considerIncrease:
-            return AppPalette.positive
-        }
-    }
-
-    @ViewBuilder
-    private func tradeSignalDetailList(_ summary: TradeSignalSummary) -> some View {
+    func tradeSignalDetailList(_ summary: TradeSignalSummary) -> some View {
         if summary.items.isEmpty {
             trendEmptyState("暂无观察", detail: summary.headline)
         } else {
@@ -621,7 +624,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private func tradeSignalDetailRow(_ item: TradeSignalItem) -> some View {
+    func tradeSignalDetailRow(_ item: TradeSignalItem) -> some View {
         let tint = trendSignalTint(for: item)
         return HStack(alignment: .top, spacing: 0) {
             // 左侧状态色条
@@ -705,7 +708,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private func tradeSignalAssetSubtitle(_ item: TradeSignalItem) -> some View {
+    func tradeSignalAssetSubtitle(_ item: TradeSignalItem) -> some View {
         let parts: [String] = [item.assetCode, item.title].compactMap { value in
             let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)
             return (trimmed?.isEmpty == false) ? trimmed : nil
@@ -720,7 +723,7 @@ extension EnhancementCenterView {
         )
     }
 
-    private func tradeSignalStatusBadge(_ item: TradeSignalItem) -> some View {
+    func tradeSignalStatusBadge(_ item: TradeSignalItem) -> some View {
         let tint = trendSignalTint(for: item)
         return Text(item.status.displayText)
             .font(.system(size: 10, weight: .bold))
@@ -732,7 +735,7 @@ extension EnhancementCenterView {
             .overlay(Capsule().stroke(tint.opacity(AppPalette.accentBorder), lineWidth: 1))
     }
 
-    private func tradeSignalActionIcon(_ action: TradeSignalAction) -> String {
+    func tradeSignalActionIcon(_ action: TradeSignalAction) -> String {
         switch action {
         case .watchBuy:
             return "arrow.up.circle"
@@ -772,7 +775,7 @@ extension EnhancementCenterView {
     private enum TradeSignalConditionGlyph { case filled, half }
 
     @ViewBuilder
-    private func trendEvidenceList(_ evidence: [TrendEvidence]) -> some View {
+    func trendEvidenceList(_ evidence: [TrendEvidence]) -> some View {
         if evidence.isEmpty {
             trendEmptyState("暂无外部证据", detail: "模型没有返回可核验来源，按本地上下文结果理解。")
         } else {
@@ -784,7 +787,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private func trendEvidenceCard(_ item: TrendEvidence) -> some View {
+    func trendEvidenceCard(_ item: TrendEvidence) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 5) {
                 Image(systemName: "link")
@@ -825,7 +828,7 @@ extension EnhancementCenterView {
         )
     }
 
-    private func trendWarnings(_ report: TrendAnalysisReport) -> some View {
+    func trendWarnings(_ report: TrendAnalysisReport) -> some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceS) {
             VStack(alignment: .leading, spacing: AppPalette.spaceS) {
                 ForEach(report.warnings) { warning in
@@ -854,7 +857,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private func trendBlock<Content: View>(_ title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
+    func trendBlock<Content: View>(_ title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: AppPalette.spaceS) {
             HStack(spacing: 7) {
                 Image(systemName: icon)
@@ -869,7 +872,7 @@ extension EnhancementCenterView {
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
-    private func trendFact(_ title: String, value: String, tint: Color) -> some View {
+    func trendFact(_ title: String, value: String, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.system(size: 10, weight: .medium))
@@ -885,7 +888,7 @@ extension EnhancementCenterView {
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
 
-    private func trendConfidenceBar(_ confidence: TrendConfidence) -> some View {
+    func trendConfidenceBar(_ confidence: TrendConfidence) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(confidence.label)
@@ -902,14 +905,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private func trendConditionRow(title: String, values: [String]) -> some View {
-        Text("\(title)：\(values.prefix(3).joined(separator: "；"))")
-            .font(.system(size: 10))
-            .foregroundStyle(title == "触发" ? AppPalette.info : AppPalette.warning)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private func trendSignalTint(for item: TradeSignalItem) -> Color {
+    func trendSignalTint(for item: TradeSignalItem) -> Color {
         switch item.status {
         case .triggered, .upgraded:
             return AppPalette.warning
@@ -922,7 +918,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private func trendEmptyState(_ title: String, detail: String) -> some View {
+    func trendEmptyState(_ title: String, detail: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.system(size: 12, weight: .bold))
@@ -937,20 +933,20 @@ extension EnhancementCenterView {
         .background(AppPalette.cardStrong, in: RoundedRectangle(cornerRadius: AppPalette.cardRadius))
     }
 
-    private var trendPanelSubtitle: String {
+    var trendPanelSubtitle: String {
         if let report = model.trendReport {
             return "\(report.dataAsOf) · \(report.externalSignalStatus.displayText)"
         }
         return model.trendSettings.provider.isConfigured ? "已配置模型，等待生成" : "需要配置趋势分析模型"
     }
 
-    private func trendLogTime(_ timestamp: String) -> String {
+    func trendLogTime(_ timestamp: String) -> String {
         let trimmed = timestamp.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 16 else { return trimmed }
         return String(trimmed.dropFirst(11).prefix(5))
     }
 
-    private var trendStateText: String {
+    var trendStateText: String {
         switch model.trendGenerationState {
         case .idle:
             return "空闲"
@@ -965,7 +961,7 @@ extension EnhancementCenterView {
         }
     }
 
-    private var trendStateTint: Color {
+    var trendStateTint: Color {
         switch model.trendGenerationState {
         case .idle:
             return AppPalette.muted
@@ -1093,7 +1089,7 @@ private extension TrendDirection {
     }
 }
 
-private extension TrendActionKind {
+extension TrendActionKind {
     var displayText: String {
         switch self {
         case .watch:
