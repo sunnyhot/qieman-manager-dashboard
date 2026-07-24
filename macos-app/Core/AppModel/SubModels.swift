@@ -136,6 +136,7 @@ final class EnhancementState: ObservableObject {
     @Published var trendSettings: TrendAnalysisSettings = .default
     @Published var trendGenerationState: TrendGenerationState = .idle
     @Published var trendConnectionState: TrendConnectionState = .idle
+    @Published var trendProviderCapabilities: TrendProviderCapabilities?
     @Published var trendPrivacyMode: TrendPrivacyMode = .sanitized
     @Published var lastTrendGeneratedAt: String?
     @Published var lastTrendError = ""

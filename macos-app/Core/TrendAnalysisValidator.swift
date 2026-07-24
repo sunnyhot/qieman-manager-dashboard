@@ -18,7 +18,7 @@ struct TrendAnalysisValidator {
         "保证收益"
     ]
 
-    func validate(_ report: TrendAnalysisReport, expectedFundCodes: [String] = []) -> TrendValidationResult {
+    func validate(_ report: TrendAnalysisReport, expectedFundCodes: [String] = [], expectedPrivacyMode: TrendPrivacyMode? = nil) -> TrendValidationResult {
         var messages: [String] = []
 
         let horizonKinds = Set(report.horizons.map(\.horizon))
@@ -34,8 +34,28 @@ struct TrendAnalysisValidator {
         if !report.disclaimer.contains("非投资建议") {
             messages.append("缺少明确的非投资建议声明。")
         }
-        if report.externalSignalStatus == .available && report.evidence.isEmpty {
-            messages.append("externalSignalStatus 为 available 时必须提供 evidence/证据。")
+        let hasTavilyEvidence = report.evidence.contains { $0.id.hasPrefix("web:tavily:") }
+        if report.externalSignalStatus == .available && !hasTavilyEvidence {
+            messages.append("externalSignalStatus 为 available 时必须引用本次 Tavily 搜索产生的 web:tavily:* 证据。")
+        }
+        if report.externalSignalStatus != .available && hasTavilyEvidence {
+            messages.append("报告已经引用 Tavily 网页证据，externalSignalStatus 应为 available。")
+        }
+
+        // 证据账本解析：sectors/marketOutlook/opportunities 引用的 evidenceID 必须都在 report.evidence 中。
+        let evidenceIDs = Set(report.evidence.map(\.id))
+        for id in collectReferencedEvidenceIDs(report) where !evidenceIDs.contains(id) {
+            messages.append("引用的证据 ID 不存在：\(id)")
+        }
+
+        // confidence 分数范围 0...100。
+        for confidence in collectConfidenceScores(report) where confidence.score < 0 || confidence.score > 100 {
+            messages.append("confidence score 必须在 0...100 之间：\(confidence.score)")
+        }
+
+        // privacyMode 必须与本次分析快照一致（App 在 submit 阶段已覆盖，这里做防御性校验）。
+        if let expectedPrivacyMode, report.privacyMode != expectedPrivacyMode {
+            messages.append("privacyMode 必须与本次分析快照一致（\(expectedPrivacyMode.rawValue)）。")
         }
 
         for sector in report.sectors {
@@ -132,5 +152,30 @@ struct TrendAnalysisValidator {
         guard let value else { return nil }
         let normalized = value.uppercased().filter { $0.isLetter || $0.isNumber }
         return normalized.isEmpty ? nil : normalized
+    }
+
+    /// sectors/marketOutlook/opportunities 中引用的全部 evidenceID（去重、保序）。
+    private func collectReferencedEvidenceIDs(_ report: TrendAnalysisReport) -> [String] {
+        var ids: [String] = []
+        var seen = Set<String>()
+        let append: (String) -> Void = { id in
+            if !seen.contains(id) { seen.insert(id); ids.append(id) }
+        }
+        report.sectors.forEach { $0.evidenceIDs.forEach(append) }
+        report.marketOutlook.forEach { $0.evidenceIDs.forEach(append) }
+        report.opportunities.forEach { $0.evidenceIDs.forEach(append) }
+        return ids
+    }
+
+    /// 报告里所有 TrendConfidence，用于范围校验。
+    private func collectConfidenceScores(_ report: TrendAnalysisReport) -> [TrendConfidence] {
+        var scores: [TrendConfidence] = []
+        scores.append(contentsOf: report.horizons.map(\.confidence))
+        scores.append(contentsOf: report.sectors.map(\.confidence))
+        scores.append(contentsOf: report.marketOutlook.map(\.confidence))
+        scores.append(contentsOf: report.opportunities.map(\.confidence))
+        scores.append(contentsOf: report.actions.map(\.confidence))
+        scores.append(contentsOf: (report.keyAssets + report.assetTrends).flatMap(\.horizons).map(\.confidence))
+        return scores
     }
 }

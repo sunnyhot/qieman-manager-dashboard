@@ -1,0 +1,373 @@
+import XCTest
+@testable import QiemanDashboard
+
+// 阶段二：快照、工具、证据账本与增强 Validator 的单元测试。
+final class TrendResearchToolTests: XCTestCase {
+    private let registry = TrendResearchToolRegistry()
+
+    // MARK: - 资产分页
+
+    func testAssetsPaginateStablyWithoutGapsOrDuplicates() async throws {
+        let snapshot = makeSnapshot(assets: (0..<25).map { makeAsset(code: String(format: "%05d", $0)) })
+        let context = makeContext(snapshot: snapshot)
+
+        let page1 = try parseData(await runAssetTool(cursor: 0, limit: 20, context: context))
+        XCTAssertEqual(page1["total_count"] as? Int, 25)
+        XCTAssertEqual((page1["assets"] as? [Any])?.count, 20)
+        XCTAssertEqual(page1["has_more"] as? Bool, true)
+        XCTAssertEqual(page1["next_cursor"] as? Int, 20)
+
+        let page2 = try parseData(await runAssetTool(cursor: 20, limit: 20, context: context))
+        XCTAssertEqual((page2["assets"] as? [Any])?.count, 5)
+        XCTAssertEqual(page2["has_more"] as? Bool, false)
+
+        // 顺序稳定、无重复、无遗漏。
+        let codes = collectCodes(page1) + collectCodes(page2)
+        XCTAssertEqual(codes, (0..<25).map { String(format: "%05d", $0) })
+    }
+
+    func testAssetsRejectNegativeCursor() async throws {
+        let snapshot = makeSnapshot(assets: [makeAsset(code: "00001")])
+        let context = makeContext(snapshot: snapshot)
+
+        let result = await runAssetTool(cursor: -1, limit: 5, context: context)
+        XCTAssertTrue(result.isError)
+        XCTAssertTrue(result.contentJSON.contains("invalid_arguments"))
+    }
+
+    func testAssetsRejectOutOfRangeLimit() async throws {
+        let snapshot = makeSnapshot(assets: [makeAsset(code: "00001"), makeAsset(code: "00002")])
+        let context = makeContext(snapshot: snapshot)
+
+        let result = await runAssetTool(cursor: 0, limit: 99, context: context)
+        XCTAssertTrue(result.isError)
+        XCTAssertTrue(result.contentJSON.contains("invalid_arguments"))
+    }
+
+    func testAssetsFilterByCodes() async throws {
+        let snapshot = makeSnapshot(assets: ["00001", "00002", "00003"].map { makeAsset(code: $0) })
+        let context = makeContext(snapshot: snapshot)
+
+        let data = try parseData(await runAssetTool(cursor: 0, limit: 20, codes: ["00002"], context: context))
+        XCTAssertEqual(collectCodes(data), ["00002"])
+    }
+
+    // MARK: - Tavily 联网搜索
+
+    func testWebSearchRequiresConfiguredKey() async {
+        let context = makeContext(snapshot: makeSnapshot())
+        let result = await runWebSearch(registry: registry, arguments: ["query": "中国最新产业政策"], context: context)
+        XCTAssertTrue(result.isError)
+        XCTAssertTrue(result.contentJSON.contains("web_search_not_configured"))
+    }
+
+    func testWebSearchRejectsOutOfRangeResultCount() async {
+        let webRegistry = TrendResearchToolRegistry(webSearchClient: FakeTavilySearchClient(response: .empty))
+        let context = makeContext(
+            snapshot: makeSnapshot(),
+            webSearchSettings: TavilySearchSettings(apiKey: "tvly-test")
+        )
+        let result = await runWebSearch(
+            registry: webRegistry,
+            arguments: ["query": "中国最新产业政策", "max_results": 20],
+            context: context
+        )
+        XCTAssertTrue(result.isError)
+        XCTAssertTrue(result.contentJSON.contains("invalid_arguments"))
+    }
+
+    func testWebSearchRecordsCanonicalTavilyEvidence() async throws {
+        let response = TavilySearchResponse(
+            query: "中国最新产业政策",
+            results: [
+                TavilySearchResult(
+                    title: "政策发布",
+                    url: "https://www.gov.cn/zhengce/example",
+                    content: "国务院发布最新产业政策。",
+                    score: 0.92,
+                    publishedDate: "2026-07-23"
+                )
+            ],
+            responseTime: "0.45",
+            requestID: "request-1"
+        )
+        let webRegistry = TrendResearchToolRegistry(webSearchClient: FakeTavilySearchClient(response: response))
+        let ledger = TrendEvidenceLedger()
+        let context = TrendResearchToolContext(
+            snapshot: makeSnapshot(),
+            evidenceLedger: ledger,
+            webSearchSettings: TavilySearchSettings(apiKey: "tvly-test")
+        )
+
+        let result = await runWebSearch(
+            registry: webRegistry,
+            arguments: [
+                "query": "中国最新产业政策",
+                "topic": "news",
+                "time_range": "week",
+                "max_results": 5,
+                "include_domains": ["www.gov.cn"]
+            ],
+            context: context
+        )
+
+        XCTAssertFalse(result.isError)
+        let data = try parseData(result)
+        XCTAssertEqual(data["count"] as? Int, 1)
+        let id = try XCTUnwrap((data["results"] as? [[String: Any]])?.first?["evidence_id"] as? String)
+        XCTAssertTrue(id.hasPrefix("web:tavily:"))
+        let evidence = await ledger.canonical(for: id)
+        XCTAssertEqual(evidence?.sourceName, "Tavily · gov.cn")
+        XCTAssertEqual(evidence?.url, "https://www.gov.cn/zhengce/example")
+    }
+
+    // MARK: - 证据账本
+
+    func testToolsRecordStableEvidenceIDs() async throws {
+        let snapshot = makeSnapshot(assets: [makeAsset(code: "00001")])
+        let ledger = TrendEvidenceLedger()
+        let context = TrendResearchToolContext(snapshot: snapshot, evidenceLedger: ledger)
+
+        _ = await runAssetTool(cursor: 0, limit: 20, context: context)
+
+        let ids = await ledger.allIDs()
+        XCTAssertTrue(ids.contains("portfolio:asset:00001"))
+    }
+
+    // MARK: - submit 归一化
+
+    func testSubmitNormalizesTimestampsAndPrivacyMode() async throws {
+        // 快照无可覆盖基金（assets 为空）→ 覆盖率校验平凡通过，便于聚焦归一化行为。
+        let snapshot = makeSnapshot(assets: [])
+        let ledger = TrendEvidenceLedger()
+        let context = TrendResearchToolContext(snapshot: snapshot, evidenceLedger: ledger)
+
+        let report = TrendAnalysisReport.fixture(generatedAt: "1999-01-01 00:00:00", externalSignalStatus: .partial)
+        let reportObject = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(report)) as? [String: Any])
+        let arguments = jsonString(["report": reportObject])
+        let call = AgentToolCall(id: "submit_1", function: AgentToolFunctionCall(name: "submit_trend_report", arguments: arguments))
+
+        let result = await registry.execute(call, context: context)
+        XCTAssertFalse(result.isError)
+        guard case .report(let normalized) = result.completion else {
+            XCTFail("期望 submit 成功并返回报告")
+            return
+        }
+        XCTAssertEqual(normalized.dataAsOf, "2026-07-24 09:58:00")
+        XCTAssertEqual(normalized.privacyMode, .sanitized)
+        XCTAssertNotEqual(normalized.generatedAt, "1999-01-01 00:00:00")
+    }
+
+    func testSubmitPromotesStatusOnlyWhenReportReferencesTavilyEvidence() async throws {
+        let snapshot = makeSnapshot(assets: [])
+        let ledger = TrendEvidenceLedger()
+        let webEvidence = TrendEvidence(
+            id: "web:tavily:abc123",
+            sourceName: "Tavily · gov.cn",
+            title: "政策发布",
+            url: "https://www.gov.cn/zhengce/example",
+            publishedAt: "2026-07-23",
+            retrievedAt: "2026-07-24T10:00:00Z",
+            summary: "国务院发布最新产业政策。"
+        )
+        await ledger.record([webEvidence])
+        let context = TrendResearchToolContext(
+            snapshot: snapshot,
+            evidenceLedger: ledger,
+            webSearchSettings: TavilySearchSettings(apiKey: "tvly-test")
+        )
+
+        let base = TrendAnalysisReport.fixture(
+            generatedAt: "1999-01-01 00:00:00",
+            externalSignalStatus: .unavailable
+        )
+        var reportObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(base)) as? [String: Any]
+        )
+        reportObject["sectors"] = [[
+            "id": "policy",
+            "name": "政策环境",
+            "exposureText": "影响组合相关行业",
+            "direction": "neutralPositive",
+            "confidence": ["score": 65, "label": "中"],
+            "rationale": "近期政策提供边际支持。",
+            "evidenceIDs": [webEvidence.id],
+            "counterSignals": ["若后续执行力度不足则下调判断。"]
+        ]]
+        let call = AgentToolCall(
+            id: "submit_web",
+            function: AgentToolFunctionCall(
+                name: "submit_trend_report",
+                arguments: jsonString(["report": reportObject])
+            )
+        )
+
+        let result = await registry.execute(call, context: context)
+        guard case .report(let normalized) = result.completion else {
+            XCTFail("期望带 Tavily 引用的报告通过校验")
+            return
+        }
+        XCTAssertEqual(normalized.externalSignalStatus, .available)
+        XCTAssertEqual(normalized.evidence, [webEvidence])
+    }
+
+    // MARK: - Validator 增强
+
+    func testValidatorRejectsAvailableStatusWithoutTavilyEvidence() {
+        let report = TrendAnalysisReport.fixture(generatedAt: "2026-07-24 10:00:00", externalSignalStatus: .available)
+        let result = TrendAnalysisValidator().validate(report)
+        XCTAssertFalse(result.isValid)
+        XCTAssertTrue(result.messages.contains { $0.contains("Tavily") })
+    }
+
+    func testValidatorRejectsFabricatedEvidenceID() throws {
+        let base = TrendAnalysisReport.fixture(generatedAt: "2026-07-24 10:00:00", externalSignalStatus: .partial)
+        var dict = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(base)) as? [String: Any])
+        dict["sectors"] = [[
+            "name": "A股",
+            "exposureText": "30%",
+            "direction": "neutral",
+            "confidence": ["score": 60, "label": "中"],
+            "rationale": "测试板块",
+            "evidenceIDs": ["fabricated:eid"],
+            "counterSignals": ["无"]
+        ]]
+        let data = try JSONSerialization.data(withJSONObject: dict)
+        let report = try JSONDecoder().decode(TrendAnalysisReport.self, from: data)
+
+        let result = TrendAnalysisValidator().validate(report)
+        XCTAssertTrue(result.messages.contains { $0.contains("引用的证据 ID 不存在：fabricated:eid") })
+    }
+
+    // MARK: - 辅助构造
+
+    private func makeContext(
+        snapshot: TrendResearchSnapshot,
+        webSearchSettings: TavilySearchSettings = .empty
+    ) -> TrendResearchToolContext {
+        TrendResearchToolContext(
+            snapshot: snapshot,
+            evidenceLedger: TrendEvidenceLedger(),
+            webSearchSettings: webSearchSettings
+        )
+    }
+
+    private func makeSnapshot(
+        assets: [TrendContextAsset] = [],
+        signals: [TrendResearchSignal] = [],
+        quotes: [TrendResearchQuote] = []
+    ) -> TrendResearchSnapshot {
+        TrendResearchSnapshot(
+            runID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+            createdAt: "2026-07-24 10:00:00",
+            dataAsOf: "2026-07-24 09:58:00",
+            privacyMode: .sanitized,
+            portfolio: TrendContextPortfolio(
+                assetCount: assets.count,
+                holdingCount: assets.count,
+                activePlanCount: 0,
+                pendingAssetCount: 0,
+                totalMarketValue: nil,
+                totalPendingCashAmount: nil,
+                totalEstimatedNextPlanAmount: nil,
+                totalEffectiveHoldingAmount: nil
+            ),
+            assets: assets,
+            sectors: [],
+            platformSignals: signals,
+            managerSignals: [],
+            marketQuotes: quotes,
+            insightHeadline: "测试洞察",
+            sourceWarnings: []
+        )
+    }
+
+    private func makeAsset(code: String, marketValue: Double? = nil) -> TrendContextAsset {
+        TrendContextAsset(
+            id: code,
+            name: "基金\(code)",
+            code: code,
+            assetType: PersonalAssetType.fund.displayName,
+            sector: "A股",
+            statusText: "已持有",
+            weightText: nil,
+            profitPct: 0.1,
+            estimateChangePct: 0.2,
+            pendingTradeCount: 0,
+            activePlanCount: 0,
+            pausedPlanCount: 0,
+            endedPlanCount: 0,
+            marketValue: marketValue,
+            costValue: nil,
+            profitAmount: nil,
+            pendingCashAmount: nil,
+            estimatedNextPlanAmount: nil,
+            totalCumulativePlanAmount: nil
+        )
+    }
+
+    private func runAssetTool(
+        cursor: Int?,
+        limit: Int?,
+        codes: [String]? = nil,
+        context: TrendResearchToolContext
+    ) async -> TrendResearchToolResult {
+        var args: [String: Any] = [:]
+        if let cursor { args["cursor"] = cursor }
+        if let limit { args["limit"] = limit }
+        if let codes { args["codes"] = codes }
+        let call = AgentToolCall(
+            id: "asset_call",
+            function: AgentToolFunctionCall(name: "get_portfolio_assets", arguments: jsonString(args))
+        )
+        return await registry.execute(call, context: context)
+    }
+
+    private func runWebSearch(
+        registry: TrendResearchToolRegistry,
+        arguments: [String: Any],
+        context: TrendResearchToolContext
+    ) async -> TrendResearchToolResult {
+        let call = AgentToolCall(
+            id: "web_search_call",
+            function: AgentToolFunctionCall(name: "web_search", arguments: jsonString(arguments))
+        )
+        return await registry.execute(call, context: context)
+    }
+
+    private func parseData(_ result: TrendResearchToolResult) throws -> [String: Any] {
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(result.contentJSON.utf8)) as? [String: Any])
+        return try XCTUnwrap(json["data"] as? [String: Any])
+    }
+
+    private func collectCodes(_ data: [String: Any]) -> [String] {
+        ((data["assets"] as? [Any]) ?? []).compactMap { ($0 as? [String: Any])?["code"] as? String }
+    }
+
+    private func jsonString(_ dict: [String: Any]) -> String {
+        guard let data = try? JSONSerialization.data(withJSONObject: dict),
+              let string = String(data: data, encoding: .utf8) else { return "{}" }
+        return string
+    }
+}
+
+private struct FakeTavilySearchClient: TavilySearchClientProtocol {
+    let response: TavilySearchResponse
+
+    func search(
+        _ searchRequest: TavilySearchRequest,
+        apiKey: String,
+        timeoutSeconds: Double
+    ) async throws -> TavilySearchResponse {
+        response
+    }
+}
+
+private extension TavilySearchResponse {
+    static let empty = TavilySearchResponse(
+        query: nil,
+        results: [],
+        responseTime: nil,
+        requestID: nil
+    )
+}

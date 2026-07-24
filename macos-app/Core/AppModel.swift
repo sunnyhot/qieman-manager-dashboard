@@ -111,7 +111,11 @@ final class AppModel: ObservableObject {
     let managerWatchStore = ManagerWatchStore()
     let notificationManager = LocalNotificationManager()
     let personalAssetAutomation = PersonalAssetAutomation()
-    var trendAIClient: any TrendAIClientProtocol = TrendAIClient()
+    var trendResearchAgent: any TrendResearchAgentProtocol = TrendResearchAgent()
+    /// 工具调用能力探测器；默认走真实 client，测试可替换以避免联网。
+    var trendCapabilityProbe: @Sendable (TrendAIProviderSettings) async throws -> TrendProviderCapabilities = { settings in
+        try await OpenAICompatibleAgentClient().checkToolCallingCapability(settings: settings)
+    }
     var trendProgressHeartbeatIntervalNanoseconds: UInt64 = 15_000_000_000
     let portfolioAutoRefreshIntervalSeconds: UInt64 = 60
     let refreshThrottle = RefreshThrottle()
@@ -121,6 +125,7 @@ final class AppModel: ObservableObject {
     var managerWatchTask: Task<Void, Never>?
     var personalAssetAutomationTask: Task<Void, Never>?
     var portfolioAutoRefreshTask: Task<Void, Never>?
+    var trendGenerationTask: Task<Void, Never>?
     var activeCommentsRequestKey = ""
     var isApplyingPersonalAssetAutomation = false
     private var cancellables = Set<AnyCancellable>()
@@ -372,6 +377,11 @@ final class AppModel: ObservableObject {
         set { enhancementState.trendConnectionState = newValue }
     }
 
+    var trendProviderCapabilities: TrendProviderCapabilities? {
+        get { enhancementState.trendProviderCapabilities }
+        set { enhancementState.trendProviderCapabilities = newValue }
+    }
+
     var trendPrivacyMode: TrendPrivacyMode {
         get { enhancementState.trendPrivacyMode }
         set { enhancementState.trendPrivacyMode = newValue }
@@ -589,7 +599,7 @@ final class AppModel: ObservableObject {
         }
 
         await applyPersonalAssetAutomation(updateNotice: false)
-        await runDailyTrendAnalysisIfNeeded()
+        // 每日自动分析由 ContentView.task 在 start() 之后统一触发，避免双重入口。
         restartManagerWatchLoop(immediate: false)
         restartPersonalAssetAutomationLoop()
         restartPortfolioAutoRefreshLoop()

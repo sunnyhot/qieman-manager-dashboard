@@ -167,7 +167,7 @@ final class TrendAnalysisValidatorTests: XCTestCase {
     func testAcceptsFixtureReport() {
         let report = TrendAnalysisReport.fixture(
             generatedAt: "2026-06-22 12:00:00",
-            externalSignalStatus: .available
+            externalSignalStatus: .partial
         )
 
         let result = TrendAnalysisValidator().validate(report)

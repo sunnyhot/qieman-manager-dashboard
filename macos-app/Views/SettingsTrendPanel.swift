@@ -9,7 +9,7 @@ struct TrendSettingsPanel: View {
     var body: some View {
         SettingsPanel(
             title: "AI 研判",
-            subtitle: "配置模型连接、每日自动分析与操作建议偏好",
+            subtitle: "配置模型连接、Tavily 联网搜索、每日自动分析与操作建议偏好",
             icon: "sparkles"
         ) {
             configurationContent
@@ -71,10 +71,13 @@ struct TrendSettingsPanel: View {
                     trendSecureField("API Key", text: trendProviderAPIKeyBinding, placeholder: "sk-...")
                     trendField("超时秒数", text: trendProviderTimeoutBinding, placeholder: "300")
 
-                    trendLabeledControl("外部信号") {
-                        Toggle("支持联网/外部信号", isOn: trendProviderSearchBinding)
-                            .toggleStyle(.switch)
-                    }
+                    SettingsDivider()
+                    SettingsGroupHeader(title: "联网搜索")
+                    trendSecureField("Tavily API Key", text: tavilyAPIKeyBinding, placeholder: "tvly-...")
+                    Text("用于搜索最新行业、宏观和政策信息。搜索查询只包含通用行业和政策关键词，不发送组合金额或个人信息。")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppPalette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.vertical, 13)
 
@@ -325,10 +328,10 @@ struct TrendSettingsPanel: View {
         )
     }
 
-    private var trendProviderSearchBinding: Binding<Bool> {
+    private var tavilyAPIKeyBinding: Binding<String> {
         Binding(
-            get: { model.trendSettings.provider.supportsOnlineSearch },
-            set: { model.trendSettings.provider.supportsOnlineSearch = $0 }
+            get: { model.trendSettings.webSearch.apiKey },
+            set: { model.trendSettings.webSearch.apiKey = $0 }
         )
     }
 

@@ -165,15 +165,22 @@ extension EnhancementCenterView {
             .frame(maxWidth: 220)
 
             Button {
-                Task {
-                    await model.generateTrendAnalysis(userInitiated: true)
-                }
+                model.startTrendAnalysis(userInitiated: true)
             } label: {
                 Label(model.trendGenerationState == .generating ? "生成中…" : "立即分析", systemImage: "wand.and.stars")
             }
             .buttonStyle(.appPrimary)
             .tint(AppPalette.brand)
-            .disabled(!model.trendSettings.provider.isConfigured || model.trendGenerationState == .generating)
+            .disabled(!model.trendSettings.provider.isConfigured || model.trendGenerationState == .generating || model.trendProviderCapabilities?.supportsToolCalls == false)
+
+            if model.trendGenerationState == .generating {
+                Button {
+                    model.cancelTrendAnalysis()
+                } label: {
+                    Label("取消", systemImage: "xmark.circle")
+                }
+                .buttonStyle(.appSecondary)
+            }
 
             Button {
                 Task {

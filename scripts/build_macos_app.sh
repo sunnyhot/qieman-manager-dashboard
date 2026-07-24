@@ -100,28 +100,10 @@ PLIST
 perl -0pi -e 's#__APP_NAME__#'"$APP_NAME"'#g; s#__APP_DISPLAY_NAME__#'"$APP_DISPLAY_NAME"'#g; s#__APP_VERSION__#'"$APP_VERSION"'#g; s#__APP_BUILD__#'"$APP_BUILD"'#g; s#__BUNDLE_ID__#'"$BUNDLE_ID"'#g; s#__MIN_MACOS_VERSION__#'"$MIN_MACOS_VERSION"'#g; s#__UPDATE_REPOSITORY__#'"$UPDATE_REPOSITORY"'#g; s#__UPDATE_FEED_URL__#'"$UPDATE_FEED_URL"'#g' "$CONTENTS_DIR/Info.plist"
 printf 'APPL????' > "$CONTENTS_DIR/PkgInfo"
 
-echo "[5/8] 拷贝 Agent 技能资源"
+echo "[5/8] 拷贝说明文档"
 cp "$ROOT_DIR/README.md" "$PAYLOAD_DIR/"
-cp -R "$ROOT_DIR/skills" "$PAYLOAD_DIR/"
-
-TREND_SKILL_DIR="$PAYLOAD_DIR/skills/investment-trend-analysis"
-REQUIRED_TREND_SKILL_FILES=(
-  "SKILL.md"
-  "references/domain-rules.md"
-  "references/output-contract.md"
-  "assets/trend-report.schema.json"
-  "assets/examples.json"
-)
-for required_file in "${REQUIRED_TREND_SKILL_FILES[@]}"; do
-  if [ ! -f "$TREND_SKILL_DIR/$required_file" ]; then
-    echo "❌ 验证失败: 趋势分析 skill 文件缺失 ($TREND_SKILL_DIR/$required_file)"
-    exit 1
-  fi
-done
 
 cat > "$PAYLOAD_DIR/APP_BUNDLE_README.txt" <<'TXT'
-This app bundle contains the native Agent skill resources.
-
 Runtime data location:
 ~/Library/Application Support/QiemanDashboard
 

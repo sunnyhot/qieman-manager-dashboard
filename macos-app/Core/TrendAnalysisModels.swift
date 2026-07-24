@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 enum TrendPrivacyMode: String, Codable, CaseIterable, Identifiable, Hashable {
@@ -133,7 +134,6 @@ struct TrendAIProviderSettings: Codable, Hashable {
     var baseURL: String
     var model: String
     var apiKey: String
-    var supportsOnlineSearch: Bool
     var timeoutSeconds: Double
 
     static let defaultGenerationTimeoutSeconds: Double = 300
@@ -143,7 +143,6 @@ struct TrendAIProviderSettings: Codable, Hashable {
         baseURL: "",
         model: "",
         apiKey: "",
-        supportsOnlineSearch: false,
         timeoutSeconds: defaultGenerationTimeoutSeconds
     )
 
@@ -151,6 +150,14 @@ struct TrendAIProviderSettings: Codable, Hashable {
         !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// 基于 baseURL+model+apiKey 的稳定指纹（SHA256 截断），用于判断能力检测结果是否仍对当前配置有效。
+    /// 不含 apiKey 明文，跨进程稳定。
+    var fingerprint: String {
+        let raw = "\(baseURL.trimmingCharacters(in: .whitespacesAndNewlines))|\(model.trimmingCharacters(in: .whitespacesAndNewlines))|\(apiKey)"
+        let digest = SHA256.hash(data: Data(raw.utf8))
+        return digest.compactMap { String(format: "%02x", $0) }.joined().prefix(16).description
     }
 
     var redactedAPIKey: String {
@@ -175,14 +182,12 @@ struct TrendAIProviderSettings: Codable, Hashable {
         baseURL: String,
         model: String,
         apiKey: String,
-        supportsOnlineSearch: Bool,
         timeoutSeconds: Double
     ) {
         self.providerName = providerName
         self.baseURL = baseURL
         self.model = model
         self.apiKey = apiKey
-        self.supportsOnlineSearch = supportsOnlineSearch
         self.timeoutSeconds = timeoutSeconds
     }
 
@@ -192,7 +197,6 @@ struct TrendAIProviderSettings: Codable, Hashable {
         baseURL = try container.decodeIfPresent(String.self, forKey: .baseURL) ?? ""
         model = try container.decodeIfPresent(String.self, forKey: .model) ?? ""
         apiKey = try container.decodeIfPresent(String.self, forKey: .apiKey) ?? ""
-        supportsOnlineSearch = try container.decodeIfPresent(Bool.self, forKey: .supportsOnlineSearch) ?? false
         timeoutSeconds = try container.decodeIfPresent(Double.self, forKey: .timeoutSeconds)
             ?? Self.defaultGenerationTimeoutSeconds
     }
@@ -202,14 +206,40 @@ struct TrendAIProviderSettings: Codable, Hashable {
         case baseURL
         case model
         case apiKey
-        case supportsOnlineSearch
         case timeoutSeconds
     }
 }
 
+struct TavilySearchSettings: Codable, Hashable, Sendable {
+    var apiKey: String
+
+    static let empty = TavilySearchSettings(apiKey: "")
+
+    var isConfigured: Bool {
+        !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var redactedAPIKey: String {
+        TrendAIProviderSettings.mask(apiKey)
+    }
+
+    init(apiKey: String) {
+        self.apiKey = apiKey
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        apiKey = try container.decodeIfPresent(String.self, forKey: .apiKey) ?? ""
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case apiKey
+    }
+}
+
 struct TrendAnalysisSettings: Codable, Hashable {
-    var agent: TrendAgentSettings
     var provider: TrendAIProviderSettings
+    var webSearch: TavilySearchSettings
     var defaultPrivacyMode: TrendPrivacyMode
     var dailyAutoAnalysisEnabled: Bool
     var dailyAutoAnalysisTimes: [String]
@@ -217,8 +247,8 @@ struct TrendAnalysisSettings: Codable, Hashable {
     var lastAutoAnalysisSlotKey: String?
 
     static let `default` = TrendAnalysisSettings(
-        agent: .default,
         provider: .empty,
+        webSearch: .empty,
         defaultPrivacyMode: .sanitized,
         dailyAutoAnalysisEnabled: false,
         dailyAutoAnalysisTimes: TrendAutoAnalysisSchedule.default.timeStrings,
@@ -227,50 +257,16 @@ struct TrendAnalysisSettings: Codable, Hashable {
     )
 
     init(
-        agent: TrendAgentSettings,
-        defaultPrivacyMode: TrendPrivacyMode,
-        dailyAutoAnalysisEnabled: Bool,
-        dailyAutoAnalysisTimes: [String] = TrendAutoAnalysisSchedule.default.timeStrings,
-        lastAutoAnalysisDay: String?,
-        lastAutoAnalysisSlotKey: String? = nil
-    ) {
-        self.agent = agent
-        self.provider = .empty
-        self.defaultPrivacyMode = defaultPrivacyMode
-        self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
-        self.dailyAutoAnalysisTimes = TrendAutoAnalysisSchedule(timeStrings: dailyAutoAnalysisTimes).timeStrings
-        self.lastAutoAnalysisDay = lastAutoAnalysisDay
-        self.lastAutoAnalysisSlotKey = lastAutoAnalysisSlotKey
-    }
-
-    init(
         provider: TrendAIProviderSettings,
+        webSearch: TavilySearchSettings = .empty,
         defaultPrivacyMode: TrendPrivacyMode,
         dailyAutoAnalysisEnabled: Bool,
         dailyAutoAnalysisTimes: [String] = TrendAutoAnalysisSchedule.default.timeStrings,
         lastAutoAnalysisDay: String?,
         lastAutoAnalysisSlotKey: String? = nil
     ) {
-        self.agent = .default
         self.provider = provider
-        self.defaultPrivacyMode = defaultPrivacyMode
-        self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
-        self.dailyAutoAnalysisTimes = TrendAutoAnalysisSchedule(timeStrings: dailyAutoAnalysisTimes).timeStrings
-        self.lastAutoAnalysisDay = lastAutoAnalysisDay
-        self.lastAutoAnalysisSlotKey = lastAutoAnalysisSlotKey
-    }
-
-    init(
-        agent: TrendAgentSettings,
-        provider: TrendAIProviderSettings,
-        defaultPrivacyMode: TrendPrivacyMode,
-        dailyAutoAnalysisEnabled: Bool,
-        dailyAutoAnalysisTimes: [String] = TrendAutoAnalysisSchedule.default.timeStrings,
-        lastAutoAnalysisDay: String?,
-        lastAutoAnalysisSlotKey: String? = nil
-    ) {
-        self.agent = agent
-        self.provider = provider
+        self.webSearch = webSearch
         self.defaultPrivacyMode = defaultPrivacyMode
         self.dailyAutoAnalysisEnabled = dailyAutoAnalysisEnabled
         self.dailyAutoAnalysisTimes = TrendAutoAnalysisSchedule(timeStrings: dailyAutoAnalysisTimes).timeStrings
@@ -280,8 +276,8 @@ struct TrendAnalysisSettings: Codable, Hashable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        agent = try container.decodeIfPresent(TrendAgentSettings.self, forKey: .agent) ?? .default
         provider = try container.decodeIfPresent(TrendAIProviderSettings.self, forKey: .provider) ?? .empty
+        webSearch = try container.decodeIfPresent(TavilySearchSettings.self, forKey: .webSearch) ?? .empty
         defaultPrivacyMode = try container.decodeIfPresent(TrendPrivacyMode.self, forKey: .defaultPrivacyMode) ?? .sanitized
         dailyAutoAnalysisEnabled = try container.decodeIfPresent(Bool.self, forKey: .dailyAutoAnalysisEnabled) ?? false
         if let times = try container.decodeIfPresent([String].self, forKey: .dailyAutoAnalysisTimes) {
@@ -297,8 +293,8 @@ struct TrendAnalysisSettings: Codable, Hashable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(agent, forKey: .agent)
         try container.encode(provider, forKey: .provider)
+        try container.encode(webSearch, forKey: .webSearch)
         try container.encode(defaultPrivacyMode, forKey: .defaultPrivacyMode)
         try container.encode(dailyAutoAnalysisEnabled, forKey: .dailyAutoAnalysisEnabled)
         try container.encode(dailyAutoAnalysisTimes, forKey: .dailyAutoAnalysisTimes)
@@ -307,8 +303,8 @@ struct TrendAnalysisSettings: Codable, Hashable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case agent
         case provider
+        case webSearch
         case defaultPrivacyMode
         case dailyAutoAnalysisEnabled
         case dailyAutoAnalysisTimes

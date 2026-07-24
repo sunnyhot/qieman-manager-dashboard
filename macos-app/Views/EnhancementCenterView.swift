@@ -38,14 +38,14 @@ struct EnhancementCenterView: View {
             }
             Spacer(minLength: AppPalette.spaceS)
             Button {
-                Task { await model.generateTrendAnalysis(userInitiated: true) }
+                model.startTrendAnalysis(userInitiated: true)
             } label: {
                 Label(model.trendGenerationState == .generating ? "生成中…" : "立即分析", systemImage: "wand.and.stars")
                     .font(.system(size: 12, weight: .semibold))
             }
             .buttonStyle(.appPrimary)
             .tint(AppPalette.brand)
-            .disabled(!model.trendSettings.provider.isConfigured || model.trendGenerationState == .generating)
+            .disabled(!model.trendSettings.provider.isConfigured || model.trendGenerationState == .generating || model.trendProviderCapabilities?.supportsToolCalls == false)
             .help(model.trendSettings.provider.isConfigured ? "生成 AI 趋势分析" : "先在「设置」里配置模型")
         }
         .frame(maxWidth: .infinity, alignment: .leading)

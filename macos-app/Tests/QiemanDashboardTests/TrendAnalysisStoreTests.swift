@@ -10,6 +10,7 @@ final class TrendAnalysisStoreTests: XCTestCase {
 
         XCTAssertFalse(settings.provider.isConfigured)
         XCTAssertEqual(settings.provider.timeoutSeconds, 300)
+        XCTAssertFalse(settings.webSearch.isConfigured)
         XCTAssertEqual(settings.defaultPrivacyMode, .sanitized)
         XCTAssertFalse(settings.dailyAutoAnalysisEnabled)
         XCTAssertEqual(settings.dailyAutoAnalysisTimes, ["09:30", "14:30"])
@@ -24,9 +25,9 @@ final class TrendAnalysisStoreTests: XCTestCase {
                 baseURL: "https://open.bigmodel.cn/api/coding/paas/v4",
                 model: "glm-5.2",
                 apiKey: "sk-test-secret",
-                supportsOnlineSearch: true,
                 timeoutSeconds: 180
             ),
+            webSearch: TavilySearchSettings(apiKey: "tvly-test-secret"),
             defaultPrivacyMode: .fullDetail,
             dailyAutoAnalysisEnabled: true,
             dailyAutoAnalysisTimes: ["15:10", "09:30"],
@@ -41,8 +42,8 @@ final class TrendAnalysisStoreTests: XCTestCase {
         XCTAssertEqual(loaded.provider.baseURL, "https://open.bigmodel.cn/api/coding/paas/v4")
         XCTAssertEqual(loaded.provider.model, "glm-5.2")
         XCTAssertEqual(loaded.provider.apiKey, "sk-test-secret")
-        XCTAssertTrue(loaded.provider.supportsOnlineSearch)
         XCTAssertEqual(loaded.provider.timeoutSeconds, 180)
+        XCTAssertEqual(loaded.webSearch.apiKey, "tvly-test-secret")
         XCTAssertEqual(loaded.defaultPrivacyMode, settings.defaultPrivacyMode)
         XCTAssertEqual(loaded.dailyAutoAnalysisEnabled, settings.dailyAutoAnalysisEnabled)
         XCTAssertEqual(loaded.dailyAutoAnalysisTimes, ["09:30", "15:10"])
@@ -73,8 +74,8 @@ final class TrendAnalysisStoreTests: XCTestCase {
         XCTAssertEqual(loaded.provider.baseURL, "https://open.bigmodel.cn/api/coding/paas/v4")
         XCTAssertEqual(loaded.provider.model, "glm-5.2")
         XCTAssertEqual(loaded.provider.providerName, "智谱")
-        XCTAssertTrue(loaded.provider.supportsOnlineSearch)
         XCTAssertEqual(loaded.provider.timeoutSeconds, 60)
+        XCTAssertFalse(loaded.webSearch.isConfigured)
         XCTAssertEqual(loaded.defaultPrivacyMode, .fullDetail)
         XCTAssertTrue(loaded.dailyAutoAnalysisEnabled)
         XCTAssertEqual(loaded.dailyAutoAnalysisTimes, ["09:30", "14:30"])

@@ -1,0 +1,262 @@
+import Foundation
+
+// 阶段二：趋势研究 Agent 的不可变分析快照。
+//
+// 运行前由 @MainActor AppModel 把当前状态冻结成这份 Sendable 快照。后续所有工具
+// 只查询该快照，不直接访问 AppModel，保证多轮模型调用读到同一份数据，后台刷新
+// 不会改变本次分析依据，隐私过滤在进入 Agent 前一次完成。
+
+// MARK: - 信号与行情
+
+/// 平台/alfa/主理人关注信号。统一容纳长赢调仓、alfa 调仓和主理人巡检命中三类异构信号，
+/// 每条带全局唯一的 evidenceID。
+struct TrendResearchSignal: Sendable, Codable, Hashable, Identifiable {
+    /// 来源：qieman（长赢调仓）/ alfa / manager（主理人关注命中）。
+    let source: String
+    /// 类型：adjustment（调仓动作）/ watch-hit（主理人巡检命中）。
+    let kind: String
+    let evidenceID: String
+    /// 发生时间（来源时间字符串，保留原始格式）。
+    let occurredAt: String?
+    let fundCode: String?
+    let fundName: String?
+    /// 动作描述（如 buy/sell/加仓/减仓，或主理人命中类型）。
+    let action: String?
+    let title: String
+    let detail: String?
+    /// 长赢调仓的估值涨跌百分比；alfa 无此字段。
+    let valuationChangePct: Double?
+    /// alfa 调仓前后持仓比例（0~1）。
+    let beforePercent: Double?
+    let afterPercent: Double?
+    let groupName: String?
+    let sourcePoCode: String?
+    let articleURL: String?
+
+    var id: String { evidenceID }
+}
+
+/// 大盘指数或基金估值行情条目。
+struct TrendResearchQuote: Sendable, Codable, Hashable, Identifiable {
+    /// 类型：index（大盘指数）/ fund-estimate（基金估值）。
+    let kind: String
+    let evidenceID: String
+    /// 指数 rawValue 或基金代码。
+    let code: String
+    let name: String
+    let price: Double?
+    let changePct: Double?
+    let changeAmount: Double?
+    let quotedAt: String?
+    let sourceLabel: String?
+
+    var id: String { evidenceID }
+}
+
+/// 基金估值条目。由 AppModel 从个人持仓/关注/平台持仓估值行预先聚合成 [code: estimate]，
+/// 避免快照构造器耦合多个 snapshot 模型。
+struct TrendResearchFundEstimate: Sendable, Codable, Hashable {
+    let code: String
+    let name: String?
+    let estimateChangePct: Double?
+    let price: Double?
+    let quotedAt: String?
+    let sourceLabel: String?
+}
+
+// MARK: - 快照
+
+struct TrendResearchSnapshot: Sendable, Hashable {
+    let runID: UUID
+    /// App 接受报告的时间。
+    let createdAt: String
+    /// 快照中用于分析的数据截止时间（保守取最新来源时间，无法确定时用 createdAt）。
+    let dataAsOf: String
+    let privacyMode: TrendPrivacyMode
+
+    let portfolio: TrendContextPortfolio
+    let assets: [TrendContextAsset]
+    let sectors: [TrendContextSector]
+
+    let platformSignals: [TrendResearchSignal]
+    let managerSignals: [TrendResearchSignal]
+    let marketQuotes: [TrendResearchQuote]
+
+    let insightHeadline: String
+    let sourceWarnings: [String]
+
+    /// Validator 用来检查 assetTrends 覆盖率的基金代码全集：类型为基金且 code 非空。
+    var expectedFundCodes: [String] {
+        assets
+            .filter { $0.assetType == PersonalAssetType.fund.displayName }
+            .compactMap { $0.code }
+    }
+}
+
+// MARK: - 构造器
+
+/// 从 AppModel 各数据源组装不可变快照。
+///
+/// 设计为接受显式输入而非 AppModel 实例，便于在不启动完整 AppModel 的单元测试中直接构造。
+/// portfolio/assets/sectors/insightHeadline 复用 TrendAnalysisContextBuilder（含脱敏），
+/// 信号与行情在此构造为带稳定 evidenceID 的结构化数据。
+struct TrendResearchSnapshotBuilder {
+    /// 单个来源最多保留的信号条数，控制快照体积。
+    static let maxSignalsPerSource = 20
+
+    func build(
+        rows: [PersonalAssetAggregateRow],
+        summary: PersonalAssetAggregateSummary?,
+        platformPayload: PlatformPayload?,
+        alfaPayload: PlatformPayload?,
+        managerWatchEvents: [ManagerWatchTimelineEvent],
+        marketIndexQuotes: [MarketIndexKind: MarketIndexQuote],
+        fundEstimates: [String: TrendResearchFundEstimate],
+        watchSummary: ManagerWatchTimelineSummary,
+        insightSummary: PortfolioSnapshotInsightSummary,
+        privacyMode: TrendPrivacyMode,
+        runID: UUID,
+        createdAt: String,
+        dataAsOf: String,
+        sourceWarnings: [String]
+    ) -> TrendResearchSnapshot {
+        // 复用现有 ContextBuilder 得到脱敏后的 portfolio/assets/sectors/insightHeadline。
+        // platformActions 传空：结构化信号由快照自身持有，不再用字符串化版本。
+        let context = TrendAnalysisContextBuilder().build(
+            rows: rows,
+            summary: summary,
+            platformActions: [],
+            watchSummary: watchSummary,
+            insightSummary: insightSummary,
+            privacyMode: privacyMode,
+            createdAt: createdAt
+        )
+
+        let platformSignals = Self.signals(fromPlatform: platformPayload, source: "qieman")
+            + Self.signals(fromPlatform: alfaPayload, source: "alfa")
+        let managerSignals = Self.managerSignals(from: managerWatchEvents)
+        let marketQuotes = Self.indexQuotes(from: marketIndexQuotes)
+            + Self.fundEstimateQuotes(from: fundEstimates)
+
+        return TrendResearchSnapshot(
+            runID: runID,
+            createdAt: createdAt,
+            dataAsOf: dataAsOf,
+            privacyMode: privacyMode,
+            portfolio: context.portfolio,
+            assets: context.assets,
+            sectors: context.sectors,
+            platformSignals: platformSignals,
+            managerSignals: managerSignals,
+            marketQuotes: marketQuotes,
+            insightHeadline: context.insightHeadline,
+            sourceWarnings: sourceWarnings
+        )
+    }
+
+    // MARK: 信号构造
+
+    private static func signals(fromPlatform payload: PlatformPayload?, source: String) -> [TrendResearchSignal] {
+        guard let actions = payload?.actions else { return [] }
+        return actions.prefix(maxSignalsPerSource).compactMap { action in
+            // 缺少标识的动作无法形成稳定 evidenceID，跳过。
+            guard action.actionKey != nil
+                || action.adjustmentId != nil
+                || action.fundCode != nil else { return nil }
+            return TrendResearchSignal(
+                source: source,
+                kind: "adjustment",
+                evidenceID: "platform:\(source):\(platformActionID(action))",
+                occurredAt: action.txnDate ?? action.createdAt,
+                fundCode: action.fundCode,
+                fundName: action.fundName,
+                action: action.action ?? action.side,
+                title: platformActionTitle(action),
+                detail: action.comment,
+                valuationChangePct: action.valuationChangePct,
+                beforePercent: action.beforePercent,
+                afterPercent: action.afterPercent,
+                groupName: action.groupName,
+                sourcePoCode: action.sourcePoCode,
+                articleURL: action.articleUrl
+            )
+        }
+    }
+
+    private static func managerSignals(from events: [ManagerWatchTimelineEvent]) -> [TrendResearchSignal] {
+        events
+            .filter { $0.kind == .forumHit || $0.kind == .platformHit }
+            .prefix(maxSignalsPerSource)
+            .map { event in
+                TrendResearchSignal(
+                    source: "manager",
+                    kind: "watch-hit",
+                    evidenceID: "manager:\(event.kind.rawValue):\(event.targetID ?? event.id.uuidString)",
+                    occurredAt: Self.isoFormatter.string(from: event.occurredAt),
+                    fundCode: nil,
+                    fundName: event.managerName.isEmpty ? nil : event.managerName,
+                    action: event.kind.rawValue,
+                    title: event.title,
+                    detail: event.detail.isEmpty ? nil : event.detail,
+                    valuationChangePct: nil,
+                    beforePercent: nil,
+                    afterPercent: nil,
+                    groupName: nil,
+                    sourcePoCode: event.prodCode.isEmpty ? nil : event.prodCode,
+                    articleURL: nil
+                )
+            }
+    }
+
+    private static func platformActionID(_ action: PlatformActionPayload) -> String {
+        if let key = action.actionKey, !key.isEmpty { return key }
+        return "\(action.adjustmentId ?? 0)-\(action.fundCode ?? "")-\(action.txnDate ?? action.createdAt ?? "")"
+    }
+
+    private static func platformActionTitle(_ action: PlatformActionPayload) -> String {
+        if let title = action.actionTitle, !title.isEmpty { return title }
+        if let title = action.adjustmentTitle, !title.isEmpty { return title }
+        if let title = action.title, !title.isEmpty { return title }
+        return action.fundName ?? action.fundCode ?? "调仓动作"
+    }
+
+    // MARK: 行情构造
+
+    private static func indexQuotes(from quotes: [MarketIndexKind: MarketIndexQuote]) -> [TrendResearchQuote] {
+        quotes.values.map { quote in
+            TrendResearchQuote(
+                kind: "index",
+                evidenceID: "market:index:\(quote.kind.rawValue):\(quote.quotedAt)",
+                code: quote.kind.rawValue,
+                name: quote.name,
+                price: quote.price,
+                changePct: quote.changePct,
+                changeAmount: quote.changeAmount,
+                quotedAt: quote.quotedAt,
+                sourceLabel: quote.sourceLabel
+            )
+        }
+    }
+
+    private static func fundEstimateQuotes(from estimates: [String: TrendResearchFundEstimate]) -> [TrendResearchQuote] {
+        estimates.values.map { estimate in
+            TrendResearchQuote(
+                kind: "fund-estimate",
+                evidenceID: "market:fund-estimate:\(estimate.code):\(estimate.quotedAt ?? "")",
+                code: estimate.code,
+                name: estimate.name ?? estimate.code,
+                price: estimate.price,
+                changePct: estimate.estimateChangePct,
+                changeAmount: nil,
+                quotedAt: estimate.quotedAt,
+                sourceLabel: estimate.sourceLabel
+            )
+        }
+    }
+
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+}
